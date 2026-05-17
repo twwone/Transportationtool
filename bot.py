@@ -57,6 +57,15 @@ def _tg_notify(bot_token: str, chat_id: str, message: str):
         pass
 
 
+_CHROMIUM_ARGS = [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-extensions",
+    "--no-first-run",
+    "--disable-background-networking",
+]
+
 _SEARCH_JS = """
 (params) => new Promise((resolve, reject) => {
     $.ajax({
@@ -64,65 +73,46 @@ _SEARCH_JS = """
         type: 'POST',
         data: params,
         dataType: 'json'
-    }).done(resolve).fail((xhr) => reject(xhr.status + ' ' + xhr.statusText));
+    }).done(resolve).fail((xhr) => reject(String(xhr.status)));
 })
 """
 
 
-def _check_availability(config: dict) -> tuple[int, str | None]:
-    """在 Playwright Chrome 頁面的 JS 環境內呼叫高鐵 Search API，繞過 CDN WAF。"""
+def _query_with_browser(browser, config: dict) -> tuple[int, str | None]:
+    """開一個新分頁執行查詢，結束後關閉分頁。"""
+    page = browser.new_page()
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-            )
-            page = browser.new_page()
+        page.goto(THSR_TIMETABLE, timeout=30000, wait_until="domcontentloaded")
 
-            # 攔截 /TimeTable/Search 回應（用來確認 HTTP 狀態）
-            status_holder: list[int] = []
+        t = config["time_val"]
+        time_str = "00:00" if t == "0000" else f"{t[:2]}:{t[2:]}"
 
-            def handle_response(resp):
-                if "/TimeTable/Search" in resp.url:
-                    status_holder.append(resp.status)
+        result = page.evaluate(_SEARCH_JS, {
+            "SearchType":        "S",
+            "Lang":              "TW",
+            "StartStation":      config["origin_code"],
+            "EndStation":        config["dest_code"],
+            "OutWardSearchDate": config["date"],
+            "OutWardSearchTime": time_str,
+            "ReturnSearchDate":  "",
+            "ReturnSearchTime":  "",
+            "DiscountType":      "",
+        })
+    finally:
+        try:
+            page.close()
+        except Exception:
+            pass
 
-            page.on("response", handle_response)
+    if not result or not result.get("success"):
+        return -1, f"API 回傳失敗：{result}"
 
-            # 載入時刻表頁（讓 jQuery 和 session cookie 就位）
-            page.goto(THSR_TIMETABLE, timeout=30000, wait_until="domcontentloaded")
-
-            # 透過頁面 JS 環境執行 jQuery AJAX（同源，不受 CDN WAF 攔截）
-            t = config["time_val"]
-            time_str = "00:00" if t == "0000" else f"{t[:2]}:{t[2:]}"
-
-            result = page.evaluate(_SEARCH_JS, {
-                "SearchType":        "S",
-                "Lang":              "TW",
-                "StartStation":      config["origin_code"],
-                "EndStation":        config["dest_code"],
-                "OutWardSearchDate": config["date"],
-                "OutWardSearchTime": time_str,
-                "ReturnSearchDate":  "",
-                "ReturnSearchTime":  "",
-                "DiscountType":      "",
-            })
-
-            browser.close()
-
-        if not result or not result.get("success"):
-            return -1, f"API 回傳失敗：{result}"
-
-        trains = (
-            result.get("data", {})
-                  .get("DepartureTable", {})
-                  .get("TrainItem", [])
-        )
-        return len(trains), None
-
-    except PWTimeout:
-        return -1, "Playwright 逾時（頁面載入超過 30 秒）"
-    except Exception as e:
-        return -1, str(e)[:200]
+    trains = (
+        result.get("data", {})
+              .get("DepartureTable", {})
+              .get("TrainItem", [])
+    )
+    return len(trains), None
 
 
 class THSRBot:
@@ -155,33 +145,67 @@ class THSRBot:
     def _log(self, msg: str, status: str = "running", found: bool = False):
         self.callback(status, msg, found)
 
+    def _launch_browser(self, p):
+        return p.chromium.launch(headless=True, args=_CHROMIUM_ARGS)
+
     def run(self):
         self.running = True
         attempt = 0
-        try:
-            while self.running:
-                attempt += 1
-                self._log(f"第 {attempt} 次查詢 {self.origin}→{self.destination} {self.config['date']}...")
-
-                count, err = _check_availability(self.config)
-
-                if err:
-                    self._log(f"查詢錯誤，稍後重試: {err}", "running")
-                    self._interruptible_sleep(10)
-                    continue
-
-                if count > 0:
-                    msg = (
-                        f"高鐵放票通知\n"
-                        f"{self.origin}→{self.destination}\n"
-                        f"{self.config['date']}\n"
-                        f"找到 {count} 個可搭班次，趕快去搶！"
+        # 整個 run 週期只建立一個 sync_playwright 和一個 browser，
+        # 避免每次查詢都重建事件迴圈（Flask 多執行緒下容易 crash）
+        with sync_playwright() as p:
+            browser = self._launch_browser(p)
+            try:
+                while self.running:
+                    attempt += 1
+                    self._log(
+                        f"第 {attempt} 次查詢 {self.origin}→{self.destination} "
+                        f"{self.config['date']}..."
                     )
-                    self._log(f"找到 {count} 個可搭班次！", "found", found=True)
-                    _tg_notify(self.tg_token, self.tg_chat_id, msg)
-                    break
-                else:
-                    self._log(f"第 {attempt} 次：無班次，{self.interval} 秒後再試...")
-                    self._interruptible_sleep(self.interval)
-        finally:
-            self.running = False
+
+                    try:
+                        # 若 browser 已 crash 則重新啟動
+                        if not browser.is_connected():
+                            self._log("Browser 已斷線，重新啟動...")
+                            browser = self._launch_browser(p)
+
+                        count, err = _query_with_browser(browser, self.config)
+                    except PWTimeout:
+                        err = "查詢逾時（30 秒）"
+                        count = -1
+                    except Exception as e:
+                        err = str(e)[:200]
+                        count = -1
+                        # browser crash：重建
+                        try:
+                            browser.close()
+                        except Exception:
+                            pass
+                        browser = self._launch_browser(p)
+
+                    if err:
+                        self._log(f"查詢錯誤，稍後重試: {err}", "running")
+                        self._interruptible_sleep(10)
+                        continue
+
+                    if count > 0:
+                        msg = (
+                            f"高鐵放票通知\n"
+                            f"{self.origin}→{self.destination}\n"
+                            f"{self.config['date']}\n"
+                            f"找到 {count} 個可搭班次，趕快去搶！"
+                        )
+                        self._log(f"找到 {count} 個可搭班次！", "found", found=True)
+                        _tg_notify(self.tg_token, self.tg_chat_id, msg)
+                        break
+                    else:
+                        self._log(
+                            f"第 {attempt} 次：無班次，{self.interval} 秒後再試..."
+                        )
+                        self._interruptible_sleep(self.interval)
+            finally:
+                try:
+                    browser.close()
+                except Exception:
+                    pass
+                self.running = False
