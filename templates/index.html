@@ -108,7 +108,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
 <body>
 
 <h1>🚄 高鐵刷票機器人</h1>
-<p class="subtitle">自動偵測放票，找到座位 LINE 通知</p>
+<p class="subtitle">自動偵測放票，找到座位 Telegram 通知</p>
 
 <div class="card">
   <div class="card-title">搭乘資訊</div>
@@ -175,15 +175,21 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     </div>
   </div>
 
-  {% if not has_line_token %}
+  {% if not has_tg_token %}
   <div style="margin-bottom:12px;">
-    <label>LINE Notify Token
-      <a class="line-tag" href="https://notify-bot.line.me/my/" target="_blank">取得 Token</a>
+    <label>Telegram Bot Token
+      <a class="line-tag" style="background:#2196f3;" href="https://t.me/BotFather" target="_blank">@BotFather</a>
     </label>
-    <input type="password" id="line_token" placeholder="貼上 LINE Notify Token（選填）">
+    <input type="password" id="tg_token" placeholder="110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw">
+  </div>
+  <div style="margin-bottom:12px;">
+    <label>Telegram Chat ID
+      <a class="line-tag" style="background:#2196f3;" href="https://t.me/userinfobot" target="_blank">取得 ID</a>
+    </label>
+    <input type="text" id="tg_chat_id" placeholder="123456789">
   </div>
   {% else %}
-  <div style="font-size:0.75rem; color:#4caf50; margin-bottom:12px;">✓ LINE Notify 已透過環境變數設定</div>
+  <div style="font-size:0.75rem; color:#4caf50; margin-bottom:12px;">✓ Telegram 已透過環境變數設定</div>
   {% endif %}
 
   <div class="btn-group">
@@ -193,7 +199,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
 </div>
 
 <div class="card">
-  <div class="found-box" id="foundBox">🎉 找到座位！查看 LINE 通知，趕快去訂票！</div>
+  <div class="found-box" id="foundBox">🎉 找到座位！查看 Telegram 通知，趕快去訂票！</div>
   <div class="status-row">
     <div class="dot" id="dot"></div>
     <span class="status-msg" id="statusMsg">尚未啟動</span>
@@ -215,8 +221,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     const seat_type   = document.getElementById("seat_type").value;
     const adult       = document.getElementById("adult").value;
     const interval    = document.getElementById("interval").value;
-    const ltEl        = document.getElementById("line_token");
-    const line_token  = ltEl ? ltEl.value.trim() : "";
+    const tgEl        = document.getElementById("tg_token");
+    const tg_token    = tgEl ? tgEl.value.trim() : "";
+    const tgChatEl    = document.getElementById("tg_chat_id");
+    const tg_chat_id  = tgChatEl ? tgChatEl.value.trim() : "";
 
     if (!date)                        { alert("請選擇日期"); return; }
     if (origin === destination)       { alert("出發站與到達站不能相同"); return; }
@@ -224,7 +232,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     const res  = await fetch("/api/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ origin, destination, date, time, seat_type, adult, interval, line_token }),
+      body: JSON.stringify({ origin, destination, date, time, seat_type, adult, interval, tg_token, tg_chat_id }),
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }

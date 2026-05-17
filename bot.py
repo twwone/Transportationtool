@@ -47,14 +47,13 @@ TIME_OPTIONS = {
 THSR_URL = "https://www.thsrc.com.tw/tw/TimeTable/SearchByStation"
 
 
-def _line_notify(token: str, message: str):
-    if not token:
+def _tg_notify(bot_token: str, chat_id: str, message: str):
+    if not bot_token or not chat_id:
         return
     try:
         http_requests.post(
-            "https://notify-api.line.me/api/notify",
-            headers={"Authorization": f"Bearer {token}"},
-            data={"message": message},
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={"chat_id": chat_id, "text": message},
             timeout=10,
         )
     except Exception:
@@ -97,7 +96,8 @@ class THSRBot:
         self.seat_type   = config["seat_type"]   # "1"=標準 "2"=商務
         self.adult       = int(config["adult"])
         self.interval    = int(config.get("interval", 30))
-        self.line_token  = config.get("line_token") or os.environ.get("LINE_NOTIFY_TOKEN", "")
+        self.tg_token    = config.get("tg_token") or os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        self.tg_chat_id  = config.get("tg_chat_id") or os.environ.get("TELEGRAM_CHAT_ID", "")
         self.callback    = status_callback
         self.running     = False
         self.driver: webdriver.Chrome | None = None
@@ -184,9 +184,9 @@ class THSRBot:
                     continue
 
                 if count > 0:
-                    msg = f"\n🚄 高鐵放票通知\n{self.origin}→{self.destination}\n{self.date}\n找到 {count} 個可訂班次，趕快去搶！"
+                    msg = f"🚄 高鐵放票通知\n{self.origin}→{self.destination}\n{self.date}\n找到 {count} 個可訂班次，趕快去搶！"
                     self._log(f"找到 {count} 個可訂班次！", "found", found=True)
-                    _line_notify(self.line_token, msg)
+                    _tg_notify(self.tg_token, self.tg_chat_id, msg)
                     break
                 else:
                     self._log(f"第 {attempt} 次：無可用座位，{self.interval} 秒後再試...")

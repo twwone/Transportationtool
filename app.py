@@ -34,7 +34,7 @@ def index():
         "index.html",
         stations=list(STATIONS.keys()),
         times=list(TIME_OPTIONS.keys()),
-        has_line_token=bool(os.environ.get("LINE_NOTIFY_TOKEN")),
+        has_tg_token=bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
     )
 
 
@@ -64,7 +64,8 @@ def start():
         "seat_type":   data["seat_type"],
         "adult":       data["adult"],
         "interval":    data.get("interval", 30),
-        "line_token":  data.get("line_token", ""),
+        "tg_token":    data.get("tg_token", ""),
+        "tg_chat_id":  data.get("tg_chat_id", ""),
     }
 
     _bot = THSRBot(config, _update)
