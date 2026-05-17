@@ -76,8 +76,10 @@ def start():
 
 @app.route("/api/stop", methods=["POST"])
 def stop():
+    global _bot
     if _bot:
         _bot.stop()
+        _bot = None
     _status.update({"running": False, "status": "stopped", "message": "使用者手動停止"})
     return jsonify({"success": True})
 

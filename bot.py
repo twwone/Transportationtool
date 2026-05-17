@@ -62,28 +62,30 @@ def _tg_notify(bot_token: str, chat_id: str, message: str):
 
 def _build_driver() -> webdriver.Chrome:
     options = Options()
-    options.add_argument("--headless=new")
+    options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.add_argument("--disable-setuid-sandbox")
     options.add_argument("--window-size=1280,900")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
 
-    # Railway / Linux：使用系統 chromium
-    chromium_path = "/usr/bin/chromium"
-    if os.path.exists(chromium_path):
-        options.binary_location = chromium_path
-        service = Service("/usr/bin/chromedriver")
+    # 依序找 Chromium 路徑（Railway/Linux 環境）
+    for path in ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"]:
+        if os.path.exists(path):
+            options.binary_location = path
+            driver_path = "/usr/bin/chromedriver"
+            if not os.path.exists(driver_path):
+                driver_path = "/usr/lib/chromium/chromedriver"
+            service = Service(driver_path)
+            break
     else:
-        # 本機 macOS：用 webdriver-manager
+        # 本機 macOS
         from webdriver_manager.chrome import ChromeDriverManager
         service = Service(ChromeDriverManager().install())
 
     driver = webdriver.Chrome(service=service, options=options)
-    driver.execute_script(
-        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-    )
     return driver
 
 
@@ -104,6 +106,12 @@ class THSRBot:
 
     def stop(self):
         self.running = False
+
+    def _interruptible_sleep(self, seconds: int):
+        for _ in range(seconds):
+            if not self.running:
+                break
+            time.sleep(1)
 
     def _log(self, msg: str, status: str = "running", found: bool = False):
         self.callback(status, msg, found)
@@ -179,8 +187,9 @@ class THSRBot:
                 count, err = self._check_once()
 
                 if err:
-                    self._log(f"查詢錯誤: {err}", "error")
-                    time.sleep(5)
+                    # 暫時性錯誤，保持 running 狀態繼續重試
+                    self._log(f"查詢錯誤，稍後重試: {err[:120]}", "running")
+                    self._interruptible_sleep(5)
                     continue
 
                 if count > 0:
@@ -190,10 +199,7 @@ class THSRBot:
                     break
                 else:
                     self._log(f"第 {attempt} 次：無可用座位，{self.interval} 秒後再試...")
-                    for _ in range(self.interval):
-                        if not self.running:
-                            break
-                        time.sleep(1)
+                    self._interruptible_sleep(self.interval)
         finally:
             self.running = False
             if self.driver:
