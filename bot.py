@@ -100,8 +100,9 @@ def _setup_page(browser):
     return page
 
 
-def _query_with_page(page, config: dict) -> tuple[int, str | None]:
-    """在已存在的分頁上執行查詢，查完導回空白頁釋放記憶體。"""
+def _query_with_browser(browser, config: dict) -> tuple[int, str | None]:
+    """每次查詢建立新分頁，查完直接 close()，避免殘留分頁狀態造成 TargetClosedError。"""
+    page = _setup_page(browser)
     try:
         page.goto(THSR_TIMETABLE, timeout=30000, wait_until="domcontentloaded")
         page.wait_for_function("typeof $ !== 'undefined'", timeout=15000)
@@ -121,9 +122,8 @@ def _query_with_page(page, config: dict) -> tuple[int, str | None]:
             "DiscountType":      "",
         })
     finally:
-        # 查完導回空白頁，釋放 THSR 頁面資源但保留分頁
         try:
-            page.goto("about:blank", timeout=5000, wait_until="commit")
+            page.close()
         except Exception:
             pass
 
@@ -178,7 +178,6 @@ class THSRBot:
         attempt = 0
         with sync_playwright() as p:
             browser = self._launch_browser(p)
-            page    = _setup_page(browser)
             try:
                 while self.running:
                     attempt += 1
@@ -188,7 +187,6 @@ class THSRBot:
                     )
 
                     try:
-                        # browser crash 時重建 browser 和 page
                         if not browser.is_connected():
                             self._log("Browser 斷線，重新啟動...")
                             try:
@@ -196,9 +194,8 @@ class THSRBot:
                             except Exception:
                                 pass
                             browser = self._launch_browser(p)
-                            page    = _setup_page(browser)
 
-                        count, err = _query_with_page(page, self.config)
+                        count, err = _query_with_browser(browser, self.config)
 
                     except PWTimeout:
                         err   = "查詢逾時（30 秒）"
@@ -206,13 +203,11 @@ class THSRBot:
                     except Exception as e:
                         err   = str(e)[:200]
                         count = -1
-                        # page 或 browser 異常：重建兩者
                         try:
                             browser.close()
                         except Exception:
                             pass
                         browser = self._launch_browser(p)
-                        page    = _setup_page(browser)
 
                     if err:
                         self._log(f"查詢錯誤，稍後重試: {err}", "running")
