@@ -59,6 +59,7 @@ def _tg_notify(bot_token: str, chat_id: str, message: str):
 
 _CHROMIUM_ARGS = [
     "--no-sandbox",
+    "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
     "--disable-extensions",
@@ -68,7 +69,6 @@ _CHROMIUM_ARGS = [
     "--disable-sync",
     "--disable-translate",
     "--hide-scrollbars",
-    "--metrics-recording-only",
     "--mute-audio",
     "--safebrowsing-disable-auto-update",
 ]
@@ -176,67 +176,77 @@ class THSRBot:
         self.running = True
         self._found  = False  # reset per-run
         attempt = 0
-        with sync_playwright() as p:
-            browser = self._launch_browser(p)
+
+        while self.running and not self._found:
             try:
-                while self.running:
-                    attempt += 1
-                    self._log(
-                        f"第 {attempt} 次查詢 {self.origin}→{self.destination} "
-                        f"{self.config['date']}..."
-                    )
-
+                with sync_playwright() as p:
+                    browser = self._launch_browser(p)
                     try:
-                        if not browser.is_connected():
-                            self._log("Browser 斷線，重新啟動...")
+                        while self.running and not self._found:
+                            attempt += 1
+                            self._log(
+                                f"第 {attempt} 次查詢 {self.origin}→{self.destination} "
+                                f"{self.config['date']}..."
+                            )
+
+                            err   = None
+                            count = -1
                             try:
-                                browser.close()
-                            except Exception:
-                                pass
-                            browser = self._launch_browser(p)
+                                if not browser.is_connected():
+                                    self._log("Browser 斷線，重新啟動瀏覽器...")
+                                    try:
+                                        browser.close()
+                                    except Exception:
+                                        pass
+                                    browser = self._launch_browser(p)
 
-                        count, err = _query_with_browser(browser, self.config)
+                                count, err = _query_with_browser(browser, self.config)
 
-                    except PWTimeout:
-                        err   = "查詢逾時（30 秒）"
-                        count = -1
-                    except Exception as e:
-                        err   = str(e)[:200]
-                        count = -1
+                            except PWTimeout:
+                                err = "查詢逾時（30 秒）"
+                            except Exception as e:
+                                err = str(e)[:200]
+                                try:
+                                    browser.close()
+                                except Exception:
+                                    pass
+                                browser = self._launch_browser(p)
+
+                            if err:
+                                self._log(f"查詢錯誤，稍後重試: {err}", "running")
+                                self._interruptible_sleep(10)
+                                continue
+
+                            if count > 0:
+                                self._found = True
+                                seat_label = "商務" if self.config.get("seat_type") == "2" else "標準"
+                                adult = self.config.get("adult", 1)
+                                msg = (
+                                    f"高鐵放票通知\n"
+                                    f"{self.origin}→{self.destination}\n"
+                                    f"{self.config['date']} | {seat_label}廂 {adult} 張\n"
+                                    f"找到 {count} 個可搭班次，趕快去搶！"
+                                )
+                                self._log(f"找到 {count} 個可搭班次！", "found", found=True)
+                                _tg_notify(self.tg_token, self.tg_chat_id, msg)
+                            else:
+                                self._log(
+                                    f"第 {attempt} 次：無班次，{self.interval} 秒後再試..."
+                                )
+                                self._interruptible_sleep(self.interval)
+                    finally:
                         try:
                             browser.close()
                         except Exception:
                             pass
-                        browser = self._launch_browser(p)
 
-                    if err:
-                        self._log(f"查詢錯誤，稍後重試: {err}", "running")
-                        self._interruptible_sleep(10)
-                        continue
+            except Exception as e:
+                # sync_playwright() context 本身異常，整個重啟
+                if not self.running:
+                    break
+                self._log(f"Playwright 環境異常，5 秒後重啟: {str(e)[:100]}", "running")
+                self._interruptible_sleep(5)
 
-                    if count > 0:
-                        self._found = True
-                        seat_label = "商務" if self.config.get("seat_type") == "2" else "標準"
-                        adult = self.config.get("adult", 1)
-                        msg = (
-                            f"高鐵放票通知\n"
-                            f"{self.origin}→{self.destination}\n"
-                            f"{self.config['date']} | {seat_label}廂 {adult} 張\n"
-                            f"找到 {count} 個可搭班次，趕快去搶！"
-                        )
-                        self._log(f"找到 {count} 個可搭班次！", "found", found=True)
-                        _tg_notify(self.tg_token, self.tg_chat_id, msg)
-                        break
-                    else:
-                        self._log(
-                            f"第 {attempt} 次：無班次，{self.interval} 秒後再試..."
-                        )
-                        self._interruptible_sleep(self.interval)
-            finally:
-                try:
-                    browser.close()
-                except Exception:
-                    pass
-                self.running = False
-                if not self._found:
-                    self.callback("stopped", "機器人已停止")
+        self.running = False
+        if not self._found:
+            self.callback("stopped", "機器人已停止")
