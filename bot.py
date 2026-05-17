@@ -52,17 +52,21 @@ THSR_BASE         = "https://www.thsrc.com.tw"
 THSR_TIMETABLE    = f"{THSR_BASE}/ArticleContent/a3b630bb-1066-4352-a1ef-58c7b4e8ef7c"
 
 
-def _tg_notify(bot_token: str, chat_id: str, message: str):
+def _tg_notify(bot_token: str, chat_id: str, message: str) -> str | None:
+    """回傳 None 代表成功，回傳字串代表錯誤原因。"""
     if not bot_token or not chat_id:
-        return
+        return "tg_token 或 tg_chat_id 為空"
     try:
-        requests.post(
+        resp = requests.post(
             f"https://api.telegram.org/bot{bot_token}/sendMessage",
             json={"chat_id": chat_id, "text": message},
             timeout=10,
         )
-    except Exception:
-        pass
+        if not resp.ok:
+            return f"HTTP {resp.status_code}: {resp.text[:200]}"
+        return None
+    except Exception as e:
+        return f"{type(e).__name__}: {str(e)[:150]}"
 
 
 _CHROMIUM_ARGS = [
@@ -327,7 +331,13 @@ class THSRBot:
                                     f"\n立即訂票：\n{booking_url}"
                                 )
                                 self._log(f"找到 {len(trains)} 班可搭車次！", "found", found=True)
-                                _tg_notify(self.tg_token, self.tg_chat_id, msg)
+                                has_tg = bool(self.tg_token and self.tg_chat_id)
+                                self._log(f"[TG] 準備送出通知 token={'有' if self.tg_token else '無'} chat_id={'有' if self.tg_chat_id else '無'}")
+                                tg_err = _tg_notify(self.tg_token, self.tg_chat_id, msg)
+                                if tg_err:
+                                    self._log(f"[TG] 送出失敗: {tg_err}", "running")
+                                elif has_tg:
+                                    self._log("[TG] 通知已送出")
                             else:
                                 self._log(
                                     f"第 {attempt} 次：時段內無班次，{self.interval} 秒後再試..."
