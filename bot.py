@@ -218,6 +218,7 @@ class THSRBot:
         self.interval    = int(config.get("interval", 30))
         self.tg_token    = config.get("tg_token") or os.environ.get("TELEGRAM_BOT_TOKEN", "")
         self.tg_chat_id  = config.get("tg_chat_id") or os.environ.get("TELEGRAM_CHAT_ID", "")
+        self.base_url    = config.get("base_url", "").rstrip("/")
         self.callback    = status_callback
         self.running     = False
         self._found      = False
@@ -299,15 +300,25 @@ class THSRBot:
                                 lines = "\n".join(_fmt_train(t) for t in trains[:5])
                                 if len(trains) > 5:
                                     lines += f"\n...另有 {len(trains)-5} 班"
-                                search_url, enc_err = _get_search_url(self.config)
-                                if enc_err:
-                                    self._log(f"[Encrypt 失敗] {enc_err}", "running")
+                                if self.base_url:
+                                    booking_url = (
+                                        f"{self.base_url}/api/go"
+                                        f"?o={self.config['origin_code']}"
+                                        f"&d={self.config['dest_code']}"
+                                        f"&dt={quote(self.config['date'], safe='')}"
+                                        f"&t={self.config['time_from']}"
+                                        f"&dis={quote(self.config.get('discount', ''), safe='')}"
+                                    )
+                                else:
+                                    booking_url, enc_err = _get_search_url(self.config)
+                                    if enc_err:
+                                        self._log(f"[Encrypt 失敗] {enc_err}", "running")
                                 msg = (
                                     f"高鐵放票通知！\n"
                                     f"{self.origin} → {self.destination}｜{self.config['date']}\n"
                                     f"時段：{from_str} - {to_str}｜{seat_label}廂 {adult} 張｜{disc_name}\n"
                                     f"\n找到 {len(trains)} 班：\n{lines}\n"
-                                    f"\n立即訂票：\n{search_url}"
+                                    f"\n立即訂票：\n{booking_url}"
                                 )
                                 self._log(f"找到 {len(trains)} 班可搭車次！", "found", found=True)
                                 _tg_notify(self.tg_token, self.tg_chat_id, msg)

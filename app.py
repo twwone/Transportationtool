@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 import time
 import threading
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect as flask_redirect
 from bot import THSRBot, STATIONS, TIME_OPTIONS, DISCOUNT_OPTIONS
 
 app = Flask(__name__)
@@ -14,6 +14,7 @@ def _resolve_time_to(display: str) -> str:
 
 _bot: THSRBot | None = None
 _thread: threading.Thread | None = None
+_base_url: str = ""
 _lock = threading.Lock()
 _status = {
     "running": False,
@@ -49,7 +50,7 @@ def index():
 
 @app.route("/api/start", methods=["POST"])
 def start():
-    global _bot, _thread
+    global _bot, _thread, _base_url
 
     data = request.json or {}
     for f in ["origin", "destination", "date", "time_from", "seat_type", "adult"]:
@@ -59,6 +60,7 @@ def start():
     if data["origin"] == data["destination"]:
         return jsonify({"error": "出發站與到達站不能相同"}), 400
 
+    _base_url = request.host_url.rstrip("/")
     config = {
         "origin":      data["origin"],
         "destination": data["destination"],
@@ -71,6 +73,7 @@ def start():
         "interval":    data.get("interval", 30),
         "tg_token":    data.get("tg_token", ""),
         "tg_chat_id":  data.get("tg_chat_id", ""),
+        "base_url":    _base_url,
     }
 
     with _lock:
@@ -107,6 +110,21 @@ def stop():
 @app.route("/api/status")
 def status():
     return jsonify(_status)
+
+
+@app.route("/api/go")
+def booking_go():
+    """點擊時即時生成 cipher 並 redirect 到高鐵時刻表預填頁。"""
+    from bot import _get_search_url
+    config = {
+        "origin_code": request.args.get("o", "TaiPei"),
+        "dest_code":   request.args.get("d", "ZuoYing"),
+        "date":        request.args.get("dt", ""),
+        "time_from":   request.args.get("t", "0000"),
+        "discount":    request.args.get("dis", ""),
+    }
+    url, _ = _get_search_url(config)
+    return flask_redirect(url)
 
 
 @app.route("/api/test_encrypt")
