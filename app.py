@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import time
 import threading
@@ -42,8 +43,12 @@ def index():
 def start():
     global _bot, _thread
 
-    if _status["running"]:
+    # 雙重確認：狀態旗標 AND thread 仍存活
+    # bot crash 時 thread 已死但旗標可能卡在 True，需允許重新啟動
+    if _status["running"] and _thread is not None and _thread.is_alive():
         return jsonify({"error": "機器人已在執行中"}), 400
+    if not (_thread is not None and _thread.is_alive()):
+        _status["running"] = False  # 補正卡住的狀態
 
     data = request.json or {}
     for f in ["origin", "destination", "date", "time", "seat_type", "adult"]:

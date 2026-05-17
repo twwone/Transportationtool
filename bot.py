@@ -150,6 +150,7 @@ class THSRBot:
 
     def run(self):
         self.running = True
+        self._found  = False
         attempt = 0
         # 整個 run 週期只建立一個 sync_playwright 和一個 browser，
         # 避免每次查詢都重建事件迴圈（Flask 多執行緒下容易 crash）
@@ -189,6 +190,7 @@ class THSRBot:
                         continue
 
                     if count > 0:
+                        self._found = True
                         msg = (
                             f"高鐵放票通知\n"
                             f"{self.origin}→{self.destination}\n"
@@ -209,3 +211,6 @@ class THSRBot:
                 except Exception:
                     pass
                 self.running = False
+                # 找到票時狀態已是 "found"，不覆蓋；其餘一律設為 stopped
+                if not self._found:
+                    self.callback("stopped", "機器人已停止")
