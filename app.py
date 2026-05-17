@@ -7,6 +7,11 @@ from bot import THSRBot, STATIONS, TIME_OPTIONS
 
 app = Flask(__name__)
 
+
+def _resolve_time_to(display: str) -> str:
+    code = TIME_OPTIONS.get(display, "2359")
+    return "2359" if code == "0000" else code
+
 _bot: THSRBot | None = None
 _thread: threading.Thread | None = None
 _lock = threading.Lock()
@@ -46,7 +51,7 @@ def start():
     global _bot, _thread
 
     data = request.json or {}
-    for f in ["origin", "destination", "date", "time", "seat_type", "adult"]:
+    for f in ["origin", "destination", "date", "time_from", "seat_type", "adult"]:
         if not data.get(f):
             return jsonify({"error": f"缺少欄位: {f}"}), 400
 
@@ -57,7 +62,8 @@ def start():
         "origin":      data["origin"],
         "destination": data["destination"],
         "date":        data["date"].replace("-", "/"),
-        "time":        TIME_OPTIONS.get(data["time"], "0000"),
+        "time":        TIME_OPTIONS.get(data["time_from"], "0000"),
+        "time_to":     _resolve_time_to(data.get("time_to", "不限")),
         "seat_type":   data["seat_type"],
         "adult":       data["adult"],
         "interval":    data.get("interval", 30),

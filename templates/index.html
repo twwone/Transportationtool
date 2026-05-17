@@ -132,16 +132,24 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     </div>
   </div>
 
-  <div class="row col2">
+  <div class="row col3">
     <div>
       <label>搭乘日期</label>
       <input type="date" id="date">
     </div>
     <div>
-      <label>最早出發時間</label>
-      <select id="time">
+      <label>出發時間（從）</label>
+      <select id="time_from">
         {% for t in times %}
         <option value="{{ t }}">{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>出發時間（到）</label>
+      <select id="time_to">
+        {% for t in times %}
+        <option value="{{ t }}" {% if t == "不限" %}selected{% endif %}>{{ t }}</option>
         {% endfor %}
       </select>
     </div>
@@ -233,7 +241,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     const origin      = document.getElementById("origin").value;
     const destination = document.getElementById("destination").value;
     const date        = document.getElementById("date").value;
-    const time        = document.getElementById("time").value;
+    const time_from   = document.getElementById("time_from").value;
+    const time_to     = document.getElementById("time_to").value;
     const seat_type   = document.getElementById("seat_type").value;
     const adult       = document.getElementById("adult").value;
     const interval    = document.getElementById("interval").value;
@@ -248,7 +257,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     const res  = await fetch("/api/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ origin, destination, date, time, seat_type, adult, interval, tg_token, tg_chat_id }),
+      body: JSON.stringify({ origin, destination, date, time_from, time_to, seat_type, adult, interval, tg_token, tg_chat_id }),
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }

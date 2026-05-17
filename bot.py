@@ -100,14 +100,24 @@ def _setup_page(browser):
     return page
 
 
-def _query_with_browser(browser, config: dict) -> tuple[int, str | None]:
+def _fmt_train(t: dict) -> str:
+    num  = t.get("TrainNumber", "?")
+    dep  = t.get("DepartureTime", "?")
+    arr  = t.get("DestinationTime", "?")
+    dur  = t.get("Duration", "?")
+    free = t.get("NonReservedCar", "")
+    free_str = f" 自由座:{free}" if free else ""
+    return f"・{num}  {dep}→{arr}（{dur}）{free_str}"
+
+
+def _query_with_browser(browser, config: dict) -> tuple[list, str | None]:
     """每次查詢建立新分頁，查完直接 close()，避免殘留分頁狀態造成 TargetClosedError。"""
     page = _setup_page(browser)
     try:
         page.goto(THSR_TIMETABLE, timeout=30000, wait_until="domcontentloaded")
         page.wait_for_function("typeof $ !== 'undefined'", timeout=15000)
 
-        t = config["time_val"]
+        t = config["time_from"]
         time_str = "00:00" if t == "0000" else f"{t[:2]}:{t[2:]}"
 
         result = page.evaluate(_SEARCH_JS, {
@@ -128,14 +138,20 @@ def _query_with_browser(browser, config: dict) -> tuple[int, str | None]:
             pass
 
     if not result or not result.get("success"):
-        return -1, f"API 回傳失敗：{result}"
+        return [], f"API 回傳失敗：{result}"
 
-    trains = (
+    all_trains = (
         result.get("data", {})
               .get("DepartureTable", {})
               .get("TrainItem", [])
     )
-    return len(trains), None
+
+    time_to = config.get("time_to", "2359")
+    filtered = [
+        tr for tr in all_trains
+        if tr.get("DepartureTime", "").replace(":", "") <= time_to
+    ]
+    return filtered, None
 
 
 class THSRBot:
@@ -144,7 +160,8 @@ class THSRBot:
             "origin_code": STATIONS[config["origin"]],
             "dest_code":   STATIONS[config["destination"]],
             "date":        config["date"],
-            "time_val":    config["time"],
+            "time_from":   config["time"],
+            "time_to":     config.get("time_to", "2359"),
             "seat_type":   config["seat_type"],
             "adult":       int(config["adult"]),
         }
@@ -184,13 +201,16 @@ class THSRBot:
                     try:
                         while self.running and not self._found:
                             attempt += 1
+                            tf, tt = self.config["time_from"], self.config["time_to"]
+                            from_s = "不限" if tf == "0000" else f"{tf[:2]}:{tf[2:]}"
+                            to_s   = "不限" if tt == "2359" else f"{tt[:2]}:{tt[2:]}"
                             self._log(
                                 f"第 {attempt} 次查詢 {self.origin}→{self.destination} "
-                                f"{self.config['date']}..."
+                                f"{self.config['date']} {from_s}-{to_s}..."
                             )
 
-                            err   = None
-                            count = -1
+                            err    = None
+                            trains = []
                             try:
                                 if not browser.is_connected():
                                     self._log("Browser 斷線，重新啟動瀏覽器...")
@@ -200,7 +220,7 @@ class THSRBot:
                                         pass
                                     browser = self._launch_browser(p)
 
-                                count, err = _query_with_browser(browser, self.config)
+                                trains, err = _query_with_browser(browser, self.config)
 
                             except PWTimeout:
                                 err = "查詢逾時（30 秒）"
@@ -217,21 +237,28 @@ class THSRBot:
                                 self._interruptible_sleep(10)
                                 continue
 
-                            if count > 0:
-                                self._found = True
-                                seat_label = "商務" if self.config.get("seat_type") == "2" else "標準"
-                                adult = self.config.get("adult", 1)
+                            if trains:
+                                self._found    = True
+                                seat_label     = "商務" if self.config.get("seat_type") == "2" else "標準"
+                                adult          = self.config.get("adult", 1)
+                                tf, tt         = self.config["time_from"], self.config["time_to"]
+                                from_str       = "不限" if tf == "0000" else f"{tf[:2]}:{tf[2:]}"
+                                to_str         = "不限" if tt == "2359" else f"{tt[:2]}:{tt[2:]}"
+                                lines          = "\n".join(_fmt_train(t) for t in trains[:5])
+                                if len(trains) > 5:
+                                    lines += f"\n...另有 {len(trains)-5} 班"
                                 msg = (
-                                    f"高鐵放票通知\n"
-                                    f"{self.origin}→{self.destination}\n"
-                                    f"{self.config['date']} | {seat_label}廂 {adult} 張\n"
-                                    f"找到 {count} 個可搭班次，趕快去搶！"
+                                    f"高鐵放票通知！\n"
+                                    f"{self.origin} → {self.destination}｜{self.config['date']}\n"
+                                    f"時段：{from_str} - {to_str}｜{seat_label}廂 {adult} 張\n"
+                                    f"\n找到 {len(trains)} 班：\n{lines}\n"
+                                    f"\n立即訂票：\nhttps://irs.thsrc.com.tw/IMINT/?locale=tw"
                                 )
-                                self._log(f"找到 {count} 個可搭班次！", "found", found=True)
+                                self._log(f"找到 {len(trains)} 班可搭車次！", "found", found=True)
                                 _tg_notify(self.tg_token, self.tg_chat_id, msg)
                             else:
                                 self._log(
-                                    f"第 {attempt} 次：無班次，{self.interval} 秒後再試..."
+                                    f"第 {attempt} 次：時段內無班次，{self.interval} 秒後再試..."
                                 )
                                 self._interruptible_sleep(self.interval)
                     finally:
