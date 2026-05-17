@@ -64,7 +64,17 @@ _CHROMIUM_ARGS = [
     "--disable-extensions",
     "--no-first-run",
     "--disable-background-networking",
+    "--disable-default-apps",
+    "--disable-sync",
+    "--disable-translate",
+    "--hide-scrollbars",
+    "--metrics-recording-only",
+    "--mute-audio",
+    "--safebrowsing-disable-auto-update",
 ]
+
+# 封鎖不必要的資源類型（圖片、字體、媒體），大幅減少頁面記憶體用量
+_BLOCK_TYPES = {"image", "media", "font", "stylesheet", "other"}
 
 _SEARCH_JS = """
 (params) => new Promise((resolve, reject) => {
@@ -78,9 +88,20 @@ _SEARCH_JS = """
 """
 
 
-def _query_with_browser(browser, config: dict) -> tuple[int, str | None]:
-    """開一個新分頁執行查詢，結束後關閉分頁。"""
-    page = browser.new_page()
+def _setup_page(browser):
+    """建立並設定一個固定分頁（封鎖圖片/字體/媒體）。"""
+    page = browser.new_page(viewport={"width": 1280, "height": 720})
+    page.route(
+        "**/*",
+        lambda route: route.abort()
+        if route.request.resource_type in _BLOCK_TYPES
+        else route.continue_(),
+    )
+    return page
+
+
+def _query_with_page(page, config: dict) -> tuple[int, str | None]:
+    """在已存在的分頁上執行查詢，查完導回空白頁釋放記憶體。"""
     try:
         page.goto(THSR_TIMETABLE, timeout=30000, wait_until="domcontentloaded")
 
@@ -99,8 +120,9 @@ def _query_with_browser(browser, config: dict) -> tuple[int, str | None]:
             "DiscountType":      "",
         })
     finally:
+        # 查完導回空白頁，釋放 THSR 頁面資源但保留分頁
         try:
-            page.close()
+            page.goto("about:blank", timeout=5000, wait_until="commit")
         except Exception:
             pass
 
@@ -152,10 +174,9 @@ class THSRBot:
         self.running = True
         self._found  = False
         attempt = 0
-        # 整個 run 週期只建立一個 sync_playwright 和一個 browser，
-        # 避免每次查詢都重建事件迴圈（Flask 多執行緒下容易 crash）
         with sync_playwright() as p:
             browser = self._launch_browser(p)
+            page    = _setup_page(browser)
             try:
                 while self.running:
                     attempt += 1
@@ -165,24 +186,31 @@ class THSRBot:
                     )
 
                     try:
-                        # 若 browser 已 crash 則重新啟動
+                        # browser crash 時重建 browser 和 page
                         if not browser.is_connected():
-                            self._log("Browser 已斷線，重新啟動...")
+                            self._log("Browser 斷線，重新啟動...")
+                            try:
+                                browser.close()
+                            except Exception:
+                                pass
                             browser = self._launch_browser(p)
+                            page    = _setup_page(browser)
 
-                        count, err = _query_with_browser(browser, self.config)
+                        count, err = _query_with_page(page, self.config)
+
                     except PWTimeout:
-                        err = "查詢逾時（30 秒）"
+                        err   = "查詢逾時（30 秒）"
                         count = -1
                     except Exception as e:
-                        err = str(e)[:200]
+                        err   = str(e)[:200]
                         count = -1
-                        # browser crash：重建
+                        # page 或 browser 異常：重建兩者
                         try:
                             browser.close()
                         except Exception:
                             pass
                         browser = self._launch_browser(p)
+                        page    = _setup_page(browser)
 
                     if err:
                         self._log(f"查詢錯誤，稍後重試: {err}", "running")
@@ -211,6 +239,5 @@ class THSRBot:
                 except Exception:
                     pass
                 self.running = False
-                # 找到票時狀態已是 "found"，不覆蓋；其餘一律設為 stopped
                 if not self._found:
                     self.callback("stopped", "機器人已停止")
