@@ -152,7 +152,7 @@ def _get_search_url(config: dict) -> tuple[str, str | None]:
         data = resp.json()
         cipher = data.get("cipherText", "")
         if cipher:
-            return f"{THSR_TIMETABLE}?search={quote(cipher, safe='')}", None
+            return f"{THSR_TIMETABLE}?search={quote(cipher, safe='+/=')}", None
         return fallback, f"HTTP {resp.status_code} cipherText 為空: {str(data)[:100]}"
     except Exception as e:
         return fallback, f"{type(e).__name__}: {str(e)[:150]}"
