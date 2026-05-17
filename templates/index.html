@@ -38,6 +38,7 @@ h1 { font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
 .row { display: grid; gap: 12px; margin-bottom: 12px; }
 .row.col2 { grid-template-columns: 1fr 1fr; }
 .row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+.row.col4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
 label { display: block; font-size: 0.75rem; color: #777; margin-bottom: 5px; }
 select, input {
   width: 100%;
@@ -155,12 +156,20 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     </div>
   </div>
 
-  <div class="row col3">
+  <div class="row col4">
     <div>
       <label>車廂</label>
       <select id="seat_type">
         <option value="1">標準</option>
         <option value="2">商務</option>
+      </select>
+    </div>
+    <div>
+      <label>優惠票種</label>
+      <select id="discount">
+        {% for d in discounts %}
+        <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
       </select>
     </div>
     <div>
@@ -221,6 +230,13 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
 
   let poll = null;
 
+  // 還原上次填寫的 TG 憑證
+  ["tg_token", "tg_chat_id"].forEach(key => {
+    const el  = document.getElementById(key);
+    const val = localStorage.getItem(key);
+    if (el && val) el.value = val;
+  });
+
   // 頁面載入時同步伺服器狀態，關掉網頁重開仍可按暫停
   (async function init() {
     try {
@@ -244,12 +260,15 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     const time_from   = document.getElementById("time_from").value;
     const time_to     = document.getElementById("time_to").value;
     const seat_type   = document.getElementById("seat_type").value;
+    const discount    = document.getElementById("discount").value;
     const adult       = document.getElementById("adult").value;
     const interval    = document.getElementById("interval").value;
     const tgEl        = document.getElementById("tg_token");
     const tg_token    = tgEl ? tgEl.value.trim() : "";
     const tgChatEl    = document.getElementById("tg_chat_id");
     const tg_chat_id  = tgChatEl ? tgChatEl.value.trim() : "";
+    if (tg_token)    localStorage.setItem("tg_token",   tg_token);
+    if (tg_chat_id)  localStorage.setItem("tg_chat_id", tg_chat_id);
 
     if (!date)                        { alert("請選擇日期"); return; }
     if (origin === destination)       { alert("出發站與到達站不能相同"); return; }
@@ -257,7 +276,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     const res  = await fetch("/api/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ origin, destination, date, time_from, time_to, seat_type, adult, interval, tg_token, tg_chat_id }),
+      body: JSON.stringify({ origin, destination, date, time_from, time_to, seat_type, discount, adult, interval, tg_token, tg_chat_id }),
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }

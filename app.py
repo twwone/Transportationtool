@@ -3,7 +3,7 @@ import os
 import time
 import threading
 from flask import Flask, render_template, request, jsonify
-from bot import THSRBot, STATIONS, TIME_OPTIONS
+from bot import THSRBot, STATIONS, TIME_OPTIONS, DISCOUNT_OPTIONS
 
 app = Flask(__name__)
 
@@ -43,6 +43,7 @@ def index():
         stations=list(STATIONS.keys()),
         times=list(TIME_OPTIONS.keys()),
         has_tg_token=bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
+        discounts=list(DISCOUNT_OPTIONS.keys()),
     )
 
 
@@ -64,6 +65,7 @@ def start():
         "date":        data["date"].replace("-", "/"),
         "time":        TIME_OPTIONS.get(data["time_from"], "0000"),
         "time_to":     _resolve_time_to(data.get("time_to", "不限")),
+        "discount":    DISCOUNT_OPTIONS.get(data.get("discount", "全票"), ""),
         "seat_type":   data["seat_type"],
         "adult":       data["adult"],
         "interval":    data.get("interval", 30),

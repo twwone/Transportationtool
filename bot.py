@@ -40,6 +40,13 @@ TIME_OPTIONS = {
     "22:00": "2200", "23:00": "2300",
 }
 
+DISCOUNT_OPTIONS = {
+    "全票":    "",
+    "大學生":  "68d9fc7b-7330-44c2-962a-74bc47d2ee8a",
+    "早鳥":    "e1b4c4d9-98d7-4c8c-9834-e1d2528750f1",
+    "校外教學": "40863ff1-a16c-4da1-8af7-c1f8991627f3",
+}
+
 THSR_BASE         = "https://www.thsrc.com.tw"
 THSR_TIMETABLE    = f"{THSR_BASE}/ArticleContent/a3b630bb-1066-4352-a1ef-58c7b4e8ef7c"
 
@@ -107,7 +114,10 @@ def _fmt_train(t: dict) -> str:
     dur  = t.get("Duration", "?")
     free = t.get("NonReservedCar", "")
     free_str = f" 自由座:{free}" if free else ""
-    return f"・{num}  {dep}→{arr}（{dur}）{free_str}"
+    discs = t.get("Discount", [])
+    disc_str = " | ".join(f"{d.get('Name','')} {d.get('Value','')}" for d in discs if d.get("Name"))
+    disc_str = f" [{disc_str}]" if disc_str else ""
+    return f"・{num}  {dep}→{arr}（{dur}）{free_str}{disc_str}"
 
 
 def _query_with_browser(browser, config: dict) -> tuple[list, str | None]:
@@ -129,7 +139,7 @@ def _query_with_browser(browser, config: dict) -> tuple[list, str | None]:
             "OutWardSearchTime": time_str,
             "ReturnSearchDate":  "",
             "ReturnSearchTime":  "",
-            "DiscountType":      "",
+            "DiscountType":      config.get("discount", ""),
         })
     finally:
         try:
@@ -164,6 +174,7 @@ class THSRBot:
             "time_to":     config.get("time_to", "2359"),
             "seat_type":   config["seat_type"],
             "adult":       int(config["adult"]),
+            "discount":    config.get("discount", ""),
         }
         self.origin      = config["origin"]
         self.destination = config["destination"]
@@ -239,18 +250,22 @@ class THSRBot:
 
                             if trains:
                                 self._found    = True
-                                seat_label     = "商務" if self.config.get("seat_type") == "2" else "標準"
-                                adult          = self.config.get("adult", 1)
-                                tf, tt         = self.config["time_from"], self.config["time_to"]
-                                from_str       = "不限" if tf == "0000" else f"{tf[:2]}:{tf[2:]}"
-                                to_str         = "不限" if tt == "2359" else f"{tt[:2]}:{tt[2:]}"
-                                lines          = "\n".join(_fmt_train(t) for t in trains[:5])
+                                seat_label  = "商務" if self.config.get("seat_type") == "2" else "標準"
+                                adult       = self.config.get("adult", 1)
+                                tf, tt      = self.config["time_from"], self.config["time_to"]
+                                from_str    = "不限" if tf == "0000" else f"{tf[:2]}:{tf[2:]}"
+                                to_str      = "不限" if tt == "2359" else f"{tt[:2]}:{tt[2:]}"
+                                disc_name   = next(
+                                    (k for k, v in DISCOUNT_OPTIONS.items() if v == self.config.get("discount", "")),
+                                    "全票"
+                                )
+                                lines = "\n".join(_fmt_train(t) for t in trains[:5])
                                 if len(trains) > 5:
                                     lines += f"\n...另有 {len(trains)-5} 班"
                                 msg = (
                                     f"高鐵放票通知！\n"
                                     f"{self.origin} → {self.destination}｜{self.config['date']}\n"
-                                    f"時段：{from_str} - {to_str}｜{seat_label}廂 {adult} 張\n"
+                                    f"時段：{from_str} - {to_str}｜{seat_label}廂 {adult} 張｜{disc_name}\n"
                                     f"\n找到 {len(trains)} 班：\n{lines}\n"
                                     f"\n立即訂票：\nhttps://irs.thsrc.com.tw/IMINT/?locale=tw"
                                 )
