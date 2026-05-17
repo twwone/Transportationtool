@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高鐵刷票</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0f0f13;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+}
+h1 { font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.subtitle { font-size: 0.82rem; color: #555; margin-bottom: 24px; }
+.card {
+  background: #1a1a24;
+  border: 1px solid #2a2a3a;
+  border-radius: 16px;
+  padding: 22px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 16px;
+}
+.row { display: grid; gap: 12px; margin-bottom: 12px; }
+.row.col2 { grid-template-columns: 1fr 1fr; }
+.row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+label { display: block; font-size: 0.75rem; color: #777; margin-bottom: 5px; }
+select, input {
+  width: 100%;
+  background: #111118;
+  border: 1px solid #2a2a3c;
+  border-radius: 10px;
+  color: #e0e0e0;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23555' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  padding-right: 28px;
+}
+select:focus, input:focus { border-color: #5b8dee; }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cursor: pointer; }
+.line-row { display: flex; gap: 8px; align-items: flex-end; }
+.line-row input { flex: 1; }
+.line-tag {
+  font-size: 0.7rem; padding: 4px 8px; border-radius: 6px;
+  background: #06c755; color: #fff; white-space: nowrap;
+  align-self: flex-end; margin-bottom: 2px; cursor: pointer;
+}
+.btn-group { display: flex; gap: 10px; margin-top: 4px; }
+.btn {
+  flex: 1; padding: 13px; border-radius: 12px; border: none;
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.2px;
+}
+.btn-start { background: linear-gradient(135deg, #5b8dee, #7c5bf0); color: #fff; }
+.btn-start:hover { opacity: 0.88; }
+.btn-start:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-stop { background: #1e1218; border: 1px solid #6b2d2d; color: #f08080; }
+.btn-stop:hover:not(:disabled) { background: #2a1820; }
+.btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Status */
+.status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #333; flex-shrink: 0; }
+.dot.running { background: #5b8dee; animation: blink 1.4s infinite; }
+.dot.found { background: #4caf50; }
+.dot.error { background: #f44; }
+.dot.stopped { background: #666; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.status-msg { font-size: 0.88rem; color: #bbb; }
+.found-box {
+  background: #0d2a0d; border: 1px solid #2d6a2d; border-radius: 12px;
+  padding: 14px 16px; text-align: center; color: #7dd87d;
+  font-weight: 600; font-size: 1rem; margin-bottom: 12px; display: none;
+}
+.found-box.show { display: block; }
+.log {
+  background: #09090f; border: 1px solid #1a1a28; border-radius: 10px;
+  padding: 12px; height: 190px; overflow-y: auto;
+  font-family: "SF Mono", "Fira Code", monospace; font-size: 0.73rem; line-height: 1.8; color: #555;
+}
+.log .e-run { color: #666; }
+.log .e-found { color: #7dd87d; font-weight: 600; }
+.log .e-error { color: #e07070; }
+</style>
+</head>
+<body>
+
+<h1>🚄 高鐵刷票機器人</h1>
+<p class="subtitle">自動偵測放票，找到座位 LINE 通知</p>
+
+<div class="card">
+  <div class="card-title">搭乘資訊</div>
+
+  <div class="row col2">
+    <div>
+      <label>出發站</label>
+      <select id="origin">
+        {% for s in stations %}
+        <option value="{{ s }}" {% if s == "台北" %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>到達站</label>
+      <select id="destination">
+        {% for s in stations %}
+        <option value="{{ s }}" {% if s == "左營" %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="row col2">
+    <div>
+      <label>搭乘日期</label>
+      <input type="date" id="date">
+    </div>
+    <div>
+      <label>最早出發時間</label>
+      <select id="time">
+        {% for t in times %}
+        <option value="{{ t }}">{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="row col3">
+    <div>
+      <label>車廂</label>
+      <select id="seat_type">
+        <option value="1">標準</option>
+        <option value="2">商務</option>
+      </select>
+    </div>
+    <div>
+      <label>大人</label>
+      <select id="adult">
+        <option value="1">1 張</option>
+        <option value="2">2 張</option>
+        <option value="3">3 張</option>
+        <option value="4">4 張</option>
+      </select>
+    </div>
+    <div>
+      <label>間隔</label>
+      <select id="interval">
+        <option value="15">15 秒</option>
+        <option value="30" selected>30 秒</option>
+        <option value="60">1 分鐘</option>
+        <option value="120">2 分鐘</option>
+      </select>
+    </div>
+  </div>
+
+  {% if not has_line_token %}
+  <div style="margin-bottom:12px;">
+    <label>LINE Notify Token
+      <a class="line-tag" href="https://notify-bot.line.me/my/" target="_blank">取得 Token</a>
+    </label>
+    <input type="password" id="line_token" placeholder="貼上 LINE Notify Token（選填）">
+  </div>
+  {% else %}
+  <div style="font-size:0.75rem; color:#4caf50; margin-bottom:12px;">✓ LINE Notify 已透過環境變數設定</div>
+  {% endif %}
+
+  <div class="btn-group">
+    <button class="btn btn-start" id="btnStart" onclick="startBot()">開始刷票</button>
+    <button class="btn btn-stop"  id="btnStop"  onclick="stopBot()" disabled>停止</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="found-box" id="foundBox">🎉 找到座位！查看 LINE 通知，趕快去訂票！</div>
+  <div class="status-row">
+    <div class="dot" id="dot"></div>
+    <span class="status-msg" id="statusMsg">尚未啟動</span>
+  </div>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  document.getElementById("date").value = d.toISOString().split("T")[0];
+
+  let poll = null;
+
+  async function startBot() {
+    const origin      = document.getElementById("origin").value;
+    const destination = document.getElementById("destination").value;
+    const date        = document.getElementById("date").value;
+    const time        = document.getElementById("time").value;
+    const seat_type   = document.getElementById("seat_type").value;
+    const adult       = document.getElementById("adult").value;
+    const interval    = document.getElementById("interval").value;
+    const ltEl        = document.getElementById("line_token");
+    const line_token  = ltEl ? ltEl.value.trim() : "";
+
+    if (!date)                        { alert("請選擇日期"); return; }
+    if (origin === destination)       { alert("出發站與到達站不能相同"); return; }
+
+    const res  = await fetch("/api/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ origin, destination, date, time, seat_type, adult, interval, line_token }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+
+    document.getElementById("btnStart").disabled = true;
+    document.getElementById("btnStop").disabled  = false;
+    document.getElementById("foundBox").classList.remove("show");
+    poll = setInterval(fetchStatus, 2000);
+    fetchStatus();
+  }
+
+  async function stopBot() {
+    await fetch("/api/stop", { method: "POST" });
+    clearInterval(poll); poll = null;
+    document.getElementById("btnStart").disabled = false;
+    document.getElementById("btnStop").disabled  = true;
+  }
+
+  async function fetchStatus() {
+    try {
+      const data = await (await fetch("/api/status")).json();
+      const dot  = document.getElementById("dot");
+      dot.className = "dot " + (data.status || "");
+      document.getElementById("statusMsg").textContent = data.message || "";
+
+      if (data.found) {
+        document.getElementById("foundBox").classList.add("show");
+        clearInterval(poll); poll = null;
+        document.getElementById("btnStart").disabled = false;
+        document.getElementById("btnStop").disabled  = true;
+      }
+
+      if (!data.running && data.status !== "running" && !data.found) {
+        document.getElementById("btnStart").disabled = false;
+        document.getElementById("btnStop").disabled  = true;
+      }
+
+      if (data.log?.length) {
+        document.getElementById("log").innerHTML = [...data.log].reverse().map(line => {
+          let cls = "e-run";
+          if (line.includes("找到"))          cls = "e-found";
+          else if (line.includes("錯誤") || line.includes("失敗")) cls = "e-error";
+          return `<div class="${cls}">${line}</div>`;
+        }).join("");
+      }
+    } catch(_) {}
+  }
+</script>
+</body>
+</html>
