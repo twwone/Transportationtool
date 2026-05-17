@@ -1,21 +1,21 @@
+from __future__ import annotations
 import os
 import time
 import requests
-from bs4 import BeautifulSoup
 
 STATIONS = {
-    "南港": "0990",
-    "台北": "1000",
-    "板橋": "1010",
-    "桃園": "1020",
-    "新竹": "1030",
-    "苗栗": "1035",
-    "台中": "1040",
-    "彰化": "1043",
-    "雲林": "1047",
-    "嘉義": "1050",
-    "台南": "1060",
-    "左營": "1070",
+    "南港": "NanGang",
+    "台北": "TaiPei",
+    "板橋": "BanQiao",
+    "桃園": "TaoYuan",
+    "新竹": "XinZhu",
+    "苗栗": "MiaoLi",
+    "台中": "TaiZhong",
+    "彰化": "ZhangHua",
+    "雲林": "YunLin",
+    "嘉義": "JiaYi",
+    "台南": "TaiNan",
+    "左營": "ZuoYing",
 }
 
 TIME_OPTIONS = {
@@ -39,7 +39,9 @@ TIME_OPTIONS = {
     "22:00": "2200", "23:00": "2300",
 }
 
-THSR_SEARCH_URL = "https://www.thsrc.com.tw/tw/TimeTable/SearchByStation"
+THSR_BASE     = "https://www.thsrc.com.tw"
+THSR_SEARCH   = f"{THSR_BASE}/TimeTable/Search"
+THSR_TIMETABLE_PAGE = f"{THSR_BASE}/ArticleContent/a3b630bb-1066-4352-a1ef-58c7b4e8ef7c"
 
 HEADERS = {
     "User-Agent": (
@@ -47,7 +49,6 @@ HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
     "Accept-Encoding": "gzip, deflate, br",
     "Connection": "keep-alive",
@@ -69,80 +70,54 @@ def _tg_notify(bot_token: str, chat_id: str, message: str):
 
 def _check_availability(session: requests.Session, config: dict) -> tuple[int, str | None]:
     try:
-        # Step 1: GET 首頁取得 cookies 和隱藏欄位
-        resp = session.get(THSR_SEARCH_URL, timeout=15)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "lxml")
+        # 造訪時刻表頁面取得 session cookie
+        session.get(THSR_TIMETABLE_PAGE, timeout=15)
 
-        form = soup.find("form")
-        if not form:
-            return -1, "找不到搜尋表單，高鐵網站可能改版"
-
-        # 取出所有隱藏欄位（Wicket 框架需要）
-        form_data: dict[str, str] = {}
-        for inp in form.find_all("input", type="hidden"):
-            name = inp.get("name", "")
-            if name:
-                form_data[name] = inp.get("value", "")
-
-        # 填入搜尋條件
-        form_data.update({
-            "selectStartStation":               config["origin_code"],
-            "selectDestinationStation":          config["dest_code"],
-            "trainConDate":                      config["date"],
-            "trainConTime":                      config["time_val"],
-            "seatCon:seatRadioGroup":            config["seat_type"],
-            "ticketPanel:rows:0:ticketAmount":   str(config["adult"]),
-            "ticketPanel:rows:1:ticketAmount":   "0",
-            "ticketPanel:rows:2:ticketAmount":   "0",
-            "ticketPanel:rows:3:ticketAmount":   "0",
-            "ticketPanel:rows:4:ticketAmount":   "0",
-        })
-
-        # 找送出按鈕的 name
-        btn = form.find("input", id="btnSubmit") or form.find("button", id="btnSubmit")
-        if btn and btn.get("name"):
-            form_data[btn["name"]] = btn.get("value", "submit")
-
-        # Step 2: POST 搜尋
-        action = form.get("action", THSR_SEARCH_URL)
-        if action and not action.startswith("http"):
-            action = "https://www.thsrc.com.tw" + action
-
+        # POST 新版 JSON 查詢 API
+        form_data = {
+            "SearchType":        "S",
+            "Lang":              "TW",
+            "StartStation":      config["origin_code"],
+            "EndStation":        config["dest_code"],
+            "OutWardSearchDate": config["date"],
+            "OutWardSearchTime": config["time_val"],
+            "ReturnSearchDate":  "",
+            "ReturnSearchTime":  "",
+            "DiscountType":      "",
+        }
         resp = session.post(
-            action or THSR_SEARCH_URL,
+            THSR_SEARCH,
             data=form_data,
-            headers={"Referer": THSR_SEARCH_URL,
-                     "Content-Type": "application/x-www-form-urlencoded"},
+            headers={
+                "Referer":           THSR_TIMETABLE_PAGE,
+                "X-Requested-With":  "XMLHttpRequest",
+                "Accept":            "application/json, text/javascript, */*; q=0.01",
+                "Content-Type":      "application/x-www-form-urlencoded; charset=UTF-8",
+            },
             timeout=20,
         )
+
+        if resp.status_code == 405:
+            return -1, (
+                "查詢 API 被 CDN 封鎖（405）。\n"
+                "請確認是否從台灣 IP 執行，或改用在地部署。"
+            )
+
         resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "lxml")
+        data = resp.json()
 
-        # Step 3: 判斷有無可訂班次
-        # 方法一：找可點擊的訂票連結（非 disabled）
-        available = 0
-        for a in soup.select("a"):
-            classes = " ".join(a.get("class", []))
-            text = a.get_text(strip=True)
-            if ("disabled" not in classes) and any(kw in text for kw in ["立即訂票", "選擇", "訂票"]):
-                available += 1
+        if not data.get("success"):
+            return -1, f"API 回傳失敗：{data}"
 
-        # 方法二：找含「售完」的班次，用總班次數扣掉
-        if available == 0:
-            all_rows = soup.select("tr.rich-table-row, .result-item, [class*='train']")
-            sold_out = len(soup.find_all(string=lambda t: t and ("售完" in t or "額滿" in t)))
-            if all_rows and len(all_rows) > sold_out:
-                available = len(all_rows) - sold_out
+        trains = (
+            data.get("data", {})
+                .get("DepartureTable", {})
+                .get("TrainItem", [])
+        )
+        return len(trains), None
 
-        # 方法三：頁面有無「查無班次」訊息
-        no_result_keywords = ["查無班次", "查無資料", "無搜尋結果", "沒有符合"]
-        page_text = soup.get_text()
-        if any(kw in page_text for kw in no_result_keywords):
-            return 0, None
-
-        return available, None
-
+    except requests.exceptions.JSONDecodeError:
+        return -1, "API 回傳格式非 JSON，網站可能改版"
     except requests.RequestException as e:
         return -1, f"網路錯誤: {e}"
     except Exception as e:
@@ -194,21 +169,23 @@ class THSRBot:
 
                 if err:
                     self._log(f"查詢錯誤，稍後重試: {err}", "running")
-                    self._interruptible_sleep(5)
+                    # 被 WAF 封鎖時等久一點，避免被視為攻擊
+                    wait = 30 if "405" in (err or "") else 5
+                    self._interruptible_sleep(wait)
                     continue
 
                 if count > 0:
                     msg = (
-                        f"🚄 高鐵放票通知\n"
+                        f"高鐵放票通知\n"
                         f"{self.origin}→{self.destination}\n"
                         f"{self.config['date']}\n"
-                        f"找到 {count} 個可訂班次，趕快去搶！"
+                        f"找到 {count} 個可搭班次，趕快去搶！"
                     )
-                    self._log(f"找到 {count} 個可訂班次！", "found", found=True)
+                    self._log(f"找到 {count} 個可搭班次！", "found", found=True)
                     _tg_notify(self.tg_token, self.tg_chat_id, msg)
                     break
                 else:
-                    self._log(f"第 {attempt} 次：無可用座位，{self.interval} 秒後再試...")
+                    self._log(f"第 {attempt} 次：無班次結果，{self.interval} 秒後再試...")
                     self._interruptible_sleep(self.interval)
         finally:
             self.running = False
