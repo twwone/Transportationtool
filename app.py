@@ -114,17 +114,41 @@ def status():
 
 @app.route("/api/go")
 def booking_go():
-    """點擊時即時生成 cipher 並 redirect 到高鐵時刻表預填頁。"""
-    from bot import _get_search_url
-    config = {
-        "origin_code": request.args.get("o", "TaiPei"),
-        "dest_code":   request.args.get("d", "ZuoYing"),
-        "date":        request.args.get("dt", ""),
-        "time_from":   request.args.get("t", "0000"),
-        "discount":    request.args.get("dis", ""),
-    }
-    url, _ = _get_search_url(config)
-    return flask_redirect(url)
+    """中繼訂票頁：顯示搜尋條件與班次，提供 IRS 訂票按鈕。"""
+    import json
+    from bot import STATIONS, DISCOUNT_OPTIONS, TIME_OPTIONS
+    o   = request.args.get("o", "TaiPei")
+    d   = request.args.get("d", "ZuoYing")
+    dt  = request.args.get("dt", "")
+    t   = request.args.get("t", "0000")
+    tt  = request.args.get("tt", "2359")
+    dis = request.args.get("dis", "")
+    st  = request.args.get("st", "1")
+    adult = request.args.get("adult", "1")
+    trains_raw = request.args.get("trains", "")
+
+    origin_name = next((k for k, v in STATIONS.items() if v == o), o)
+    dest_name   = next((k for k, v in STATIONS.items() if v == d), d)
+    time_from   = "不限" if t == "0000" else f"{t[:2]}:{t[2:]}"
+    time_to     = "不限" if tt == "2359" else f"{tt[:2]}:{tt[2:]}"
+    seat_label  = "商務" if st == "2" else "標準"
+    disc_name   = next((k for k, v in DISCOUNT_OPTIONS.items() if v == dis), "全票")
+
+    trains = []
+    try:
+        trains = json.loads(trains_raw) if trains_raw else []
+    except Exception:
+        pass
+
+    display_trains = trains[:5]
+    extra_count    = max(0, len(trains) - 5)
+
+    return render_template("go.html",
+        origin=origin_name, dest=dest_name,
+        date=dt, time_from=time_from, time_to=time_to,
+        seat_label=seat_label, adult=adult, disc_name=disc_name,
+        trains=display_trains, extra_count=extra_count,
+    )
 
 
 @app.route("/api/test_encrypt")

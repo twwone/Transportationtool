@@ -301,13 +301,19 @@ class THSRBot:
                                 if len(trains) > 5:
                                     lines += f"\n...另有 {len(trains)-5} 班"
                                 if self.base_url:
+                                    import json as _json
+                                    trains_json = quote(_json.dumps(trains[:5], ensure_ascii=False), safe='')
                                     booking_url = (
                                         f"{self.base_url}/api/go"
                                         f"?o={self.config['origin_code']}"
                                         f"&d={self.config['dest_code']}"
                                         f"&dt={quote(self.config['date'], safe='')}"
                                         f"&t={self.config['time_from']}"
+                                        f"&tt={self.config.get('time_to', '2359')}"
                                         f"&dis={quote(self.config.get('discount', ''), safe='')}"
+                                        f"&st={self.config.get('seat_type', '1')}"
+                                        f"&adult={self.config.get('adult', 1)}"
+                                        f"&trains={trains_json}"
                                     )
                                 else:
                                     booking_url, enc_err = _get_search_url(self.config)
