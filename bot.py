@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import time
 import requests
+from urllib.parse import quote
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 STATIONS = {
@@ -120,6 +121,43 @@ def _fmt_train(t: dict) -> str:
     return f"・{num}  {dep}→{arr}（{dur}）{free_str}{disc_str}"
 
 
+def _get_search_url(config: dict) -> tuple[str, str | None]:
+    """用 requests 直接呼叫 /TimeTable/Encrypt，取得預填搜尋 URL。
+    Returns (url, error_or_None)."""
+    tf = config["time_from"]
+    time_str = "00:00" if tf == "0000" else f"{tf[:2]}:{tf[2:]}"
+    plain = (
+        f"?startStation={config['origin_code']}"
+        f"&endStation={config['dest_code']}"
+        f"&typesofticket=tot-1"
+        f"&outWardDate={config['date']}"
+        f"&outWardTime={time_str}"
+        f"&returnDate=&returnTime="
+        f"&offer={config.get('discount', '')}"
+    )
+    fallback = "https://irs.thsrc.com.tw/IMINT/?locale=tw"
+    try:
+        resp = requests.post(
+            f"{THSR_BASE}/TimeTable/Encrypt",
+            data={"plainText": plain},
+            headers={
+                "Referer": THSR_TIMETABLE,
+                "Origin": THSR_BASE,
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+            },
+            timeout=10,
+        )
+        data = resp.json()
+        cipher = data.get("cipherText", "")
+        if cipher:
+            return f"{THSR_TIMETABLE}?search={quote(cipher, safe='')}", None
+        return fallback, f"HTTP {resp.status_code} cipherText 為空: {str(data)[:100]}"
+    except Exception as e:
+        return fallback, f"{type(e).__name__}: {str(e)[:150]}"
+
+
 def _query_with_browser(browser, config: dict) -> tuple[list, str | None]:
     """每次查詢建立新分頁，查完直接 close()，避免殘留分頁狀態造成 TargetClosedError。"""
     page = _setup_page(browser)
@@ -155,7 +193,6 @@ def _query_with_browser(browser, config: dict) -> tuple[list, str | None]:
               .get("DepartureTable", {})
               .get("TrainItem", [])
     )
-
     time_to = config.get("time_to", "2359")
     filtered = [
         tr for tr in all_trains
@@ -262,12 +299,15 @@ class THSRBot:
                                 lines = "\n".join(_fmt_train(t) for t in trains[:5])
                                 if len(trains) > 5:
                                     lines += f"\n...另有 {len(trains)-5} 班"
+                                search_url, enc_err = _get_search_url(self.config)
+                                if enc_err:
+                                    self._log(f"[Encrypt 失敗] {enc_err}", "running")
                                 msg = (
                                     f"高鐵放票通知！\n"
                                     f"{self.origin} → {self.destination}｜{self.config['date']}\n"
                                     f"時段：{from_str} - {to_str}｜{seat_label}廂 {adult} 張｜{disc_name}\n"
                                     f"\n找到 {len(trains)} 班：\n{lines}\n"
-                                    f"\n立即訂票：\nhttps://irs.thsrc.com.tw/IMINT/?locale=tw"
+                                    f"\n立即訂票：\n{search_url}"
                                 )
                                 self._log(f"找到 {len(trains)} 班可搭車次！", "found", found=True)
                                 _tg_notify(self.tg_token, self.tg_chat_id, msg)

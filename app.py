@@ -109,6 +109,20 @@ def status():
     return jsonify(_status)
 
 
+@app.route("/api/test_encrypt")
+def test_encrypt():
+    from bot import _get_search_url, STATIONS
+    config = {
+        "origin_code": STATIONS.get(request.args.get("origin", "台北"), "TaiPei"),
+        "dest_code":   STATIONS.get(request.args.get("dest",   "左營"), "ZuoYing"),
+        "date":        request.args.get("date", "2026/06/20"),
+        "time_from":   request.args.get("time", "1000"),
+        "discount":    "",
+    }
+    url, err = _get_search_url(config)
+    return jsonify({"url": url, "error": err})
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")
