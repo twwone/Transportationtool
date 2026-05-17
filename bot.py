@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import time
 import requests
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 STATIONS = {
     "南港": "NanGang",
@@ -39,20 +40,8 @@ TIME_OPTIONS = {
     "22:00": "2200", "23:00": "2300",
 }
 
-THSR_BASE     = "https://www.thsrc.com.tw"
-THSR_SEARCH   = f"{THSR_BASE}/TimeTable/Search"
-THSR_TIMETABLE_PAGE = f"{THSR_BASE}/ArticleContent/a3b630bb-1066-4352-a1ef-58c7b4e8ef7c"
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-}
+THSR_BASE         = "https://www.thsrc.com.tw"
+THSR_TIMETABLE    = f"{THSR_BASE}/ArticleContent/a3b630bb-1066-4352-a1ef-58c7b4e8ef7c"
 
 
 def _tg_notify(bot_token: str, chat_id: str, message: str):
@@ -68,60 +57,72 @@ def _tg_notify(bot_token: str, chat_id: str, message: str):
         pass
 
 
-def _check_availability(session: requests.Session, config: dict) -> tuple[int, str | None]:
+_SEARCH_JS = """
+(params) => new Promise((resolve, reject) => {
+    $.ajax({
+        url: '/TimeTable/Search',
+        type: 'POST',
+        data: params,
+        dataType: 'json'
+    }).done(resolve).fail((xhr) => reject(xhr.status + ' ' + xhr.statusText));
+})
+"""
+
+
+def _check_availability(config: dict) -> tuple[int, str | None]:
+    """在 Playwright Chrome 頁面的 JS 環境內呼叫高鐵 Search API，繞過 CDN WAF。"""
     try:
-        # 造訪時刻表頁面取得 session cookie
-        session.get(THSR_TIMETABLE_PAGE, timeout=15)
-
-        # POST 新版 JSON 查詢 API
-        form_data = {
-            "SearchType":        "S",
-            "Lang":              "TW",
-            "StartStation":      config["origin_code"],
-            "EndStation":        config["dest_code"],
-            "OutWardSearchDate": config["date"],
-            "OutWardSearchTime": config["time_val"],
-            "ReturnSearchDate":  "",
-            "ReturnSearchTime":  "",
-            "DiscountType":      "",
-        }
-        resp = session.post(
-            THSR_SEARCH,
-            data=form_data,
-            headers={
-                "Referer":           THSR_TIMETABLE_PAGE,
-                "X-Requested-With":  "XMLHttpRequest",
-                "Accept":            "application/json, text/javascript, */*; q=0.01",
-                "Content-Type":      "application/x-www-form-urlencoded; charset=UTF-8",
-            },
-            timeout=20,
-        )
-
-        if resp.status_code == 405:
-            return -1, (
-                "查詢 API 被 CDN 封鎖（405）。\n"
-                "請確認是否從台灣 IP 執行，或改用在地部署。"
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
             )
+            page = browser.new_page()
 
-        resp.raise_for_status()
-        data = resp.json()
+            # 攔截 /TimeTable/Search 回應（用來確認 HTTP 狀態）
+            status_holder: list[int] = []
 
-        if not data.get("success"):
-            return -1, f"API 回傳失敗：{data}"
+            def handle_response(resp):
+                if "/TimeTable/Search" in resp.url:
+                    status_holder.append(resp.status)
+
+            page.on("response", handle_response)
+
+            # 載入時刻表頁（讓 jQuery 和 session cookie 就位）
+            page.goto(THSR_TIMETABLE, timeout=30000, wait_until="domcontentloaded")
+
+            # 透過頁面 JS 環境執行 jQuery AJAX（同源，不受 CDN WAF 攔截）
+            t = config["time_val"]
+            time_str = "00:00" if t == "0000" else f"{t[:2]}:{t[2:]}"
+
+            result = page.evaluate(_SEARCH_JS, {
+                "SearchType":        "S",
+                "Lang":              "TW",
+                "StartStation":      config["origin_code"],
+                "EndStation":        config["dest_code"],
+                "OutWardSearchDate": config["date"],
+                "OutWardSearchTime": time_str,
+                "ReturnSearchDate":  "",
+                "ReturnSearchTime":  "",
+                "DiscountType":      "",
+            })
+
+            browser.close()
+
+        if not result or not result.get("success"):
+            return -1, f"API 回傳失敗：{result}"
 
         trains = (
-            data.get("data", {})
-                .get("DepartureTable", {})
-                .get("TrainItem", [])
+            result.get("data", {})
+                  .get("DepartureTable", {})
+                  .get("TrainItem", [])
         )
         return len(trains), None
 
-    except requests.exceptions.JSONDecodeError:
-        return -1, "API 回傳格式非 JSON，網站可能改版"
-    except requests.RequestException as e:
-        return -1, f"網路錯誤: {e}"
+    except PWTimeout:
+        return -1, "Playwright 逾時（頁面載入超過 30 秒）"
     except Exception as e:
-        return -1, str(e)[:150]
+        return -1, str(e)[:200]
 
 
 class THSRBot:
@@ -156,22 +157,17 @@ class THSRBot:
 
     def run(self):
         self.running = True
-        session = requests.Session()
-        session.headers.update(HEADERS)
-
         attempt = 0
         try:
             while self.running:
                 attempt += 1
                 self._log(f"第 {attempt} 次查詢 {self.origin}→{self.destination} {self.config['date']}...")
 
-                count, err = _check_availability(session, self.config)
+                count, err = _check_availability(self.config)
 
                 if err:
                     self._log(f"查詢錯誤，稍後重試: {err}", "running")
-                    # 被 WAF 封鎖時等久一點，避免被視為攻擊
-                    wait = 30 if "405" in (err or "") else 5
-                    self._interruptible_sleep(wait)
+                    self._interruptible_sleep(10)
                     continue
 
                 if count > 0:
@@ -185,7 +181,7 @@ class THSRBot:
                     _tg_notify(self.tg_token, self.tg_chat_id, msg)
                     break
                 else:
-                    self._log(f"第 {attempt} 次：無班次結果，{self.interval} 秒後再試...")
+                    self._log(f"第 {attempt} 次：無班次，{self.interval} 秒後再試...")
                     self._interruptible_sleep(self.interval)
         finally:
             self.running = False
