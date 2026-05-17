@@ -213,6 +213,22 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
 
   let poll = null;
 
+  // 頁面載入時同步伺服器狀態，關掉網頁重開仍可按暫停
+  (async function init() {
+    try {
+      const data = await (await fetch("/api/status")).json();
+      if (data.running || data.status === "running") {
+        document.getElementById("btnStart").disabled = true;
+        document.getElementById("btnStop").disabled  = false;
+        if (!poll) poll = setInterval(fetchStatus, 2000);
+      }
+      if (data.found) {
+        document.getElementById("foundBox").classList.add("show");
+      }
+      fetchStatus();
+    } catch(_) {}
+  })();
+
   async function startBot() {
     const origin      = document.getElementById("origin").value;
     const destination = document.getElementById("destination").value;

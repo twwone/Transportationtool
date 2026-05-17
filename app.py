@@ -9,6 +9,7 @@ app = Flask(__name__)
 
 _bot: THSRBot | None = None
 _thread: threading.Thread | None = None
+_lock = threading.Lock()
 _status = {
     "running": False,
     "status":  "idle",
@@ -19,14 +20,15 @@ _status = {
 
 
 def _update(status: str, message: str, found: bool = False):
-    _status["status"]  = status
-    _status["message"] = message
-    _status["found"]   = found
-    _status["running"] = status == "running"
-    ts = time.strftime("%H:%M:%S")
-    _status["log"].append(f"[{ts}] {message}")
-    if len(_status["log"]) > 100:
-        _status["log"] = _status["log"][-100:]
+    with _lock:
+        _status["status"]  = status
+        _status["message"] = message
+        _status["found"]   = found
+        _status["running"] = status == "running"
+        ts = time.strftime("%H:%M:%S")
+        _status["log"].append(f"[{ts}] {message}")
+        if len(_status["log"]) > 100:
+            _status["log"] = _status["log"][-100:]
 
 
 @app.route("/")
@@ -43,13 +45,6 @@ def index():
 def start():
     global _bot, _thread
 
-    # 雙重確認：狀態旗標 AND thread 仍存活
-    # bot crash 時 thread 已死但旗標可能卡在 True，需允許重新啟動
-    if _status["running"] and _thread is not None and _thread.is_alive():
-        return jsonify({"error": "機器人已在執行中"}), 400
-    if not (_thread is not None and _thread.is_alive()):
-        _status["running"] = False  # 補正卡住的狀態
-
     data = request.json or {}
     for f in ["origin", "destination", "date", "time", "seat_type", "adult"]:
         if not data.get(f):
@@ -57,9 +52,6 @@ def start():
 
     if data["origin"] == data["destination"]:
         return jsonify({"error": "出發站與到達站不能相同"}), 400
-
-    _status.update({"running": True, "status": "running",
-                    "message": "啟動中...", "found": False, "log": []})
 
     config = {
         "origin":      data["origin"],
@@ -73,19 +65,34 @@ def start():
         "tg_chat_id":  data.get("tg_chat_id", ""),
     }
 
-    _bot = THSRBot(config, _update)
-    _thread = threading.Thread(target=_bot.run, daemon=True)
-    _thread.start()
+    with _lock:
+        # bot crash 時 thread 已死但旗標可能卡在 True，需允許重新啟動
+        thread_alive = _thread is not None and _thread.is_alive()
+        if _status["running"] and thread_alive:
+            return jsonify({"error": "機器人已在執行中"}), 400
+        if not thread_alive:
+            _status["running"] = False
+
+        _status.update({"running": True, "status": "running",
+                        "message": "啟動中...", "found": False, "log": []})
+        _bot = THSRBot(config, _update)
+        _thread = threading.Thread(target=_bot.run, daemon=True)
+        _thread.start()
+
     return jsonify({"success": True})
 
 
 @app.route("/api/stop", methods=["POST"])
 def stop():
-    global _bot
-    if _bot:
-        _bot.stop()
-        _bot = None
-    _status.update({"running": False, "status": "stopped", "message": "使用者手動停止"})
+    global _bot, _thread
+    with _lock:
+        if _bot:
+            _bot.stop()
+            _bot = None
+        _status.update({"running": False, "status": "stopped", "message": "使用者手動停止"})
+    # 等舊 thread 真正結束，避免重啟時新舊 bot 同時寫 _status
+    if _thread is not None:
+        _thread.join(timeout=3)
     return jsonify({"success": True})
 
 

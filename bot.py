@@ -104,6 +104,7 @@ def _query_with_page(page, config: dict) -> tuple[int, str | None]:
     """在已存在的分頁上執行查詢，查完導回空白頁釋放記憶體。"""
     try:
         page.goto(THSR_TIMETABLE, timeout=30000, wait_until="domcontentloaded")
+        page.wait_for_function("typeof $ !== 'undefined'", timeout=15000)
 
         t = config["time_val"]
         time_str = "00:00" if t == "0000" else f"{t[:2]}:{t[2:]}"
@@ -154,6 +155,7 @@ class THSRBot:
         self.tg_chat_id  = config.get("tg_chat_id") or os.environ.get("TELEGRAM_CHAT_ID", "")
         self.callback    = status_callback
         self.running     = False
+        self._found      = False
 
     def stop(self):
         self.running = False
@@ -172,7 +174,7 @@ class THSRBot:
 
     def run(self):
         self.running = True
-        self._found  = False
+        self._found  = False  # reset per-run
         attempt = 0
         with sync_playwright() as p:
             browser = self._launch_browser(p)
@@ -219,10 +221,12 @@ class THSRBot:
 
                     if count > 0:
                         self._found = True
+                        seat_label = "商務" if self.config.get("seat_type") == "2" else "標準"
+                        adult = self.config.get("adult", 1)
                         msg = (
                             f"高鐵放票通知\n"
                             f"{self.origin}→{self.destination}\n"
-                            f"{self.config['date']}\n"
+                            f"{self.config['date']} | {seat_label}廂 {adult} 張\n"
                             f"找到 {count} 個可搭班次，趕快去搶！"
                         )
                         self._log(f"找到 {count} 個可搭班次！", "found", found=True)
