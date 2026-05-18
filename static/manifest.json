@@ -1,11 +1,11 @@
 {
-  "name": "高鐵刷票機器人",
-  "short_name": "高鐵刷票",
-  "description": "自動偵測高鐵放票，找到座位立即 Telegram 通知",
+  "name": "交通助理",
+  "short_name": "交通助理",
+  "description": "高鐵刷票 + 桃園機場捷運即時到站",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f13",
-  "theme_color": "#1a1a24",
+  "theme_color": "#0f0f13",
   "orientation": "portrait-primary",
   "icons": [
     {

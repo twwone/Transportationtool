@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>機場捷運</title>
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1218">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0d1218;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 0 0 48px;
+}
+
+/* ── 頂部 ── */
+.topbar {
+  background: #111820;
+  border-bottom: 1px solid #1e2a38;
+  padding: 16px 20px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-row1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.back-btn {
+  color: #3b82f6;
+  font-size: 0.85rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.topbar-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+}
+.refresh-info {
+  font-size: 0.7rem;
+  color: #334;
+}
+
+/* 方向切換 */
+.dir-toggle {
+  display: flex;
+  background: #0d1218;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+.dir-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #556;
+  background: transparent;
+}
+.dir-btn.active {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+
+/* 常用站快捷 */
+.home-station-bar {
+  padding: 12px 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hs-label { font-size: 0.72rem; color: #445; }
+.hs-chip {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #1e3a5f;
+  color: #60a5fa;
+  background: transparent;
+  cursor: pointer;
+}
+.hs-chip.active { background: #1e3a5f; }
+
+/* ── 主要內容 ── */
+.content { padding: 14px 16px; }
+
+/* 未設定 TDX 提示 */
+.setup-banner {
+  background: #1a1f28;
+  border: 1px solid #2a3848;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  color: #778;
+  line-height: 1.7;
+}
+.setup-banner strong { color: #60a5fa; display: block; margin-bottom: 8px; font-size: 0.9rem; }
+.setup-banner code {
+  background: #0d1218;
+  border: 1px solid #2a3848;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-family: "SF Mono", monospace;
+  font-size: 0.78rem;
+  color: #aaa;
+}
+
+/* 站點卡片 */
+.station-card {
+  background: #111820;
+  border: 1px solid #1e2a38;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+.station-card.home-highlight {
+  border-color: #1e3a5f;
+  background: #111c28;
+}
+.station-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.station-id {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #3b82f6;
+  background: #0d1a28;
+  border: 1px solid #1e3a5f;
+  border-radius: 6px;
+  padding: 2px 6px;
+  letter-spacing: 0.5px;
+}
+.station-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #dde;
+  flex: 1;
+}
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #334;
+  transition: color 0.15s;
+  padding: 2px;
+}
+.star-btn.starred { color: #facc15; }
+
+/* 班次列 */
+.trains-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.train-chip {
+  background: #0d1218;
+  border: 1px solid #1e2a38;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.train-type {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.train-type.express { color: #fb923c; }
+.train-type.local   { color: #60a5fa; }
+
+.train-countdown {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.train-time {
+  font-size: 0.65rem;
+  color: #445;
+}
+
+/* 倒數顏色 */
+.cnt-urgent  { color: #4ade80; }   /* < 3 分 */
+.cnt-soon    { color: #facc15; }   /* 3–8 分 */
+.cnt-normal  { color: #60a5fa; }   /* > 8 分 */
+.cnt-none    { color: #334; }      /* 無班次 */
+
+/* 更新中 spinner */
+.updating-bar {
+  text-align: center;
+  padding: 12px;
+  font-size: 0.72rem;
+  color: #334;
+}
+
+/* 底部更新倒數 */
+.refresh-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #111820;
+  border-top: 1px solid #1e2a38;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #334;
+}
+.refresh-bar button {
+  background: #1e3a5f;
+  border: none;
+  color: #60a5fa;
+  font-size: 0.72rem;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- 頂部 -->
+<div class="topbar">
+  <div class="topbar-row1">
+    <a href="/" class="back-btn">‹ 返回</a>
+    <span class="topbar-title">🚇 桃園機場捷運</span>
+    <span class="refresh-info" id="lastUpdate">—</span>
+  </div>
+  <div class="dir-toggle">
+    <button class="dir-btn active" id="btnDir0" onclick="setDir(0)">← 往台北</button>
+    <button class="dir-btn"        id="btnDir1" onclick="setDir(1)">往機場 / 中壢 →</button>
+  </div>
+</div>
+
+<!-- 常用站列 -->
+<div class="home-station-bar" id="homeBar">
+  <span class="hs-label">⭐ 常用站：</span>
+  <!-- 動態生成 -->
+</div>
+
+<!-- 主內容 -->
+<div class="content" id="content">
+  <div class="updating-bar">載入中...</div>
+</div>
+
+<!-- 底部更新列 -->
+<div class="refresh-bar">
+  <span id="refreshCountdown">—</span>
+  <button onclick="fetchNow()">立即更新</button>
+</div>
+
+<script>
+const STATIONS = {{ stations | tojson }};
+const HAS_TDX  = {{ has_tdx | tojson }};
+
+let direction   = 0;         // 0: 往台北, 1: 往桃園
+let liveData    = [];        // 最新 API 回應
+let starredId   = localStorage.getItem("mrt_starred") || "";
+let refreshTick = 30;
+let refreshTimer = null;
+
+// ── 初始化 ──
+(function init() {
+  renderHomeBar();
+  if (HAS_TDX) {
+    fetchNow();
+    startRefreshTimer();
+  } else {
+    renderNoTDX();
+  }
+})();
+
+// ── 方向切換 ──
+function setDir(d) {
+  direction = d;
+  document.getElementById("btnDir0").classList.toggle("active", d === 0);
+  document.getElementById("btnDir1").classList.toggle("active", d === 1);
+  renderStations();
+}
+
+// ── 常用站列 ──
+function renderHomeBar() {
+  const bar = document.getElementById("homeBar");
+  bar.innerHTML = '<span class="hs-label">⭐ 常用站：</span>';
+  if (!starredId) {
+    bar.innerHTML += '<span style="font-size:0.72rem;color:#334;">點各站 ☆ 設定</span>';
+    return;
+  }
+  const st = STATIONS.find(s => s.id === starredId);
+  if (!st) return;
+  const chip = document.createElement("button");
+  chip.className = "hs-chip active";
+  chip.textContent = st.name;
+  chip.onclick = () => scrollToStation(starredId);
+  bar.appendChild(chip);
+}
+
+function scrollToStation(id) {
+  const el = document.getElementById("card-" + id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// ── 取資料 ──
+async function fetchNow() {
+  refreshTick = 30;
+  try {
+    const resp = await fetch("/api/mrt/liveboard");
+    const json = await resp.json();
+    if (!json.configured) { renderNoTDX(); return; }
+    if (json.error)       { renderError(json.error); return; }
+    liveData = json.data || [];
+    document.getElementById("lastUpdate").textContent =
+      "更新 " + new Date().toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+    renderStations();
+  } catch(e) {
+    renderError(String(e));
+  }
+}
+
+function startRefreshTimer() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    refreshTick--;
+    document.getElementById("refreshCountdown").textContent =
+      `每 30 秒更新・${refreshTick} 秒後重整`;
+    if (refreshTick <= 0) fetchNow();
+  }, 1000);
+}
+
+// ── 渲染各站 ──
+function renderStations() {
+  const content = document.getElementById("content");
+  let html = "";
+
+  // 先顯示常用站（如果有）
+  const orderedStations = starredId
+    ? [
+        ...STATIONS.filter(s => s.id === starredId),
+        ...STATIONS.filter(s => s.id !== starredId),
+      ]
+    : STATIONS;
+
+  for (const st of orderedStations) {
+    const isHome = st.id === starredId;
+    const trains = getTrainsForStation(st.id, direction);
+    const express = trains.filter(t => t.TrainType === 1).slice(0, 2);
+    const local   = trains.filter(t => t.TrainType === 2).slice(0, 2);
+
+    html += `
+      <div class="station-card ${isHome ? "home-highlight" : ""}" id="card-${st.id}">
+        <div class="station-header">
+          <span class="station-id">${st.id}</span>
+          <span class="station-name">${st.name}</span>
+          <button class="star-btn ${isHome ? "starred" : ""}"
+                  onclick="toggleStar('${st.id}')" title="設為常用站">
+            ${isHome ? "★" : "☆"}
+          </button>
+        </div>
+        <div class="trains-row">
+          <div class="train-chip">
+            <span class="train-type express">直達車</span>
+            ${renderCountdowns(express)}
+          </div>
+          <div class="train-chip">
+            <span class="train-type local">普通車</span>
+            ${renderCountdowns(local)}
+          </div>
+        </div>
+      </div>`;
+  }
+  content.innerHTML = html;
+}
+
+function getTrainsForStation(stationId, dir) {
+  return liveData
+    .filter(t => t.StationID === stationId && t.Direction === dir)
+    .sort((a, b) => (a.EstimatedArrivalTime || 999) - (b.EstimatedArrivalTime || 999));
+}
+
+function renderCountdowns(trains) {
+  if (!trains.length) {
+    return '<span class="train-countdown cnt-none">—</span><span class="train-time">暫無班次</span>';
+  }
+  return trains.map(t => {
+    const mins = typeof t.EstimatedArrivalTime === "number"
+      ? t.EstimatedArrivalTime
+      : minutesFromNow(t.ScheduledArrivalTime);
+    const cls  = mins < 3 ? "cnt-urgent" : mins <= 8 ? "cnt-soon" : "cnt-normal";
+    const sched = formatHHMM(t.ScheduledArrivalTime || t.ScheduledDepartureTime);
+    return `<span class="train-countdown ${cls}">${mins} <small style="font-size:0.55em;font-weight:500">分</small></span>
+            <span class="train-time">班次 ${t.StationSequence || "—"}・預計 ${sched}</span>`;
+  }).join('<div style="margin-top:6px;border-top:1px solid #1e2a38;padding-top:6px">');
+}
+
+function minutesFromNow(isoStr) {
+  if (!isoStr) return 999;
+  const diff = (new Date(isoStr) - Date.now()) / 60000;
+  return Math.max(0, Math.round(diff));
+}
+
+function formatHHMM(isoStr) {
+  if (!isoStr) return "—";
+  const d = new Date(isoStr);
+  if (isNaN(d)) return isoStr.slice(11, 16) || "—";
+  return d.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit"});
+}
+
+// ── 常用站切換 ──
+function toggleStar(id) {
+  starredId = starredId === id ? "" : id;
+  localStorage.setItem("mrt_starred", starredId);
+  renderHomeBar();
+  renderStations();
+}
+
+// ── 未設定 TDX ──
+function renderNoTDX() {
+  document.getElementById("content").innerHTML = `
+    <div class="setup-banner">
+      <strong>⚙️ 需要設定 TDX API 金鑰才能顯示即時資料</strong>
+      1. 前往 <b>tdx.transportdata.tw</b> 免費註冊<br>
+      2. 取得 <code>client_id</code> 和 <code>client_secret</code><br>
+      3. 在 Railway 環境變數新增：<br>
+      &nbsp;&nbsp;<code>TDX_CLIENT_ID</code> = 你的 client_id<br>
+      &nbsp;&nbsp;<code>TDX_CLIENT_SECRET</code> = 你的 client_secret<br>
+      4. 重新部署即可
+    </div>`;
+}
+
+function renderError(msg) {
+  document.getElementById("content").innerHTML =
+    `<div class="setup-banner"><strong>⚠️ 資料載入失敗</strong>${msg}</div>`;
+}
+</script>
+</body>
+</html>
