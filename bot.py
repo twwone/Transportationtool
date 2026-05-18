@@ -214,6 +214,17 @@ def _book_ticket(browser, config: dict, log_fn=None) -> tuple[bytes | None, str 
         cipher_url, _ = _get_search_url(config)
         _step("前往高鐵時刻表...")
         page.goto(cipher_url, timeout=30000, wait_until="domcontentloaded")
+
+        # 處理 Cookie 同意彈窗
+        try:
+            agree_btn = page.locator("button:has-text('我同意')").first
+            agree_btn.wait_for(state="visible", timeout=4000)
+            agree_btn.click()
+            _step("已關閉 Cookie 同意視窗")
+            time.sleep(1)
+        except Exception:
+            pass  # 沒有彈窗就繼續
+
         time.sleep(2)  # 等 JS 渲染班次結果
 
         # 先截圖結果頁（不管後續是否成功都有東西看）
