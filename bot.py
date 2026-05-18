@@ -162,6 +162,112 @@ def _get_search_url(config: dict) -> tuple[str, str | None]:
         return fallback, f"{type(e).__name__}: {str(e)[:150]}"
 
 
+_BOOKING_ID_SELECTORS = [
+    "#idNumber", "input[name='idNumber']", "input[name='TempOrderIdNumber']",
+    "input[name*='IdNumber']", "input[placeholder*='身分證']",
+]
+_BOOKING_PHONE_SELECTORS = [
+    "#mobilePhone", "input[name='mobilePhone']", "input[name='TempMobilePhone']",
+    "input[name*='Mobile']", "input[name*='Phone']",
+    "input[placeholder*='手機']", "input[placeholder*='電話']",
+]
+_BOOKING_EMAIL_SELECTORS = [
+    "#email", "input[name='email']", "input[name='TempContactEmail']",
+    "input[type='email']", "input[name*='Email']",
+]
+_BOOKING_BTN_SELECTORS = [
+    "a:has-text('立即訂票')", "a:has-text('訂票')",
+    "button:has-text('訂票')", "a[href*='IMINT']",
+    ".btn-book", ".booking-btn",
+]
+
+
+def _fill_field(page, selectors: list, value: str) -> bool:
+    for sel in selectors:
+        try:
+            el = page.locator(sel).first
+            el.wait_for(state="visible", timeout=2000)
+            el.fill(value)
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def _book_ticket(browser, config: dict) -> tuple[bytes | None, str | None]:
+    """
+    前往 THSR 訂票頁自動填入身分證/電話/Email，停在付款頁前截圖。
+    回傳 (screenshot_bytes, error_or_None)。
+    """
+    page = _setup_page(browser)
+    try:
+        cipher_url, enc_err = _get_search_url(config)
+        page.goto(cipher_url, timeout=30000, wait_until="domcontentloaded")
+
+        clicked = False
+        for sel in _BOOKING_BTN_SELECTORS:
+            try:
+                btn = page.locator(sel).first
+                btn.wait_for(state="visible", timeout=6000)
+                btn.click()
+                clicked = True
+                break
+            except Exception:
+                continue
+
+        if not clicked:
+            ss = page.screenshot(full_page=True)
+            return ss, "找不到訂票按鈕（可能結果未載入或選擇器需更新）"
+
+        # 等待跳轉到訂票頁
+        try:
+            page.wait_for_url("**irs.thsrc**", timeout=15000)
+        except PWTimeout:
+            pass
+        page.wait_for_load_state("domcontentloaded", timeout=15000)
+
+        # 填入乘客資料
+        id_ok    = _fill_field(page, _BOOKING_ID_SELECTORS,    config.get("id_number", ""))
+        phone_ok = _fill_field(page, _BOOKING_PHONE_SELECTORS, config.get("phone", ""))
+        email    = config.get("email", "")
+        if email:
+            _fill_field(page, _BOOKING_EMAIL_SELECTORS, email)
+
+        ss = page.screenshot(full_page=True)
+        if not id_ok and not phone_ok:
+            return ss, "欄位填入失敗（高鐵網頁結構可能已更新）"
+        return ss, None
+
+    except Exception as e:
+        try:
+            ss = page.screenshot()
+        except Exception:
+            ss = None
+        return ss, f"{type(e).__name__}: {str(e)[:150]}"
+    finally:
+        try:
+            page.close()
+        except Exception:
+            pass
+
+
+def _tg_send_photo(bot_token: str, chat_id: str, photo_bytes: bytes, caption: str) -> str | None:
+    if not bot_token or not chat_id:
+        return "tg_token 或 tg_chat_id 為空"
+    try:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendPhoto",
+            data={"chat_id": chat_id, "caption": caption},
+            files={"photo": ("booking.png", photo_bytes, "image/png")},
+            timeout=30,
+        )
+        if not resp.ok:
+            return f"HTTP {resp.status_code}: {resp.text[:200]}"
+        return None
+    except Exception as e:
+        return f"{type(e).__name__}: {str(e)[:150]}"
+
+
 def _query_with_browser(browser, config: dict) -> tuple[list, str | None]:
     """每次查詢建立新分頁，查完直接 close()，避免殘留分頁狀態造成 TargetClosedError。"""
     page = _setup_page(browser)
@@ -216,6 +322,9 @@ class THSRBot:
             "seat_type":   config["seat_type"],
             "adult":       int(config["adult"]),
             "discount":    config.get("discount", ""),
+            "id_number":   config.get("id_number", ""),
+            "phone":       config.get("phone", ""),
+            "email":       config.get("email", ""),
         }
         self.origin      = config["origin"]
         self.destination = config["destination"]
@@ -338,6 +447,24 @@ class THSRBot:
                                     self._log(f"[TG] 送出失敗: {tg_err}", "running")
                                 elif has_tg:
                                     self._log("[TG] 通知已送出")
+
+                                # 自動填入乘客資料
+                                if self.config.get("id_number"):
+                                    self._log("開始自動填入乘客資料...")
+                                    ss, book_err = _book_ticket(browser, self.config)
+                                    if ss and has_tg:
+                                        caption = (
+                                            "✅ 乘客資料已自動填入，請確認截圖後完成付款"
+                                            if not book_err
+                                            else f"⚠️ 自動填入中斷：{book_err}\n請參考截圖手動繼續"
+                                        )
+                                        photo_err = _tg_send_photo(self.tg_token, self.tg_chat_id, ss, caption)
+                                        if photo_err:
+                                            self._log(f"[TG] 截圖傳送失敗: {photo_err}")
+                                        else:
+                                            self._log("[TG] 訂票截圖已傳送")
+                                    if book_err:
+                                        self._log(f"[訂票] {book_err}")
                             else:
                                 self._log(
                                     f"第 {attempt} 次：時段內無班次，{self.interval} 秒後再試..."

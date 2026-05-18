@@ -74,6 +74,9 @@ def start():
         "tg_token":    data.get("tg_token", ""),
         "tg_chat_id":  data.get("tg_chat_id", ""),
         "base_url":    _base_url,
+        "id_number":   data.get("id_number", ""),
+        "phone":       data.get("phone", ""),
+        "email":       data.get("email", ""),
     }
 
     with _lock:
