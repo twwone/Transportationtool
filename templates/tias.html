@@ -206,9 +206,8 @@ body {
   border-color: #bfdbfe;
 }
 .res-icon-lbl {
-  font-size: 0.6rem; font-weight: 700; color: #8e8e93;
-  text-transform: uppercase; letter-spacing: 0.3px;
-  margin-bottom: 5px;
+  font-size: 0.82rem; font-weight: 600; color: #636366;
+  margin-bottom: 6px;
 }
 .res-val {
   font-size: 1.5rem; font-weight: 800;
@@ -430,7 +429,7 @@ function buildResBlock(icon, label, value, highlight) {
     : 'res-val tba';
   const blockCls = highlight && hasVal ? 'res-block res-highlighted' : 'res-block';
   return `<div class="${blockCls}">
-    <div class="res-icon-lbl">${icon} ${label}</div>
+    <div class="res-icon-lbl">${label}</div>
     <div class="${valCls}">${hasVal ? value : '待定'}</div>
   </div>`;
 }
