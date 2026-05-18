@@ -232,14 +232,22 @@ def _get_mrt_data(token: str):
 
 @app.route("/api/mrt/siri")
 def mrt_siri():
-    fallback = {"siri_message": "抱歉，目前無法取得機場捷運即時資料，請稍後再試。"}
+    use_text = bool(request.args.get("text"))
+    fallback_msg = "抱歉，目前無法取得機場捷運即時資料，請稍後再試。"
+
+    def _resp(msg):
+        if use_text:
+            from flask import Response
+            return Response(msg, mimetype="text/plain; charset=utf-8")
+        return jsonify({"siri_message": msg})
+
     token = _get_tdx_token()
     if not token:
-        return jsonify(fallback)
+        return _resp(fallback_msg)
 
     data = _get_mrt_data(token)
     if not data:
-        return jsonify(fallback)
+        return _resp(fallback_msg)
 
     trains = [
         t for t in data
@@ -247,7 +255,7 @@ def mrt_siri():
         and t.get("Direction") == _SIRI_DIRECTION
     ]
     if not trains:
-        return jsonify({"siri_message": f"目前 {_SIRI_STATION_NAME} {_SIRI_DIR_LABEL} 無即時班次資料。"})
+        return _resp(f"目前 {_SIRI_STATION_NAME} {_SIRI_DIR_LABEL} 無即時班次資料。")
 
     now_ts = time.time()
     best, best_mins = None, None
@@ -268,7 +276,7 @@ def mrt_siri():
             continue
 
     if best is None:
-        return jsonify({"siri_message": f"目前 {_SIRI_STATION_NAME} {_SIRI_DIR_LABEL} 無即時班次資料。"})
+        return _resp(f"目前 {_SIRI_STATION_NAME} {_SIRI_DIR_LABEL} 無即時班次資料。")
 
     type_raw = best.get("TrainTypeName", {})
     train_type = type_raw.get("Zh_tw", "列車") if isinstance(type_raw, dict) else str(type_raw or "列車")
@@ -279,7 +287,7 @@ def mrt_siri():
     else:
         msg = f"下一班{_SIRI_DIR_LABEL}的{train_type}還有 {mins} 分鐘進站，請把握時間。"
 
-    return jsonify({"siri_message": msg})
+    return _resp(msg)
 
 @app.route("/api/mrt/liveboard")
 def mrt_liveboard():
