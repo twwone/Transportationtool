@@ -228,6 +228,27 @@ def mrt_liveboard():
         return jsonify({"error": str(e), "configured": True}), 500
 
 
+# ──────────────────────────────────────────────
+#  Widget 個人設定儲存
+# ──────────────────────────────────────────────
+_widget_configs: dict = {}
+
+@app.route("/api/widget-config/<key>", methods=["GET"])
+def widget_config_get(key):
+    cfg = _widget_configs.get(key)
+    if not cfg:
+        return jsonify({"error": "找不到設定"}), 404
+    return jsonify(cfg)
+
+@app.route("/api/widget-config/<key>", methods=["POST"])
+def widget_config_set(key):
+    body = request.get_json(silent=True) or {}
+    station  = body.get("station", "A1")
+    direction = int(body.get("direction", 0))
+    _widget_configs[key] = {"station": station, "direction": direction}
+    return jsonify({"ok": True})
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")

@@ -116,17 +116,20 @@ pre {
 </head>
 <body>
 
+<a href="/" style="display:inline-block;margin-bottom:16px;font-size:0.95rem;color:#7c3aed;text-decoration:none;">‹ 返回</a>
+
 <h1>🚇 機場捷運 Widget</h1>
 <p class="sub">Scriptable App 設定頁</p>
 
 <!-- 步驟說明 -->
 <div class="card">
-  <div class="card-label">使用步驟</div>
+  <div class="card-label">使用步驟（只需設定一次）</div>
   <div class="steps">
     <div class="step">從 App Store 下載 <a href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank">Scriptable</a>（免費）</div>
     <div class="step">選擇下方車站和方向後，按「複製程式碼」</div>
     <div class="step">開啟 Scriptable → 右上角 ＋ → 貼上 → 儲存</div>
     <div class="step">長按主畫面 → 新增 Widget → Scriptable → 選 Medium</div>
+    <div class="step" style="color:#7c3aed;font-weight:600;">之後改站只要回這頁重新選，Widget 自動更新，不用再貼程式碼</div>
   </div>
 </div>
 
@@ -170,14 +173,25 @@ pre {
 
 <!-- 程式碼 -->
 <div class="card">
-  <div class="card-label">程式碼（複製後貼到 Scriptable）</div>
+  <div class="card-label">程式碼（只需複製一次貼到 Scriptable）</div>
   <pre id="codeBox"></pre>
   <button class="copy-btn" id="copyBtn" onclick="copyCode()">複製程式碼</button>
-  <p class="note">複製後開啟 Scriptable，點右上角 ＋ 貼上</p>
+  <p class="note" id="saveNote">選好站後程式碼自動更新，複製貼上一次即可</p>
 </div>
 
 <script>
 const APP_URL = window.location.origin;
+
+// 產生或讀取個人識別碼
+function getMyKey() {
+  let k = localStorage.getItem("widget_key");
+  if (!k) {
+    k = Math.random().toString(36).slice(2, 10);
+    localStorage.setItem("widget_key", k);
+  }
+  return k;
+}
+const MY_KEY = getMyKey();
 
 const STATION_NAMES = {
   A1:"台北車站", A2:"三重站", A3:"新北產業園區站", A4:"新莊副都心站",
@@ -187,12 +201,11 @@ const STATION_NAMES = {
   A17:"領航站", A18:"高鐵桃園站", A19:"桃園體育園區站", A20:"興南站", A21:"環北站"
 };
 
-function generateCode(stationId, direction) {
+function generateCode() {
+  const configUrl = `${APP_URL}/api/widget-config/${MY_KEY}`;
   return `// 桃園機場捷運 Widget（Scriptable）
-// ── 設定 ────────────────────────────
-const APP_URL    = "${APP_URL}";
-const STATION_ID = "${stationId}";  // ${STATION_NAMES[stationId]}
-const DIRECTION  = ${direction};        // ${direction == 0 ? "0:往台北" : "1:往機場/中壢"}
+// ── 只需設定這一行，改站請到網頁重新選 ──
+const CONFIG_URL = "${configUrl}";
 // ─────────────────────────────────────
 
 const STATION_NAMES = {
@@ -221,9 +234,17 @@ function cntColor(m) {
   return m < 3 ? C.urgent : m <= 8 ? C.soon : C.normal;
 }
 
-async function fetchTrains() {
+async function fetchConfig() {
   try {
-    const req = new Request(APP_URL + "/api/mrt/liveboard");
+    const req = new Request(CONFIG_URL);
+    req.timeoutInterval = 5;
+    return await req.loadJSON();
+  } catch(e) { return null; }
+}
+
+async function fetchTrains(appUrl) {
+  try {
+    const req = new Request(appUrl + "/api/mrt/liveboard");
     req.timeoutInterval = 8;
     const json = await req.loadJSON();
     if (!json.configured || json.error) return null;
@@ -268,8 +289,21 @@ async function buildWidget() {
   const w = new ListWidget();
   w.backgroundColor = C.bg;
   w.setPadding(14, 16, 12, 16);
-  w.url = APP_URL + "/mrt";
   w.refreshAfterDate = new Date(Date.now() + 60000);
+
+  // 從伺服器讀取個人設定
+  const cfg = await fetchConfig();
+  if (!cfg || cfg.error) {
+    w.url = CONFIG_URL.replace("/api/widget-config/", "/widget-setup");
+    const err = w.addText("⚠️ 請先到網頁設定車站");
+    err.font = Font.systemFont(13);
+    err.textColor = C.sub;
+    return w;
+  }
+  const STATION_ID = cfg.station;
+  const DIRECTION  = cfg.direction;
+  const APP_BASE   = CONFIG_URL.split("/api/")[0];
+  w.url = APP_BASE + "/mrt";
 
   const hdr = w.addStack();
   hdr.layoutHorizontally();
@@ -292,7 +326,7 @@ async function buildWidget() {
   dir.textColor = C.sub;
   w.addSpacer(10);
 
-  const data = await fetchTrains();
+  const data = await fetchTrains(APP_BASE);
   if (!data) {
     const err = w.addText("⚠️ 無法取得資料");
     err.font = Font.systemFont(12);
@@ -333,10 +367,24 @@ if (config.runsInWidget) {
 Script.complete();`;
 }
 
-function updateCode() {
+async function updateCode() {
   const station   = document.getElementById("stationSel").value;
   const direction = document.getElementById("dirSel").value;
-  document.getElementById("codeBox").textContent = generateCode(station, direction);
+  document.getElementById("codeBox").textContent = generateCode();
+  // 自動儲存設定到伺服器
+  const note = document.getElementById("saveNote");
+  try {
+    await fetch(`${APP_URL}/api/widget-config/${MY_KEY}`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({station, direction: parseInt(direction)}),
+    });
+    note.textContent = "✓ 設定已儲存，Widget 下次更新時自動套用";
+    note.style.color = "#16a34a";
+  } catch(e) {
+    note.textContent = "⚠️ 儲存失敗，請確認網路連線";
+    note.style.color = "#dc2626";
+  }
 }
 
 async function copyCode() {
