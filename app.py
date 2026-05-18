@@ -393,6 +393,25 @@ def _fetch_tias(token: str):
         _tias_cache["expires_at"] = time.time() + _TIAS_TTL
     return arr, dep
 
+@app.route("/api/tias/debug")
+def tias_debug():
+    """暫時用於診斷：回傳 TDX 原始資料（前 5 筆）與錯誤訊息"""
+    token = _get_tdx_token()
+    if not token:
+        return jsonify({"error": "TDX token 取得失敗，請確認 TDX_CLIENT_ID / TDX_CLIENT_SECRET"})
+    hdr  = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    base = f"https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/{_TIAS_AIRPORT}"
+    p    = {"$format": "JSON", "$top": "5"}
+    result = {}
+    for route in ("Arrival", "Departure"):
+        url = f"{base}/{route}"
+        try:
+            r = _requests.get(url, headers=hdr, params=p, timeout=10)
+            result[route] = {"status": r.status_code, "data": r.json()}
+        except Exception as e:
+            result[route] = {"error": str(e)}
+    return jsonify(result)
+
 @app.route("/tias")
 def tias():
     return render_template("tias.html")
