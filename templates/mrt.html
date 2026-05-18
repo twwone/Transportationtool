@@ -98,7 +98,14 @@ body {
 .hs-chip.active { background: #1e3a5f; }
 
 /* ── 主要內容 ── */
-.content { padding: 14px 16px; }
+.content {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
 
 /* 未設定 TDX 提示 */
 .setup-banner {
@@ -282,26 +289,23 @@ let refreshTick = 30;
 let refreshTimer = null;
 
 // ── Demo 模擬資料 ──
+let _demoStart = 0;   // Date.now() when data was generated
+
 function generateDemoData() {
-  const now = Date.now();
+  _demoStart = Date.now();
   const rows = [];
-  const stationIds = STATIONS.map(s => s.id);
-  // 每站、每方向、直達(1)+普通(2)，各產生 2 班
-  stationIds.forEach((sid, si) => {
+  STATIONS.forEach((st, si) => {
     [0, 1].forEach(dir => {
       [1, 2].forEach(type => {
-        // 依站序偏移，讓各站間隔合理
-        const base1 = ((si * 7 + type * 3 + dir * 11) % 18) + 1;
-        const base2 = base1 + ((type === 1) ? 18 : 15);
-        [base1, base2].forEach((mins, bi) => {
-          const dep = new Date(now + mins * 60000);
+        const base1 = ((si * 7 + type * 3 + dir * 11) % 18) + 2;
+        const base2 = base1 + (type === 1 ? 18 : 15);
+        [base1, base2].forEach(mins => {
           rows.push({
-            StationID:            sid,
-            Direction:            dir,
-            TrainType:            type,
-            EstimatedArrivalTime: mins,
-            ScheduledArrivalTime: dep.toISOString(),
-            StationSequence:      si + 1,
+            StationID:       st.id,
+            Direction:       dir,
+            TrainType:       type,
+            _baseMins:       mins,   // 生成時的整數分鐘
+            StationSequence: si + 1,
           });
         });
       });
@@ -310,19 +314,17 @@ function generateDemoData() {
   return rows;
 }
 
-// demo 模式每秒倒數
+// 取得目前剩餘分鐘（整數）
+function demoMins(t) {
+  const elapsed = (Date.now() - _demoStart) / 60000;
+  return Math.max(0, Math.round(t._baseMins - elapsed));
+}
+
+// demo 模式每秒重繪
 let _demoTick = null;
 function startDemoTick() {
   if (_demoTick) return;
   _demoTick = setInterval(() => {
-    liveData = liveData.map(t => ({
-      ...t,
-      EstimatedArrivalTime: Math.max(0, t.EstimatedArrivalTime - 1/60),
-    }));
-    // 有班次歸零就重新生成
-    if (liveData.some(t => t.EstimatedArrivalTime < 0.1)) {
-      liveData = generateDemoData();
-    }
     renderStations();
     refreshTick--;
     document.getElementById("refreshCountdown").textContent =
@@ -455,7 +457,16 @@ function renderStations() {
 function getTrainsForStation(stationId, dir) {
   return liveData
     .filter(t => t.StationID === stationId && t.Direction === dir)
-    .sort((a, b) => (a.EstimatedArrivalTime || 999) - (b.EstimatedArrivalTime || 999));
+    .map(t => ({
+      ...t,
+      _mins: t._baseMins !== undefined
+        ? demoMins(t)
+        : Math.round(typeof t.EstimatedArrivalTime === "number"
+            ? t.EstimatedArrivalTime
+            : minutesFromNow(t.ScheduledArrivalTime)),
+    }))
+    .filter(t => t._mins >= 0)
+    .sort((a, b) => a._mins - b._mins);
 }
 
 function renderCountdowns(trains) {
@@ -463,13 +474,12 @@ function renderCountdowns(trains) {
     return '<span class="train-countdown cnt-none">—</span><span class="train-time">暫無班次</span>';
   }
   return trains.map(t => {
-    const mins = typeof t.EstimatedArrivalTime === "number"
-      ? t.EstimatedArrivalTime
-      : minutesFromNow(t.ScheduledArrivalTime);
-    const cls  = mins < 3 ? "cnt-urgent" : mins <= 8 ? "cnt-soon" : "cnt-normal";
+    const mins  = t._mins;
+    const cls   = mins < 3 ? "cnt-urgent" : mins <= 8 ? "cnt-soon" : "cnt-normal";
     const sched = formatHHMM(t.ScheduledArrivalTime || t.ScheduledDepartureTime);
+    const timeStr = t._baseMins !== undefined ? "" : `・預計 ${sched}`;
     return `<span class="train-countdown ${cls}">${mins} <small style="font-size:0.55em;font-weight:500">分</small></span>
-            <span class="train-time">班次 ${t.StationSequence || "—"}・預計 ${sched}</span>`;
+            <span class="train-time">班次 ${t.StationSequence || "—"}${timeStr}</span>`;
   }).join('<div style="margin-top:6px;border-top:1px solid #1e2a38;padding-top:6px">');
 }
 
