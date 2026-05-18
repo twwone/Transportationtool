@@ -22,7 +22,8 @@ body {
 .topbar {
   background: #ffffff;
   border-bottom: 1px solid #e5e5ea;
-  padding: 16px 20px 12px;
+  padding: 12px 20px 12px;
+  padding-top: max(12px, env(safe-area-inset-top) + 8px);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -79,7 +80,7 @@ body {
 
 /* 常用站快捷 */
 .home-station-bar {
-  padding: 12px 20px 0;
+  padding: 10px 0 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -235,6 +236,7 @@ body {
   background: #ffffff;
   border-top: 1px solid #e5e5ea;
   padding: 10px 20px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom) + 6px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -255,7 +257,7 @@ body {
 </head>
 <body>
 
-<!-- 頂部 -->
+<!-- 頂部（含常用站，整塊 sticky） -->
 <div class="topbar">
   <div class="topbar-row1">
     <a href="/" class="back-btn">‹ 返回</a>
@@ -266,12 +268,9 @@ body {
     <button class="dir-btn active" id="btnDir0" onclick="setDir(0)">← 往台北</button>
     <button class="dir-btn"        id="btnDir1" onclick="setDir(1)">往機場 / 中壢 →</button>
   </div>
-</div>
-
-<!-- 常用站列 -->
-<div class="home-station-bar" id="homeBar">
-  <span class="hs-label">⭐ 常用站：</span>
-  <!-- 動態生成 -->
+  <div class="home-station-bar" id="homeBar">
+    <span class="hs-label">⭐ 常用站：</span>
+  </div>
 </div>
 
 <!-- 主內容 -->
