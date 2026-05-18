@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import time
 import threading
+from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
 from flask import Flask, render_template, request, jsonify, redirect as flask_redirect
 from bot import THSRBot, STATIONS, TIME_OPTIONS, DISCOUNT_OPTIONS
@@ -201,6 +202,84 @@ def mrt():
 
 _mrt_cache: dict = {"data": None, "expires_at": 0.0}
 _mrt_lock = threading.Lock()
+
+# ─── Siri 通勤捷徑設定（依個人需求修改這四行）────────
+_SIRI_STATION_ID   = "A18"        # 站點代碼，例如 A18 = 高鐵桃園站
+_SIRI_STATION_NAME = "高鐵桃園站"  # 顯示用中文站名
+_SIRI_DIRECTION    = 0             # 0 = 往台北/機場方向；1 = 往環北方向
+_SIRI_DIR_LABEL    = "往機場"      # 訊息裡顯示的方向文字
+
+def _get_mrt_data(token: str):
+    """命中 30 秒快取就直接回傳，否則重打 TDX 並更新快取。"""
+    with _mrt_lock:
+        if _mrt_cache["data"] and time.time() < _mrt_cache["expires_at"]:
+            return _mrt_cache["data"]
+    try:
+        resp = _requests.get(
+            "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            params={"$format": "JSON"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        with _mrt_lock:
+            _mrt_cache["data"] = data
+            _mrt_cache["expires_at"] = time.time() + 30
+        return data
+    except Exception:
+        return None
+
+@app.route("/api/mrt/siri")
+def mrt_siri():
+    fallback = {"siri_message": "抱歉，目前無法取得機場捷運即時資料，請稍後再試。"}
+    token = _get_tdx_token()
+    if not token:
+        return jsonify(fallback)
+
+    data = _get_mrt_data(token)
+    if not data:
+        return jsonify(fallback)
+
+    trains = [
+        t for t in data
+        if t.get("StationID") == _SIRI_STATION_ID
+        and t.get("Direction") == _SIRI_DIRECTION
+    ]
+    if not trains:
+        return jsonify({"siri_message": f"目前 {_SIRI_STATION_NAME} {_SIRI_DIR_LABEL} 無即時班次資料。"})
+
+    now_ts = time.time()
+    best, best_mins = None, None
+    for t in trains:
+        raw = t.get("EstimatedArrivalTime", "")
+        if not raw:
+            continue
+        try:
+            arrival = _dt.fromisoformat(raw)
+            if arrival.tzinfo is None:
+                arrival = arrival.replace(tzinfo=_tz(_td(hours=8)))
+            mins = (arrival.timestamp() - now_ts) / 60
+            if mins < 0:
+                continue
+            if best_mins is None or mins < best_mins:
+                best_mins, best = mins, t
+        except Exception:
+            continue
+
+    if best is None:
+        return jsonify({"siri_message": f"目前 {_SIRI_STATION_NAME} {_SIRI_DIR_LABEL} 無即時班次資料。"})
+
+    type_raw = best.get("TrainTypeName", {})
+    train_type = type_raw.get("Zh_tw", "列車") if isinstance(type_raw, dict) else str(type_raw or "列車")
+
+    mins = round(best_mins)
+    if mins <= 0:
+        msg = f"下一班{_SIRI_DIR_LABEL}的{train_type}即將進站，請盡快前往月台。"
+    else:
+        msg = f"下一班{_SIRI_DIR_LABEL}的{train_type}還有 {mins} 分鐘進站，請把握時間。"
+
+    return jsonify({"siri_message": msg})
 
 @app.route("/api/mrt/liveboard")
 def mrt_liveboard():
