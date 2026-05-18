@@ -129,84 +129,89 @@ body {
   color: #6c6c70;
 }
 
-/* 站點卡片 */
-.station-card {
+/* 站點橫列 */
+.station-row {
   background: #ffffff;
   border: 1px solid #e5e5ea;
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-.station-card.home-highlight {
-  border-color: #c4b5fd;
-  background: #faf8ff;
-}
-.station-header {
+  border-radius: 12px;
+  padding: 11px 14px;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: border-color 0.15s;
+}
+.station-row.home-highlight {
+  border-color: #c4b5fd;
+  background: #faf8ff;
 }
 .station-id {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: #7c3aed;
   background: #f3f0ff;
   border: 1px solid #ddd6fe;
-  border-radius: 6px;
-  padding: 2px 6px;
+  border-radius: 5px;
+  padding: 2px 5px;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 .station-name {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #1c1c1e;
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .star-btn {
   background: none;
   border: none;
-  font-size: 1rem;
+  font-size: 0.95rem;
   cursor: pointer;
   color: #c7c7cc;
   transition: color 0.15s;
-  padding: 2px;
+  padding: 2px 4px;
+  flex-shrink: 0;
 }
 .star-btn.starred { color: #f59e0b; }
 
-/* 班次列 */
-.trains-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+/* 班次區（右側） */
+.trains-inline {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
-.train-chip {
-  background: #f9f9f9;
-  border: 1px solid #e5e5ea;
-  border-radius: 10px;
-  padding: 8px 10px;
+.train-pill {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  background: #f9f9f9;
+  border: 1px solid #e5e5ea;
+  border-radius: 8px;
+  padding: 5px 10px;
+  min-width: 52px;
+  gap: 1px;
 }
-.train-type {
-  font-size: 0.62rem;
+.train-label {
+  font-size: 0.58rem;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
-.train-type.express { color: #ea580c; }
-.train-type.local   { color: #7c3aed; }
+.train-label.express { color: #ea580c; }
+.train-label.local   { color: #7c3aed; }
 
 .train-countdown {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.1;
 }
 .train-time {
-  font-size: 0.65rem;
+  font-size: 0.58rem;
   color: #aeaeb2;
+  white-space: nowrap;
 }
 
 /* 倒數顏色 */
@@ -412,12 +417,11 @@ function startRefreshTimer() {
   }, 1000);
 }
 
-// ── 渲染各站 ──
+// ── 渲染各站（橫列式）──
 function renderStations() {
   const content = document.getElementById("content");
   let html = "";
 
-  // 先顯示常用站（如果有）
   const orderedStations = starredId
     ? [
         ...STATIONS.filter(s => s.id === starredId),
@@ -427,33 +431,40 @@ function renderStations() {
 
   for (const st of orderedStations) {
     const isHome = st.id === starredId;
-    const trains = getTrainsForStation(st.id, direction);
-    const express = trains.filter(t => t.TrainType === 1).slice(0, 2);
-    const local   = trains.filter(t => t.TrainType === 2).slice(0, 2);
+    const trains  = getTrainsForStation(st.id, direction);
+    const express = trains.filter(t => t.TrainType === 1)[0];
+    const local   = trains.filter(t => t.TrainType === 2)[0];
 
     html += `
-      <div class="station-card ${isHome ? "home-highlight" : ""}" id="card-${st.id}">
-        <div class="station-header">
-          <span class="station-id">${st.id}</span>
-          <span class="station-name">${st.name}</span>
-          <button class="star-btn ${isHome ? "starred" : ""}"
-                  onclick="toggleStar('${st.id}')" title="設為常用站">
-            ${isHome ? "★" : "☆"}
-          </button>
+      <div class="station-row ${isHome ? "home-highlight" : ""}" id="card-${st.id}">
+        <span class="station-id">${st.id}</span>
+        <span class="station-name">${st.name}</span>
+        <div class="trains-inline">
+          ${renderPill(express, "express", "直達")}
+          ${renderPill(local,   "local",   "普通")}
         </div>
-        <div class="trains-row">
-          <div class="train-chip">
-            <span class="train-type express">直達車</span>
-            ${renderCountdowns(express)}
-          </div>
-          <div class="train-chip">
-            <span class="train-type local">普通車</span>
-            ${renderCountdowns(local)}
-          </div>
-        </div>
+        <button class="star-btn ${isHome ? "starred" : ""}"
+                onclick="toggleStar('${st.id}')" title="設為常用站">
+          ${isHome ? "★" : "☆"}
+        </button>
       </div>`;
   }
   content.innerHTML = html;
+}
+
+function renderPill(train, typeClass, label) {
+  if (!train) {
+    return `<div class="train-pill">
+      <span class="train-label ${typeClass}">${label}</span>
+      <span class="train-countdown cnt-none">—</span>
+    </div>`;
+  }
+  const mins = train._mins;
+  const cls  = mins < 3 ? "cnt-urgent" : mins <= 8 ? "cnt-soon" : "cnt-normal";
+  return `<div class="train-pill">
+    <span class="train-label ${typeClass}">${label}</span>
+    <span class="train-countdown ${cls}">${mins}<small style="font-size:0.5em;font-weight:500"> 分</small></span>
+  </div>`;
 }
 
 function getTrainsForStation(stationId, dir) {
@@ -471,19 +482,6 @@ function getTrainsForStation(stationId, dir) {
     .sort((a, b) => a._mins - b._mins);
 }
 
-function renderCountdowns(trains) {
-  if (!trains.length) {
-    return '<span class="train-countdown cnt-none">—</span><span class="train-time">暫無班次</span>';
-  }
-  return trains.map(t => {
-    const mins  = t._mins;
-    const cls   = mins < 3 ? "cnt-urgent" : mins <= 8 ? "cnt-soon" : "cnt-normal";
-    const sched = formatHHMM(t.ScheduledArrivalTime || t.ScheduledDepartureTime);
-    const timeStr = t._baseMins !== undefined ? "" : `・預計 ${sched}`;
-    return `<span class="train-countdown ${cls}">${mins} <small style="font-size:0.55em;font-weight:500">分</small></span>
-            <span class="train-time">班次 ${t.StationSequence || "—"}${timeStr}</span>`;
-  }).join('<div style="margin-top:6px;border-top:1px solid #1e2a38;padding-top:6px">');
-}
 
 function minutesFromNow(isoStr) {
   if (!isoStr) return 999;
