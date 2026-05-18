@@ -215,29 +215,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
   </div>
 </div>
 
-<div class="card">
-  <div class="card-title">乘客資料（選填．找到票後自動填入訂票頁）</div>
-  <div class="row col2" style="margin-bottom:12px;">
-    <div>
-      <label>身分證字號</label>
-      <div style="position:relative;">
-        <input type="password" id="id_number" placeholder="A123456789" autocomplete="off">
-        <span onclick="toggleVis('id_number',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:0.8rem;color:#555;user-select:none;">顯示</span>
-      </div>
-    </div>
-    <div>
-      <label>聯絡電話</label>
-      <input type="tel" id="phone" placeholder="0912345678" autocomplete="off">
-    </div>
-  </div>
-  <div>
-    <label>電子郵件</label>
-    <input type="email" id="email" placeholder="you@example.com" autocomplete="off">
-  </div>
-  <div style="font-size:0.72rem;color:#444;margin-top:10px;">
-    ※ 資料僅存在本機 localStorage，不傳到任何伺服器。找到票後 Bot 自動填入訂票表單，截圖傳 Telegram，你再手動完成付款。
-  </div>
-</div>
 
 <div class="card">
   <div class="found-box" id="foundBox">🎉 找到座位！查看 Telegram 通知，趕快去訂票！</div>
@@ -255,17 +232,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
   let poll = null;
 
   // 還原上次填寫的欄位
-  ["tg_token", "tg_chat_id", "id_number", "phone", "email"].forEach(key => {
+  ["tg_token", "tg_chat_id"].forEach(key => {
     const el  = document.getElementById(key);
     const val = localStorage.getItem(key);
     if (el && val) el.value = val;
   });
-
-  function toggleVis(id, btn) {
-    const el = document.getElementById(id);
-    if (el.type === "password") { el.type = "text";     btn.textContent = "隱藏"; }
-    else                        { el.type = "password"; btn.textContent = "顯示"; }
-  }
 
   // 頁面載入時同步伺服器狀態，關掉網頁重開仍可按暫停
   (async function init() {
@@ -297,14 +268,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     const tg_token    = tgEl ? tgEl.value.trim() : "";
     const tgChatEl    = document.getElementById("tg_chat_id");
     const tg_chat_id  = tgChatEl ? tgChatEl.value.trim() : "";
-    const id_number   = (document.getElementById("id_number")?.value || "").trim();
-    const phone       = (document.getElementById("phone")?.value || "").trim();
-    const email       = (document.getElementById("email")?.value || "").trim();
     if (tg_token)    localStorage.setItem("tg_token",   tg_token);
     if (tg_chat_id)  localStorage.setItem("tg_chat_id", tg_chat_id);
-    if (id_number)   localStorage.setItem("id_number",  id_number);
-    if (phone)       localStorage.setItem("phone",       phone);
-    if (email)       localStorage.setItem("email",       email);
 
     if (!date)                        { alert("請選擇日期"); return; }
     if (origin === destination)       { alert("出發站與到達站不能相同"); return; }
@@ -312,7 +277,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); cur
     const res  = await fetch("/api/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ origin, destination, date, time_from, time_to, seat_type, discount, adult, interval, tg_token, tg_chat_id, id_number, phone, email }),
+      body: JSON.stringify({ origin, destination, date, time_from, time_to, seat_type, discount, adult, interval, tg_token, tg_chat_id }),
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
