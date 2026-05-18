@@ -220,6 +220,19 @@ body {
   font-size: 0.82rem; font-weight: 400;
   color: #c7c7cc; font-style: italic; line-height: 1.5;
 }
+/* 登機門變更 */
+.res-block.res-gate-changed {
+  background: #fff7ed; border-color: #f97316;
+}
+.res-changed { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.res-prev { font-size: 1.1rem; font-weight: 700; color: #9ca3af; text-decoration: line-through; }
+.res-chg-arrow { font-size: 0.9rem; font-weight: 700; color: #f97316; }
+.res-new  { font-size: 1.5rem; font-weight: 800; color: #c2410c; letter-spacing: -0.5px; line-height: 1; }
+/* 資料時間 */
+.card-updated {
+  font-size: 0.6rem; color: #c7c7cc;
+  text-align: right; margin-top: 8px;
+}
 
 /* ── TAT Section ── */
 .tat-wrap {
@@ -374,6 +387,8 @@ const MILESTONES = [
 let _arrData = [], _depData = [], _allArr = [], _allDep = [];
 let _tab = 'arr';
 let _searchTimer = null;
+let _prevGates = {};   // { FlightNumber: gate }
+let _gateChanges = {}; // { FlightNumber: { from, to } }
 
 /* ── 工具 ── */
 function fmtHHMM(iso) {
@@ -422,15 +437,28 @@ function buildTimeHtml(label, schIso, estIso, actIso) {
 }
 
 /* ── 資源大格 ── */
-function buildResBlock(icon, label, value, highlight) {
-  const hasVal = value && value.trim();
-  const valCls = hasVal
-    ? (value.length > 5 ? 'res-val res-val-sm' : 'res-val')
-    : 'res-val tba';
-  const blockCls = highlight && hasVal ? 'res-block res-highlighted' : 'res-block';
+function buildResBlock(icon, label, value, highlight, prevValue) {
+  const hasVal    = !!(value && value.trim());
+  const hasChanged = prevValue && hasVal && prevValue !== value;
+  const blockCls  = hasChanged
+    ? 'res-block res-gate-changed'
+    : (highlight && hasVal ? 'res-block res-highlighted' : 'res-block');
+
+  let valHtml;
+  if (hasChanged) {
+    valHtml = `<div class="res-changed">
+      <span class="res-prev">${prevValue}</span>
+      <span class="res-chg-arrow">→</span>
+      <span class="res-new">${value}</span>
+    </div>`;
+  } else {
+    const valCls = hasVal ? (value.length > 5 ? 'res-val res-val-sm' : 'res-val') : 'res-val tba';
+    valHtml = `<div class="${valCls}">${hasVal ? value : '待定'}</div>`;
+  }
+
   return `<div class="${blockCls}">
     <div class="res-icon-lbl">${label}</div>
-    <div class="${valCls}">${hasVal ? value : '待定'}</div>
+    ${valHtml}
   </div>`;
 }
 
@@ -521,19 +549,21 @@ function renderCard(f, mode, showDirBadge) {
     ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
     : '';
 
-  // Resources: 2-col grid
+  // Resources: 2-col grid（傳入舊登機門值做變更比對）
+  const prevGate = _gateChanges[fltNum] ? _gateChanges[fltNum].from : undefined;
   const resGrid = isArr
     ? `<div class="res-grid">
-        ${buildResBlock('🚪', '登機門', gate, true)}
-        ${buildResBlock('🧳', '行李轉盤', baggage, true)}
+        ${buildResBlock('', '登機門', gate, true, prevGate)}
+        ${buildResBlock('', '行李轉盤', baggage, true)}
        </div>`
     : `<div class="res-grid">
-        ${buildResBlock('🚪', '登機門', gate, true)}
-        ${buildResBlock('🎫', '報到櫃檯', counter, true)}
+        ${buildResBlock('', '登機門', gate, true, prevGate)}
+        ${buildResBlock('', '報到櫃檯', counter, true)}
        </div>`;
 
-  const timeHtml = buildTimeHtml(isArr ? 'STA' : 'STD', sch, est, act);
-  const tatHtml  = !isArr ? buildTAT(sch, est) : '';
+  const timeHtml   = buildTimeHtml(isArr ? 'STA' : 'STD', sch, est, act);
+  const tatHtml    = !isArr ? buildTAT(sch, est) : '';
+  const updatedAt  = f.UpdateTime ? fmtHHMM(f.UpdateTime) : '';
 
   return `<div class="${cardCls}">
     <div class="card-meta">
@@ -555,6 +585,7 @@ function renderCard(f, mode, showDirBadge) {
     ${timeHtml}
     ${resGrid}
     ${tatHtml}
+    ${updatedAt ? `<div class="card-updated">資料更新 ${updatedAt}</div>` : ''}
   </div>`;
 }
 
@@ -655,6 +686,23 @@ async function load() {
     _depData = data.departures    || [];
     _allArr  = data.all_arrivals  || [];
     _allDep  = data.all_departures || [];
+
+    // 登機門變更追蹤
+    const newGates = {};
+    [..._allArr, ..._allDep].forEach(f => {
+      const g = f.Gate || f.ArrivalGate || f.DepartureGate || '';
+      if (f.FlightNumber && g) newGates[f.FlightNumber] = g;
+    });
+    if (Object.keys(_prevGates).length) {
+      _gateChanges = {};
+      Object.keys(newGates).forEach(flt => {
+        const prev = _prevGates[flt];
+        if (prev && prev !== newGates[flt]) {
+          _gateChanges[flt] = { from: prev, to: newGates[flt] };
+        }
+      });
+    }
+    _prevGates = newGates;
 
     document.getElementById('listArr').innerHTML = _arrData.length
       ? _arrData.map(f => renderCard(f, 'arr')).join('')
