@@ -126,6 +126,14 @@ body {
   font-size: 0.7rem; color: #636366;
   background: #f2f2f7; padding: 3px 8px; border-radius: 6px;
 }
+.badge-actype {
+  font-size: 0.68rem; font-weight: 600; color: #636366;
+  background: #f2f2f7; padding: 3px 8px; border-radius: 6px;
+}
+.badge-actype-changed {
+  background: #fff7ed; color: #c2410c;
+  border: 1px solid #f97316;
+}
 
 /* ── 2. Hero row：航班號 + 目的地/出發地 ── */
 .card-hero {
@@ -387,8 +395,10 @@ const MILESTONES = [
 let _arrData = [], _depData = [], _allArr = [], _allDep = [];
 let _tab = 'arr';
 let _searchTimer = null;
-let _prevGates = {};   // { FlightNumber: gate }
-let _gateChanges = {}; // { FlightNumber: { from, to } }
+let _prevGates    = {};
+let _gateChanges  = {};
+let _prevAcTypes  = {};
+let _acTypeChanges = {};
 
 /* ── 工具 ── */
 function fmtHHMM(iso) {
@@ -530,6 +540,7 @@ function renderCard(f, mode, showDirBadge) {
   const baggage = f.BaggageClaim  || f.BaggageClaimBelt || '';
   const counter = f.CheckCounter  || f.CheckInCounter  || f.CheckInArea  || '';
   const terminal = f.Terminal     || f.ArrivalTerminal || f.DepartureTerminal || '';
+  const acType  = f.AcType || '';
   const status   = parseStatus(
     (isArr ? f.ArrivalRemark : f.DepartureRemark) || f.Remark || f.FlightStatus || ''
   );
@@ -549,8 +560,11 @@ function renderCard(f, mode, showDirBadge) {
     ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
     : '';
 
-  // Resources: 2-col grid（傳入舊登機門值做變更比對）
-  const prevGate = _gateChanges[fltNum] ? _gateChanges[fltNum].from : undefined;
+  const prevGate   = _gateChanges[fltNum]  ? _gateChanges[fltNum].from  : undefined;
+  const acTypeChg  = _acTypeChanges[fltNum];
+  const acTypeBadge = acTypeChg
+    ? `<span class="badge-actype badge-actype-changed">${acTypeChg.from} → ${acTypeChg.to}</span>`
+    : (acType ? `<span class="badge-actype">${acType}</span>` : '');
   const resGrid = isArr
     ? `<div class="res-grid">
         ${buildResBlock('', '登機門', gate, true, prevGate)}
@@ -570,6 +584,7 @@ function renderCard(f, mode, showDirBadge) {
       <span class="badge-airline">${airline}</span>
       ${dirBadge}
       <span class="badge-status st-${status.cls}">${status.label}</span>
+      ${acTypeBadge}
       ${terminal ? `<span class="badge-terminal">T${terminal}</span>` : ''}
     </div>
     <div class="card-hero">
@@ -713,6 +728,22 @@ async function load() {
       });
     }
     _prevGates = newGates;
+
+    // 機型變更追蹤
+    const newAcTypes = {};
+    [..._allArr, ..._allDep].forEach(f => {
+      if (f.FlightNumber && f.AcType) newAcTypes[f.FlightNumber] = f.AcType;
+    });
+    if (Object.keys(_prevAcTypes).length) {
+      _acTypeChanges = {};
+      Object.keys(newAcTypes).forEach(flt => {
+        const prev = _prevAcTypes[flt];
+        if (prev && prev !== newAcTypes[flt]) {
+          _acTypeChanges[flt] = { from: prev, to: newAcTypes[flt] };
+        }
+      });
+    }
+    _prevAcTypes = newAcTypes;
 
     document.getElementById('listArr').innerHTML = _arrData.length
       ? _arrData.map(f => renderCard(f, 'arr')).join('')
