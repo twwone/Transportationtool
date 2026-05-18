@@ -435,9 +435,12 @@ def _fetch_tias():
         with _tias_lock:
             return _tias_cache["arr"] or [], _tias_cache["dep"] or []
 
+_SKIP_EXTS = ('.svg','.png','.jpg','.gif','.woff','.woff2','.ttf','.js','.css','.ico','.map')
+_SKIP_HOSTS = ('fonts.gstatic','fonts.googleapis','google-analytics','facebook','doubleclick')
+
 @app.route("/api/tias/debug")
 def tias_debug():
-    """診斷：攔截機場頁面所有 JSON API 呼叫，找出航班資料端點"""
+    """診斷：捕捉所有非靜態資源 API 呼叫"""
     try:
         from playwright.sync_api import sync_playwright
         captured = []
@@ -454,21 +457,28 @@ def tias_debug():
 
             def on_response(response):
                 url = response.url
-                ct  = response.headers.get("content-type", "")
-                if "json" in ct or "xml" in ct or "csv" in ct:
-                    try:
-                        body = response.text()
-                        captured.append({"url": url, "content_type": ct, "body_preview": body[:800]})
-                    except Exception:
-                        captured.append({"url": url, "content_type": ct})
+                if any(url.endswith(e) for e in _SKIP_EXTS): return
+                if any(h in url for h in _SKIP_HOSTS): return
+                if '/assets/img/' in url or '/assets/fonts/' in url: return
+                ct = response.headers.get("content-type", "")
+                try:
+                    body = response.text()
+                    captured.append({
+                        "url": url,
+                        "status": response.status,
+                        "content_type": ct,
+                        "body_preview": body[:600],
+                    })
+                except Exception:
+                    captured.append({"url": url, "status": response.status, "content_type": ct})
 
             page.on("response", on_response)
             page.goto("https://www.taoyuan-airport.com/flight_arrival", timeout=30000)
             page.wait_for_load_state("networkidle", timeout=25000)
-            page.wait_for_timeout(5000)
+            page.wait_for_timeout(6000)
             browser.close()
 
-        return jsonify({"captured_requests": captured})
+        return jsonify({"total": len(captured), "requests": captured})
     except Exception as e:
         return jsonify({"error": str(e)})
 
