@@ -339,11 +339,10 @@ def mrt_liveboard():
 
 # ──────────────────────────────────────────────
 #  TIAS（航空資訊看板）
-#  資料來源：桃園機場股份有限公司開放資料 CSV（每 5 分鐘更新）
-#  https://odp.taoyuan-airport.com/dataset/2023081816?format=csv
+#  資料來源：TDX 交通部 FIDS 即時到離站 API
 # ──────────────────────────────────────────────
 
-# 可擴充的代理航空公司清單，未來直接在此新增 {"code": "XX", "name": "..."}
+# 可擴充：新增 {"code": "XX", "name": "..."} 即可納入過濾
 _TIAS_AIRLINES = [
     {"code": "AK", "name": "AirAsia"},
     {"code": "FD", "name": "Thai AirAsia"},
@@ -353,67 +352,84 @@ _TIAS_AIRLINES = [
     {"code": "D7", "name": "AirAsia X"},
     {"code": "XJ", "name": "Thai AirAsia X"},
 ]
-# Railway 環境變數 TIAS_GIST_ID 由中繼腳本第一次執行時產生
-_TIAS_GIST_ID = os.environ.get("TIAS_GIST_ID", "")
-_TIAS_TTL     = 60  # 秒
+_TIAS_CODES = {a["code"] for a in _TIAS_AIRLINES}
+_TIAS_TTL   = 30  # 秒，與 MRT 模組一致
 
 _tias_cache = {"arr": None, "dep": None, "expires_at": 0.0}
 _tias_lock  = threading.Lock()
 
+_TDX_FIDS = "https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport"
+
 def _fetch_tias():
+    """命中 30 秒快取就直接回傳，否則重打 TDX FIDS 並更新快取。"""
     with _tias_lock:
         if _tias_cache["arr"] is not None and time.time() < _tias_cache["expires_at"]:
-            return _tias_cache["arr"], _tias_cache["dep"]
+            return _tias_cache["arr"], _tias_cache["dep"], True
 
-    if not _TIAS_GIST_ID:
-        return [], []
+    token = _get_tdx_token()
+    if not token:
+        return None, None, False
 
-    try:
-        # 讀取 Mac 中繼腳本每 5 分鐘更新的 Gist JSON
-        gist_raw = f"https://gist.githubusercontent.com/raw/{_TIAS_GIST_ID}/tias.json"
-        resp = _requests.get(gist_raw, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-        arr = data.get("arrivals", [])
-        dep = data.get("departures", [])
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    params  = {"$format": "JSON", "$top": 400}
 
-        with _tias_lock:
-            _tias_cache["arr"] = arr
-            _tias_cache["dep"] = dep
-            _tias_cache["expires_at"] = time.time() + _TIAS_TTL
-        return arr, dep
-    except Exception:
-        with _tias_lock:
-            return _tias_cache["arr"] or [], _tias_cache["dep"] or []
+    def _get(direction: str):
+        try:
+            r = _requests.get(
+                f"{_TDX_FIDS}/{direction}/TPE",
+                headers=headers, params=params, timeout=12,
+            )
+            r.raise_for_status()
+            body = r.json()
+            return body if isinstance(body, list) else body.get("data", [])
+        except Exception:
+            return []
 
-@app.route("/api/tias/debug")
-def tias_debug():
-    """診斷：顯示 Gist 設定狀態與最新快取資料"""
-    arr, dep = _fetch_tias()
-    gist_id = _TIAS_GIST_ID or "(未設定 TIAS_GIST_ID)"
-    return jsonify({
-        "gist_id":     gist_id,
-        "gist_url":    f"https://gist.github.com/{gist_id}" if _TIAS_GIST_ID else None,
-        "cached_arr":  len(arr),
-        "cached_dep":  len(dep),
-        "sample_arr":  arr[:2],
-        "sample_dep":  dep[:2],
-        "cache_ok":    bool(arr or dep),
-    })
+    arr = _get("Arrival")
+    dep = _get("Departure")
+
+    with _tias_lock:
+        _tias_cache["arr"] = arr
+        _tias_cache["dep"] = dep
+        _tias_cache["expires_at"] = time.time() + _TIAS_TTL
+
+    return arr, dep, True
+
 
 @app.route("/tias")
 def tias():
     return render_template("tias.html")
 
+
 @app.route("/api/tias/flights")
 def tias_flights_api():
-    arr, dep = _fetch_tias()
+    arr_all, dep_all, ok = _fetch_tias()
+    if not ok:
+        return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
+
     return jsonify({
-        "configured":  True,
-        "arrivals":    arr,
-        "departures":  dep,
-        "airlines":    _TIAS_AIRLINES,
-        "updated_at":  time.strftime("%H:%M:%S"),
+        "configured":     True,
+        "arrivals":       [f for f in arr_all if f.get("AirlineID") in _TIAS_CODES],
+        "departures":     [f for f in dep_all if f.get("AirlineID") in _TIAS_CODES],
+        "all_arrivals":   arr_all,
+        "all_departures": dep_all,
+        "airlines":       _TIAS_AIRLINES,
+        "updated_at":     time.strftime("%H:%M:%S"),
+    })
+
+
+@app.route("/api/tias/debug")
+def tias_debug():
+    arr, dep, ok = _fetch_tias()
+    return jsonify({
+        "tdx_configured": ok,
+        "tdx_client_id":  bool(os.environ.get("TDX_CLIENT_ID")),
+        "cached_arr":     len(arr) if arr else 0,
+        "cached_dep":     len(dep) if dep else 0,
+        "airasia_arr":    len([f for f in (arr or []) if f.get("AirlineID") in _TIAS_CODES]),
+        "airasia_dep":    len([f for f in (dep or []) if f.get("AirlineID") in _TIAS_CODES]),
+        "sample_arr":     (arr or [])[:2],
+        "sample_dep":     (dep or [])[:2],
     })
 
 

@@ -59,6 +59,28 @@ body {
   padding: 6px 16px; font-size: 0.7rem; color: #aeaeb2;
 }
 
+/* ── Search (全航班 tab) ── */
+.search-wrap {
+  padding: 10px 12px 0;
+}
+.search-input {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid #e5e5ea; border-radius: 12px;
+  font-size: 0.95rem; color: #1c1c1e;
+  background: #fff;
+  outline: none; transition: border-color 0.15s;
+}
+.search-input:focus { border-color: #1a56db; }
+.search-hint {
+  text-align: center; padding: 44px 20px 0;
+  color: #aeaeb2; font-size: 0.82rem; line-height: 1.7;
+}
+.search-hint .hint-icon { font-size: 2.2rem; display: block; margin-bottom: 10px; }
+.search-count {
+  padding: 6px 12px 2px;
+  font-size: 0.7rem; color: #aeaeb2;
+}
+
 /* ── List ── */
 .list { padding: 0 12px; }
 
@@ -81,6 +103,8 @@ body {
   font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px;
   padding: 3px 8px; border-radius: 6px;
 }
+.badge-dir-arr { background: #d1fae5; color: #065f46; font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+.badge-dir-dep { background: #eff6ff; color: #1e40af; font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
 .flt-num { font-size: 1.2rem; font-weight: 700; flex: 1; }
 .badge-terminal {
   font-size: 0.7rem; color: #636366;
@@ -153,7 +177,6 @@ body {
 .tat-headline {
   display: flex; align-items: center; gap: 7px; margin-bottom: 9px;
 }
-.tat-icon { font-size: 0.85rem; }
 .tat-next { font-size: 0.82rem; font-weight: 600; color: #1c1c1e; }
 .tat-next.phase-urgent { color: #b91c1c; }
 .tat-next.phase-soon   { color: #92400e; }
@@ -165,17 +188,17 @@ body {
   display: flex; align-items: center; gap: 8px;
   padding: 5px 8px; border-radius: 8px;
 }
-.ms-row.ms-done  { opacity: 0.4; }
-.ms-row.ms-now   { background: #eff6ff; border: 1px solid #bfdbfe; }
-.ms-row.ms-next  { background: #fffbeb; border: 1px solid #fde68a; }
+.ms-row.ms-done   { opacity: 0.4; }
+.ms-row.ms-now    { background: #eff6ff; border: 1px solid #bfdbfe; }
+.ms-row.ms-next   { background: #fffbeb; border: 1px solid #fde68a; }
 .ms-row.ms-urgent { background: #fef2f2; border: 1px solid #fecaca; }
 .ms-row.ms-future { opacity: 0.55; }
 .ms-dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
-.ms-done  .ms-dot  { background: #9ca3af; }
-.ms-now   .ms-dot  { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
-.ms-next  .ms-dot  { background: #f59e0b; }
+.ms-done   .ms-dot { background: #9ca3af; }
+.ms-now    .ms-dot { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+.ms-next   .ms-dot { background: #f59e0b; }
 .ms-urgent .ms-dot { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
 .ms-future .ms-dot { background: #d1d5db; }
 .ms-time {
@@ -187,8 +210,8 @@ body {
   font-size: 0.7rem; font-weight: 600; color: #6b7280;
   white-space: nowrap;
 }
-.ms-now   .ms-countdown { color: #1d4ed8; }
-.ms-next  .ms-countdown { color: #92400e; }
+.ms-now    .ms-countdown { color: #1d4ed8; }
+.ms-next   .ms-countdown { color: #92400e; }
 .ms-urgent .ms-countdown { color: #b91c1c; }
 
 /* ── Empty / Error ── */
@@ -218,7 +241,8 @@ body {
   </div>
   <div class="tabs">
     <div class="tab active" id="tab-arr" onclick="switchTab('arr')">🛬 入港</div>
-    <div class="tab" id="tab-dep" onclick="switchTab('dep')">🛫 出港</div>
+    <div class="tab"        id="tab-dep" onclick="switchTab('dep')">🛫 出港</div>
+    <div class="tab"        id="tab-all" onclick="switchTab('all')">🔍 全航班</div>
   </div>
 </div>
 
@@ -228,14 +252,41 @@ body {
 </div>
 
 <div id="errWrap"></div>
+
+<!-- 入港列表 -->
 <div class="list" id="listArr"><div class="loading">載入中…</div></div>
+
+<!-- 出港列表 -->
 <div class="list" id="listDep" style="display:none"><div class="loading">載入中…</div></div>
+
+<!-- 全航班搜尋區 -->
+<div id="panelAll" style="display:none">
+  <div class="search-wrap">
+    <input
+      id="searchInput"
+      class="search-input"
+      type="search"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+      placeholder="航班號 · 航空代碼 · 機場代碼（如 AK、KUL）"
+      oninput="onSearchInput()"
+    >
+  </div>
+  <div id="searchCount" class="search-count"></div>
+  <div id="searchHint" class="search-hint">
+    <span class="hint-icon">🔍</span>
+    輸入 2 個字元以上開始檢索<br>
+    <span style="font-size:0.75rem">支援：航班號（AK5034）、航空代碼（AK）、機場（KUL）</span>
+  </div>
+  <div class="list" id="allResults"></div>
+</div>
 
 <script>
 /* ── 城市名對照 ── */
 const CITY = {
   KUL:'吉隆坡',ICN:'首爾仁川',PUS:'釜山',NRT:'東京成田',HND:'東京羽田',
-  KIX:'大阪',NGO:'名古屋',FUK:'福岡',OKA:'沖繩',CTS:'札幌',
+  KIX:'大阪關西',NGO:'名古屋',FUK:'福岡',OKA:'沖繩',CTS:'札幌',
   BKK:'曼谷素萬那普',DMK:'曼谷廊曼',HKT:'普吉',CNX:'清邁',
   CGK:'雅加達',SUB:'泗水',DPS:'峇里島',BPN:'望加錫',
   MNL:'馬尼拉',CEB:'宿霧',DVO:'達沃',
@@ -257,18 +308,22 @@ const ST_MAP = [
   [/(取消|Cancel)/i,                   'cancel', '取消'],
 ];
 
-/* ── TAT 里程碑（以 STD 為基準，offset 單位：分鐘）── */
+/* ── 出港 TAT 里程碑（offset：相對 STD，分鐘）── */
 const MILESTONES = [
-  { key:'open',  label:'開始報到', offset:-180, short:'開報' },
-  { key:'close', label:'截止報到', offset:-45,  short:'截報' },
-  { key:'board', label:'開始登機', offset:-40,  short:'登機' },
-  { key:'gate',  label:'關艙門',   offset:-15,  short:'關艙' },
-  { key:'std',   label:'起飛',     offset:0,    short:'起飛' },
+  { key:'open',  label:'開始報到', offset:-180 },
+  { key:'close', label:'截止報到', offset:-45  },
+  { key:'board', label:'開始登機', offset:-40  },
+  { key:'gate',  label:'關艙門',   offset:-15  },
+  { key:'std',   label:'起飛',     offset:0    },
 ];
 
+/* ── 全局資料 ── */
+let _arrData = [], _depData = [];
+let _allArr  = [], _allDep  = [];
 let _tab = 'arr';
-let _timer = null;
+let _searchTimer = null;
 
+/* ── 時間工具 ── */
 function fmtHHMM(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -280,6 +335,7 @@ function delayMin(schIso, estIso) {
   return Math.round((new Date(estIso) - new Date(schIso)) / 60000);
 }
 
+/* ── 狀態解析 ── */
 function parseStatus(remark) {
   if (!remark) return { cls:'unknown', label:'—' };
   const txt = typeof remark === 'object'
@@ -291,6 +347,7 @@ function parseStatus(remark) {
   return { cls:'unknown', label: txt.slice(0,8) || '—' };
 }
 
+/* ── 時間欄位 ── */
 function renderTimeBlock(label, schIso, estIso, actIso) {
   const sch = fmtHHMM(schIso);
   const dm  = delayMin(schIso, estIso);
@@ -310,6 +367,7 @@ function renderTimeBlock(label, schIso, estIso, actIso) {
   </div>`;
 }
 
+/* ── 資源 chips ── */
 function renderResources(chips) {
   if (!chips.length) return `<div class="res"><span class="res-tba">資源待分配</span></div>`;
   return chips.map(c =>
@@ -321,12 +379,13 @@ function renderResources(chips) {
   ).join('');
 }
 
+/* ── 出港 TAT 里程碑 ── */
 function renderTAT(stdIso, etdIso) {
   const ref = etdIso || stdIso;
   if (!ref) return '';
   const std = new Date(ref);
   const now = new Date();
-  const nowMins = (now - std) / 60000; // 負 = 起飛前，正 = 起飛後
+  const nowMins = (now - std) / 60000;
 
   const ms = MILESTONES.map(m => ({
     ...m,
@@ -334,15 +393,12 @@ function renderTAT(stdIso, etdIso) {
     isPast: m.offset <= nowMins,
   }));
 
-  // 找「下一個」里程碑（最小的 offset 還沒過）
   const nextMs = ms.find(m => m.offset > nowMins);
 
-  // 計算倒數
   let headlineTxt = '', headlineCls = '';
   if (!nextMs) {
     const ago = Math.round(nowMins);
     headlineTxt = `✅ 已起飛 ${ago} 分鐘前`;
-    headlineCls = '';
   } else {
     const remain = Math.round(nextMs.offset - nowMins);
     if (remain <= 5) {
@@ -356,26 +412,22 @@ function renderTAT(stdIso, etdIso) {
       headlineCls = 'phase-ok';
     } else {
       const h = Math.floor(remain / 60), m = remain % 60;
-      headlineTxt = `⏱ 距${nextMs.label} ${h}h ${m > 0 ? m + 'm' : ''}`;
+      headlineTxt = `⏱ 距${nextMs.label} ${h}h${m > 0 ? ' ' + m + 'm' : ''}`;
       headlineCls = 'phase-ok';
     }
   }
 
   const rows = ms.map(m => {
-    let rowCls, dotCls, countdown = '';
     const remain = Math.round(m.offset - nowMins);
-
+    let rowCls, countdown = '';
     if (m.isPast) {
       rowCls = 'ms-done';
     } else if (m === nextMs) {
-      if (remain <= 5)       { rowCls = 'ms-urgent'; }
-      else if (remain <= 20) { rowCls = 'ms-next'; }
-      else                   { rowCls = 'ms-now'; }
-      countdown = remain <= 0 ? '時間到' : `${remain < 60 ? remain + 'm' : Math.floor(remain/60) + 'h' + (remain%60||'')}`;
+      rowCls = remain <= 5 ? 'ms-urgent' : remain <= 20 ? 'ms-next' : 'ms-now';
+      countdown = remain <= 0 ? '時間到' : `${remain < 60 ? remain + 'm' : Math.floor(remain/60) + 'h' + (remain % 60 || '')}`;
     } else {
       rowCls = 'ms-future';
     }
-
     return `<div class="ms-row ${rowCls}">
       <div class="ms-dot"></div>
       <div class="ms-time">${fmtHHMM(m.time.toISOString())}</div>
@@ -392,37 +444,45 @@ function renderTAT(stdIso, etdIso) {
   </div>`;
 }
 
-function renderCard(f, mode) {
+/* ── 航班卡片
+     mode = 'arr' | 'dep'
+     showDirBadge = true 時在 badge 列加入方向標籤（全航班搜尋用）
+── */
+function renderCard(f, mode, showDirBadge) {
   const isArr = mode === 'arr';
 
   const airline  = f.AirlineID || '??';
   const fltNum   = f.FlightNumber || '—';
   const terminal = f.ArrivalTerminal || f.DepartureTerminal || '';
-  const counterAp = isArr
-    ? (f.DepartureAirportID || '')
-    : (f.ArrivalAirportID || '');
-  const cityName = f.CounterCity || CITY[counterAp] || counterAp || '—';
+  const counterAp = isArr ? (f.DepartureAirportID || '') : (f.ArrivalAirportID || '');
+  const cityName  = CITY[counterAp] || counterAp || '—';
 
-  const sch = isArr ? f.ScheduleArrivalTime   : f.ScheduleDepartureTime;
-  const est = isArr ? (f.EstimateArrivalTime  || f.EstimatedArrivalTime)
-                    : (f.EstimateDepartureTime || f.EstimatedDepartureTime);
-  const act = isArr ? f.ActualArrivalTime      : f.ActualDepartureTime;
+  const sch = isArr ? f.ScheduleArrivalTime    : f.ScheduleDepartureTime;
+  const est = isArr ? (f.EstimatedArrivalTime  || f.EstimateArrivalTime)
+                    : (f.EstimatedDepartureTime || f.EstimateDepartureTime);
+  const act = isArr ? f.ActualArrivalTime       : f.ActualDepartureTime;
+
   const gate    = isArr ? f.ArrivalGate   : f.DepartureGate;
   const baggage = f.BaggageClaim || f.BaggageClaimBelt;
   const counter = f.CheckInArea  || f.CheckinArea || f.CheckInCounter;
-  const status  = parseStatus(f.Remark || f.FlightStatus || f.Status || '');
+  const status  = parseStatus(f.Remark || f.FlightStatus || '');
 
   const chips = [];
-  if (gate)              chips.push({ icon:'🚪', lbl:'登機門', val: gate });
-  if (!isArr && counter) chips.push({ icon:'🎫', lbl:'報到',   val: counter });
-  if (isArr && baggage)  chips.push({ icon:'🧳', lbl:'行李轉盤', val: baggage });
+  if (gate)              chips.push({ icon:'🚪', lbl:'登機門',  val: gate });
+  if (!isArr && counter) chips.push({ icon:'🎫', lbl:'報到',    val: counter });
+  if ( isArr && baggage) chips.push({ icon:'🧳', lbl:'行李轉盤', val: baggage });
 
   const timeLabel = isArr ? 'STA' : 'STD';
-  const tatHtml = !isArr ? renderTAT(sch, est) : '';
+  const tatHtml   = !isArr ? renderTAT(sch, est) : '';
+
+  const dirBadge = showDirBadge
+    ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
+    : '';
 
   return `<div class="card">
     <div class="flt-head">
       <span class="badge-airline">${airline}</span>
+      ${dirBadge}
       <span class="flt-num">${fltNum}</span>
       <span class="badge-status st-${status.cls}">${status.label}</span>
       ${terminal ? `<span class="badge-terminal">T${terminal}</span>` : ''}
@@ -444,18 +504,81 @@ function renderCard(f, mode) {
   </div>`;
 }
 
+/* ── Tab 切換 ── */
 function switchTab(tab) {
   _tab = tab;
-  document.getElementById('tab-arr').classList.toggle('active', tab === 'arr');
-  document.getElementById('tab-dep').classList.toggle('active', tab === 'dep');
-  document.getElementById('listArr').style.display = tab === 'arr' ? '' : 'none';
-  document.getElementById('listDep').style.display = tab === 'dep' ? '' : 'none';
+  ['arr','dep','all'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+  document.getElementById('listArr').style.display  = tab === 'arr' ? '' : 'none';
+  document.getElementById('listDep').style.display  = tab === 'dep' ? '' : 'none';
+  document.getElementById('panelAll').style.display = tab === 'all' ? '' : 'none';
+
+  const hint = document.getElementById('airlineHint');
+  if (tab === 'all') {
+    hint.textContent = 'TPE 全部即時航班';
+    hint.style.color = '#8e8e93';
+  } else {
+    renderAirlineHint();
+  }
 }
 
+function renderAirlineHint() {
+  const hint = document.getElementById('airlineHint');
+  if (_tab !== 'all') {
+    hint.textContent = window._airlines
+      ? window._airlines.map(a => a.code).join(' · ')
+      : '';
+  }
+}
+
+/* ── 全航班搜尋 ── */
+function onSearchInput() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(runSearch, 250);
+}
+
+function runSearch() {
+  const q = (document.getElementById('searchInput').value || '').trim().toUpperCase();
+  const hintEl   = document.getElementById('searchHint');
+  const countEl  = document.getElementById('searchCount');
+  const resultEl = document.getElementById('allResults');
+
+  if (q.length < 2) {
+    hintEl.style.display = '';
+    countEl.textContent  = '';
+    resultEl.innerHTML   = '';
+    return;
+  }
+
+  hintEl.style.display = 'none';
+
+  const combined = [
+    ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
+    ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
+  ].filter(f => {
+    const flt = (f.FlightNumber    || '').toUpperCase();
+    const al  = (f.AirlineID       || '').toUpperCase();
+    const ap  = (f.DepartureAirportID || f.ArrivalAirportID || '').toUpperCase();
+    return flt.includes(q) || al === q || ap === q;
+  }).sort((a, b) => {
+    const ta = a.ScheduleArrivalTime || a.ScheduleDepartureTime || '';
+    const tb = b.ScheduleArrivalTime || b.ScheduleDepartureTime || '';
+    return ta.localeCompare(tb);
+  });
+
+  countEl.textContent = combined.length ? `共 ${combined.length} 筆航班` : '';
+
+  resultEl.innerHTML = combined.length
+    ? combined.map(f => renderCard(f, f._dir, true)).join('')
+    : `<div class="empty"><span class="empty-icon">🔍</span>查無「${q}」相關航班</div>`;
+}
+
+/* ── 主載入 ── */
 async function load(manual) {
   const btn = document.getElementById('refreshBtn');
-  btn.innerHTML = '<span class="spin">↻</span> 更新中';
-  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">↻</span>';
+  btn.disabled  = true;
 
   try {
     const res  = await fetch('/api/tias/flights');
@@ -464,39 +587,50 @@ async function load(manual) {
     if (!data.configured) {
       document.getElementById('errWrap').innerHTML =
         `<div class="error-banner">⚠️ TDX API 未設定，請確認環境變數 TDX_CLIENT_ID / TDX_CLIENT_SECRET。</div>`;
+      document.getElementById('listArr').innerHTML = '';
+      document.getElementById('listDep').innerHTML = '';
       return;
     }
 
     document.getElementById('errWrap').innerHTML = '';
     document.getElementById('updateLabel').textContent = `更新 ${data.updated_at}`;
-    if (data.airlines?.length) {
-      document.getElementById('airlineHint').textContent =
-        data.airlines.map(a => a.code).join(' · ');
-    }
+
+    window._airlines = data.airlines || [];
+    renderAirlineHint();
+
+    _arrData = data.arrivals  || [];
+    _depData = data.departures || [];
+    _allArr  = data.all_arrivals  || [];
+    _allDep  = data.all_departures || [];
 
     const arrEl = document.getElementById('listArr');
     const depEl = document.getElementById('listDep');
 
-    arrEl.innerHTML = data.arrivals.length
-      ? data.arrivals.map(f => renderCard(f, 'arr')).join('')
-      : `<div class="empty"><span class="empty-icon">🛬</span>目前無入港航班</div>`;
+    arrEl.innerHTML = _arrData.length
+      ? _arrData.map(f => renderCard(f, 'arr')).join('')
+      : `<div class="empty"><span class="empty-icon">🛬</span>目前無 AirAsia 入港航班</div>`;
 
-    depEl.innerHTML = data.departures.length
-      ? data.departures.map(f => renderCard(f, 'dep')).join('')
-      : `<div class="empty"><span class="empty-icon">🛫</span>目前無出港航班</div>`;
+    depEl.innerHTML = _depData.length
+      ? _depData.map(f => renderCard(f, 'dep')).join('')
+      : `<div class="empty"><span class="empty-icon">🛫</span>目前無 AirAsia 出港航班</div>`;
+
+    // 若全航班搜尋有內容，即時更新結果
+    if (_tab === 'all' && (document.getElementById('searchInput').value || '').trim().length >= 2) {
+      runSearch();
+    }
 
   } catch (e) {
     document.getElementById('errWrap').innerHTML =
       `<div class="error-banner">⚠️ 連線失敗，請稍後再試。</div>`;
   } finally {
     btn.innerHTML = '↻ 重整';
-    btn.disabled = false;
+    btn.disabled  = false;
   }
 }
 
-// 初始載入 + 60 秒自動刷新
+// 初始載入 + 30 秒自動刷新
 load();
-_timer = setInterval(load, 60000);
+setInterval(load, 30000);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 </script>
