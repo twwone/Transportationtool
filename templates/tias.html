@@ -602,6 +602,7 @@ function switchTab(tab) {
   const hint = document.getElementById('airlineHint');
   if (tab === 'all') {
     hint.textContent = 'TPE 全部即時航班';
+    runSearch();
   } else {
     renderAirlineHint();
   }
@@ -626,35 +627,44 @@ function runSearch() {
   const countEl = document.getElementById('searchCount');
   const resEl   = document.getElementById('allResults');
 
-  if (q.length < 2) {
-    hintEl.style.display = '';
-    countEl.textContent  = '';
-    resEl.innerHTML      = '';
-    return;
-  }
   hintEl.style.display = 'none';
 
-  const combined = [
+  // 合併並按排班時間升序排列
+  const allSorted = [
     ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
     ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
-  ].filter(f => {
-    const flt     = (f.FlightNumber || '').toUpperCase();
-    const al      = (f.AirlineID    || '').toUpperCase();
-    const ap      = (f.DepartureAirportID || f.ArrivalAirportID || '').toUpperCase();
-    const gate    = (f.Gate || f.ArrivalGate || f.DepartureGate || '').toUpperCase();
-    const counter = (f.CheckCounter || f.CheckInCounter || f.CheckInArea || '').toUpperCase();
-    const baggage = (f.BaggageClaim || '').toUpperCase();
-    return flt.includes(q) || al === q || ap === q
-        || gate.includes(q) || counter.includes(q) || baggage.includes(q);
-  }).sort((a, b) => {
+  ].sort((a, b) => {
     const ta = a.ScheduleArrivalTime || a.ScheduleDepartureTime || '';
     const tb = b.ScheduleArrivalTime || b.ScheduleDepartureTime || '';
     return ta.localeCompare(tb);
   });
 
-  countEl.textContent = combined.length ? `共 ${combined.length} 筆` : '';
-  resEl.innerHTML = combined.length
-    ? combined.map(f => renderCard(f, f._dir, true)).join('')
+  // 無查詢時直接列出全部
+  if (!q) {
+    countEl.textContent = `共 ${allSorted.length} 筆航班`;
+    resEl.innerHTML     = allSorted.map(f => renderCard(f, f._dir, true)).join('');
+    return;
+  }
+
+  // 有查詢時過濾
+  // TDX 的 FlightNumber 只存數字（如 "12"），AirlineID 分開存（"JX"）
+  // 合併成 "JX12" 再比對，讓使用者輸入完整航班號也能找到
+  const results = allSorted.filter(f => {
+    const flt      = (f.FlightNumber || '').toUpperCase();
+    const fullFlt  = ((f.AirlineID || '') + (f.FlightNumber || '')).toUpperCase();
+    const al       = (f.AirlineID || '').toUpperCase();
+    const ap       = (f.DepartureAirportID || f.ArrivalAirportID || '').toUpperCase();
+    const gate     = (f.Gate || '').toUpperCase();
+    const counter  = (f.CheckCounter || f.CheckInCounter || f.CheckInArea || '').toUpperCase();
+    const baggage  = (f.BaggageClaim || '').toUpperCase();
+    return fullFlt.includes(q) || flt.includes(q)
+        || al.startsWith(q) || ap.startsWith(q)
+        || gate.includes(q) || counter.includes(q) || baggage.includes(q);
+  });
+
+  countEl.textContent = results.length ? `共 ${results.length} 筆` : '';
+  resEl.innerHTML = results.length
+    ? results.map(f => renderCard(f, f._dir, true)).join('')
     : `<div class="empty"><span class="empty-icon">🔍</span>查無「${q}」相關航班</div>`;
 }
 
@@ -712,9 +722,7 @@ async function load() {
       ? _depData.map(f => renderCard(f, 'dep')).join('')
       : `<div class="empty"><span class="empty-icon">🛫</span>目前無 AirAsia 出港航班</div>`;
 
-    if (_tab === 'all' && (document.getElementById('searchInput').value || '').trim().length >= 2) {
-      runSearch();
-    }
+    if (_tab === 'all') runSearch();
 
   } catch (e) {
     document.getElementById('errWrap').innerHTML =
