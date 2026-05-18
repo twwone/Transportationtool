@@ -194,53 +194,69 @@ def _fill_field(page, selectors: list, value: str) -> bool:
     return False
 
 
-def _book_ticket(browser, config: dict) -> tuple[bytes | None, str | None]:
+def _screenshot(page) -> bytes:
+    """截取可視區域 JPEG（避免 full_page PNG 超過 Telegram 10MB 限制）。"""
+    return page.screenshot(type="jpeg", quality=80)
+
+
+def _book_ticket(browser, config: dict, log_fn=None) -> tuple[bytes | None, str | None]:
     """
     前往 THSR 訂票頁自動填入身分證/電話/Email，停在付款頁前截圖。
-    回傳 (screenshot_bytes, error_or_None)。
+    回傳 (screenshot_jpeg_bytes, error_or_None)。
     """
+    def _step(msg: str):
+        if log_fn:
+            log_fn(f"[訂票] {msg}")
+
     page = _setup_page(browser)
     try:
-        cipher_url, enc_err = _get_search_url(config)
+        _step("取得查詢連結...")
+        cipher_url, _ = _get_search_url(config)
+        _step("前往高鐵時刻表...")
         page.goto(cipher_url, timeout=30000, wait_until="domcontentloaded")
+        time.sleep(2)  # 等 JS 渲染班次結果
 
+        # 先截圖結果頁（不管後續是否成功都有東西看）
+        ss = _screenshot(page)
+
+        _step("尋找訂票按鈕...")
         clicked = False
         for sel in _BOOKING_BTN_SELECTORS:
             try:
                 btn = page.locator(sel).first
-                btn.wait_for(state="visible", timeout=6000)
+                btn.wait_for(state="visible", timeout=3000)
                 btn.click()
                 clicked = True
+                _step(f"點擊成功 ({sel})")
                 break
             except Exception:
                 continue
 
         if not clicked:
-            ss = page.screenshot(full_page=True)
-            return ss, "找不到訂票按鈕（可能結果未載入或選擇器需更新）"
+            return ss, "找不到訂票按鈕，截圖為時刻表結果頁（可能選擇器需更新）"
 
-        # 等待跳轉到訂票頁
+        _step("等待訂票頁載入...")
         try:
             page.wait_for_url("**irs.thsrc**", timeout=15000)
         except PWTimeout:
             pass
         page.wait_for_load_state("domcontentloaded", timeout=15000)
 
-        # 填入乘客資料
+        _step("填入乘客資料...")
         id_ok    = _fill_field(page, _BOOKING_ID_SELECTORS,    config.get("id_number", ""))
         phone_ok = _fill_field(page, _BOOKING_PHONE_SELECTORS, config.get("phone", ""))
-        email    = config.get("email", "")
-        if email:
-            _fill_field(page, _BOOKING_EMAIL_SELECTORS, email)
+        if config.get("email"):
+            _fill_field(page, _BOOKING_EMAIL_SELECTORS, config.get("email", ""))
 
-        ss = page.screenshot(full_page=True)
+        ss = _screenshot(page)
         if not id_ok and not phone_ok:
-            return ss, "欄位填入失敗（高鐵網頁結構可能已更新）"
+            return ss, "欄位填入失敗（截圖為訂票頁，可能選擇器需更新）"
+        _step("完成，等你確認後付款！")
         return ss, None
 
     except Exception as e:
         try:
-            ss = page.screenshot()
+            ss = _screenshot(page)
         except Exception:
             ss = None
         return ss, f"{type(e).__name__}: {str(e)[:150]}"
@@ -258,7 +274,7 @@ def _tg_send_photo(bot_token: str, chat_id: str, photo_bytes: bytes, caption: st
         resp = requests.post(
             f"https://api.telegram.org/bot{bot_token}/sendPhoto",
             data={"chat_id": chat_id, "caption": caption},
-            files={"photo": ("booking.png", photo_bytes, "image/png")},
+            files={"photo": ("booking.jpg", photo_bytes, "image/jpeg")},
             timeout=30,
         )
         if not resp.ok:
@@ -451,7 +467,7 @@ class THSRBot:
                                 # 自動填入乘客資料
                                 if self.config.get("id_number"):
                                     self._log("開始自動填入乘客資料...")
-                                    ss, book_err = _book_ticket(browser, self.config)
+                                    ss, book_err = _book_ticket(browser, self.config, self._log)
                                     if ss and has_tg:
                                         caption = (
                                             "✅ 乘客資料已自動填入，請確認截圖後完成付款"
