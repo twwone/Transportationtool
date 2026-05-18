@@ -281,6 +281,61 @@ let starredId   = localStorage.getItem("mrt_starred") || "";
 let refreshTick = 30;
 let refreshTimer = null;
 
+// ── Demo 模擬資料 ──
+function generateDemoData() {
+  const now = Date.now();
+  const rows = [];
+  const stationIds = STATIONS.map(s => s.id);
+  // 每站、每方向、直達(1)+普通(2)，各產生 2 班
+  stationIds.forEach((sid, si) => {
+    [0, 1].forEach(dir => {
+      [1, 2].forEach(type => {
+        // 依站序偏移，讓各站間隔合理
+        const base1 = ((si * 7 + type * 3 + dir * 11) % 18) + 1;
+        const base2 = base1 + ((type === 1) ? 18 : 15);
+        [base1, base2].forEach((mins, bi) => {
+          const dep = new Date(now + mins * 60000);
+          rows.push({
+            StationID:            sid,
+            Direction:            dir,
+            TrainType:            type,
+            EstimatedArrivalTime: mins,
+            ScheduledArrivalTime: dep.toISOString(),
+            StationSequence:      si + 1,
+          });
+        });
+      });
+    });
+  });
+  return rows;
+}
+
+// demo 模式每秒倒數
+let _demoTick = null;
+function startDemoTick() {
+  if (_demoTick) return;
+  _demoTick = setInterval(() => {
+    liveData = liveData.map(t => ({
+      ...t,
+      EstimatedArrivalTime: Math.max(0, t.EstimatedArrivalTime - 1/60),
+    }));
+    // 有班次歸零就重新生成
+    if (liveData.some(t => t.EstimatedArrivalTime < 0.1)) {
+      liveData = generateDemoData();
+    }
+    renderStations();
+    refreshTick--;
+    document.getElementById("refreshCountdown").textContent =
+      `Demo 模式・${Math.max(0, refreshTick)} 秒後模擬更新`;
+    if (refreshTick <= 0) {
+      liveData = generateDemoData();
+      refreshTick = 30;
+      document.getElementById("lastUpdate").textContent =
+        "模擬更新 " + new Date().toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+    }
+  }, 1000);
+}
+
 // ── 初始化 ──
 (function init() {
   renderHomeBar();
@@ -288,7 +343,11 @@ let refreshTimer = null;
     fetchNow();
     startRefreshTimer();
   } else {
-    renderNoTDX();
+    // Demo 模式：用模擬資料跑完整 UI
+    liveData = generateDemoData();
+    document.getElementById("lastUpdate").textContent = "Demo 模式";
+    renderStations();
+    startDemoTick();
   }
 })();
 
@@ -435,18 +494,13 @@ function toggleStar(id) {
   renderStations();
 }
 
-// ── 未設定 TDX ──
+// ── 未設定 TDX（API 回傳 configured:false 時才呼叫）──
 function renderNoTDX() {
-  document.getElementById("content").innerHTML = `
-    <div class="setup-banner">
-      <strong>⚙️ 需要設定 TDX API 金鑰才能顯示即時資料</strong>
-      1. 前往 <b>tdx.transportdata.tw</b> 免費註冊<br>
-      2. 取得 <code>client_id</code> 和 <code>client_secret</code><br>
-      3. 在 Railway 環境變數新增：<br>
-      &nbsp;&nbsp;<code>TDX_CLIENT_ID</code> = 你的 client_id<br>
-      &nbsp;&nbsp;<code>TDX_CLIENT_SECRET</code> = 你的 client_secret<br>
-      4. 重新部署即可
-    </div>`;
+  // 切換成 demo 模式，不顯示錯誤畫面
+  liveData = generateDemoData();
+  document.getElementById("lastUpdate").textContent = "Demo 模式";
+  renderStations();
+  startDemoTick();
 }
 
 function renderError(msg) {
