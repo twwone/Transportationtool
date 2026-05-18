@@ -195,7 +195,7 @@ def mrt_liveboard():
         return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
     try:
         resp = _requests.get(
-            "https://tdx.transportdata.tw/api/basic/v3/Rail/TYMC/StationLiveBoard",
+            "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             params={"$format": "JSON"},
             timeout=10,
