@@ -410,12 +410,10 @@ class THSRBot:
                                     (k for k, v in DISCOUNT_OPTIONS.items() if v == self.config.get("discount", "")),
                                     "全票"
                                 )
-                                lines = "\n".join(_fmt_train(t) for t in trains[:5])
-                                if len(trains) > 5:
-                                    lines += f"\n...另有 {len(trains)-5} 班"
+                                lines = "\n".join(_fmt_train(t) for t in trains[:3])
+                                if len(trains) > 3:
+                                    lines += f"\n...另有 {len(trains)-3} 班"
                                 if self.base_url:
-                                    import json as _json
-                                    trains_json = quote(_json.dumps(trains[:5], ensure_ascii=False), safe='')
                                     booking_url = (
                                         f"{self.base_url}/api/go"
                                         f"?o={self.config['origin_code']}"
@@ -426,7 +424,6 @@ class THSRBot:
                                         f"&dis={quote(self.config.get('discount', ''), safe='')}"
                                         f"&st={self.config.get('seat_type', '1')}"
                                         f"&adult={self.config.get('adult', 1)}"
-                                        f"&trains={trains_json}"
                                     )
                                 else:
                                     booking_url, enc_err = _get_search_url(self.config)
@@ -439,6 +436,9 @@ class THSRBot:
                                     f"\n找到 {len(trains)} 班：\n{lines}\n"
                                     f"\n立即訂票：\n{booking_url}"
                                 )
+                                # Telegram 上限 4096 字元
+                                if len(msg) > 4000:
+                                    msg = msg[:3980] + "\n...(訊息已截斷)"
                                 self._log(f"找到 {len(trains)} 班可搭車次！", "found", found=True)
                                 has_tg = bool(self.tg_token and self.tg_chat_id)
                                 self._log(f"[TG] 準備送出通知 token={'有' if self.tg_token else '無'} chat_id={'有' if self.tg_chat_id else '無'}")
