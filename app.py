@@ -371,13 +371,20 @@ def _fetch_tias():
         return None, None, False
 
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-    params  = {"$format": "JSON", "$top": 400}
+    today = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
 
-    def _get(direction: str):
+    def _get(direction: str, time_field: str):
         try:
             r = _requests.get(
                 f"{_TDX_FIDS}/{direction}/TPE",
-                headers=headers, params=params, timeout=12,
+                headers=headers,
+                params={
+                    "$format":  "JSON",
+                    "$top":     500,
+                    "$filter":  f"FlightDate eq '{today}'",
+                    "$orderby": f"{time_field} asc",
+                },
+                timeout=12,
             )
             r.raise_for_status()
             body = r.json()
@@ -385,8 +392,8 @@ def _fetch_tias():
         except Exception:
             return []
 
-    arr = _get("Arrival")
-    dep = _get("Departure")
+    arr = _get("Arrival",   "ScheduleArrivalTime")
+    dep = _get("Departure", "ScheduleDepartureTime")
 
     with _tias_lock:
         _tias_cache["arr"] = arr
