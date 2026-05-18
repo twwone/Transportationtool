@@ -378,17 +378,16 @@ def _fetch_tias():
             r = _requests.get(
                 f"{_TDX_FIDS}/{direction}/TPE",
                 headers=headers,
-                params={
-                    "$format":  "JSON",
-                    "$top":     500,
-                    "$filter":  f"FlightDate eq '{today}'",
-                    "$orderby": f"{time_field} asc",
-                },
+                params={"$format": "JSON", "$top": 1000},
                 timeout=12,
             )
             r.raise_for_status()
             body = r.json()
-            return body if isinstance(body, list) else body.get("data", [])
+            data = body if isinstance(body, list) else body.get("data", [])
+            # 只保留今日航班，並依排班時間升序排列
+            filtered = [f for f in data if f.get("FlightDate", "") == today]
+            filtered.sort(key=lambda f: f.get(time_field, ""))
+            return filtered
         except Exception:
             return []
 
