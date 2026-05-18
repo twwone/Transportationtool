@@ -249,12 +249,12 @@ const CITY = {
 
 /* ── 狀態對照 ── */
 const ST_MAP = [
-  [/(準時|On.?Time|正常)/i,    'ontime', '準時'],
-  [/(延誤|Delay)/i,            'delay',  '延誤'],
-  [/(落地|Arrived?|抵達)/i,    'landed', '落地'],
-  [/(起飛|Depart)/i,           'depart', '已起飛'],
-  [/(登機|Board)/i,            'board',  '登機中'],
-  [/(取消|Cancel)/i,           'cancel', '取消'],
+  [/(準時|On.?Time|正常)/i,            'ontime', '準時'],
+  [/(延誤|Delay)/i,                    'delay',  '延誤'],
+  [/(落地|Arrived?|抵達|已到)/i,        'landed', '落地'],
+  [/(起飛|Depart|出發|已出發)/i,        'depart', '已起飛'],
+  [/(登機|Board)/i,                    'board',  '登機中'],
+  [/(取消|Cancel)/i,                   'cancel', '取消'],
 ];
 
 /* ── TAT 里程碑（以 STD 為基準，offset 單位：分鐘）── */
@@ -401,9 +401,7 @@ function renderCard(f, mode) {
   const counterAp = isArr
     ? (f.DepartureAirportID || '')
     : (f.ArrivalAirportID || '');
-  const cityName = counterAp
-    ? (CITY[counterAp] || (f.DepartureAirportName?.Zh_tw || f.ArrivalAirportName?.Zh_tw || counterAp))
-    : '—';
+  const cityName = f.CounterCity || CITY[counterAp] || counterAp || '—';
 
   const sch = isArr ? f.ScheduleArrivalTime   : f.ScheduleDepartureTime;
   const est = isArr ? (f.EstimateArrivalTime  || f.EstimatedArrivalTime)

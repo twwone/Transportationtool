@@ -2,6 +2,8 @@ from __future__ import annotations
 import os
 import time
 import threading
+import csv as _csv
+import io as _io
 from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
 from flask import Flask, render_template, request, jsonify, redirect as flask_redirect
@@ -339,6 +341,8 @@ def mrt_liveboard():
 
 # ──────────────────────────────────────────────
 #  TIAS（航空資訊看板）
+#  資料來源：桃園機場股份有限公司開放資料 CSV（每 5 分鐘更新）
+#  https://odp.taoyuan-airport.com/dataset/2023081816?format=csv
 # ──────────────────────────────────────────────
 
 # 可擴充的代理航空公司清單，未來直接在此新增 {"code": "XX", "name": "..."}
@@ -352,65 +356,97 @@ _TIAS_AIRLINES = [
     {"code": "XJ", "name": "Thai AirAsia X"},
 ]
 _TIAS_CODES   = {a["code"] for a in _TIAS_AIRLINES}
-_TIAS_AIRPORT = "TPE"
+_TIAS_CSV_URL = "https://odp.taoyuan-airport.com/dataset/2023081816?format=csv"
 _TIAS_TTL     = 60  # 秒
 
 _tias_cache = {"arr": None, "dep": None, "expires_at": 0.0}
 _tias_lock  = threading.Lock()
 
-def _fetch_tias(token: str):
+def _parse_tias_time(date_str, time_str):
+    """把 '2026/05/19' + '0830' 或 '08:30' 合成 ISO 8601 字串"""
+    if not date_str or not time_str:
+        return None
+    try:
+        t = time_str.strip().replace(':', '').replace(' ', '').zfill(4)
+        d = date_str.strip().replace('/', '-')
+        return f"{d}T{t[:2]}:{t[2:]}:00+08:00"
+    except Exception:
+        return None
+
+def _fetch_tias():
     with _tias_lock:
         if _tias_cache["arr"] is not None and time.time() < _tias_cache["expires_at"]:
             return _tias_cache["arr"], _tias_cache["dep"]
 
-    hdr  = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-    base = f"https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/{_TIAS_AIRPORT}"
-    p    = {"$format": "JSON", "$top": "200"}
+    try:
+        resp = _requests.get(
+            _TIAS_CSV_URL,
+            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"},
+        )
+        resp.raise_for_status()
+        resp.encoding = "utf-8-sig"  # 處理 BOM
+        reader = _csv.DictReader(_io.StringIO(resp.text))
 
-    def _get(url):
-        try:
-            r = _requests.get(url, headers=hdr, params=p, timeout=10)
-            r.raise_for_status()
-            return r.json()
-        except Exception:
-            return []
+        arr, dep = [], []
+        for row in reader:
+            code = (row.get("航空公司代碼") or "").strip()
+            if code not in _TIAS_CODES:
+                continue
+            kind       = (row.get("種類") or "").strip()          # A=入港, D=出港
+            counter_ap = (row.get("往來地點") or "").strip()
+            sch        = _parse_tias_time(row.get("表訂日期"), row.get("表訂時間"))
+            est        = _parse_tias_time(row.get("預計日期"), row.get("預計時間"))
 
-    def _sort_key_arr(f):
-        return f.get("ScheduleArrivalTime") or ""
+            flight = {
+                "AirlineID":            code,
+                "AirlineName":          (row.get("航空公司中文") or "").strip(),
+                "FlightNumber":         (row.get("班次")         or "").strip(),
+                "ArrivalTerminal":      (row.get("航廈")         or "").strip(),
+                "DepartureTerminal":    (row.get("航廈")         or "").strip(),
+                "ArrivalGate":          (row.get("機門")         or "").strip(),
+                "DepartureGate":        (row.get("機門")         or "").strip(),
+                "DepartureAirportID":   counter_ap,
+                "ArrivalAirportID":     counter_ap,
+                "CounterCity":          (row.get("往來地點中文") or "").strip(),
+                "AircraftType":         (row.get("機型")         or "").strip(),
+                "CheckInArea":          (row.get("報到櫃台")     or "").strip(),
+                "BaggageClaim":         (row.get("行李轉盤")     or "").strip(),
+                "Remark":               (row.get("航班動態中文") or row.get("航班狀態") or "").strip(),
+                "ScheduleArrivalTime":   sch if kind == "A" else None,
+                "EstimateArrivalTime":   est if kind == "A" else None,
+                "ScheduleDepartureTime": sch if kind == "D" else None,
+                "EstimateDepartureTime": est if kind == "D" else None,
+            }
+            if kind == "A":
+                arr.append(flight)
+            elif kind == "D":
+                dep.append(flight)
 
-    def _sort_key_dep(f):
-        return f.get("ScheduleDepartureTime") or ""
+        arr.sort(key=lambda f: f.get("ScheduleArrivalTime") or "")
+        dep.sort(key=lambda f: f.get("ScheduleDepartureTime") or "")
 
-    arr_raw = _get(f"{base}/Arrival")
-    dep_raw = _get(f"{base}/Departure")
-
-    arr = sorted([f for f in arr_raw if f.get("AirlineID") in _TIAS_CODES], key=_sort_key_arr)
-    dep = sorted([f for f in dep_raw if f.get("AirlineID") in _TIAS_CODES], key=_sort_key_dep)
-
-    with _tias_lock:
-        _tias_cache["arr"] = arr
-        _tias_cache["dep"] = dep
-        _tias_cache["expires_at"] = time.time() + _TIAS_TTL
-    return arr, dep
+        with _tias_lock:
+            _tias_cache["arr"] = arr
+            _tias_cache["dep"] = dep
+            _tias_cache["expires_at"] = time.time() + _TIAS_TTL
+        return arr, dep
+    except Exception:
+        with _tias_lock:
+            return _tias_cache["arr"] or [], _tias_cache["dep"] or []
 
 @app.route("/api/tias/debug")
 def tias_debug():
-    """暫時用於診斷：回傳 TDX 原始資料（前 5 筆）與錯誤訊息"""
-    token = _get_tdx_token()
-    if not token:
-        return jsonify({"error": "TDX token 取得失敗，請確認 TDX_CLIENT_ID / TDX_CLIENT_SECRET"})
-    hdr  = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-    base = f"https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/{_TIAS_AIRPORT}"
-    p    = {"$format": "JSON", "$top": "5"}
-    result = {}
-    for route in ("Arrival", "Departure"):
-        url = f"{base}/{route}"
-        try:
-            r = _requests.get(url, headers=hdr, params=p, timeout=10)
-            result[route] = {"status": r.status_code, "data": r.json()}
-        except Exception as e:
-            result[route] = {"error": str(e)}
-    return jsonify(result)
+    """診斷：回傳 CSV 原始前 5 筆"""
+    try:
+        resp = _requests.get(_TIAS_CSV_URL, timeout=15,
+                             headers={"User-Agent": "Mozilla/5.0"})
+        resp.encoding = "utf-8-sig"
+        reader = _csv.DictReader(_io.StringIO(resp.text))
+        rows = [row for i, row in enumerate(reader) if i < 5]
+        return jsonify({"status": resp.status_code, "sample": rows})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 @app.route("/tias")
 def tias():
@@ -418,14 +454,11 @@ def tias():
 
 @app.route("/api/tias/flights")
 def tias_flights_api():
-    token = _get_tdx_token()
-    if not token:
-        return jsonify({"error": "TDX 未設定", "configured": False}), 503
-    arr, dep = _fetch_tias(token)
+    arr, dep = _fetch_tias()
     return jsonify({
         "configured":  True,
-        "arrivals":    arr or [],
-        "departures":  dep or [],
+        "arrivals":    arr,
+        "departures":  dep,
         "airlines":    _TIAS_AIRLINES,
         "updated_at":  time.strftime("%H:%M:%S"),
     })
