@@ -103,6 +103,15 @@ def _get_tdx_token() -> str | None:
 # ──────────────────────────────────────────────
 #  首頁（交通工具選單）
 # ──────────────────────────────────────────────
+@app.route("/sw.js")
+def sw():
+    from flask import send_from_directory, make_response
+    resp = make_response(send_from_directory("static", "sw.js"))
+    resp.headers["Content-Type"] = "application/javascript"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
 @app.route("/")
 def home():
     return render_template("home.html")

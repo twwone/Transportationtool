@@ -528,5 +528,8 @@ function renderError(msg) {
     `<div class="setup-banner"><strong>⚠️ 資料載入失敗</strong>${msg}</div>`;
 }
 </script>
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
 </body>
 </html>

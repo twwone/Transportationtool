@@ -365,6 +365,9 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
     } catch(_) {}
   }
 </script>
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
 </div><!-- /scroll-content -->
 </body>
 </html>
