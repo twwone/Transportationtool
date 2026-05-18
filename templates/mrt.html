@@ -468,17 +468,28 @@ function renderPill(train, typeClass, label) {
 
 function getTrainsForStation(stationId, dir) {
   return liveData
-    .filter(t => t.StationID === stationId && t.Direction === dir)
-    .map(t => ({
-      ...t,
-      _mins: t._baseMins !== undefined
+    .filter(t => {
+      if (t._baseMins !== undefined) return t.StationID === stationId && t.Direction === dir;
+      const toTaipei = t.DestinationStationID === "A1";
+      return t.StationID === stationId && (dir === 0 ? toTaipei : !toTaipei);
+    })
+    .map(t => {
+      const mins = t._baseMins !== undefined
         ? demoMins(t)
-        : Math.round(typeof t.EstimatedArrivalTime === "number"
-            ? t.EstimatedArrivalTime
-            : minutesFromNow(t.ScheduledArrivalTime)),
-    }))
-    .filter(t => t._mins >= 0)
-    .sort((a, b) => a._mins - b._mins);
+        : (typeof t.EstimateTime === "number" ? t.EstimateTime : 999);
+      // 往機場：A22終點=普通(2)，其他=直達(1)；往台北：按時間順序分配
+      const trainType = t._baseMins !== undefined
+        ? t.TrainType
+        : (dir === 1 ? (t.DestinationStationID === "A22" ? 2 : 1) : t._typeAssigned);
+      return { ...t, _mins: mins, TrainType: trainType };
+    })
+    .filter(t => t._mins >= 0 && t._mins < 999)
+    .sort((a, b) => a._mins - b._mins)
+    .map((t, i) => ({
+      ...t,
+      // 往台北無法區分車種，按時間順序第1班給直達槽、第2班給普通槽
+      TrainType: t.TrainType ?? (i === 0 ? 1 : 2),
+    }));
 }
 
 

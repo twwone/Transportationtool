@@ -136,16 +136,27 @@ pre {
   <div class="field">
     <label>車站</label>
     <select id="stationSel" onchange="updateCode()">
-      <option value="A01">A01　台北車站</option>
-      <option value="A02">A02　三重站</option>
-      <option value="A03">A03　新北產業園區站</option>
-      <option value="A04">A04　機場第一航廈站</option>
-      <option value="A05">A05　機場第二航廈站</option>
-      <option value="A06">A06　機場旅館站</option>
-      <option value="A07">A07　大園站</option>
-      <option value="A08">A08　坑口站</option>
-      <option value="A09">A09　長庚醫院站</option>
-      <option value="A10">A10　中壢站</option>
+      <option value="A1">A1　台北車站</option>
+      <option value="A2">A2　三重站</option>
+      <option value="A3">A3　新北產業園區站</option>
+      <option value="A4">A4　新莊副都心站</option>
+      <option value="A5">A5　泰山站</option>
+      <option value="A6">A6　泰山貴和站</option>
+      <option value="A7">A7　體育大學站</option>
+      <option value="A8">A8　長庚醫院站</option>
+      <option value="A9">A9　林口站</option>
+      <option value="A10">A10　山鼻站</option>
+      <option value="A11">A11　坑口站</option>
+      <option value="A12">A12　機場第一航廈站</option>
+      <option value="A13">A13　機場第二航廈站</option>
+      <option value="A14a">A14a　機場旅館站</option>
+      <option value="A15">A15　大園站</option>
+      <option value="A16">A16　橫山站</option>
+      <option value="A17">A17　領航站</option>
+      <option value="A18">A18　高鐵桃園站</option>
+      <option value="A19">A19　桃園體育園區站</option>
+      <option value="A20">A20　興南站</option>
+      <option value="A21">A21　環北站</option>
     </select>
   </div>
   <div class="field">
@@ -169,9 +180,11 @@ pre {
 const APP_URL = window.location.origin;
 
 const STATION_NAMES = {
-  A01:"台北車站", A02:"三重站", A03:"新北產業園區站",
-  A04:"機場第一航廈站", A05:"機場第二航廈站", A06:"機場旅館站",
-  A07:"大園站", A08:"坑口站", A09:"長庚醫院站", A10:"中壢站"
+  A1:"台北車站", A2:"三重站", A3:"新北產業園區站", A4:"新莊副都心站",
+  A5:"泰山站", A6:"泰山貴和站", A7:"體育大學站", A8:"長庚醫院站",
+  A9:"林口站", A10:"山鼻站", A11:"坑口站", A12:"機場第一航廈站",
+  A13:"機場第二航廈站", A14a:"機場旅館站", A15:"大園站", A16:"橫山站",
+  A17:"領航站", A18:"高鐵桃園站", A19:"桃園體育園區站", A20:"興南站", A21:"環北站"
 };
 
 function generateCode(stationId, direction) {
@@ -183,9 +196,11 @@ const DIRECTION  = ${direction};        // ${direction == 0 ? "0:往台北" : "1
 // ─────────────────────────────────────
 
 const STATION_NAMES = {
-  A01:"台北車站", A02:"三重站", A03:"新北產業園區站",
-  A04:"機場第一航廈站", A05:"機場第二航廈站", A06:"機場旅館站",
-  A07:"大園站", A08:"坑口站", A09:"長庚醫院站", A10:"中壢站"
+  A1:"台北車站", A2:"三重站", A3:"新北產業園區站", A4:"新莊副都心站",
+  A5:"泰山站", A6:"泰山貴和站", A7:"體育大學站", A8:"長庚醫院站",
+  A9:"林口站", A10:"山鼻站", A11:"坑口站", A12:"機場第一航廈站",
+  A13:"機場第二航廈站", A14a:"機場旅館站", A15:"大園站", A16:"橫山站",
+  A17:"領航站", A18:"高鐵桃園站", A19:"桃園體育園區站", A20:"興南站", A21:"環北站"
 };
 const C = {
   bg:new Color("#ffffff"), card:new Color("#f2f2f7"),
@@ -196,8 +211,8 @@ const C = {
 };
 
 function getMins(t) {
-  if (typeof t.EstimatedArrivalTime === "number")
-    return Math.round(t.EstimatedArrivalTime);
+  if (typeof t.EstimateTime === "number") return t.EstimateTime;
+  if (typeof t.EstimatedArrivalTime === "number") return Math.round(t.EstimatedArrivalTime);
   const iso = t.ScheduledArrivalTime || t.ScheduledDepartureTime;
   if (!iso) return 999;
   return Math.max(0, Math.round((new Date(iso) - Date.now()) / 60000));
@@ -286,13 +301,19 @@ async function buildWidget() {
   }
 
   const trains = data
-    .filter(t => t.StationID === STATION_ID && t.Direction === DIRECTION)
+    .filter(t => {
+      const toTaipei = t.DestinationStationID === "A1";
+      return t.StationID === STATION_ID && (DIRECTION === 0 ? toTaipei : !toTaipei);
+    })
     .map(t => ({...t, _mins: getMins(t)}))
-    .filter(t => t._mins >= 0)
+    .filter(t => t._mins >= 0 && t._mins < 999)
     .sort((a, b) => a._mins - b._mins);
 
-  const express = trains.filter(t => t.TrainType === 1)[0];
-  const local   = trains.filter(t => t.TrainType === 2)[0];
+  // 往機場：A22終點=普通，其他=直達；往台北：按時間順序分配
+  const express = trains.find((t, i) =>
+    DIRECTION === 1 ? t.DestinationStationID !== "A22" : i === 0);
+  const local = trains.find((t, i) =>
+    DIRECTION === 1 ? t.DestinationStationID === "A22" : i === 1);
 
   const row = w.addStack();
   row.layoutHorizontally();
