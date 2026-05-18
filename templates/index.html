@@ -20,13 +20,38 @@ body {
   background: #f2f2f7;
   color: #1c1c1e;
   min-height: 100vh;
+}
+/* ── 頂部 ── */
+.topbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e5ea;
+  padding: 12px 20px 14px;
+  padding-top: max(12px, env(safe-area-inset-top) + 8px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.back-btn {
+  color: #ff9500;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.topbar-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c1c1e;
+  flex: 1;
+}
+/* ── 捲動內容 ── */
+.scroll-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px 40px;
+  padding: 20px 16px 40px;
 }
-h1 { font-size: 1.4rem; font-weight: 700; color: #1c1c1e; margin-bottom: 4px; }
-.subtitle { font-size: 0.82rem; color: #8e8e93; margin-bottom: 24px; }
 .card {
   background: #ffffff;
   border: 1px solid #e5e5ea;
@@ -118,8 +143,12 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
 </head>
 <body>
 
-<h1>🚄 高鐵刷票機器人</h1>
-<p class="subtitle">自動偵測放票，找到座位 Telegram 通知</p>
+<div class="topbar">
+  <a href="/" class="back-btn">‹ 返回</a>
+  <span class="topbar-title">🚄 高鐵刷票</span>
+</div>
+
+<div class="scroll-content">
 
 <div class="card">
   <div class="card-title">搭乘資訊</div>
@@ -336,5 +365,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
     } catch(_) {}
   }
 </script>
+</div><!-- /scroll-content -->
 </body>
 </html>
