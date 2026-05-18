@@ -408,7 +408,18 @@ async function copyCode() {
   }, 2000);
 }
 
-updateCode();
+// 頁面載入時從伺服器還原上次設定
+(async function init() {
+  try {
+    const res = await fetch(`${APP_URL}/api/widget-config/${MY_KEY}`);
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg.station)  document.getElementById("stationSel").value  = cfg.station;
+      if (cfg.direction !== undefined) document.getElementById("dirSel").value = cfg.direction;
+    }
+  } catch(e) {}
+  updateCode();
+})();
 </script>
 </body>
 </html>
