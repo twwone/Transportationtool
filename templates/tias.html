@@ -479,9 +479,8 @@ function renderTAT(stdIso, etdIso) {
 function renderCard(f, mode, showDirBadge) {
   const isArr = mode === 'arr';
 
-  const airline  = f.AirlineID || '??';
-  const fltNum   = f.FlightNumber || '—';
-  const terminal = f.ArrivalTerminal || f.DepartureTerminal || '';
+  const airline   = f.AirlineID || '??';
+  const fltNum    = f.FlightNumber || '—';
   const counterAp = isArr ? (f.DepartureAirportID || '') : (f.ArrivalAirportID || '');
   const cityName  = CITY[counterAp] || counterAp || '—';
 
@@ -490,10 +489,13 @@ function renderCard(f, mode, showDirBadge) {
                     : (f.EstimatedDepartureTime || f.EstimateDepartureTime);
   const act = isArr ? f.ActualArrivalTime       : f.ActualDepartureTime;
 
-  const gate    = isArr ? f.ArrivalGate   : f.DepartureGate;
+  const gate    = f.Gate || (isArr ? f.ArrivalGate : f.DepartureGate);
   const baggage = f.BaggageClaim || f.BaggageClaimBelt;
-  const counter = f.CheckInArea  || f.CheckinArea || f.CheckInCounter;
-  const status  = parseStatus(f.Remark || f.FlightStatus || '');
+  const counter = f.CheckCounter || f.CheckInCounter || f.CheckInArea;
+  const terminal = f.Terminal || f.ArrivalTerminal || f.DepartureTerminal;
+  const status  = parseStatus(
+    (isArr ? f.ArrivalRemark : f.DepartureRemark) || f.Remark || f.FlightStatus || ''
+  );
 
   const chips = [];
   if (gate)              chips.push({ icon:'🚪', lbl:'登機門',  val: gate });
