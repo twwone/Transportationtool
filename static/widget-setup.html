@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Widget 設定</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  padding: 24px 16px 48px;
+}
+h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+.sub { font-size: 0.8rem; color: #8e8e93; margin-bottom: 24px; }
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.card-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #aeaeb2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 0.78rem; color: #6c6c70; margin-bottom: 6px; }
+select {
+  width: 100%;
+  background: #f9f9f9;
+  border: 1px solid #d1d1d6;
+  border-radius: 10px;
+  color: #1c1c1e;
+  padding: 10px 30px 10px 12px;
+  font-size: 0.9rem;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23aeaeb2' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.steps { counter-reset: step; }
+.step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  font-size: 0.85rem;
+  color: #3c3c43;
+}
+.step::before {
+  counter-increment: step;
+  content: counter(step);
+  background: #7c3aed;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step a { color: #7c3aed; text-decoration: none; font-weight: 600; }
+
+pre {
+  background: #1c1c1e;
+  color: #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.72rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+  margin-bottom: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.copy-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #7c3aed, #a0318e);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  transition: opacity 0.15s;
+}
+.copy-btn:active { opacity: 0.8; }
+.copy-btn.copied { background: linear-gradient(135deg, #16a34a, #15803d); }
+
+.note {
+  font-size: 0.75rem;
+  color: #8e8e93;
+  text-align: center;
+  margin-top: 8px;
+}
+</style>
+</head>
+<body>
+
+<h1>🚇 機場捷運 Widget</h1>
+<p class="sub">Scriptable App 設定頁</p>
+
+<!-- 步驟說明 -->
+<div class="card">
+  <div class="card-label">使用步驟</div>
+  <div class="steps">
+    <div class="step">從 App Store 下載 <a href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank">Scriptable</a>（免費）</div>
+    <div class="step">選擇下方車站和方向後，按「複製程式碼」</div>
+    <div class="step">開啟 Scriptable → 右上角 ＋ → 貼上 → 儲存</div>
+    <div class="step">長按主畫面 → 新增 Widget → Scriptable → 選 Medium</div>
+  </div>
+</div>
+
+<!-- 設定 -->
+<div class="card">
+  <div class="card-label">Widget 設定</div>
+  <div class="field">
+    <label>車站</label>
+    <select id="stationSel" onchange="updateCode()">
+      <option value="A01">A01　台北車站</option>
+      <option value="A02">A02　三重站</option>
+      <option value="A03">A03　新北產業園區站</option>
+      <option value="A04">A04　機場第一航廈站</option>
+      <option value="A05">A05　機場第二航廈站</option>
+      <option value="A06">A06　機場旅館站</option>
+      <option value="A07">A07　大園站</option>
+      <option value="A08">A08　坑口站</option>
+      <option value="A09">A09　長庚醫院站</option>
+      <option value="A10">A10　中壢站</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>方向</label>
+    <select id="dirSel" onchange="updateCode()">
+      <option value="0">← 往台北</option>
+      <option value="1">往機場 / 中壢 →</option>
+    </select>
+  </div>
+</div>
+
+<!-- 程式碼 -->
+<div class="card">
+  <div class="card-label">程式碼（複製後貼到 Scriptable）</div>
+  <pre id="codeBox"></pre>
+  <button class="copy-btn" id="copyBtn" onclick="copyCode()">複製程式碼</button>
+  <p class="note">複製後開啟 Scriptable，點右上角 ＋ 貼上</p>
+</div>
+
+<script>
+const APP_URL = window.location.origin;
+
+const STATION_NAMES = {
+  A01:"台北車站", A02:"三重站", A03:"新北產業園區站",
+  A04:"機場第一航廈站", A05:"機場第二航廈站", A06:"機場旅館站",
+  A07:"大園站", A08:"坑口站", A09:"長庚醫院站", A10:"中壢站"
+};
+
+function generateCode(stationId, direction) {
+  return `// 桃園機場捷運 Widget（Scriptable）
+// ── 設定 ────────────────────────────
+const APP_URL    = "${APP_URL}";
+const STATION_ID = "${stationId}";  // ${STATION_NAMES[stationId]}
+const DIRECTION  = ${direction};        // ${direction == 0 ? "0:往台北" : "1:往機場/中壢"}
+// ─────────────────────────────────────
+
+const STATION_NAMES = {
+  A01:"台北車站", A02:"三重站", A03:"新北產業園區站",
+  A04:"機場第一航廈站", A05:"機場第二航廈站", A06:"機場旅館站",
+  A07:"大園站", A08:"坑口站", A09:"長庚醫院站", A10:"中壢站"
+};
+const C = {
+  bg:new Color("#ffffff"), card:new Color("#f2f2f7"),
+  text:new Color("#1c1c1e"), sub:new Color("#8e8e93"),
+  express:new Color("#a0318e"), local:new Color("#3d40a5"),
+  urgent:new Color("#dc2626"), soon:new Color("#c2410c"),
+  normal:new Color("#16a34a"), none:new Color("#c7c7cc"),
+};
+
+function getMins(t) {
+  if (typeof t.EstimatedArrivalTime === "number")
+    return Math.round(t.EstimatedArrivalTime);
+  const iso = t.ScheduledArrivalTime || t.ScheduledDepartureTime;
+  if (!iso) return 999;
+  return Math.max(0, Math.round((new Date(iso) - Date.now()) / 60000));
+}
+function cntColor(m) {
+  return m < 3 ? C.urgent : m <= 8 ? C.soon : C.normal;
+}
+
+async function fetchTrains() {
+  try {
+    const req = new Request(APP_URL + "/api/mrt/liveboard");
+    req.timeoutInterval = 8;
+    const json = await req.loadJSON();
+    if (!json.configured || json.error) return null;
+    return json.data || [];
+  } catch(e) { return null; }
+}
+
+function addPill(stack, train, label, labelColor) {
+  const pill = stack.addStack();
+  pill.layoutVertically();
+  pill.centerAlignContent();
+  pill.backgroundColor = C.card;
+  pill.cornerRadius = 10;
+  pill.setPadding(8, 8, 8, 8);
+
+  const lbl = pill.addText(label);
+  lbl.font = Font.boldSystemFont(10);
+  lbl.textColor = labelColor;
+  lbl.centerAlignText();
+  pill.addSpacer(3);
+
+  if (train) {
+    const m = train._mins;
+    const row = pill.addStack();
+    row.layoutHorizontally();
+    row.centerAlignContent();
+    const num = row.addText(String(m));
+    num.font = Font.boldSystemFont(28);
+    num.textColor = cntColor(m);
+    const unit = row.addText(" 分");
+    unit.font = Font.systemFont(13);
+    unit.textColor = cntColor(m);
+  } else {
+    const none = pill.addText("—");
+    none.font = Font.boldSystemFont(28);
+    none.textColor = C.none;
+    none.centerAlignText();
+  }
+}
+
+async function buildWidget() {
+  const w = new ListWidget();
+  w.backgroundColor = C.bg;
+  w.setPadding(14, 16, 12, 16);
+  w.url = APP_URL + "/mrt";
+  w.refreshAfterDate = new Date(Date.now() + 60000);
+
+  const hdr = w.addStack();
+  hdr.layoutHorizontally();
+  hdr.centerAlignContent();
+  const ttl = hdr.addText("🚇 機場捷運");
+  ttl.font = Font.boldSystemFont(13);
+  ttl.textColor = C.text;
+  hdr.addSpacer();
+  const now = new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"});
+  const upd = hdr.addText(now);
+  upd.font = Font.systemFont(10);
+  upd.textColor = C.sub;
+
+  w.addSpacer(3);
+  const stn = w.addText(STATION_NAMES[STATION_ID] || STATION_ID);
+  stn.font = Font.semiboldSystemFont(13);
+  stn.textColor = C.text;
+  const dir = w.addText(DIRECTION === 0 ? "← 往台北" : "往機場 / 中壢 →");
+  dir.font = Font.systemFont(10);
+  dir.textColor = C.sub;
+  w.addSpacer(10);
+
+  const data = await fetchTrains();
+  if (!data) {
+    const err = w.addText("⚠️ 無法取得資料");
+    err.font = Font.systemFont(12);
+    err.textColor = C.sub;
+    return w;
+  }
+
+  const trains = data
+    .filter(t => t.StationID === STATION_ID && t.Direction === DIRECTION)
+    .map(t => ({...t, _mins: getMins(t)}))
+    .filter(t => t._mins >= 0)
+    .sort((a, b) => a._mins - b._mins);
+
+  const express = trains.filter(t => t.TrainType === 1)[0];
+  const local   = trains.filter(t => t.TrainType === 2)[0];
+
+  const row = w.addStack();
+  row.layoutHorizontally();
+  row.spacing = 8;
+  addPill(row, express, "直達車", C.express);
+  addPill(row, local,   "普通車", C.local);
+
+  return w;
+}
+
+const widget = await buildWidget();
+if (config.runsInWidget) {
+  Script.setWidget(widget);
+} else {
+  widget.presentMedium();
+}
+Script.complete();`;
+}
+
+function updateCode() {
+  const station   = document.getElementById("stationSel").value;
+  const direction = document.getElementById("dirSel").value;
+  document.getElementById("codeBox").textContent = generateCode(station, direction);
+}
+
+async function copyCode() {
+  const code = document.getElementById("codeBox").textContent;
+  try {
+    await navigator.clipboard.writeText(code);
+  } catch(e) {
+    const ta = document.createElement("textarea");
+    ta.value = code;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  const btn = document.getElementById("copyBtn");
+  btn.textContent = "✓ 已複製！";
+  btn.classList.add("copied");
+  setTimeout(() => {
+    btn.textContent = "複製程式碼";
+    btn.classList.remove("copied");
+  }, 2000);
+}
+
+updateCode();
+</script>
+</body>
+</html>

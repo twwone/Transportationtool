@@ -124,6 +124,15 @@ body {
 .card-thsr:hover .arrow { color: #ff9500; }
 .card-mrt:hover  .arrow { color: #7c3aed; }
 
+/* Widget 卡片 */
+.card-widget { border-color: #d1d9ff; }
+.card-widget::before { background: radial-gradient(ellipse at 80% 20%, #6366f112, transparent 60%); }
+.card-widget:hover { border-color: #6366f1; background: #f8f8ff; }
+.card-widget:hover::before { opacity: 1; }
+.card-widget .icon-wrap { background: #eef2ff; }
+.card-widget .card-title { color: #4f46e5; }
+.card-widget:hover .arrow { color: #6366f1; }
+
 .footer {
   margin-top: 40px;
   font-size: 0.7rem;
@@ -157,6 +166,17 @@ body {
       <div class="card-text">
         <div class="card-title">桃園機場捷運</div>
         <div class="card-desc">即時到站倒數，直達車 / 普通車分開顯示</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+  </a>
+
+  <a href="/static/widget-setup.html" class="card card-widget">
+    <div class="card-inner">
+      <div class="icon-wrap">🔲</div>
+      <div class="card-text">
+        <div class="card-title">iPhone Widget 設定</div>
+        <div class="card-desc">Scriptable 捷運 Widget，選站即可複製程式碼</div>
       </div>
       <div class="arrow">›</div>
     </div>
