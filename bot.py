@@ -199,10 +199,11 @@ def _query_with_browser(browser, config: dict) -> tuple[list, str | None]:
               .get("DepartureTable", {})
               .get("TrainItem", [])
     )
-    time_to = config.get("time_to", "2359")
+    time_from = config.get("time_from", "0000")
+    time_to   = config.get("time_to",   "2359")
     filtered = [
         tr for tr in all_trains
-        if tr.get("DepartureTime", "").replace(":", "") <= time_to
+        if time_from <= tr.get("DepartureTime", "").replace(":", "") <= time_to
     ]
     return filtered, None
 
