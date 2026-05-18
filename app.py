@@ -437,7 +437,7 @@ def _fetch_tias():
 
 @app.route("/api/tias/debug")
 def tias_debug():
-    """診斷：用 Playwright 開桃園機場 FIDS 頁面，回傳標題與 HTML 結構"""
+    """診斷：用 Playwright 擷取航班資料結構"""
     try:
         from playwright.sync_api import sync_playwright
         with sync_playwright() as p:
@@ -451,13 +451,33 @@ def tias_debug():
             )
             page.goto("https://www.taoyuan-airport.com/flight_arrival", timeout=30000)
             page.wait_for_load_state("networkidle", timeout=20000)
-            html    = page.content()
-            title   = page.title()
+            page.wait_for_timeout(3000)
+
+            # 取 body 純文字（看實際航班資料）
+            body_text = page.evaluate("document.body.innerText")
+
+            # 找含 flight/fids/row/table 關鍵字的 class 名稱
+            structure = page.evaluate("""() => {
+                const seen = new Set();
+                const result = [];
+                document.querySelectorAll('[class]').forEach(el => {
+                    const cls = el.className;
+                    if (typeof cls === 'string') {
+                        cls.split(' ').forEach(c => {
+                            if (c && !seen.has(c) && result.length < 60) {
+                                seen.add(c);
+                                result.push(c);
+                            }
+                        });
+                    }
+                });
+                return result;
+            }""")
+
             browser.close()
         return jsonify({
-            "title":        title,
-            "html_length":  len(html),
-            "html_preview": html[:4000],
+            "body_text_preview": body_text[:3000],
+            "all_classes":       structure,
         })
     except Exception as e:
         return jsonify({"error": str(e)})
