@@ -235,6 +235,17 @@ def mrt_siri():
     use_text = bool(request.args.get("text"))
     fallback_msg = "抱歉，目前無法取得機場捷運即時資料，請稍後再試。"
 
+    # URL 參數優先，沒帶就用預設值
+    station_id = request.args.get("station", _SIRI_STATION_ID)
+    try:
+        direction = int(request.args.get("dir", _SIRI_DIRECTION))
+    except ValueError:
+        direction = _SIRI_DIRECTION
+
+    station_info = next((s for s in _MRT_STATIONS if s["id"] == station_id), None)
+    station_name = station_info["name"] if station_info else station_id
+    dir_label = "往台北" if direction == 0 else "往環北"
+
     def _resp(msg):
         if use_text:
             from flask import Response
@@ -251,11 +262,11 @@ def mrt_siri():
 
     trains = [
         t for t in data
-        if t.get("StationID") == _SIRI_STATION_ID
-        and t.get("Direction") == _SIRI_DIRECTION
+        if t.get("StationID") == station_id
+        and t.get("Direction") == direction
     ]
     if not trains:
-        return _resp(f"目前 {_SIRI_STATION_NAME} {_SIRI_DIR_LABEL} 無即時班次資料。")
+        return _resp(f"目前 {station_name} {dir_label} 無即時班次資料。")
 
     now_ts = time.time()
     best, best_mins = None, None
@@ -276,16 +287,16 @@ def mrt_siri():
             continue
 
     if best is None:
-        return _resp(f"目前 {_SIRI_STATION_NAME} {_SIRI_DIR_LABEL} 無即時班次資料。")
+        return _resp(f"目前 {station_name} {dir_label} 無即時班次資料。")
 
     type_raw = best.get("TrainTypeName", {})
     train_type = type_raw.get("Zh_tw", "列車") if isinstance(type_raw, dict) else str(type_raw or "列車")
 
     mins = round(best_mins)
     if mins <= 0:
-        msg = f"下一班{_SIRI_DIR_LABEL}的{train_type}即將進站，請盡快前往月台。"
+        msg = f"下一班{dir_label}的{train_type}即將進站，請盡快前往月台。"
     else:
-        msg = f"下一班{_SIRI_DIR_LABEL}的{train_type}還有 {mins} 分鐘進站，請把握時間。"
+        msg = f"下一班{dir_label}的{train_type}還有 {mins} 分鐘進站，請把握時間。"
 
     return _resp(msg)
 
