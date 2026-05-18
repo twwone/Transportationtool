@@ -294,7 +294,7 @@ async function buildWidget() {
   // 從伺服器讀取個人設定
   const cfg = await fetchConfig();
   if (!cfg || cfg.error) {
-    w.url = CONFIG_URL.replace("/api/widget-config/", "/widget-setup");
+    w.url = CONFIG_URL.replace("/api/widget-config/", "/static/widget-setup.html");
     const err = w.addText("⚠️ 請先到網頁設定車站");
     err.font = Font.systemFont(13);
     err.textColor = C.sub;
