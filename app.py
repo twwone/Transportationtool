@@ -337,6 +337,81 @@ def mrt_liveboard():
 
 
 
+# ──────────────────────────────────────────────
+#  TIAS（航空資訊看板）
+# ──────────────────────────────────────────────
+
+# 可擴充的代理航空公司清單，未來直接在此新增 {"code": "XX", "name": "..."}
+_TIAS_AIRLINES = [
+    {"code": "AK", "name": "AirAsia"},
+    {"code": "FD", "name": "Thai AirAsia"},
+    {"code": "QZ", "name": "AirAsia Indonesia"},
+    {"code": "Z2", "name": "AirAsia Philippines"},
+    {"code": "XT", "name": "AirAsia X Indonesia"},
+    {"code": "D7", "name": "AirAsia X"},
+    {"code": "XJ", "name": "Thai AirAsia X"},
+]
+_TIAS_CODES   = {a["code"] for a in _TIAS_AIRLINES}
+_TIAS_AIRPORT = "TPE"
+_TIAS_TTL     = 60  # 秒
+
+_tias_cache = {"arr": None, "dep": None, "expires_at": 0.0}
+_tias_lock  = threading.Lock()
+
+def _fetch_tias(token: str):
+    with _tias_lock:
+        if _tias_cache["arr"] is not None and time.time() < _tias_cache["expires_at"]:
+            return _tias_cache["arr"], _tias_cache["dep"]
+
+    hdr  = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    base = f"https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/{_TIAS_AIRPORT}"
+    p    = {"$format": "JSON", "$top": "200"}
+
+    def _get(url):
+        try:
+            r = _requests.get(url, headers=hdr, params=p, timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except Exception:
+            return []
+
+    def _sort_key_arr(f):
+        return f.get("ScheduleArrivalTime") or ""
+
+    def _sort_key_dep(f):
+        return f.get("ScheduleDepartureTime") or ""
+
+    arr_raw = _get(f"{base}/Arrival")
+    dep_raw = _get(f"{base}/Departure")
+
+    arr = sorted([f for f in arr_raw if f.get("AirlineID") in _TIAS_CODES], key=_sort_key_arr)
+    dep = sorted([f for f in dep_raw if f.get("AirlineID") in _TIAS_CODES], key=_sort_key_dep)
+
+    with _tias_lock:
+        _tias_cache["arr"] = arr
+        _tias_cache["dep"] = dep
+        _tias_cache["expires_at"] = time.time() + _TIAS_TTL
+    return arr, dep
+
+@app.route("/tias")
+def tias():
+    return render_template("tias.html")
+
+@app.route("/api/tias/flights")
+def tias_flights_api():
+    token = _get_tdx_token()
+    if not token:
+        return jsonify({"error": "TDX 未設定", "configured": False}), 503
+    arr, dep = _fetch_tias(token)
+    return jsonify({
+        "configured":  True,
+        "arrivals":    arr or [],
+        "departures":  dep or [],
+        "airlines":    _TIAS_AIRLINES,
+        "updated_at":  time.strftime("%H:%M:%S"),
+    })
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")

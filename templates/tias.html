@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>航空資訊看板</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+/* ── Topbar ── */
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid #e5e5ea;
+  padding: 10px 16px 0;
+  padding-top: max(10px, env(safe-area-inset-top) + 6px);
+  position: sticky; top: 0; z-index: 100;
+}
+.topbar-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.back-btn { color: #1a56db; font-size: 0.85rem; text-decoration: none; }
+.topbar-title { font-size: 1rem; font-weight: 700; flex: 1; }
+.refresh-btn {
+  background: none; border: none; color: #1a56db;
+  font-size: 0.8rem; cursor: pointer; padding: 4px 8px;
+  border-radius: 8px; transition: background 0.1s;
+}
+.refresh-btn:active { background: #eff6ff; }
+.spin { animation: spin 0.8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Tabs ── */
+.tabs { display: flex; }
+.tab {
+  flex: 1; padding: 9px 0; text-align: center;
+  font-size: 0.9rem; font-weight: 600; color: #8e8e93;
+  cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab.active { color: #1a56db; border-bottom-color: #1a56db; }
+
+/* ── Update bar ── */
+.meta-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 16px; font-size: 0.7rem; color: #aeaeb2;
+}
+
+/* ── List ── */
+.list { padding: 0 12px; }
+
+/* ── Flight Card ── */
+.card {
+  background: #fff;
+  border: 1px solid #e5e5ea;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* header row */
+.flt-head {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.badge-airline {
+  background: #eff6ff; color: #1a56db;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px;
+  padding: 3px 8px; border-radius: 6px;
+}
+.flt-num { font-size: 1.2rem; font-weight: 700; flex: 1; }
+.badge-terminal {
+  font-size: 0.7rem; color: #636366;
+  background: #f2f2f7; padding: 3px 7px; border-radius: 6px;
+}
+
+/* status badge */
+.badge-status {
+  font-size: 0.7rem; font-weight: 600;
+  padding: 3px 9px; border-radius: 20px;
+}
+.st-ontime  { background: #d1fae5; color: #065f46; }
+.st-delay   { background: #ffedd5; color: #9a3412; }
+.st-landed  { background: #dbeafe; color: #1e40af; }
+.st-depart  { background: #dbeafe; color: #1e40af; }
+.st-board   { background: #ede9fe; color: #5b21b6; }
+.st-cancel  { background: #fee2e2; color: #991b1b; text-decoration: line-through; }
+.st-unknown { background: #f3f4f6; color: #6b7280; }
+
+/* route */
+.route {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 11px;
+}
+.ap { display: flex; flex-direction: column; }
+.iata { font-size: 1.35rem; font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
+.city { font-size: 0.65rem; color: #8e8e93; margin-top: 2px; }
+.arrow-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+.arrow-line {
+  height: 2px; flex: 1; background: #e5e5ea; border-radius: 1px;
+  position: relative;
+}
+.arrow-line::after {
+  content: '›'; position: absolute; right: -5px; top: 50%;
+  transform: translateY(-50%); color: #c7c7cc; font-size: 1rem;
+}
+
+/* times */
+.times { display: flex; gap: 20px; margin-bottom: 11px; }
+.t-block { display: flex; flex-direction: column; }
+.t-lbl {
+  font-size: 0.62rem; color: #aeaeb2; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px;
+}
+.t-sch { font-size: 1.1rem; font-weight: 700; line-height: 1; }
+.t-est { font-size: 0.8rem; font-weight: 600; color: #9a3412; margin-top: 2px; }
+.t-act { font-size: 0.8rem; font-weight: 600; color: #065f46; margin-top: 2px; }
+.t-delay-badge {
+  display: inline-block; margin-left: 5px;
+  font-size: 0.65rem; color: #9a3412; background: #ffedd5;
+  padding: 1px 5px; border-radius: 4px;
+}
+
+/* resources */
+.resources { display: flex; gap: 7px; flex-wrap: wrap; }
+.res {
+  display: flex; align-items: center; gap: 5px;
+  background: #f9f9f9; border: 1px solid #e5e5ea;
+  border-radius: 9px; padding: 5px 10px;
+}
+.res-icon { font-size: 0.85rem; }
+.res-lbl { font-size: 0.62rem; color: #aeaeb2; }
+.res-val { font-size: 0.82rem; font-weight: 700; color: #1c1c1e; }
+.res-tba { font-size: 0.78rem; color: #c7c7cc; font-style: italic; }
+
+/* ── TAT Section ── */
+.tat-wrap {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid #f2f2f7;
+}
+.tat-headline {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 9px;
+}
+.tat-icon { font-size: 0.85rem; }
+.tat-next { font-size: 0.82rem; font-weight: 600; color: #1c1c1e; }
+.tat-next.phase-urgent { color: #b91c1c; }
+.tat-next.phase-soon   { color: #92400e; }
+.tat-next.phase-ok     { color: #065f46; }
+
+/* milestone list */
+.ms-list { display: flex; flex-direction: column; gap: 5px; }
+.ms-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 8px;
+}
+.ms-row.ms-done  { opacity: 0.4; }
+.ms-row.ms-now   { background: #eff6ff; border: 1px solid #bfdbfe; }
+.ms-row.ms-next  { background: #fffbeb; border: 1px solid #fde68a; }
+.ms-row.ms-urgent { background: #fef2f2; border: 1px solid #fecaca; }
+.ms-row.ms-future { opacity: 0.55; }
+.ms-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.ms-done  .ms-dot  { background: #9ca3af; }
+.ms-now   .ms-dot  { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+.ms-next  .ms-dot  { background: #f59e0b; }
+.ms-urgent .ms-dot { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
+.ms-future .ms-dot { background: #d1d5db; }
+.ms-time {
+  font-size: 0.78rem; font-weight: 700; color: #374151;
+  min-width: 38px;
+}
+.ms-label { font-size: 0.78rem; color: #374151; flex: 1; }
+.ms-countdown {
+  font-size: 0.7rem; font-weight: 600; color: #6b7280;
+  white-space: nowrap;
+}
+.ms-now   .ms-countdown { color: #1d4ed8; }
+.ms-next  .ms-countdown { color: #92400e; }
+.ms-urgent .ms-countdown { color: #b91c1c; }
+
+/* ── Empty / Error ── */
+.empty {
+  text-align: center; padding: 60px 20px;
+  color: #aeaeb2; font-size: 0.9rem;
+}
+.empty-icon { font-size: 2.8rem; display: block; margin-bottom: 14px; }
+.error-banner {
+  background: #fef3c7; border: 1px solid #fcd34d;
+  border-radius: 12px; padding: 12px 16px;
+  font-size: 0.82rem; color: #78350f; margin: 12px;
+}
+.loading {
+  text-align: center; padding: 40px 20px;
+  color: #aeaeb2; font-size: 0.85rem;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <a href="/" class="back-btn">‹ 返回</a>
+    <span class="topbar-title">✈️ 航空資訊看板</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="load(true)">↻ 重整</button>
+  </div>
+  <div class="tabs">
+    <div class="tab active" id="tab-arr" onclick="switchTab('arr')">🛬 入港</div>
+    <div class="tab" id="tab-dep" onclick="switchTab('dep')">🛫 出港</div>
+  </div>
+</div>
+
+<div class="meta-bar">
+  <span id="airlineHint" style="color:#8e8e93"></span>
+  <span id="updateLabel">載入中…</span>
+</div>
+
+<div id="errWrap"></div>
+<div class="list" id="listArr"><div class="loading">載入中…</div></div>
+<div class="list" id="listDep" style="display:none"><div class="loading">載入中…</div></div>
+
+<script>
+/* ── 城市名對照 ── */
+const CITY = {
+  KUL:'吉隆坡',ICN:'首爾仁川',PUS:'釜山',NRT:'東京成田',HND:'東京羽田',
+  KIX:'大阪',NGO:'名古屋',FUK:'福岡',OKA:'沖繩',CTS:'札幌',
+  BKK:'曼谷素萬那普',DMK:'曼谷廊曼',HKT:'普吉',CNX:'清邁',
+  CGK:'雅加達',SUB:'泗水',DPS:'峇里島',BPN:'望加錫',
+  MNL:'馬尼拉',CEB:'宿霧',DVO:'達沃',
+  SIN:'新加坡',HKG:'香港',MFM:'澳門',
+  PEK:'北京首都',PKX:'北京大興',PVG:'上海浦東',SHA:'上海虹橋',
+  CAN:'廣州',SZX:'深圳',XMN:'廈門',CTU:'成都',XIY:'西安',WUH:'武漢',
+  TPE:'桃園',TSA:'台北松山',KHH:'高雄',RMQ:'台中',TNN:'台南',
+  KNH:'金門',TTT:'台東',HUN:'花蓮',MZG:'澎湖',LZN:'馬祖',
+  BNE:'布里斯本',SYD:'雪梨',MEL:'墨爾本',
+};
+
+/* ── 狀態對照 ── */
+const ST_MAP = [
+  [/(準時|On.?Time|正常)/i,    'ontime', '準時'],
+  [/(延誤|Delay)/i,            'delay',  '延誤'],
+  [/(落地|Arrived?|抵達)/i,    'landed', '落地'],
+  [/(起飛|Depart)/i,           'depart', '已起飛'],
+  [/(登機|Board)/i,            'board',  '登機中'],
+  [/(取消|Cancel)/i,           'cancel', '取消'],
+];
+
+/* ── TAT 里程碑（以 STD 為基準，offset 單位：分鐘）── */
+const MILESTONES = [
+  { key:'open',  label:'開始報到', offset:-180, short:'開報' },
+  { key:'close', label:'截止報到', offset:-45,  short:'截報' },
+  { key:'board', label:'開始登機', offset:-40,  short:'登機' },
+  { key:'gate',  label:'關艙門',   offset:-15,  short:'關艙' },
+  { key:'std',   label:'起飛',     offset:0,    short:'起飛' },
+];
+
+let _tab = 'arr';
+let _timer = null;
+
+function fmtHHMM(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function delayMin(schIso, estIso) {
+  if (!schIso || !estIso) return 0;
+  return Math.round((new Date(estIso) - new Date(schIso)) / 60000);
+}
+
+function parseStatus(remark) {
+  if (!remark) return { cls:'unknown', label:'—' };
+  const txt = typeof remark === 'object'
+    ? (remark.Zh_tw || remark.En || JSON.stringify(remark))
+    : String(remark);
+  for (const [re, cls, label] of ST_MAP) {
+    if (re.test(txt)) return { cls, label: txt.length < 10 ? txt : label };
+  }
+  return { cls:'unknown', label: txt.slice(0,8) || '—' };
+}
+
+function renderTimeBlock(label, schIso, estIso, actIso) {
+  const sch = fmtHHMM(schIso);
+  const dm  = delayMin(schIso, estIso);
+  let sub = '';
+  if (actIso) {
+    sub = `<div class="t-act">實際 ${fmtHHMM(actIso)}</div>`;
+  } else if (estIso && Math.abs(dm) >= 1) {
+    const badge = dm > 0
+      ? `<span class="t-delay-badge">+${dm}m</span>`
+      : `<span class="t-delay-badge" style="color:#065f46;background:#d1fae5">${dm}m</span>`;
+    sub = `<div class="t-est">預計 ${fmtHHMM(estIso)}${badge}</div>`;
+  }
+  return `<div class="t-block">
+    <div class="t-lbl">${label}</div>
+    <div class="t-sch">${sch}</div>
+    ${sub}
+  </div>`;
+}
+
+function renderResources(chips) {
+  if (!chips.length) return `<div class="res"><span class="res-tba">資源待分配</span></div>`;
+  return chips.map(c =>
+    `<div class="res">
+      <span class="res-icon">${c.icon}</span>
+      <span class="res-lbl">${c.lbl}</span>
+      <span class="res-val">${c.val}</span>
+     </div>`
+  ).join('');
+}
+
+function renderTAT(stdIso, etdIso) {
+  const ref = etdIso || stdIso;
+  if (!ref) return '';
+  const std = new Date(ref);
+  const now = new Date();
+  const nowMins = (now - std) / 60000; // 負 = 起飛前，正 = 起飛後
+
+  const ms = MILESTONES.map(m => ({
+    ...m,
+    time: new Date(std.getTime() + m.offset * 60000),
+    isPast: m.offset <= nowMins,
+  }));
+
+  // 找「下一個」里程碑（最小的 offset 還沒過）
+  const nextMs = ms.find(m => m.offset > nowMins);
+
+  // 計算倒數
+  let headlineTxt = '', headlineCls = '';
+  if (!nextMs) {
+    const ago = Math.round(nowMins);
+    headlineTxt = `✅ 已起飛 ${ago} 分鐘前`;
+    headlineCls = '';
+  } else {
+    const remain = Math.round(nextMs.offset - nowMins);
+    if (remain <= 5) {
+      headlineTxt = `🚨 ${nextMs.label} 即將到達！剩 ${remain} 分鐘`;
+      headlineCls = 'phase-urgent';
+    } else if (remain <= 20) {
+      headlineTxt = `⚠️ 距${nextMs.label} ${remain} 分鐘`;
+      headlineCls = 'phase-soon';
+    } else if (remain < 60) {
+      headlineTxt = `⏱ 距${nextMs.label} ${remain} 分鐘`;
+      headlineCls = 'phase-ok';
+    } else {
+      const h = Math.floor(remain / 60), m = remain % 60;
+      headlineTxt = `⏱ 距${nextMs.label} ${h}h ${m > 0 ? m + 'm' : ''}`;
+      headlineCls = 'phase-ok';
+    }
+  }
+
+  const rows = ms.map(m => {
+    let rowCls, dotCls, countdown = '';
+    const remain = Math.round(m.offset - nowMins);
+
+    if (m.isPast) {
+      rowCls = 'ms-done';
+    } else if (m === nextMs) {
+      if (remain <= 5)       { rowCls = 'ms-urgent'; }
+      else if (remain <= 20) { rowCls = 'ms-next'; }
+      else                   { rowCls = 'ms-now'; }
+      countdown = remain <= 0 ? '時間到' : `${remain < 60 ? remain + 'm' : Math.floor(remain/60) + 'h' + (remain%60||'')}`;
+    } else {
+      rowCls = 'ms-future';
+    }
+
+    return `<div class="ms-row ${rowCls}">
+      <div class="ms-dot"></div>
+      <div class="ms-time">${fmtHHMM(m.time.toISOString())}</div>
+      <div class="ms-label">${m.label}</div>
+      ${countdown ? `<div class="ms-countdown">${countdown}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<div class="tat-wrap">
+    <div class="tat-headline">
+      <div class="tat-next ${headlineCls}">${headlineTxt}</div>
+    </div>
+    <div class="ms-list">${rows}</div>
+  </div>`;
+}
+
+function renderCard(f, mode) {
+  const isArr = mode === 'arr';
+
+  const airline  = f.AirlineID || '??';
+  const fltNum   = f.FlightNumber || '—';
+  const terminal = f.ArrivalTerminal || f.DepartureTerminal || '';
+  const counterAp = isArr
+    ? (f.DepartureAirportID || '')
+    : (f.ArrivalAirportID || '');
+  const cityName = counterAp
+    ? (CITY[counterAp] || (f.DepartureAirportName?.Zh_tw || f.ArrivalAirportName?.Zh_tw || counterAp))
+    : '—';
+
+  const sch = isArr ? f.ScheduleArrivalTime   : f.ScheduleDepartureTime;
+  const est = isArr ? (f.EstimateArrivalTime  || f.EstimatedArrivalTime)
+                    : (f.EstimateDepartureTime || f.EstimatedDepartureTime);
+  const act = isArr ? f.ActualArrivalTime      : f.ActualDepartureTime;
+  const gate    = isArr ? f.ArrivalGate   : f.DepartureGate;
+  const baggage = f.BaggageClaim || f.BaggageClaimBelt;
+  const counter = f.CheckInArea  || f.CheckinArea || f.CheckInCounter;
+  const status  = parseStatus(f.Remark || f.FlightStatus || f.Status || '');
+
+  const chips = [];
+  if (gate)              chips.push({ icon:'🚪', lbl:'登機門', val: gate });
+  if (!isArr && counter) chips.push({ icon:'🎫', lbl:'報到',   val: counter });
+  if (isArr && baggage)  chips.push({ icon:'🧳', lbl:'行李轉盤', val: baggage });
+
+  const timeLabel = isArr ? 'STA' : 'STD';
+  const tatHtml = !isArr ? renderTAT(sch, est) : '';
+
+  return `<div class="card">
+    <div class="flt-head">
+      <span class="badge-airline">${airline}</span>
+      <span class="flt-num">${fltNum}</span>
+      <span class="badge-status st-${status.cls}">${status.label}</span>
+      ${terminal ? `<span class="badge-terminal">T${terminal}</span>` : ''}
+    </div>
+    <div class="route">
+      <div class="ap">
+        <div class="iata">${isArr ? counterAp || '—' : 'TPE'}</div>
+        <div class="city">${isArr ? cityName : '桃園'}</div>
+      </div>
+      <div class="arrow-wrap"><div class="arrow-line"></div></div>
+      <div class="ap" style="text-align:right">
+        <div class="iata">${isArr ? 'TPE' : counterAp || '—'}</div>
+        <div class="city">${isArr ? '桃園' : cityName}</div>
+      </div>
+    </div>
+    <div class="times">${renderTimeBlock(timeLabel, sch, est, act)}</div>
+    <div class="resources">${renderResources(chips)}</div>
+    ${tatHtml}
+  </div>`;
+}
+
+function switchTab(tab) {
+  _tab = tab;
+  document.getElementById('tab-arr').classList.toggle('active', tab === 'arr');
+  document.getElementById('tab-dep').classList.toggle('active', tab === 'dep');
+  document.getElementById('listArr').style.display = tab === 'arr' ? '' : 'none';
+  document.getElementById('listDep').style.display = tab === 'dep' ? '' : 'none';
+}
+
+async function load(manual) {
+  const btn = document.getElementById('refreshBtn');
+  btn.innerHTML = '<span class="spin">↻</span> 更新中';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch('/api/tias/flights');
+    const data = await res.json();
+
+    if (!data.configured) {
+      document.getElementById('errWrap').innerHTML =
+        `<div class="error-banner">⚠️ TDX API 未設定，請確認環境變數 TDX_CLIENT_ID / TDX_CLIENT_SECRET。</div>`;
+      return;
+    }
+
+    document.getElementById('errWrap').innerHTML = '';
+    document.getElementById('updateLabel').textContent = `更新 ${data.updated_at}`;
+    if (data.airlines?.length) {
+      document.getElementById('airlineHint').textContent =
+        data.airlines.map(a => a.code).join(' · ');
+    }
+
+    const arrEl = document.getElementById('listArr');
+    const depEl = document.getElementById('listDep');
+
+    arrEl.innerHTML = data.arrivals.length
+      ? data.arrivals.map(f => renderCard(f, 'arr')).join('')
+      : `<div class="empty"><span class="empty-icon">🛬</span>目前無入港航班</div>`;
+
+    depEl.innerHTML = data.departures.length
+      ? data.departures.map(f => renderCard(f, 'dep')).join('')
+      : `<div class="empty"><span class="empty-icon">🛫</span>目前無出港航班</div>`;
+
+  } catch (e) {
+    document.getElementById('errWrap').innerHTML =
+      `<div class="error-banner">⚠️ 連線失敗，請稍後再試。</div>`;
+  } finally {
+    btn.innerHTML = '↻ 重整';
+    btn.disabled = false;
+  }
+}
+
+// 初始載入 + 60 秒自動刷新
+load();
+_timer = setInterval(load, 60000);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
+</body>
+</html>

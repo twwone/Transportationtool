@@ -133,6 +133,15 @@ body {
 .card-widget .card-title { color: #4f46e5; }
 .card-widget:hover .arrow { color: #6366f1; }
 
+/* 航空看板卡片 */
+.card-tias { border-color: #bfdbfe; }
+.card-tias::before { background: radial-gradient(ellipse at 80% 20%, #1a56db10, transparent 60%); }
+.card-tias:hover { border-color: #1a56db; background: #eff6ff; }
+.card-tias:hover::before { opacity: 1; }
+.card-tias .icon-wrap { background: #dbeafe; }
+.card-tias .card-title { color: #1e40af; }
+.card-tias:hover .arrow { color: #1a56db; }
+
 .footer {
   margin-top: 40px;
   font-size: 0.7rem;
@@ -166,6 +175,17 @@ body {
       <div class="card-text">
         <div class="card-title">桃園機場捷運</div>
         <div class="card-desc">即時到站倒數，直達車 / 普通車分開顯示</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+  </a>
+
+  <a href="/tias" class="card card-tias">
+    <div class="card-inner">
+      <div class="icon-wrap">✈️</div>
+      <div class="card-text">
+        <div class="card-title">航空資訊看板</div>
+        <div class="card-desc">AirAsia 入離港即時動態・登機門・地勤時程倒數</div>
       </div>
       <div class="arrow">›</div>
     </div>
