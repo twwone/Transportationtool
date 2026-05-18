@@ -437,14 +437,28 @@ def _fetch_tias():
 
 @app.route("/api/tias/debug")
 def tias_debug():
-    """診斷：回傳 CSV 原始前 5 筆"""
+    """診斷：用 Playwright 開桃園機場 FIDS 頁面，回傳標題與 HTML 結構"""
     try:
-        resp = _requests.get(_TIAS_CSV_URL, timeout=15,
-                             headers={"User-Agent": "Mozilla/5.0"})
-        resp.encoding = "utf-8-sig"
-        reader = _csv.DictReader(_io.StringIO(resp.text))
-        rows = [row for i, row in enumerate(reader) if i < 5]
-        return jsonify({"status": resp.status_code, "sample": rows})
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+            )
+            page = browser.new_page(
+                user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                locale="zh-TW",
+            )
+            page.goto("https://www.taoyuan-airport.com/flight_arrival", timeout=30000)
+            page.wait_for_load_state("networkidle", timeout=20000)
+            html    = page.content()
+            title   = page.title()
+            browser.close()
+        return jsonify({
+            "title":        title,
+            "html_length":  len(html),
+            "html_preview": html[:4000],
+        })
     except Exception as e:
         return jsonify({"error": str(e)})
 
