@@ -262,6 +262,16 @@ def _book_ticket(browser, config: dict, log_fn=None) -> tuple[bytes | None, str 
         if not clicked:
             return ss, "找不到訂票按鈕，截圖為時刻表結果頁（可能選擇器需更新）"
 
+        # 列出頁面所有 input，方便確認正確 selector
+        try:
+            fields = booking_page.evaluate(
+                "() => Array.from(document.querySelectorAll('input')).map(el => "
+                "({tag:'input', id:el.id, name:el.name, type:el.type, placeholder:el.placeholder}))"
+            )
+            _step(f"頁面 input 欄位: {fields[:10]}")
+        except Exception as fe:
+            _step(f"無法取得欄位列表: {fe}")
+
         _step("填入乘客資料...")
         id_ok    = _fill_field(booking_page, _BOOKING_ID_SELECTORS,    config.get("id_number", ""))
         phone_ok = _fill_field(booking_page, _BOOKING_PHONE_SELECTORS, config.get("phone", ""))
