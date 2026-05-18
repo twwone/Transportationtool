@@ -283,6 +283,34 @@ body {
 </div>
 
 <script>
+/* ── 航空公司中文名對照 ── */
+const AIRLINE_CN = {
+  // AirAsia 集團
+  AK:'亞洲航空', FD:'泰國亞航', QZ:'印尼亞航', Z2:'菲律賓亞航',
+  XT:'印尼亞航X', D7:'亞航X', XJ:'泰國亞航X',
+  // 台灣航空
+  CI:'中華航空', BR:'長榮航空', IT:'台灣虎航', B7:'立榮航空', AE:'華信航空',
+  // 中國航空
+  CA:'中國國際', MU:'中國東方', CZ:'中國南方', HU:'海南航空',
+  FM:'上海航空', '3U':'四川航空', ZH:'深圳航空', SC:'山東航空',
+  // 日本航空
+  JL:'日本航空', NH:'全日空', MM:'樂桃航空', GK:'捷星日本', BC:'天馬航空',
+  // 韓國航空
+  KE:'大韓航空', OZ:'韓亞航空', BX:'釜山航空', LJ:'真航空', TW:'德威航空',
+  // 東南亞航空
+  SQ:'新加坡航空', TR:'酷航', MI:'勝安航空',
+  MH:'馬來西亞航空', OD:'馬印航空',
+  PR:'菲律賓航空', '5J':'宿霧太平洋',
+  TG:'泰國航空', WE:'泰國微笑',
+  GA:'印尼航空',
+  VN:'越南航空', VJ:'越捷航空',
+  // 港澳航空
+  CX:'國泰航空', HX:'香港航空', UO:'香港快運', NX:'澳門航空',
+  // 歐美中東
+  EK:'阿聯酋航空', QR:'卡達航空', TK:'土耳其航空',
+  KL:'荷蘭皇家', LH:'漢莎航空', BA:'英國航空', AF:'法國航空',
+};
+
 /* ── 城市名對照 ── */
 const CITY = {
   KUL:'吉隆坡',ICN:'首爾仁川',PUS:'釜山',NRT:'東京成田',HND:'東京羽田',
@@ -479,9 +507,11 @@ function renderCard(f, mode, showDirBadge) {
     ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
     : '';
 
+  const airlineName = AIRLINE_CN[airline] ? `${airline} ${AIRLINE_CN[airline]}` : airline;
+
   return `<div class="card">
     <div class="flt-head">
-      <span class="badge-airline">${airline}</span>
+      <span class="badge-airline">${airlineName}</span>
       ${dirBadge}
       <span class="flt-num">${fltNum}</span>
       <span class="badge-status st-${status.cls}">${status.label}</span>
