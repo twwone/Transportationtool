@@ -435,50 +435,87 @@ def _fetch_tias():
         with _tias_lock:
             return _tias_cache["arr"] or [], _tias_cache["dep"] or []
 
-_SKIP_EXTS = ('.svg','.png','.jpg','.gif','.woff','.woff2','.ttf','.js','.css','.ico','.map')
-_SKIP_HOSTS = ('fonts.gstatic','fonts.googleapis','google-analytics','facebook','doubleclick')
-
 @app.route("/api/tias/debug")
 def tias_debug():
-    """診斷：捕捉所有非靜態資源 API 呼叫"""
+    """診斷 v6：攔截頁面 JS 打出的 flight API 回應，直接取得航班 JSON"""
     try:
         from playwright.sync_api import sync_playwright
-        captured = []
+        captured: dict = {}
+        blocked:  list = []
 
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+                args=[
+                    "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu",
+                    "--disable-blink-features=AutomationControlled",
+                ],
             )
-            page = browser.new_page(
-                user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            ctx = browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                ),
                 locale="zh-TW",
+                extra_http_headers={
+                    "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8",
+                    "sec-ch-ua": '"Chromium";v="124","Google Chrome";v="124"',
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": '"Windows"',
+                },
             )
+            page = ctx.new_page()
 
-            def on_response(response):
-                url = response.url
-                if any(url.endswith(e) for e in _SKIP_EXTS): return
-                if any(h in url for h in _SKIP_HOSTS): return
-                if '/assets/img/' in url or '/assets/fonts/' in url: return
-                ct = response.headers.get("content-type", "")
-                try:
-                    body = response.text()
-                    captured.append({
-                        "url": url,
-                        "status": response.status,
-                        "content_type": ct,
-                        "body_preview": body[:600],
-                    })
-                except Exception:
-                    captured.append({"url": url, "status": response.status, "content_type": ct})
+            # 隱藏 headless 特徵
+            page.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                window.chrome = {runtime: {}};
+                Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
+                Object.defineProperty(navigator, 'languages', {get: () => ['zh-TW','zh','en-US']});
+            """)
 
-            page.on("response", on_response)
+            # 攔截所有含 "flight" 的 HTTP 回應
+            def _on_resp(resp):
+                url = resp.url
+                if "flight" not in url.lower():
+                    return
+                if resp.status < 400:
+                    try:
+                        body = resp.text()
+                        captured[url] = {"status": resp.status, "body": body[:6000]}
+                    except Exception:
+                        captured[url] = {"status": resp.status, "body": "(read error)"}
+                else:
+                    blocked.append(f"{resp.status} → {url}")
+
+            page.on("response", _on_resp)
             page.goto("https://www.taoyuan-airport.com/flight_arrival", timeout=30000)
             page.wait_for_load_state("networkidle", timeout=25000)
-            page.wait_for_timeout(6000)
+            page.wait_for_timeout(8000)  # 等非同步 fetch 完成
+
+            # 補抓：嘗試在頁面 JS 上下文主動呼叫出發頁 API
+            dep_result = page.evaluate("""async () => {
+                try {
+                    const r = await fetch('/api/api/flight/d_flight', {
+                        credentials: 'include',
+                        headers: {'Accept': 'application/json, text/plain, */*',
+                                  'X-Requested-With': 'XMLHttpRequest'}
+                    });
+                    const t = await r.text();
+                    return {status: r.status, body: t.slice(0,3000)};
+                } catch(e) { return {error: String(e)}; }
+            }""")
+
+            html_sample = page.content()[2000:5000]
             browser.close()
 
-        return jsonify({"total": len(captured), "requests": captured})
+        return jsonify({
+            "captured_flight_responses": captured,
+            "blocked_requests":          blocked,
+            "dep_api_test":              dep_result,
+            "html_sample":               html_sample,
+        })
     except Exception as e:
         return jsonify({"error": str(e)})
 
