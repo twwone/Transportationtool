@@ -437,84 +437,52 @@ def _fetch_tias():
 
 @app.route("/api/tias/debug")
 def tias_debug():
-    """診斷 v6：攔截頁面 JS 打出的 flight API 回應，直接取得航班 JSON"""
+    """診斷 v7：curl_cffi 模擬 Chrome TLS 指紋，Session 先取 cookie 再呼叫 flight API"""
     try:
-        from playwright.sync_api import sync_playwright
-        captured: dict = {}
-        blocked:  list = []
+        from curl_cffi import requests as cffi
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu",
-                    "--disable-blink-features=AutomationControlled",
-                ],
-            )
-            ctx = browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/124.0.0.0 Safari/537.36"
-                ),
-                locale="zh-TW",
-                extra_http_headers={
-                    "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8",
-                    "sec-ch-ua": '"Chromium";v="124","Google Chrome";v="124"',
-                    "sec-ch-ua-mobile": "?0",
-                    "sec-ch-ua-platform": '"Windows"',
-                },
-            )
-            page = ctx.new_page()
+        sess = cffi.Session(impersonate="chrome124")
 
-            # 隱藏 headless 特徵
-            page.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                window.chrome = {runtime: {}};
-                Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
-                Object.defineProperty(navigator, 'languages', {get: () => ['zh-TW','zh','en-US']});
-            """)
+        # Step 1：訪問入港頁，讓 Cloudflare 設定 cf_clearance
+        main = sess.get(
+            "https://www.taoyuan-airport.com/flight_arrival",
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "zh-TW,zh;q=0.9",
+            },
+            timeout=20,
+        )
 
-            # 攔截所有含 "flight" 的 HTTP 回應
-            def _on_resp(resp):
-                url = resp.url
-                if "flight" not in url.lower():
-                    return
-                if resp.status < 400:
-                    try:
-                        body = resp.text()
-                        captured[url] = {"status": resp.status, "body": body[:6000]}
-                    except Exception:
-                        captured[url] = {"status": resp.status, "body": "(read error)"}
-                else:
-                    blocked.append(f"{resp.status} → {url}")
+        # Step 2：呼叫 arrival API
+        arr = sess.get(
+            "https://www.taoyuan-airport.com/api/api/flight/a_flight",
+            headers={
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "zh-TW,zh;q=0.9",
+                "Referer": "https://www.taoyuan-airport.com/flight_arrival",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            timeout=20,
+        )
 
-            page.on("response", _on_resp)
-            page.goto("https://www.taoyuan-airport.com/flight_arrival", timeout=30000)
-            page.wait_for_load_state("networkidle", timeout=25000)
-            page.wait_for_timeout(8000)  # 等非同步 fetch 完成
-
-            # 補抓：嘗試在頁面 JS 上下文主動呼叫出發頁 API
-            dep_result = page.evaluate("""async () => {
-                try {
-                    const r = await fetch('/api/api/flight/d_flight', {
-                        credentials: 'include',
-                        headers: {'Accept': 'application/json, text/plain, */*',
-                                  'X-Requested-With': 'XMLHttpRequest'}
-                    });
-                    const t = await r.text();
-                    return {status: r.status, body: t.slice(0,3000)};
-                } catch(e) { return {error: String(e)}; }
-            }""")
-
-            html_sample = page.content()[2000:5000]
-            browser.close()
+        # Step 3：呼叫 departure API
+        dep = sess.get(
+            "https://www.taoyuan-airport.com/api/api/flight/d_flight",
+            headers={
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "zh-TW,zh;q=0.9",
+                "Referer": "https://www.taoyuan-airport.com/flight_departure",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            timeout=20,
+        )
 
         return jsonify({
-            "captured_flight_responses": captured,
-            "blocked_requests":          blocked,
-            "dep_api_test":              dep_result,
-            "html_sample":               html_sample,
+            "main_status": main.status_code,
+            "arr_status":  arr.status_code,
+            "arr_body":    arr.text[:4000],
+            "dep_status":  dep.status_code,
+            "dep_body":    dep.text[:4000],
         })
     except Exception as e:
         return jsonify({"error": str(e)})
