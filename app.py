@@ -5,6 +5,9 @@ import threading
 import requests as _requests
 from flask import Flask, render_template, request, jsonify, redirect as flask_redirect
 from bot import THSRBot, STATIONS, TIME_OPTIONS, DISCOUNT_OPTIONS
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
