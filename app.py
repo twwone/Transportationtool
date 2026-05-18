@@ -439,6 +439,151 @@ def tias_debug():
     })
 
 
+# ──────────────────────────────────────────────
+#  週班表（定期航班班表）
+#  資料來源：TDX 定期航班班表 API（每小時快取一次）
+# ──────────────────────────────────────────────
+_SCHEDULE_TTL    = 3600
+_schedule_cache  = {"dep": None, "arr": None, "expires_at": 0.0}
+_schedule_lock   = threading.Lock()
+_TDX_SCHEDULE    = "https://tdx.transportdata.tw/api/basic/v2/Air/GeneralSchedule"
+_SERVICEDAY_KEYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def _fetch_schedule():
+    with _schedule_lock:
+        if _schedule_cache["dep"] is not None and time.time() < _schedule_cache["expires_at"]:
+            return _schedule_cache["dep"], _schedule_cache["arr"], True
+
+    token = _get_tdx_token()
+    if not token:
+        return None, None, False
+
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    try:
+        r = _requests.get(
+            _TDX_SCHEDULE,
+            headers=headers,
+            params={"$format": "JSON", "$top": 5000},
+            timeout=20,
+        )
+        r.raise_for_status()
+        body = r.json()
+        all_data = body if isinstance(body, list) else body.get("data", [])
+    except Exception:
+        all_data = []
+
+    dep = [f for f in all_data if f.get("DepartureAirportID") == "TPE"]
+    arr = [f for f in all_data if f.get("ArrivalAirportID") == "TPE"]
+
+    with _schedule_lock:
+        _schedule_cache["dep"] = dep
+        _schedule_cache["arr"] = arr
+        _schedule_cache["expires_at"] = time.time() + _SCHEDULE_TTL
+
+    return dep, arr, True
+
+
+def _flights_on_weekday(flights: list, weekday: int) -> list:
+    """weekday: 0=Monday … 6=Sunday（Python convention）"""
+    day_key = _SERVICEDAY_KEYS[weekday]
+    result  = []
+    for f in flights:
+        sd = f.get("ServiceDay", {})
+        if isinstance(sd, dict):
+            if sd.get(day_key):
+                result.append(f)
+        elif isinstance(sd, str):
+            # "1234567" 格式，1=Monday … 7=Sunday
+            if str(weekday + 1) in sd:
+                result.append(f)
+    return result
+
+
+@app.route("/schedule")
+def schedule():
+    return render_template("schedule.html")
+
+
+@app.route("/api/schedule/week")
+def schedule_week_api():
+    dep_all, arr_all, ok = _fetch_schedule()
+    if not ok:
+        return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
+
+    airasia_only = request.args.get("airasia", "1") == "1"
+    deps = [f for f in dep_all if not airasia_only or f.get("AirlineID") in _TIAS_CODES]
+    arrs = [f for f in arr_all if not airasia_only or f.get("AirlineID") in _TIAS_CODES]
+
+    now_tw = _dt.now(_tz(_td(hours=8)))
+    days   = []
+
+    for i in range(7):
+        d       = now_tw + _td(days=i)
+        weekday = d.weekday()
+
+        d_flt = _flights_on_weekday(deps, weekday)
+        a_flt = _flights_on_weekday(arrs, weekday)
+
+        dep_hours = [0] * 24
+        for f in d_flt:
+            t = f.get("ScheduleDepartureTime", "")
+            if t and ":" in t:
+                try:
+                    dep_hours[int(t.split(":")[0])] += 1
+                except Exception:
+                    pass
+
+        arr_hours = [0] * 24
+        for f in a_flt:
+            t = f.get("ScheduleArrivalTime", "")
+            if t and ":" in t:
+                try:
+                    arr_hours[int(t.split(":")[0])] += 1
+                except Exception:
+                    pass
+
+        days.append({
+            "date":       d.strftime("%Y-%m-%d"),
+            "weekday_zh": ["一", "二", "三", "四", "五", "六", "日"][weekday],
+            "is_today":   i == 0,
+            "dep_count":  len(d_flt),
+            "arr_count":  len(a_flt),
+            "total":      len(d_flt) + len(a_flt),
+            "dep_hours":  dep_hours,
+            "arr_hours":  arr_hours,
+        })
+
+    avg = sum(d["total"] for d in days) / 7
+    for d in days:
+        ratio = d["total"] / avg if avg > 0 else 0
+        d["peak"] = "high" if ratio >= 1.5 else "mid" if ratio >= 1.2 else "normal"
+
+    return jsonify({
+        "configured":   True,
+        "airasia_only": airasia_only,
+        "days":         days,
+        "total_dep":    len(deps),
+        "total_arr":    len(arrs),
+        "updated_at":   time.strftime("%H:%M:%S"),
+    })
+
+
+@app.route("/api/schedule/debug")
+def schedule_debug():
+    dep, arr, ok = _fetch_schedule()
+    return jsonify({
+        "tdx_configured": ok,
+        "cached_dep":     len(dep) if dep else 0,
+        "cached_arr":     len(arr) if arr else 0,
+        "airasia_dep":    len([f for f in (dep or []) if f.get("AirlineID") in _TIAS_CODES]),
+        "airasia_arr":    len([f for f in (arr or []) if f.get("AirlineID") in _TIAS_CODES]),
+        "sample_dep":     (dep or [])[:2],
+        "sample_arr":     (arr or [])[:2],
+    })
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")

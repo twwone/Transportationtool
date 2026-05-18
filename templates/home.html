@@ -142,6 +142,15 @@ body {
 .card-tias .card-title { color: #1e40af; }
 .card-tias:hover .arrow { color: #1a56db; }
 
+/* 週班表卡片 */
+.card-schedule { border-color: #bbf7d0; }
+.card-schedule::before { background: radial-gradient(ellipse at 80% 20%, #05966912, transparent 60%); }
+.card-schedule:hover { border-color: #059669; background: #f0fdf4; }
+.card-schedule:hover::before { opacity: 1; }
+.card-schedule .icon-wrap { background: #dcfce7; }
+.card-schedule .card-title { color: #047857; }
+.card-schedule:hover .arrow { color: #059669; }
+
 .footer {
   margin-top: 40px;
   font-size: 0.7rem;
@@ -186,6 +195,17 @@ body {
       <div class="card-text">
         <div class="card-title">航空資訊看板</div>
         <div class="card-desc">AirAsia 入離港即時動態・登機門・地勤時程倒數</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+  </a>
+
+  <a href="/schedule" class="card card-schedule">
+    <div class="card-inner">
+      <div class="icon-wrap">🗓</div>
+      <div class="card-text">
+        <div class="card-title">週班表</div>
+        <div class="card-desc">未來 7 天定期航班分布・尖峰日預測・時段分析</div>
       </div>
       <div class="arrow">›</div>
     </div>
