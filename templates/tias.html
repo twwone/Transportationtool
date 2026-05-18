@@ -134,6 +134,11 @@ body {
   margin-bottom: 11px;
   gap: 8px;
 }
+.hero-left { display: flex; flex-direction: column; }
+.hero-airline-cn {
+  font-size: 0.75rem; font-weight: 600; color: #636366;
+  margin-bottom: 2px; letter-spacing: 0.2px;
+}
 .hero-flt {
   font-size: 1.85rem; font-weight: 800;
   letter-spacing: -1px; line-height: 1;
@@ -512,8 +517,7 @@ function renderCard(f, mode, showDirBadge) {
     isDone    ? 'card-done'    : '',
   ].filter(Boolean).join(' ');
 
-  const airlineName = AIRLINE_CN[airline] ? `${airline} ${AIRLINE_CN[airline]}` : airline;
-
+  const airlineCN  = AIRLINE_CN[airline] || '';
   const dirBadge = showDirBadge
     ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
     : '';
@@ -534,13 +538,16 @@ function renderCard(f, mode, showDirBadge) {
 
   return `<div class="${cardCls}">
     <div class="card-meta">
-      <span class="badge-airline">${airlineName}</span>
+      <span class="badge-airline">${airline}</span>
       ${dirBadge}
       <span class="badge-status st-${status.cls}">${status.label}</span>
       ${terminal ? `<span class="badge-terminal">T${terminal}</span>` : ''}
     </div>
     <div class="card-hero">
-      <span class="hero-flt">${fltNum}</span>
+      <div class="hero-left">
+        ${airlineCN ? `<div class="hero-airline-cn">${airlineCN}</div>` : ''}
+        <div class="hero-flt">${fltNum}</div>
+      </div>
       <div class="hero-ap">
         <div class="hero-iata">${counterAp || '—'}</div>
         <div class="hero-city">${cityName}</div>
