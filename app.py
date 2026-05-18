@@ -437,9 +437,11 @@ def _fetch_tias():
 
 @app.route("/api/tias/debug")
 def tias_debug():
-    """診斷：用 Playwright 擷取航班資料結構"""
+    """診斷：攔截機場頁面所有 JSON API 呼叫，找出航班資料端點"""
     try:
         from playwright.sync_api import sync_playwright
+        captured = []
+
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
@@ -449,36 +451,24 @@ def tias_debug():
                 user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
                 locale="zh-TW",
             )
+
+            def on_response(response):
+                url = response.url
+                ct  = response.headers.get("content-type", "")
+                if "json" in ct or "xml" in ct or "csv" in ct:
+                    try:
+                        body = response.text()
+                        captured.append({"url": url, "content_type": ct, "body_preview": body[:800]})
+                    except Exception:
+                        captured.append({"url": url, "content_type": ct})
+
+            page.on("response", on_response)
             page.goto("https://www.taoyuan-airport.com/flight_arrival", timeout=30000)
-            page.wait_for_load_state("networkidle", timeout=20000)
-            page.wait_for_timeout(3000)
-
-            # 取 body 純文字（看實際航班資料）
-            body_text = page.evaluate("document.body.innerText")
-
-            # 找含 flight/fids/row/table 關鍵字的 class 名稱
-            structure = page.evaluate("""() => {
-                const seen = new Set();
-                const result = [];
-                document.querySelectorAll('[class]').forEach(el => {
-                    const cls = el.className;
-                    if (typeof cls === 'string') {
-                        cls.split(' ').forEach(c => {
-                            if (c && !seen.has(c) && result.length < 60) {
-                                seen.add(c);
-                                result.push(c);
-                            }
-                        });
-                    }
-                });
-                return result;
-            }""")
-
+            page.wait_for_load_state("networkidle", timeout=25000)
+            page.wait_for_timeout(5000)
             browser.close()
-        return jsonify({
-            "body_text_preview": body_text[:3000],
-            "all_classes":       structure,
-        })
+
+        return jsonify({"captured_requests": captured})
     except Exception as e:
         return jsonify({"error": str(e)})
 
