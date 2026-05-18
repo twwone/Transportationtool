@@ -209,6 +209,7 @@ def _book_ticket(browser, config: dict, log_fn=None) -> tuple[bytes | None, str 
             log_fn(f"[訂票] {msg}")
 
     page = _setup_page(browser)
+    booking_page = page  # 預設同分頁，方便 finally 統一關閉
     try:
         _step("取得查詢連結...")
         cipher_url, _ = _get_search_url(config)
@@ -232,13 +233,28 @@ def _book_ticket(browser, config: dict, log_fn=None) -> tuple[bytes | None, str 
 
         _step("尋找訂票按鈕...")
         clicked = False
+
         for sel in _BOOKING_BTN_SELECTORS:
             try:
                 btn = page.locator(sel).first
                 btn.wait_for(state="visible", timeout=3000)
-                btn.click()
+                try:
+                    # 訂票按鈕可能用 target="_blank" 開新分頁
+                    with page.expect_popup(timeout=5000) as popup_info:
+                        btn.click()
+                    booking_page = popup_info.value
+                    booking_page.wait_for_load_state("domcontentloaded", timeout=15000)
+                    _step("訂票頁已在新分頁開啟")
+                except Exception:
+                    # 沒有新分頁，就在原分頁等跳轉
+                    booking_page = page
+                    try:
+                        page.wait_for_url("**irs.thsrc**", timeout=10000)
+                    except PWTimeout:
+                        pass
+                    page.wait_for_load_state("domcontentloaded", timeout=10000)
+                    _step("訂票頁在原分頁")
                 clicked = True
-                _step(f"點擊成功 ({sel})")
                 break
             except Exception:
                 continue
@@ -246,20 +262,13 @@ def _book_ticket(browser, config: dict, log_fn=None) -> tuple[bytes | None, str 
         if not clicked:
             return ss, "找不到訂票按鈕，截圖為時刻表結果頁（可能選擇器需更新）"
 
-        _step("等待訂票頁載入...")
-        try:
-            page.wait_for_url("**irs.thsrc**", timeout=15000)
-        except PWTimeout:
-            pass
-        page.wait_for_load_state("domcontentloaded", timeout=15000)
-
         _step("填入乘客資料...")
-        id_ok    = _fill_field(page, _BOOKING_ID_SELECTORS,    config.get("id_number", ""))
-        phone_ok = _fill_field(page, _BOOKING_PHONE_SELECTORS, config.get("phone", ""))
+        id_ok    = _fill_field(booking_page, _BOOKING_ID_SELECTORS,    config.get("id_number", ""))
+        phone_ok = _fill_field(booking_page, _BOOKING_PHONE_SELECTORS, config.get("phone", ""))
         if config.get("email"):
-            _fill_field(page, _BOOKING_EMAIL_SELECTORS, config.get("email", ""))
+            _fill_field(booking_page, _BOOKING_EMAIL_SELECTORS, config.get("email", ""))
 
-        ss = _screenshot(page)
+        ss = _screenshot(booking_page)
         if not id_ok and not phone_ok:
             return ss, "欄位填入失敗（截圖為訂票頁，可能選擇器需更新）"
         _step("完成，等你確認後付款！")
@@ -267,15 +276,16 @@ def _book_ticket(browser, config: dict, log_fn=None) -> tuple[bytes | None, str 
 
     except Exception as e:
         try:
-            ss = _screenshot(page)
+            ss = _screenshot(booking_page if booking_page is not page else page)
         except Exception:
             ss = None
         return ss, f"{type(e).__name__}: {str(e)[:150]}"
     finally:
-        try:
-            page.close()
-        except Exception:
-            pass
+        for p in ([page, booking_page] if booking_page is not page else [page]):
+            try:
+                p.close()
+            except Exception:
+                pass
 
 
 def _tg_send_photo(bot_token: str, chat_id: str, photo_bytes: bytes, caption: str) -> str | None:
