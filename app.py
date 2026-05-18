@@ -188,11 +188,18 @@ def mrt():
         has_tdx=bool(os.environ.get("TDX_CLIENT_ID")),
     )
 
+_mrt_cache: dict = {"data": None, "expires_at": 0.0}
+_mrt_lock = threading.Lock()
+
 @app.route("/api/mrt/liveboard")
 def mrt_liveboard():
     token = _get_tdx_token()
     if not token:
         return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
+    with _mrt_lock:
+        now = time.time()
+        if _mrt_cache["data"] and now < _mrt_cache["expires_at"]:
+            return jsonify({"configured": True, "data": _mrt_cache["data"]})
     try:
         resp = _requests.get(
             "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC",
@@ -201,7 +208,11 @@ def mrt_liveboard():
             timeout=10,
         )
         resp.raise_for_status()
-        return jsonify({"configured": True, "data": resp.json()})
+        data = resp.json()
+        with _mrt_lock:
+            _mrt_cache["data"] = data
+            _mrt_cache["expires_at"] = time.time() + 30
+        return jsonify({"configured": True, "data": data})
     except Exception as e:
         return jsonify({"error": str(e), "configured": True}), 500
 
