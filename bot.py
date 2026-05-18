@@ -175,12 +175,6 @@ _BOOKING_EMAIL_SELECTORS = [
     "#email", "input[name='email']", "input[name='TempContactEmail']",
     "input[type='email']", "input[name*='Email']",
 ]
-_BOOKING_BTN_SELECTORS = [
-    "a:has-text('立即訂票')", "a:has-text('訂票')",
-    "button:has-text('訂票')", "a[href*='IMINT']",
-    ".btn-book", ".booking-btn",
-]
-
 
 def _fill_field(page, selectors: list, value: str) -> bool:
     for sel in selectors:
@@ -199,103 +193,152 @@ def _screenshot(page) -> bytes:
     return page.screenshot(type="jpeg", quality=80)
 
 
+IMINT_BASE = "https://irs.thsrc.com.tw/IMINT"
+
+_IMINT_START_SELS  = ["select#startStation",  "select[name='startStation']"]
+_IMINT_END_SELS    = ["select#endStation",    "select[name='endStation']"]
+_IMINT_DATE_SELS   = ["input#outWardDate",    "input[name='outWardDate']"]
+_IMINT_SUBMIT_SELS = ["input#toTimeTable",    "a#toTimeTable",
+                      "input[name='toTimeTable']", "button:has-text('查詢時刻')"]
+_IMINT_TRAIN_SELS  = ["input[name='TrainQueryDataSunOn']",
+                      "input[name='trainItem']", "input[type='radio']"]
+_IMINT_NEXT_SELS   = ["input#isQueryUse",     "input[name='isQueryUse']",
+                      "button:has-text('確認')", "button:has-text('下一步')"]
+
+
 def _book_ticket(browser, config: dict, log_fn=None) -> tuple[bytes | None, str | None]:
     """
-    前往 THSR 訂票頁自動填入身分證/電話/Email，停在付款頁前截圖。
+    直接進入 irs.thsrc.com.tw/IMINT/ 訂票系統，填查詢表單→選班次→填乘客資料。
     回傳 (screenshot_jpeg_bytes, error_or_None)。
     """
     def _step(msg: str):
         if log_fn:
             log_fn(f"[訂票] {msg}")
 
-    page = _setup_page(browser)
-    booking_page = page  # 預設同分頁，方便 finally 統一關閉
-    try:
-        _step("取得查詢連結...")
-        cipher_url, _ = _get_search_url(config)
-        _step("前往高鐵時刻表...")
-        page.goto(cipher_url, timeout=30000, wait_until="domcontentloaded")
-
-        # 處理 Cookie 同意彈窗
+    def _dump_fields(pg) -> str:
         try:
-            agree_btn = page.locator("button:has-text('我同意')").first
-            agree_btn.wait_for(state="visible", timeout=4000)
-            agree_btn.click()
-            _step("已關閉 Cookie 同意視窗")
+            return pg.evaluate(
+                "() => Array.from(document.querySelectorAll('input,select'))"
+                ".map(el=>el.id+'|'+el.name+'|'+el.type).join(' / ')"
+            )[:600]
+        except Exception:
+            return ""
+
+    page = _setup_page(browser)
+    try:
+        _step("前往高鐵訂票系統 IMINT...")
+        page.goto(f"{IMINT_BASE}/?locale=tw", timeout=30000, wait_until="domcontentloaded")
+
+        # Cookie 同意彈窗
+        try:
+            agree = page.locator("button:has-text('我同意')").first
+            agree.wait_for(state="visible", timeout=4000)
+            agree.click()
+            _step("已關閉 Cookie 視窗")
             time.sleep(1)
         except Exception:
-            pass  # 沒有彈窗就繼續
+            pass
 
-        time.sleep(2)  # 等 JS 渲染班次結果
+        time.sleep(2)
 
-        # 先截圖結果頁（不管後續是否成功都有東西看）
-        ss = _screenshot(page)
+        # ── Step 1：填查詢表單 ──
+        _step("填入查詢表單...")
+        tf = config["time_from"]
+        time_str = "00:00" if tf == "0000" else f"{tf[:2]}:{tf[2:]}"
 
-        _step("尋找訂票按鈕...")
-        clicked = False
+        for sel in _IMINT_START_SELS:
+            try:
+                page.select_option(sel, value=config["origin_code"]); break
+            except Exception: pass
 
-        for sel in _BOOKING_BTN_SELECTORS:
+        for sel in _IMINT_END_SELS:
+            try:
+                page.select_option(sel, value=config["dest_code"]); break
+            except Exception: pass
+
+        for sel in _IMINT_DATE_SELS:
+            try:
+                el = page.locator(sel).first
+                el.wait_for(state="visible", timeout=3000)
+                el.fill(config["date"]); break
+            except Exception: pass
+
+        # 送出查詢
+        submitted = False
+        for sel in _IMINT_SUBMIT_SELS:
             try:
                 btn = page.locator(sel).first
                 btn.wait_for(state="visible", timeout=3000)
-                try:
-                    # 訂票按鈕可能用 target="_blank" 開新分頁
-                    with page.expect_popup(timeout=5000) as popup_info:
-                        btn.click()
-                    booking_page = popup_info.value
-                    booking_page.wait_for_load_state("domcontentloaded", timeout=15000)
-                    _step("訂票頁已在新分頁開啟")
-                except Exception:
-                    # 沒有新分頁，就在原分頁等跳轉
-                    booking_page = page
-                    try:
-                        page.wait_for_url("**irs.thsrc**", timeout=10000)
-                    except PWTimeout:
-                        pass
-                    page.wait_for_load_state("domcontentloaded", timeout=10000)
-                    _step("訂票頁在原分頁")
-                clicked = True
+                btn.click()
+                submitted = True
                 break
-            except Exception:
-                continue
+            except Exception: pass
 
-        if not clicked:
-            return ss, "找不到訂票按鈕，截圖為時刻表結果頁（可能選擇器需更新）"
+        if not submitted:
+            fields = _dump_fields(page)
+            ss = _screenshot(page)
+            return ss, f"找不到查詢按鈕\n欄位: {fields}"
 
-        # 列出頁面所有 input，方便確認正確 selector
-        try:
-            fields = booking_page.evaluate(
-                "() => Array.from(document.querySelectorAll('input')).map(el => "
-                "({tag:'input', id:el.id, name:el.name, type:el.type, placeholder:el.placeholder}))"
-            )
-            _step(f"頁面 input 欄位: {fields[:10]}")
-        except Exception as fe:
-            _step(f"無法取得欄位列表: {fe}")
+        _step("等待班次列表...")
+        page.wait_for_load_state("domcontentloaded", timeout=20000)
+        time.sleep(2)
+        ss = _screenshot(page)
 
-        _step("填入乘客資料...")
-        id_ok    = _fill_field(booking_page, _BOOKING_ID_SELECTORS,    config.get("id_number", ""))
-        phone_ok = _fill_field(booking_page, _BOOKING_PHONE_SELECTORS, config.get("phone", ""))
+        # ── Step 2：選第一班車 ──
+        _step("選擇第一班車...")
+        selected = False
+        for sel in _IMINT_TRAIN_SELS:
+            try:
+                radio = page.locator(sel).first
+                radio.wait_for(state="visible", timeout=5000)
+                radio.click()
+                selected = True
+                break
+            except Exception: pass
+
+        if not selected:
+            fields = _dump_fields(page)
+            ss = _screenshot(page)
+            return ss, f"找不到班次選項\n欄位: {fields}"
+
+        for sel in _IMINT_NEXT_SELS:
+            try:
+                btn = page.locator(sel).first
+                btn.wait_for(state="visible", timeout=3000)
+                btn.click()
+                break
+            except Exception: pass
+
+        _step("等待乘客資料頁...")
+        page.wait_for_load_state("domcontentloaded", timeout=20000)
+        time.sleep(2)
+
+        # ── Step 3：填乘客資料 ──
+        fields_raw = _dump_fields(page)
+        _step(f"訂票頁欄位: {fields_raw[:200]}")
+
+        id_ok    = _fill_field(page, _BOOKING_ID_SELECTORS,    config.get("id_number", ""))
+        phone_ok = _fill_field(page, _BOOKING_PHONE_SELECTORS, config.get("phone", ""))
         if config.get("email"):
-            _fill_field(booking_page, _BOOKING_EMAIL_SELECTORS, config.get("email", ""))
+            _fill_field(page, _BOOKING_EMAIL_SELECTORS, config.get("email", ""))
 
-        ss = _screenshot(booking_page)
+        ss = _screenshot(page)
         if not id_ok and not phone_ok:
-            return ss, "欄位填入失敗（截圖為訂票頁，可能選擇器需更新）"
-        _step("完成，等你確認後付款！")
+            return ss, f"欄位填入失敗\n頁面欄位: {fields_raw[:400]}"
+        _step("完成！等你確認後付款")
         return ss, None
 
     except Exception as e:
         try:
-            ss = _screenshot(booking_page if booking_page is not page else page)
+            ss = _screenshot(page)
         except Exception:
             ss = None
         return ss, f"{type(e).__name__}: {str(e)[:150]}"
     finally:
-        for p in ([page, booking_page] if booking_page is not page else [page]):
-            try:
-                p.close()
-            except Exception:
-                pass
+        try:
+            page.close()
+        except Exception:
+            pass
 
 
 def _tg_send_photo(bot_token: str, chat_id: str, photo_bytes: bytes, caption: str) -> str | None:
