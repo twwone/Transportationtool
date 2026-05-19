@@ -1,5 +1,7 @@
-/* config.js — 多用戶設定檔管理（LocalStorage 方案）*/
-const CFG_KEY = 'thsr_cfg_v1';
+/* config.js — 多用戶設定檔管理（LocalStorage + Supabase 雲端同步）*/
+const CFG_KEY  = 'thsr_cfg_v1';
+const SUPA_URL = 'https://bqapzqdfgnoghtgdakdw.supabase.co';
+const SUPA_KEY = 'sb_publishable_5Gw7rYaKnI3_fzcNpLbmwA_h0CgB7Fv';
 
 const Config = (() => {
   function _read() {
@@ -8,6 +10,14 @@ const Config = (() => {
   }
   function _write(data) {
     localStorage.setItem(CFG_KEY, JSON.stringify(data));
+  }
+  function _hdr(extra = {}) {
+    return {
+      'Content-Type': 'application/json',
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      ...extra
+    };
   }
 
   /* 首次使用：遷移舊版散落 key 並建立預設 profile */
@@ -36,7 +46,7 @@ const Config = (() => {
   }
 
   return {
-    getAll() { return _bootstrap(); },
+    getAll()    { return _bootstrap(); },
 
     getActive() {
       const d = _bootstrap();
@@ -96,6 +106,62 @@ const Config = (() => {
         localStorage.setItem(CFG_KEY, raw);
         return true;
       } catch { return false; }
+    },
+
+    /* ── 雲端同步 ── */
+
+    /* 推送指定 profile 到 Supabase；若尚無 syncKey 則自動產生 */
+    async push(id) {
+      const d   = _bootstrap();
+      const pid = id || d.active;
+      const p   = d.profiles[pid];
+      if (!p) return { ok: false };
+      if (!p.syncKey) {
+        p.syncKey = Math.random().toString(36).slice(2, 10);
+        _write(d);
+      }
+      try {
+        const r = await fetch(`${SUPA_URL}/rest/v1/user_configs`, {
+          method: 'POST',
+          headers: _hdr({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+          body: JSON.stringify({ sync_key: p.syncKey, config: p, updated_at: new Date().toISOString() })
+        });
+        return { ok: r.ok, syncKey: p.syncKey };
+      } catch { return { ok: false }; }
+    },
+
+    /* 從 Supabase 拉取並合併到本地（已有同碼的 profile 覆蓋；新的則新增） */
+    async pull(syncKey) {
+      try {
+        const r = await fetch(
+          `${SUPA_URL}/rest/v1/user_configs?sync_key=eq.${encodeURIComponent(syncKey)}&select=config`,
+          { headers: _hdr() }
+        );
+        if (!r.ok) return { ok: false };
+        const rows = await r.json();
+        if (!rows.length) return { ok: false, error: '找不到此同步碼' };
+        const remote = rows[0].config;
+        const d = _bootstrap();
+        const found = Object.values(d.profiles).find(p => p.syncKey === syncKey);
+        if (found) {
+          d.profiles[found.id] = { ...remote, id: found.id };
+          d.active = found.id;
+        } else {
+          const nid = 'u' + Date.now();
+          d.profiles[nid] = { ...remote, id: nid };
+          d.active = nid;
+        }
+        _write(d);
+        return { ok: true };
+      } catch { return { ok: false }; }
+    },
+
+    /* 移除 profile 的 syncKey（停用雲端同步，不刪除雲端資料） */
+    clearSync(id) {
+      const d   = _bootstrap();
+      const pid = id || d.active;
+      const p   = d.profiles[pid];
+      if (p) { delete p.syncKey; _write(d); }
     }
   };
 })();
