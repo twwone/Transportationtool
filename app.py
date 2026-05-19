@@ -443,11 +443,12 @@ def tias_debug():
 #  週班表（定期航班班表）
 #  資料來源：TDX 定期航班班表 API（每小時快取一次）
 # ──────────────────────────────────────────────
-_SCHEDULE_TTL    = 3600
-_schedule_cache  = {"dep": None, "arr": None, "expires_at": 0.0}
-_schedule_lock   = threading.Lock()
-_TDX_SCHEDULE    = "https://tdx.transportdata.tw/api/basic/v2/Air/GeneralSchedule"
-_SERVICEDAY_KEYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+_SCHEDULE_TTL     = 3600
+_schedule_cache   = {"dep": None, "arr": None, "expires_at": 0.0}
+_schedule_lock    = threading.Lock()
+_TDX_SCHED_INTL   = "https://tdx.transportdata.tw/api/basic/v2/Air/GeneralSchedule/International"
+_TDX_SCHED_DOM    = "https://tdx.transportdata.tw/api/basic/v2/Air/GeneralSchedule/Domestic"
+_WEEKDAY_FIELDS   = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
 def _fetch_schedule():
@@ -459,23 +460,38 @@ def _fetch_schedule():
     if not token:
         return None, None, False
 
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    headers  = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    today    = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
 
-    try:
-        r = _requests.get(
-            _TDX_SCHEDULE,
-            headers=headers,
-            params={"$format": "JSON", "$top": 5000},
-            timeout=20,
-        )
-        r.raise_for_status()
-        body = r.json()
-        all_data = body if isinstance(body, list) else body.get("data", [])
-    except Exception:
-        all_data = []
+    def _get(ep: str, airport_field: str) -> list:
+        try:
+            r = _requests.get(
+                ep,
+                headers=headers,
+                params={
+                    "$format": "JSON",
+                    "$top":    3000,
+                    "$filter": f"{airport_field} eq 'TPE'",
+                },
+                timeout=20,
+            )
+            r.raise_for_status()
+            body = r.json()
+            data = body if isinstance(body, list) else body.get("data", [])
+            # 只保留目前有效的班期（ScheduleStartDate ≤ today ≤ ScheduleEndDate）
+            return [f for f in data
+                    if f.get("ScheduleStartDate", "") <= today
+                    <= f.get("ScheduleEndDate", "9999-12-31")]
+        except Exception:
+            return []
 
-    dep = [f for f in all_data if f.get("DepartureAirportID") == "TPE"]
-    arr = [f for f in all_data if f.get("ArrivalAirportID") == "TPE"]
+    dep_intl = _get(_TDX_SCHED_INTL, "DepartureAirportID")
+    arr_intl = _get(_TDX_SCHED_INTL, "ArrivalAirportID")
+    dep_dom  = _get(_TDX_SCHED_DOM,  "DepartureAirportID")
+    arr_dom  = _get(_TDX_SCHED_DOM,  "ArrivalAirportID")
+
+    dep = dep_intl + dep_dom
+    arr = arr_intl + arr_dom
 
     with _schedule_lock:
         _schedule_cache["dep"] = dep
@@ -486,19 +502,10 @@ def _fetch_schedule():
 
 
 def _flights_on_weekday(flights: list, weekday: int) -> list:
-    """weekday: 0=Monday … 6=Sunday（Python convention）"""
-    day_key = _SERVICEDAY_KEYS[weekday]
-    result  = []
-    for f in flights:
-        sd = f.get("ServiceDay", {})
-        if isinstance(sd, dict):
-            if sd.get(day_key):
-                result.append(f)
-        elif isinstance(sd, str):
-            # "1234567" 格式，1=Monday … 7=Sunday
-            if str(weekday + 1) in sd:
-                result.append(f)
-    return result
+    """weekday: 0=Monday … 6=Sunday（Python convention）
+    General Schedule API 的每日欄位直接是 Monday/Tuesday/…/Sunday 布林值。"""
+    day_field = _WEEKDAY_FIELDS[weekday]
+    return [f for f in flights if f.get(day_field)]
 
 
 @app.route("/schedule")
@@ -528,7 +535,7 @@ def schedule_week_api():
 
         dep_hours = [0] * 24
         for f in d_flt:
-            t = f.get("ScheduleDepartureTime", "")
+            t = f.get("DepartureTime", "")
             if t and ":" in t:
                 try:
                     dep_hours[int(t.split(":")[0])] += 1
@@ -537,7 +544,7 @@ def schedule_week_api():
 
         arr_hours = [0] * 24
         for f in a_flt:
-            t = f.get("ScheduleArrivalTime", "")
+            t = f.get("ArrivalTime", "")
             if t and ":" in t:
                 try:
                     arr_hours[int(t.split(":")[0])] += 1
