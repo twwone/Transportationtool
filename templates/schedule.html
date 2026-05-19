@@ -37,12 +37,16 @@ body {
   background: #fff;
   border-bottom: 1px solid #e5e5ea;
   padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top) + 8px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
+  box-sizing: border-box;
 }
 .back-link {
   font-size: 0.9rem;
@@ -102,6 +106,8 @@ body {
 /* ── Main layout ── */
 .main {
   padding: 12px 16px 80px;
+  /* 補 topbar 高度（fixed 後不占文件流），加上 safe-area-inset-top */
+  padding-top: calc(60px + max(0px, env(safe-area-inset-top)));
   max-width: 540px;
   margin: 0 auto;
 }
