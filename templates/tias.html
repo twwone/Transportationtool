@@ -367,43 +367,9 @@ body {
 </div>
 
 <script>
-/* ── 航空公司中文名 ── */
-const AIRLINE_CN = {
-  AK:'亞洲航空', FD:'泰國亞航', QZ:'印尼亞航', Z2:'菲律賓亞航',
-  XT:'印尼亞航X', D7:'亞航X', XJ:'泰國亞航X',
-  CI:'中華航空', BR:'長榮航空', IT:'台灣虎航', B7:'立榮航空', AE:'華信航空',
-  CA:'中國國際', MU:'中國東方', CZ:'中國南方', HU:'海南航空',
-  FM:'上海航空', '3U':'四川航空', ZH:'深圳航空', SC:'山東航空',
-  JL:'日本航空', NH:'全日空', MM:'樂桃航空', GK:'捷星日本', BC:'天馬航空',
-  KE:'大韓航空', OZ:'韓亞航空', BX:'釜山航空', LJ:'真航空', TW:'德威航空',
-  SQ:'新加坡航空', TR:'酷航', MI:'勝安航空',
-  MH:'馬來西亞航空', OD:'馬印航空',
-  PR:'菲律賓航空', '5J':'宿霧太平洋',
-  TG:'泰國航空', WE:'泰國微笑',
-  GA:'印尼航空', VN:'越南航空', VJ:'越捷航空',
-  CX:'國泰航空', HX:'香港航空', UO:'香港快運', NX:'澳門航空',
-  EK:'阿聯酋航空', QR:'卡達航空', TK:'土耳其航空',
-  KL:'荷蘭皇家', LH:'漢莎航空', BA:'英國航空', AF:'法國航空',
-  JX:'星宇航空',
-};
-
-/* ── 城市名 ── */
-const CITY = {
-  KUL:'吉隆坡',ICN:'首爾仁川',PUS:'釜山',NRT:'東京成田',HND:'東京羽田',
-  KIX:'大阪關西',NGO:'名古屋',FUK:'福岡',OKA:'沖繩',CTS:'札幌',
-  BKK:'曼谷素萬那普',DMK:'曼谷廊曼',HKT:'普吉',CNX:'清邁',
-  CGK:'雅加達',SUB:'泗水',DPS:'峇里島',BPN:'望加錫',
-  MNL:'馬尼拉',CEB:'宿霧',DVO:'達沃',
-  SIN:'新加坡',HKG:'香港',MFM:'澳門',
-  PEK:'北京首都',PKX:'北京大興',PVG:'上海浦東',SHA:'上海虹橋',
-  CAN:'廣州',SZX:'深圳',XMN:'廈門',CTU:'成都',XIY:'西安',WUH:'武漢',
-  TPE:'桃園',TSA:'台北松山',KHH:'高雄',RMQ:'台中',TNN:'台南',
-  KNH:'金門',TTT:'台東',HUN:'花蓮',MZG:'澎湖',LZN:'馬祖',
-  BNE:'布里斯本',SYD:'雪梨',MEL:'墨爾本',
-  SFO:'舊金山',LAX:'洛杉磯',JFK:'紐約',ORD:'芝加哥',
-  LHR:'倫敦希斯羅',CDG:'巴黎戴高樂',FRA:'法蘭克福',AMS:'阿姆斯特丹',
-  DXB:'杜拜',DOH:'多哈',IST:'伊斯坦堡',
-};
+/* ── 動態元資料對照（由 /api/tias/flights 的 airline_map / airport_map 填入） ── */
+/* airline_map: { "AK": {zh:"亞洲航空", en:"AirAsia"}, ... }                       */
+/* airport_map: { "KUL": {zh:"吉隆坡", en:"Kuala Lumpur", ap_zh:"..."}, ... }       */
 
 /* ── 狀態對照 ── */
 const ST_MAP = [
@@ -431,13 +397,14 @@ const TAB_PANELS = { arr: 'listArr', dep: 'listDep', all: 'panelAll' };
 
 let _arrData = [], _depData = [], _allArr = [], _allDep = [];
 let _tab = 'arr';
-let _searchTimer = null;
+let _searchTimer  = null;
 let _prevGates    = {};
 let _gateChanges  = {};
 let _prevAcTypes  = {};
 let _acTypeChanges = {};
-/* 只有第一次載入才做錯排動畫，避免 30 秒自動重整讓卡片短暫消失 */
-let _initialLoad  = true;
+let _initialLoad  = true;   // 只有第一次載入才做錯排動畫
+let _airlineMap   = {};     // {code → {zh, en}}  由 API 填入
+let _airportMap   = {};     // {iata → {zh, en, ap_zh}}  由 API 填入
 
 /* ── 工具 ── */
 function fmtHHMM(iso) {
@@ -568,7 +535,7 @@ function renderCard(f, mode, showDirBadge) {
   const airline   = f.AirlineID    || '??';
   const fltNum    = f.FlightNumber || '—';
   const counterAp = isArr ? (f.DepartureAirportID || '') : (f.ArrivalAirportID || '');
-  const cityName  = CITY[counterAp] || counterAp || '—';
+  const cityName  = (_airportMap[counterAp] || {}).zh || counterAp || '—';
 
   const sch = isArr ? f.ScheduleArrivalTime    : f.ScheduleDepartureTime;
   const est = isArr ? (f.EstimatedArrivalTime  || f.EstimateArrivalTime)
@@ -596,7 +563,7 @@ function renderCard(f, mode, showDirBadge) {
     isDone                  ? 'card-done'      : '',
   ].filter(Boolean).join(' ');
 
-  const airlineCN = AIRLINE_CN[airline] || '';
+  const airlineCN = (_airlineMap[airline] || {}).zh || '';
   const dirBadge  = showDirBadge
     ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
     : '';
@@ -722,7 +689,12 @@ function switchTab(tab) {
 function renderAirlineHint() {
   const hint = document.getElementById('airlineHint');
   if (_tab !== 'all') {
-    hint.textContent = window._airlines ? window._airlines.map(a => a.code).join(' · ') : '';
+    hint.textContent = window._airlines
+      ? window._airlines.map(a => {
+          const m = _airlineMap[a.code];
+          return m?.zh ? `${m.zh} (${a.code})` : a.code;
+        }).join(' · ')
+      : '';
   }
 }
 
@@ -763,9 +735,13 @@ function runSearch() {
     const gate    = (f.Gate || '').toUpperCase();
     const counter = (f.CheckCounter || f.CheckInCounter || f.CheckInArea || '').toUpperCase();
     const baggage = (f.BaggageClaim || '').toUpperCase();
+    /* 動態 metadata 搜尋：中文航空公司名 + 中文城市名 */
+    const alZh    = (_airlineMap[f.AirlineID] || {}).zh || '';
+    const apZh    = (_airportMap[ap]          || {}).zh || '';
     return fullFlt.includes(q) || flt.includes(q)
         || al.startsWith(q) || ap.startsWith(q)
-        || gate.includes(q) || counter.includes(q) || baggage.includes(q);
+        || gate.includes(q) || counter.includes(q) || baggage.includes(q)
+        || alZh.includes(q) || apZh.includes(q);
   });
 
   countEl.textContent = results.length ? `共 ${results.length} 筆` : '';
@@ -795,7 +771,14 @@ async function load() {
     document.getElementById('errWrap').innerHTML = '';
     document.getElementById('updateLabel').textContent = `更新 ${data.updated_at}`;
 
-    window._airlines = data.airlines || [];
+    window._airlines = data.airlines  || [];
+
+    /* 更新元資料對照表（只在有資料時覆蓋，避免舊資料被空值清除） */
+    if (data.airline_map && Object.keys(data.airline_map).length)
+      _airlineMap = data.airline_map;
+    if (data.airport_map && Object.keys(data.airport_map).length)
+      _airportMap = data.airport_map;
+
     renderAirlineHint();
 
     _arrData = data.arrivals       || [];

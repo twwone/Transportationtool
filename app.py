@@ -358,7 +358,85 @@ _TIAS_TTL   = 30  # 秒，與 MRT 模組一致
 _tias_cache = {"arr": None, "dep": None, "expires_at": 0.0}
 _tias_lock  = threading.Lock()
 
-_TDX_FIDS = "https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport"
+_TDX_FIDS    = "https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport"
+_TDX_AIRLINE = "https://tdx.transportdata.tw/api/basic/v2/Air/Airline"
+_TDX_AIRPORT = "https://tdx.transportdata.tw/api/basic/v2/Air/Airport"
+
+# 元資料快取（航空公司 / 機場）：靜態資料，24 小時刷一次
+_META_TTL   = 86400
+_meta_cache: dict = {"airlines": {}, "airports": {}, "expires_at": 0.0}
+_meta_lock  = threading.Lock()
+
+
+def _fetch_metadata() -> tuple[dict, dict]:
+    """回傳 (airline_map, airport_map)；24 h 快取，失敗時保留舊資料。
+
+    airline_map  = { "AK": {"zh": "亞洲航空", "en": "AirAsia"}, ... }
+    airport_map  = { "TPE": {"zh": "桃園", "en": "Taoyuan", "ap_zh": "桃園國際機場"}, ... }
+    """
+    with _meta_lock:
+        if _meta_cache["airlines"] and time.time() < _meta_cache["expires_at"]:
+            return _meta_cache["airlines"], _meta_cache["airports"]
+
+    token = _get_tdx_token()
+    if not token:
+        with _meta_lock:
+            return _meta_cache["airlines"], _meta_cache["airports"]
+
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    # ── 航空公司 ──
+    airline_map: dict[str, dict] = {}
+    try:
+        r = _requests.get(
+            _TDX_AIRLINE, headers=headers,
+            params={"$format": "JSON", "$top": 2000}, timeout=15,
+        )
+        r.raise_for_status()
+        body = r.json()
+        for a in (body if isinstance(body, list) else body.get("data", [])):
+            code = a.get("AirlineID", "")
+            if not code:
+                continue
+            name = a.get("AirlineName", {})
+            airline_map[code] = {
+                "zh": name.get("Zh_tw", "") if isinstance(name, dict) else "",
+                "en": name.get("En",    "") if isinstance(name, dict) else str(name or ""),
+            }
+    except Exception:
+        pass
+
+    # ── 機場 ──
+    airport_map: dict[str, dict] = {}
+    try:
+        r = _requests.get(
+            _TDX_AIRPORT, headers=headers,
+            params={"$format": "JSON", "$top": 2000}, timeout=15,
+        )
+        r.raise_for_status()
+        body = r.json()
+        for a in (body if isinstance(body, list) else body.get("data", [])):
+            # TDX v2 AirportID 即 IATA 三碼，與 FIDS DepartureAirportID 對應
+            iata = a.get("AirportID", "")
+            if not iata:
+                continue
+            city = a.get("CityName", {})
+            apn  = a.get("AirportName", {})
+            airport_map[iata] = {
+                "zh":    city.get("Zh_tw", "") if isinstance(city, dict) else "",
+                "en":    city.get("En",    "") if isinstance(city, dict) else "",
+                "ap_zh": apn.get("Zh_tw",  "") if isinstance(apn,  dict) else "",
+            }
+    except Exception:
+        pass
+
+    with _meta_lock:
+        if airline_map:
+            _meta_cache["airlines"] = airline_map
+        if airport_map:
+            _meta_cache["airports"] = airport_map
+        _meta_cache["expires_at"] = time.time() + _META_TTL
+        return _meta_cache["airlines"], _meta_cache["airports"]
 
 def _fetch_tias():
     """命中 30 秒快取就直接回傳，否則重打 TDX FIDS 並更新快取。"""
@@ -413,6 +491,8 @@ def tias_flights_api():
     if not ok:
         return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
 
+    airline_map, airport_map = _fetch_metadata()  # 24 h 快取，幾乎無額外延遲
+
     return jsonify({
         "configured":     True,
         "arrivals":       [f for f in arr_all if f.get("AirlineID") in _TIAS_CODES],
@@ -420,6 +500,8 @@ def tias_flights_api():
         "all_arrivals":   arr_all,
         "all_departures": dep_all,
         "airlines":       _TIAS_AIRLINES,
+        "airline_map":    airline_map,   # {code: {zh, en}}
+        "airport_map":    airport_map,   # {iata: {zh, en, ap_zh}}
         "updated_at":     time.strftime("%H:%M:%S"),
     })
 
