@@ -463,6 +463,8 @@ def _fetch_schedule():
     headers  = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     today    = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
 
+    end_window = (_dt.now(_tz(_td(hours=8))) + _td(days=6)).strftime("%Y-%m-%d")
+
     def _get(ep: str, airport_field: str) -> list:
         try:
             r = _requests.get(
@@ -478,10 +480,11 @@ def _fetch_schedule():
             r.raise_for_status()
             body = r.json()
             data = body if isinstance(body, list) else body.get("data", [])
-            # 只保留目前有效的班期（ScheduleStartDate ≤ today ≤ ScheduleEndDate）
+            # 保留與 7 天視窗有交集的所有週記錄
+            # 條件：ScheduleStartDate ≤ 窗口結束 且 ScheduleEndDate ≥ 今天
             return [f for f in data
-                    if f.get("ScheduleStartDate", "") <= today
-                    <= f.get("ScheduleEndDate", "9999-12-31")]
+                    if f.get("ScheduleStartDate", "") <= end_window
+                    and f.get("ScheduleEndDate", "9999-12-31") >= today]
         except Exception:
             return []
 
@@ -501,11 +504,13 @@ def _fetch_schedule():
     return dep, arr, True
 
 
-def _flights_on_weekday(flights: list, weekday: int) -> list:
+def _flights_on_weekday(flights: list, weekday: int, for_date: str) -> list:
     """weekday: 0=Monday … 6=Sunday（Python convention）
-    General Schedule API 的每日欄位直接是 Monday/Tuesday/…/Sunday 布林值。"""
+    for_date: "YYYY-MM-DD"，確保該筆記錄在那天的班期範圍內。"""
     day_field = _WEEKDAY_FIELDS[weekday]
-    return [f for f in flights if f.get(day_field)]
+    return [f for f in flights
+            if f.get(day_field)
+            and f.get("ScheduleStartDate", "") <= for_date <= f.get("ScheduleEndDate", "9999-12-31")]
 
 
 @app.route("/schedule")
@@ -527,11 +532,12 @@ def schedule_week_api():
     days   = []
 
     for i in range(7):
-        d       = now_tw + _td(days=i)
-        weekday = d.weekday()
+        d        = now_tw + _td(days=i)
+        weekday  = d.weekday()
+        date_str = d.strftime("%Y-%m-%d")
 
-        d_flt = _flights_on_weekday(deps, weekday)
-        a_flt = _flights_on_weekday(arrs, weekday)
+        d_flt = _flights_on_weekday(deps, weekday, date_str)
+        a_flt = _flights_on_weekday(arrs, weekday, date_str)
 
         dep_hours = [0] * 24
         for f in d_flt:
