@@ -436,6 +436,8 @@ let _prevGates    = {};
 let _gateChanges  = {};
 let _prevAcTypes  = {};
 let _acTypeChanges = {};
+/* 只有第一次載入才做錯排動畫，避免 30 秒自動重整讓卡片短暫消失 */
+let _initialLoad  = true;
 
 /* ── 工具 ── */
 function fmtHHMM(iso) {
@@ -750,7 +752,6 @@ function runSearch() {
   if (!q) {
     countEl.textContent = `共 ${allSorted.length} 筆航班`;
     resEl.innerHTML = allSorted.map(f => renderCard(f, f._dir, true)).join('');
-    staggerCards(resEl, 32);
     return;
   }
 
@@ -771,7 +772,6 @@ function runSearch() {
   resEl.innerHTML = results.length
     ? results.map(f => renderCard(f, f._dir, true)).join('')
     : `<div class="empty"><span class="empty-icon">🔍</span>查無「${q}」相關航班</div>`;
-  if (results.length) staggerCards(resEl, 32);
 }
 
 /* ── 主載入 ── */
@@ -838,13 +838,14 @@ async function load() {
     arrEl.innerHTML = _arrData.length
       ? _arrData.map(f => renderCard(f, 'arr')).join('')
       : `<div class="empty"><span class="empty-icon">🛬</span>目前無 AirAsia 入港航班</div>`;
-    if (_arrData.length) staggerCards(arrEl);
+    if (_arrData.length && _initialLoad) staggerCards(arrEl);
 
     const depEl = document.getElementById('listDep');
     depEl.innerHTML = _depData.length
       ? _depData.map(f => renderCard(f, 'dep')).join('')
       : `<div class="empty"><span class="empty-icon">🛫</span>目前無 AirAsia 出港航班</div>`;
-    if (_depData.length) staggerCards(depEl);
+    if (_depData.length && _initialLoad) staggerCards(depEl);
+    _initialLoad = false;
 
     if (_tab === 'all') runSearch();
 
@@ -863,6 +864,37 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
 /* 等 layout 完成後定位指示線 */
 requestAnimationFrame(() => updateTabIndicator('arr'));
+
+/* ── bfcache 恢復：重播 body 入場動畫 + 重排卡片動畫 ── */
+window.addEventListener('pageshow', e => {
+  if (!e.persisted) return;
+
+  /* 重播 body 入場動畫 */
+  document.body.style.animationName = 'none';
+  void document.body.offsetWidth;
+  document.body.style.animationName = '';
+
+  /* 重播現有卡片錯排 */
+  const arrEl = document.getElementById('listArr');
+  const depEl = document.getElementById('listDep');
+  const allCards = [
+    ...arrEl.querySelectorAll('.card'),
+    ...depEl.querySelectorAll('.card'),
+  ];
+  allCards.forEach(c => { c.classList.remove('card-anim'); c.style.animationDelay = ''; });
+  void arrEl.offsetWidth; /* 單次 reflow */
+  arrEl.querySelectorAll('.card').forEach((c, i) => {
+    c.style.animationDelay = Math.min(i * 42, 360) + 'ms';
+    c.classList.add('card-anim');
+  });
+  depEl.querySelectorAll('.card').forEach((c, i) => {
+    c.style.animationDelay = Math.min(i * 42, 360) + 'ms';
+    c.classList.add('card-anim');
+  });
+
+  /* 指示線重新定位 */
+  requestAnimationFrame(() => updateTabIndicator(_tab));
+});
 </script>
 </body>
 </html>

@@ -456,6 +456,26 @@ load();
 
 /* 初始化藥丸位置（等 layout 完成） */
 requestAnimationFrame(updateTogglePill);
+
+/* ── bfcache 恢復：重播 body 入場 + 卡片動畫 ── */
+window.addEventListener('pageshow', e => {
+  if (!e.persisted) return;
+
+  document.body.style.animationName = 'none';
+  void document.body.offsetWidth;
+  document.body.style.animationName = '';
+
+  const cardsEl = document.getElementById('cards');
+  const dayCards = cardsEl.querySelectorAll('.day-card');
+  dayCards.forEach(c => { c.classList.remove('card-anim'); c.style.animationDelay = ''; });
+  void cardsEl.offsetWidth;
+  dayCards.forEach((c, i) => {
+    c.style.animationDelay = (i * 55) + 'ms';
+    c.classList.add('card-anim');
+  });
+
+  requestAnimationFrame(updateTogglePill);
+});
 </script>
 </body>
 </html>

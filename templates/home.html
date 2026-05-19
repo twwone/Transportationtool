@@ -284,15 +284,30 @@ document.querySelectorAll('a.card').forEach(a => {
   });
 });
 
-/* ── 返回時從 bfcache 恢復，重跑入場動畫 ── */
+/* ── bfcache 恢復：重播所有入場動畫 ── */
 window.addEventListener('pageshow', e => {
-  if (e.persisted) {
-    const grid   = document.querySelector('.grid');
-    const header = document.querySelector('.header');
-    const footer = document.querySelector('.footer');
-    [grid, header, footer].forEach(el => { el.style.cssText = ''; });
-    grid.style.animation = 'pageIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both';
-  }
+  if (!e.persisted) return;
+
+  const header = document.querySelector('.header');
+  const footer = document.querySelector('.footer');
+  const cards  = document.querySelectorAll('.grid .card');
+
+  /* 停掉已完成的動畫（設為 none 再清除觸發重播） */
+  header.style.animationName = 'none';
+  footer.style.animationName = 'none';
+  cards.forEach(c => { c.style.animationName = 'none'; });
+
+  void document.body.offsetWidth; /* 單次 reflow */
+
+  /* 恢復 header / footer CSS 定義的動畫 */
+  header.style.animationName = '';
+  footer.style.animationName = '';
+
+  /* 重播卡片錯排 */
+  cards.forEach((card, i) => {
+    card.style.animation =
+      `cardSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) ${100 + i * 72}ms both`;
+  });
 });
 </script>
 </body>
