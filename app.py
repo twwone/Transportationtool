@@ -98,7 +98,8 @@ def _get_tdx_token() -> str | None:
             _tdx_cache["expires_at"] = now + data.get("expires_in", 300)
             return token
         except Exception:
-            return None
+            # 刷新失敗時回傳舊 token 作為備援（可能仍有效）
+            return _tdx_cache.get("token")
 
 # ──────────────────────────────────────────────
 #  首頁（交通工具選單）
@@ -332,6 +333,11 @@ def mrt_liveboard():
             _mrt_cache["expires_at"] = time.time() + 30
         return jsonify({"configured": True, "data": data})
     except Exception as e:
+        # 重打失敗時回傳舊快取，避免短暫網路中斷造成整頁錯誤
+        with _mrt_lock:
+            stale = _mrt_cache.get("data")
+        if stale:
+            return jsonify({"configured": True, "data": stale, "stale": True})
         return jsonify({"error": str(e), "configured": True}), 500
 
 
@@ -481,7 +487,7 @@ def _fetch_tias():
     if not arr_ok or not dep_ok:
         if stale[0] is not None:
             return stale[0], stale[1], True
-        return arr, dep, True
+        return None, None, False  # 完全沒資料時告知前端顯示錯誤
 
     with _tias_lock:
         _tias_cache["arr"] = arr
