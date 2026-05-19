@@ -466,6 +466,9 @@ function renderPill(train, typeClass, label) {
   </div>`;
 }
 
+// 直達車實際停靠站（兩方向相同）
+const EXPRESS_STOPS = new Set(["A1", "A12", "A13", "A17", "A18"]);
+
 function getTrainsForStation(stationId, dir) {
   return liveData
     .filter(t => {
@@ -477,17 +480,26 @@ function getTrainsForStation(stationId, dir) {
       const mins = t._baseMins !== undefined
         ? demoMins(t)
         : (typeof t.EstimateTime === "number" ? t.EstimateTime : 999);
-      // 往機場：A22終點=普通(2)，其他=直達(1)；往台北：按時間順序分配
-      const trainType = t._baseMins !== undefined
-        ? t.TrainType
-        : (dir === 1 ? (t.DestinationStationID === "A22" ? 2 : 1) : t._typeAssigned);
+
+      let trainType;
+      if (t._baseMins !== undefined) {
+        // Demo 模式：沿用原本設定的類型
+        trainType = t.TrainType;
+      } else if (dir === 1) {
+        // 往機場：終點 A13（機場T2）= 直達(1)；終點 A22（老街溪）= 普通(2)
+        trainType = t.DestinationStationID === "A13" ? 1 : 2;
+      } else {
+        // 往台北：兩種車終點都是 A1，API 無法區分。
+        // 直達車不停靠非停靠站，非停靠站的所有班次均為普通車。
+        trainType = EXPRESS_STOPS.has(stationId) ? undefined : 2;
+      }
       return { ...t, _mins: mins, TrainType: trainType };
     })
     .filter(t => t._mins >= 0 && t._mins < 999)
     .sort((a, b) => a._mins - b._mins)
     .map((t, i) => ({
       ...t,
-      // 往台北無法區分車種，按時間順序第1班給直達槽、第2班給普通槽
+      // 直達停靠站往台北方向：第1班給直達槽、第2班給普通槽（最佳近似）
       TrainType: t.TrainType ?? (i === 0 ? 1 : 2),
     }));
 }
