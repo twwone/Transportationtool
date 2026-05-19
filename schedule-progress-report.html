@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>週班表開發進度報告</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #1c1c1e;
+    padding: 40px 48px;
+    max-width: 820px;
+    margin: auto;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 1.1rem; font-weight: 700; margin: 28px 0 10px; border-left: 4px solid #059669; padding-left: 10px; }
+  .meta { font-size: 0.82rem; color: #8e8e93; margin-bottom: 28px; }
+  .status-box {
+    background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 28px;
+  }
+  .status-box strong { color: #856404; }
+  .status-ok {
+    background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 28px;
+  }
+  .status-ok strong { color: #065f46; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 12px 0 20px;
+    font-size: 0.88rem;
+  }
+  th {
+    background: #f2f2f7; text-align: left;
+    padding: 8px 12px; border-bottom: 2px solid #e5e5ea;
+    font-weight: 600;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid #f0f0f5; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block; font-size: 0.72rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+  }
+  .fail  { background: #fee2e2; color: #b91c1c; }
+  .warn  { background: #fef3c7; color: #92400e; }
+  .ok    { background: #d1fae5; color: #065f46; }
+  .info  { background: #dbeafe; color: #1e40af; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .code {
+    background: #f5f5fa; border: 1px solid #e5e5ea; border-radius: 6px;
+    padding: 10px 14px; font-family: "SF Mono", Menlo, monospace;
+    font-size: 0.82rem; margin: 8px 0; white-space: pre-wrap;
+  }
+  .section-note { font-size: 0.82rem; color: #636366; margin-top: 4px; }
+  @media print {
+    body { padding: 24px 28px; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1>週班表功能 — 開發進度報告</h1>
+<div class="meta">
+  專案：交通助理 (thsr-bot) ／ 報告日期：2026-05-19 ／ 負責人：Wengtangyong
+</div>
+
+<div class="status-box">
+  <strong>目前狀態：前端完成，資料來源失敗</strong><br>
+  /schedule 頁面架構已完整實作並部署，但 TDX basic v2 層不提供定期航班班表 API，所有候選端點均回傳 404，頁面目前顯示空資料。
+</div>
+
+<h2>一、已完成的工作</h2>
+<div class="status-ok">
+  <strong>程式碼已 commit 且 push 至 GitHub（main branch）</strong>
+</div>
+<table>
+  <tr><th>項目</th><th>狀態</th><th>說明</th></tr>
+  <tr>
+    <td>app.py — 後端路由</td>
+    <td><span class="badge ok">完成</span></td>
+    <td><code>/schedule</code>、<code>/api/schedule/week</code>、<code>/api/schedule/debug</code></td>
+  </tr>
+  <tr>
+    <td>templates/schedule.html</td>
+    <td><span class="badge ok">完成</span></td>
+    <td>7 天卡片、每小時長條圖、尖峰日標示、AirAsia/全部切換</td>
+  </tr>
+  <tr>
+    <td>templates/home.html</td>
+    <td><span class="badge ok">完成</span></td>
+    <td>新增第四張入口卡片（綠色主題，連結 /schedule）</td>
+  </tr>
+  <tr>
+    <td>_fetch_schedule() 函式</td>
+    <td><span class="badge warn">空資料</span></td>
+    <td>架構完整（1 小時快取、ServiceDay 解析），但 API 端點回 404</td>
+  </tr>
+</table>
+
+<h2>二、TDX API 調查結果</h2>
+<table>
+  <tr><th>端點</th><th>結果</th><th>備註</th></tr>
+  <tr>
+    <td><code>/api/basic/v2/Air/GeneralSchedule</code></td>
+    <td><span class="badge fail">404</span></td>
+    <td>主要目標端點，不存在</td>
+  </tr>
+  <tr>
+    <td><code>/api/basic/v2/Air/InternationalSchedule</code></td>
+    <td><span class="badge fail">404</span></td>
+    <td>備選，不存在</td>
+  </tr>
+  <tr>
+    <td><code>/api/basic/v2/Air/Schedule</code></td>
+    <td><span class="badge fail">404</span></td>
+    <td>不存在</td>
+  </tr>
+  <tr>
+    <td><code>/api/basic/v2/Air/FlightSchedule</code></td>
+    <td><span class="badge fail">404</span></td>
+    <td>不存在</td>
+  </tr>
+  <tr>
+    <td><code>/api/basic/v2/Air/FIDS/Airport/…/TPE</code></td>
+    <td><span class="badge ok">200</span></td>
+    <td>即時資料正常（TIAS 模組正在使用）</td>
+  </tr>
+  <tr>
+    <td><code>/api/basic/v2/Air/Airport</code></td>
+    <td><span class="badge ok">200</span></td>
+    <td>機場基本資料（IATA/ICAO/位置）</td>
+  </tr>
+  <tr>
+    <td><code>/api/basic/v2/Air/Airline</code></td>
+    <td><span class="badge ok">200</span></td>
+    <td>航空公司基本資料（名稱/電話）</td>
+  </tr>
+</table>
+<p class="section-note">注意：測試過程中多次出現 HTTP 429（API 速率限制），確認為全域限速假陽性，並非代表端點存在。</p>
+
+<h2>三、根本原因分析</h2>
+<p>TDX 交通部資料平台在 <strong>basic（免費）層</strong>的航空資料僅提供：</p>
+<ul>
+  <li>FIDS 即時起降資料（今日航班）</li>
+  <li>機場 / 航空公司靜態基本資料</li>
+</ul>
+<p>「定期航班班表（General Schedule）」資料在 basic 層不存在，可能需要申請進階（advanced/付費）層，或與交通部另行洽詢。</p>
+
+<h2>四、可行的替代方案</h2>
+<table>
+  <tr><th>方案</th><th>可行性</th><th>說明</th></tr>
+  <tr>
+    <td>TDX advanced（付費）層</td>
+    <td><span class="badge info">未驗證</span></td>
+    <td>需升級帳號，月費視用量而定；端點可能存在</td>
+  </tr>
+  <tr>
+    <td>AviationStack API</td>
+    <td><span class="badge warn">部分可行</span></td>
+    <td>免費層 500 次/月，有 routes 資料，但 future schedule 需付費</td>
+  </tr>
+  <tr>
+    <td>AeroDataBox API</td>
+    <td><span class="badge warn">部分可行</span></td>
+    <td>RapidAPI 上的航班計畫 API，有免費配額，含 days-of-operation</td>
+  </tr>
+  <tr>
+    <td>手動班表（AirAsia 官網截取）</td>
+    <td><span class="badge warn">人工維護</span></td>
+    <td>直接從 AirAsia 官網查 TPE 的每日班次寫入設定檔，每季更新一次</td>
+  </tr>
+  <tr>
+    <td>FIDS 累積統計</td>
+    <td><span class="badge warn">需改架構</span></td>
+    <td>每天快取今日 FIDS 資料，7 天後可推算每週分布；需持久化儲存</td>
+  </tr>
+  <tr>
+    <td>移除週班表功能</td>
+    <td><span class="badge ok">立即可行</span></td>
+    <td>從首頁移除卡片，等待資料來源有解法再啟動</td>
+  </tr>
+</table>
+
+<h2>五、技術架構（已完成，等待資料來源）</h2>
+<p>一旦資料來源確定，只需修改 <code>_fetch_schedule()</code> 函式的 API 呼叫部分，前後端其餘邏輯無需重寫：</p>
+<div class="code">def _fetch_schedule():
+    # 目前呼叫 TDX GeneralSchedule（404）
+    # 替換為其他 API 的呼叫即可
+    # 回傳格式：dep / arr 各為 list，每筆含：
+    #   AirlineID, DepartureAirportID, ArrivalAirportID,
+    #   ScheduleDepartureTime, ScheduleArrivalTime,
+    #   ServiceDay: {"Monday": bool, ...} 或 "1234567" 字串</div>
+
+<h2>六、目前系統狀態</h2>
+<table>
+  <tr><th>功能</th><th>狀態</th></tr>
+  <tr><td>首頁週班表入口卡片</td><td><span class="badge ok">已保留</span> — 指向 /schedule</td></tr>
+  <tr><td>/schedule 頁面</td><td><span class="badge warn">空資料</span> — 架構完整，資料來源未接</td></tr>
+  <tr><td>/api/schedule/week</td><td><span class="badge warn">回傳空 days</span> — TDX 端點 404</td></tr>
+  <tr><td>/api/schedule/debug</td><td><span class="badge ok">可用</span> — 顯示快取狀態與 sample</td></tr>
+  <tr><td>TIAS 航空看板 (/tias)</td><td><span class="badge ok">正常運作</span></td></tr>
+  <tr><td>MRT 捷運時刻 (/mrt)</td><td><span class="badge ok">正常運作</span></td></tr>
+  <tr><td>THSR 高鐵刷票 (/thsr)</td><td><span class="badge ok">正常運作</span></td></tr>
+</table>
+
+<h2>七、後續選項</h2>
+<ul>
+  <li><strong>維持現狀</strong>：/schedule 留空，等待資料來源有解法</li>
+  <li><strong>試用 AeroDataBox</strong>：RapidAPI 申請免費帳號，測試是否有 TPE 出發的 days-of-operation 資料</li>
+  <li><strong>移除週班表卡片</strong>：從首頁移除，直到功能可用</li>
+  <li><strong>聯絡交通部 TDX</strong>：詢問是否有 GeneralSchedule 端點及申請方式</li>
+</ul>
+
+<div class="no-print" style="margin-top:40px;text-align:center;">
+  <button onclick="window.print()" style="padding:10px 24px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:0.9rem;cursor:pointer;">
+    列印 / 儲存為 PDF
+  </button>
+</div>
+
+</body>
+</html>

@@ -309,9 +309,17 @@ window.addEventListener('pageshow', e => {
 
   const header = document.querySelector('.header');
   const footer = document.querySelector('.footer');
+  const grid   = document.querySelector('.grid');
   const cards  = document.querySelectorAll('.grid .card');
 
-  /* 停掉已完成的動畫（設為 none 再清除觸發重播） */
+  /* 清除出場動畫殘留的 inline style，否則 grid / header / footer 仍是 opacity:0 */
+  [grid, header, footer].forEach(el => {
+    el.style.opacity    = '';
+    el.style.transform  = '';
+    el.style.transition = '';
+  });
+
+  /* 停掉已完成的動畫（設為 none 再觸發重播） */
   header.style.animationName = 'none';
   footer.style.animationName = 'none';
   cards.forEach(c => { c.style.animationName = 'none'; });

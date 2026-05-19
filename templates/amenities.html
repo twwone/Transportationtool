@@ -640,6 +640,10 @@ document.getElementById('backBtn').addEventListener('click', e => {
 /* ── bfcache 還原 ── */
 window.addEventListener('pageshow', e => {
   if (!e.persisted) return;
+  /* 清除返回按鈕出場動畫殘留的 inline style */
+  document.body.style.opacity    = '';
+  document.body.style.transform  = '';
+  document.body.style.transition = '';
   document.body.style.animationName = 'none';
   void document.body.offsetWidth;
   document.body.style.animationName = '';

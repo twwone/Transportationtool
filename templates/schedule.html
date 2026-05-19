@@ -461,6 +461,11 @@ requestAnimationFrame(updateTogglePill);
 window.addEventListener('pageshow', e => {
   if (!e.persisted) return;
 
+  /* 清除任何殘留的 inline opacity / transform / transition */
+  document.body.style.opacity    = '';
+  document.body.style.transform  = '';
+  document.body.style.transition = '';
+
   document.body.style.animationName = 'none';
   void document.body.offsetWidth;
   document.body.style.animationName = '';

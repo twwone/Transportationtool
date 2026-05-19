@@ -710,6 +710,14 @@ function runSearch() {
   const countEl = document.getElementById('searchCount');
   const resEl   = document.getElementById('allResults');
 
+  /* 無關鍵字時只顯示提示 + 航班總數，不渲染所有卡片（避免 jank 凍結） */
+  if (!q) {
+    hintEl.style.display = '';
+    countEl.textContent  = `共 ${_allArr.length + _allDep.length} 筆航班可搜尋`;
+    resEl.innerHTML      = '';
+    return;
+  }
+
   hintEl.style.display = 'none';
 
   const allSorted = [
@@ -720,12 +728,6 @@ function runSearch() {
     const tb = b.ScheduleArrivalTime || b.ScheduleDepartureTime || '';
     return ta.localeCompare(tb);
   });
-
-  if (!q) {
-    countEl.textContent = `共 ${allSorted.length} 筆航班`;
-    resEl.innerHTML = allSorted.map(f => renderCard(f, f._dir, true)).join('');
-    return;
-  }
 
   const results = allSorted.filter(f => {
     const flt     = (f.FlightNumber || '').toUpperCase();
@@ -851,6 +853,11 @@ requestAnimationFrame(() => updateTabIndicator('arr'));
 /* ── bfcache 恢復：重播 body 入場動畫 + 重排卡片動畫 ── */
 window.addEventListener('pageshow', e => {
   if (!e.persisted) return;
+
+  /* 清除任何殘留的 inline opacity / transform / transition */
+  document.body.style.opacity    = '';
+  document.body.style.transform  = '';
+  document.body.style.transition = '';
 
   /* 重播 body 入場動畫 */
   document.body.style.animationName = 'none';

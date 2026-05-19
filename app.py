@@ -439,19 +439,24 @@ def _fetch_metadata() -> tuple[dict, dict]:
         return _meta_cache["airlines"], _meta_cache["airports"]
 
 def _fetch_tias():
-    """命中 30 秒快取就直接回傳，否則重打 TDX FIDS 並更新快取。"""
+    """命中 30 秒快取就直接回傳，否則重打 TDX FIDS 並更新快取。
+    API 失敗時保留舊快取，避免回傳空資料覆蓋正常資料。"""
     with _tias_lock:
         if _tias_cache["arr"] is not None and time.time() < _tias_cache["expires_at"]:
             return _tias_cache["arr"], _tias_cache["dep"], True
+        # 保留舊快取供 API 失敗時 fallback
+        stale = (_tias_cache.get("arr"), _tias_cache.get("dep"))
 
     token = _get_tdx_token()
     if not token:
+        if stale[0] is not None:
+            return stale[0], stale[1], True
         return None, None, False
 
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     today = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
 
-    def _get(direction: str, time_field: str):
+    def _get(direction: str, time_field: str) -> tuple:
         try:
             r = _requests.get(
                 f"{_TDX_FIDS}/{direction}/TPE",
@@ -465,12 +470,18 @@ def _fetch_tias():
             # 只保留今日航班，並依排班時間升序排列
             filtered = [f for f in data if f.get("FlightDate", "") == today]
             filtered.sort(key=lambda f: f.get(time_field, ""))
-            return filtered
+            return filtered, True
         except Exception:
-            return []
+            return [], False
 
-    arr = _get("Arrival",   "ScheduleArrivalTime")
-    dep = _get("Departure", "ScheduleDepartureTime")
+    arr, arr_ok = _get("Arrival",   "ScheduleArrivalTime")
+    dep, dep_ok = _get("Departure", "ScheduleDepartureTime")
+
+    # 任一方向 API 失敗時，回傳舊快取而非空陣列
+    if not arr_ok or not dep_ok:
+        if stale[0] is not None:
+            return stale[0], stale[1], True
+        return arr, dep, True
 
     with _tias_lock:
         _tias_cache["arr"] = arr
