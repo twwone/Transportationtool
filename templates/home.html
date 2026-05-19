@@ -13,6 +13,24 @@
 <meta name="theme-color" content="#f2f2f7">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── 關鍵影格 ── */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.986); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes headerIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes cardSlideUp {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes pageOut {
+  to { opacity: 0; transform: scale(0.96) translateY(-10px); }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f2f2f7;
@@ -27,6 +45,7 @@ body {
 .header {
   text-align: center;
   margin-bottom: 36px;
+  animation: headerIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
 }
 .header h1 {
   font-size: 1.8rem;
@@ -52,10 +71,18 @@ body {
   border: 1px solid #e5e5ea;
   border-radius: 20px;
   padding: 26px 22px;
-  transition: transform 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  /* 複合貝茲曲線：懸停彈出用 spring，active 收縮用快速 */
+  transition:
+    transform      0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color   0.2s  ease,
+    background     0.2s  ease,
+    box-shadow     0.28s cubic-bezier(0.22, 1, 0.36, 1);
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  will-change: transform;
+  /* 預設隱藏，讓 JS 觸發入場動畫 */
+  opacity: 0;
 }
 .card::before {
   content: '';
@@ -63,22 +90,30 @@ body {
   inset: 0;
   border-radius: 20px;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.22s;
 }
-.card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-.card:active { transform: scale(0.98); }
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-5px) scale(1.012);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.11);
+  }
+  .card:hover::before { opacity: 1; }
+  .card:hover .arrow  { transform: translateX(5px); }
+}
+.card:active {
+  transform: scale(0.965) !important;
+  transition-duration: 0.08s !important;
+}
 
 /* 高鐵卡片 */
 .card-thsr { border-color: #ffe0b0; }
-.card-thsr::before { background: radial-gradient(ellipse at 80% 20%, #ff950012, transparent 60%); }
+.card-thsr::before { background: radial-gradient(ellipse at 80% 20%, #ff950015, transparent 60%); }
 .card-thsr:hover { border-color: #ff9500; background: #fffaf4; }
-.card-thsr:hover::before { opacity: 1; }
 
 /* 捷運卡片 */
 .card-mrt { border-color: #ddd6fe; }
-.card-mrt::before { background: radial-gradient(ellipse at 80% 20%, #7c3aed12, transparent 60%); }
+.card-mrt::before { background: radial-gradient(ellipse at 80% 20%, #7c3aed15, transparent 60%); }
 .card-mrt:hover { border-color: #7c3aed; background: #faf8ff; }
-.card-mrt:hover::before { opacity: 1; }
 
 .card-inner {
   display: flex;
@@ -96,6 +131,10 @@ body {
   justify-content: center;
   flex-shrink: 0;
   font-size: 1.8rem;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (hover: hover) {
+  .card:hover .icon-wrap { transform: scale(1.06) rotate(-3deg); }
 }
 .card-thsr .icon-wrap { background: #fff3e0; }
 .card-mrt  .icon-wrap { background: #ede9fe; }
@@ -118,35 +157,31 @@ body {
 .arrow {
   font-size: 1.1rem;
   color: #c7c7cc;
-  transition: color 0.15s, transform 0.15s;
+  transition: color 0.2s, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.card:hover .arrow { transform: translateX(4px); }
 .card-thsr:hover .arrow { color: #ff9500; }
 .card-mrt:hover  .arrow { color: #7c3aed; }
 
 /* Widget 卡片 */
 .card-widget { border-color: #d1d9ff; }
-.card-widget::before { background: radial-gradient(ellipse at 80% 20%, #6366f112, transparent 60%); }
+.card-widget::before { background: radial-gradient(ellipse at 80% 20%, #6366f115, transparent 60%); }
 .card-widget:hover { border-color: #6366f1; background: #f8f8ff; }
-.card-widget:hover::before { opacity: 1; }
 .card-widget .icon-wrap { background: #eef2ff; }
 .card-widget .card-title { color: #4f46e5; }
 .card-widget:hover .arrow { color: #6366f1; }
 
 /* 航空看板卡片 */
 .card-tias { border-color: #bfdbfe; }
-.card-tias::before { background: radial-gradient(ellipse at 80% 20%, #1a56db10, transparent 60%); }
+.card-tias::before { background: radial-gradient(ellipse at 80% 20%, #1a56db12, transparent 60%); }
 .card-tias:hover { border-color: #1a56db; background: #eff6ff; }
-.card-tias:hover::before { opacity: 1; }
 .card-tias .icon-wrap { background: #dbeafe; }
 .card-tias .card-title { color: #1e40af; }
 .card-tias:hover .arrow { color: #1a56db; }
 
 /* 週班表卡片 */
 .card-schedule { border-color: #bbf7d0; }
-.card-schedule::before { background: radial-gradient(ellipse at 80% 20%, #05966912, transparent 60%); }
+.card-schedule::before { background: radial-gradient(ellipse at 80% 20%, #05966915, transparent 60%); }
 .card-schedule:hover { border-color: #059669; background: #f0fdf4; }
-.card-schedule:hover::before { opacity: 1; }
 .card-schedule .icon-wrap { background: #dcfce7; }
 .card-schedule .card-title { color: #047857; }
 .card-schedule:hover .arrow { color: #059669; }
@@ -156,6 +191,7 @@ body {
   font-size: 0.7rem;
   color: #c7c7cc;
   text-align: center;
+  animation: headerIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
 }
 </style>
 </head>
@@ -217,6 +253,47 @@ body {
 
 <script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+/* ── 卡片錯開入場 ── */
+document.querySelectorAll('.grid .card').forEach((card, i) => {
+  card.style.animation =
+    `cardSlideUp 0.58s cubic-bezier(0.22, 1, 0.36, 1) ${100 + i * 72}ms both`;
+});
+
+/* ── 點擊卡片：先讓整格動畫退場，再跳頁 ── */
+document.querySelectorAll('a.card').forEach(a => {
+  a.addEventListener('click', function (e) {
+    e.preventDefault();
+    const href = this.href;
+    const grid   = document.querySelector('.grid');
+    const header = document.querySelector('.header');
+    const footer = document.querySelector('.footer');
+    const easing = 'cubic-bezier(0.4, 0, 1, 1)';
+    const dur    = '0.2s';
+
+    [grid, header, footer].forEach(el => {
+      el.style.transition = `opacity ${dur} ${easing}, transform ${dur} ${easing}`;
+    });
+    grid.style.opacity   = '0';
+    grid.style.transform = 'scale(0.95) translateY(-10px)';
+    header.style.opacity = '0';
+    header.style.transform = 'translateY(-8px)';
+    footer.style.opacity = '0';
+
+    setTimeout(() => { location.href = href; }, 210);
+  });
+});
+
+/* ── 返回時從 bfcache 恢復，重跑入場動畫 ── */
+window.addEventListener('pageshow', e => {
+  if (e.persisted) {
+    const grid   = document.querySelector('.grid');
+    const header = document.querySelector('.header');
+    const footer = document.querySelector('.footer');
+    [grid, header, footer].forEach(el => { el.style.cssText = ''; });
+    grid.style.animation = 'pageIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both';
+  }
+});
 </script>
 </body>
 </html>

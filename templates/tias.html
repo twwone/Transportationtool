@@ -12,12 +12,29 @@
 <meta name="theme-color" content="#ffffff">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── 關鍵影格 ── */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f2f2f7;
   color: #1c1c1e;
   min-height: 100vh;
   padding-bottom: 48px;
+  animation: pageIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* ── Topbar ── */
@@ -29,27 +46,52 @@ body {
   position: sticky; top: 0; z-index: 100;
 }
 .topbar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.back-btn { color: #1a56db; font-size: 0.85rem; text-decoration: none; }
+.back-btn {
+  color: #1a56db; font-size: 0.85rem; text-decoration: none;
+  transition: color 0.15s, transform 0.18s cubic-bezier(0.22,1,0.36,1), opacity 0.15s;
+  display: inline-block;
+}
+.back-btn:active { transform: scale(0.86); opacity: 0.6; }
 .topbar-title { font-size: 1rem; font-weight: 700; flex: 1; }
 .refresh-btn {
   background: none; border: none; color: #1a56db;
   font-size: 0.8rem; cursor: pointer; padding: 4px 8px;
-  border-radius: 8px; transition: background 0.1s;
+  border-radius: 8px;
+  transition: background 0.15s, transform 0.18s cubic-bezier(0.22,1,0.36,1), color 0.15s;
 }
-.refresh-btn:active { background: #eff6ff; }
-.spin { animation: spin 0.8s linear infinite; display: inline-block; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.refresh-btn:hover  { background: #eff6ff; }
+.refresh-btn:active { transform: scale(0.88); color: #1e40af; }
+.spin { animation: spin 0.7s linear infinite; display: inline-block; }
 
 /* ── Tabs ── */
-.tabs { display: flex; }
+.tabs {
+  display: flex;
+  position: relative;  /* 讓 tab-indicator 可以絕對定位 */
+}
 .tab {
   flex: 1; padding: 9px 0; text-align: center;
   font-size: 0.9rem; font-weight: 600; color: #8e8e93;
   cursor: pointer;
   border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.2s;
+  user-select: none;
 }
-.tab.active { color: #1a56db; border-bottom-color: #1a56db; }
+.tab:active { opacity: 0.65; }
+.tab.active { color: #1a56db; border-bottom-color: transparent; }
+
+/* 滑動指示線（取代各 tab 的 border） */
+.tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  height: 2.5px;
+  background: #1a56db;
+  border-radius: 2px 2px 0 0;
+  transition:
+    left  0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: left, width;
+  pointer-events: none;
+}
 
 /* ── Meta bar ── */
 .meta-bar {
@@ -63,9 +105,14 @@ body {
   width: 100%; padding: 12px 14px;
   border: 1.5px solid #e5e5ea; border-radius: 12px;
   font-size: 0.95rem; color: #1c1c1e; background: #fff;
-  outline: none; transition: border-color 0.15s;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.25s cubic-bezier(0.22,1,0.36,1), transform 0.25s cubic-bezier(0.22,1,0.36,1);
 }
-.search-input:focus { border-color: #1a56db; }
+.search-input:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3.5px rgba(26,86,219,0.13);
+  transform: scale(1.006);
+}
 .search-hint {
   text-align: center; padding: 44px 20px 0;
   color: #aeaeb2; font-size: 0.82rem; line-height: 1.8;
@@ -75,6 +122,16 @@ body {
 
 /* ── List ── */
 .list { padding: 8px 12px 0; }
+
+/* ── 面板過場：JS 操控的 inline style，預設讓 CSS 繼承 ── */
+#listArr, #listDep, #panelAll {
+  will-change: opacity, transform;
+}
+
+/* ── 卡片入場動畫 ── */
+.card-anim {
+  animation: cardIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
 /* ════════════════════════════════════════
    FLIGHT CARD
@@ -86,24 +143,29 @@ body {
   padding: 14px 15px 14px;
   margin-bottom: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background   0.2s,
+    transform    0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow   0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
-/* 延誤 */
-.card-delayed {
-  border-color: #fed7aa;
-  background: #fffbf5;
+@media (hover: hover) {
+  .card:not(.card-done):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.09);
+  }
 }
-/* 已完成（起飛/落地） */
-.card-done {
-  opacity: 0.55;
-}
-/* 轉降 */
-.card-diverted {
-  border-color: #c026d3;
-  background: #fdf4ff;
-}
+.card:active { transform: scale(0.988) !important; transition-duration: 0.08s !important; }
 
-/* ── 1. Meta row：airline · [dir] · status · terminal ── */
+/* 延誤 */
+.card-delayed { border-color: #fed7aa; background: #fffbf5; }
+/* 已完成（起飛/落地） */
+.card-done    { opacity: 0.55; }
+/* 轉降 */
+.card-diverted { border-color: #c026d3; background: #fdf4ff; }
+
+/* ── 1. Meta row ── */
 .card-meta {
   display: flex; align-items: center; gap: 6px;
   flex-wrap: wrap; margin-bottom: 10px;
@@ -119,11 +181,11 @@ body {
   font-size: 0.7rem; font-weight: 700;
   padding: 3px 9px; border-radius: 20px;
 }
-.st-ontime  { background: #d1fae5; color: #065f46; }
-.st-delay   { background: #ffedd5; color: #9a3412; }
-.st-landed  { background: #dbeafe; color: #1e40af; }
-.st-depart  { background: #dbeafe; color: #1e40af; }
-.st-board   { background: #ede9fe; color: #5b21b6; }
+.st-ontime   { background: #d1fae5; color: #065f46; }
+.st-delay    { background: #ffedd5; color: #9a3412; }
+.st-landed   { background: #dbeafe; color: #1e40af; }
+.st-depart   { background: #dbeafe; color: #1e40af; }
+.st-board    { background: #ede9fe; color: #5b21b6; }
 .st-cancel   { background: #fee2e2; color: #991b1b; }
 .st-diverted { background: #fae8ff; color: #86198f; border: 1px solid #e879f9; }
 .st-unknown  { background: #f3f4f6; color: #6b7280; }
@@ -141,7 +203,7 @@ body {
   border: 1px solid #f97316;
 }
 
-/* ── 2. Hero row：航班號 + 目的地/出發地 ── */
+/* ── 2. Hero row ── */
 .card-hero {
   display: flex; align-items: flex-end;
   justify-content: space-between;
@@ -179,90 +241,56 @@ body {
   text-transform: uppercase; letter-spacing: 0.5px;
   align-self: center;
 }
-.time-sch {
-  font-size: 1.25rem; font-weight: 800; color: #1c1c1e;
-}
-.time-sch.through {
-  text-decoration: line-through; color: #c7c7cc;
-}
+.time-sch { font-size: 1.25rem; font-weight: 800; color: #1c1c1e; }
+.time-sch.through { text-decoration: line-through; color: #c7c7cc; }
 .time-arrow { font-size: 0.85rem; color: #aeaeb2; }
-.time-est {
-  font-size: 1.25rem; font-weight: 800; color: #c2410c;
-}
+.time-est  { font-size: 1.25rem; font-weight: 800; color: #c2410c; }
 .delay-chip {
   font-size: 0.68rem; font-weight: 700;
   color: #9a3412; background: #ffedd5;
   padding: 2px 6px; border-radius: 5px;
   align-self: center;
 }
-.time-act {
-  font-size: 1.25rem; font-weight: 800; color: #15803d;
-}
-.time-act-lbl {
-  font-size: 0.62rem; color: #aeaeb2; align-self: center;
-}
+.time-act { font-size: 1.25rem; font-weight: 800; color: #15803d; }
+.time-act-lbl { font-size: 0.62rem; color: #aeaeb2; align-self: center; }
 
 /* ── 4. Resource grid ── */
 .res-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 0;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 0;
 }
 .res-block {
-  background: #f9f9f9;
-  border: 1.5px solid #e5e5ea;
-  border-radius: 12px;
-  padding: 10px 12px;
+  background: #f9f9f9; border: 1.5px solid #e5e5ea;
+  border-radius: 12px; padding: 10px 12px;
+  transition: border-color 0.2s, background 0.2s;
 }
-.res-block.res-highlighted {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-}
-.res-icon-lbl {
-  font-size: 0.82rem; font-weight: 600; color: #636366;
-  margin-bottom: 6px;
-}
+.res-block.res-highlighted { background: #eff6ff; border-color: #bfdbfe; }
+.res-icon-lbl { font-size: 0.82rem; font-weight: 600; color: #636366; margin-bottom: 6px; }
 .res-val {
   font-size: 1.5rem; font-weight: 800;
   color: #1c1c1e; letter-spacing: -0.5px; line-height: 1;
 }
-.res-val.res-val-sm {
-  font-size: 1.1rem; letter-spacing: 0;
-}
-.res-val.tba {
-  font-size: 0.82rem; font-weight: 400;
-  color: #c7c7cc; font-style: italic; line-height: 1.5;
-}
-/* 登機門變更 */
-.res-block.res-gate-changed {
-  background: #fff7ed; border-color: #f97316;
-}
+.res-val.res-val-sm { font-size: 1.1rem; letter-spacing: 0; }
+.res-val.tba { font-size: 0.82rem; font-weight: 400; color: #c7c7cc; font-style: italic; line-height: 1.5; }
+.res-block.res-gate-changed { background: #fff7ed; border-color: #f97316; }
 .res-changed { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.res-prev { font-size: 1.1rem; font-weight: 700; color: #9ca3af; text-decoration: line-through; }
+.res-prev    { font-size: 1.1rem; font-weight: 700; color: #9ca3af; text-decoration: line-through; }
 .res-chg-arrow { font-size: 0.9rem; font-weight: 700; color: #f97316; }
-.res-new  { font-size: 1.5rem; font-weight: 800; color: #c2410c; letter-spacing: -0.5px; line-height: 1; }
-/* 資料時間 */
-.card-updated {
-  font-size: 0.6rem; color: #c7c7cc;
-  text-align: right; margin-top: 8px;
-}
+.res-new     { font-size: 1.5rem; font-weight: 800; color: #c2410c; letter-spacing: -0.5px; line-height: 1; }
+.card-updated { font-size: 0.6rem; color: #c7c7cc; text-align: right; margin-top: 8px; }
 
 /* ── TAT Section ── */
-.tat-wrap {
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid #f2f2f7;
-}
+.tat-wrap { margin-top: 12px; padding-top: 12px; border-top: 1px solid #f2f2f7; }
 .tat-headline { margin-bottom: 9px; }
 .tat-next { font-size: 0.82rem; font-weight: 600; color: #1c1c1e; }
 .tat-next.phase-urgent { color: #b91c1c; }
 .tat-next.phase-soon   { color: #92400e; }
 .tat-next.phase-ok     { color: #065f46; }
-
 .ms-list { display: flex; flex-direction: column; gap: 5px; }
 .ms-row {
   display: flex; align-items: center; gap: 8px;
   padding: 5px 8px; border-radius: 8px;
+  transition: background 0.2s;
 }
 .ms-row.ms-done   { opacity: 0.38; }
 .ms-row.ms-now    { background: #eff6ff; border: 1px solid #bfdbfe; }
@@ -273,20 +301,17 @@ body {
 .ms-done   .ms-dot { background: #9ca3af; }
 .ms-now    .ms-dot { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
 .ms-next   .ms-dot { background: #f59e0b; }
-.ms-urgent .ms-dot { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
+.ms-urgent .ms-dot { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.2); animation: pulse 1.2s ease-in-out infinite; }
 .ms-future .ms-dot { background: #d1d5db; }
-.ms-time { font-size: 0.78rem; font-weight: 700; color: #374151; min-width: 38px; }
-.ms-label { font-size: 0.78rem; color: #374151; flex: 1; }
+.ms-time      { font-size: 0.78rem; font-weight: 700; color: #374151; min-width: 38px; }
+.ms-label     { font-size: 0.78rem; color: #374151; flex: 1; }
 .ms-countdown { font-size: 0.7rem; font-weight: 600; color: #6b7280; white-space: nowrap; }
 .ms-now    .ms-countdown { color: #1d4ed8; }
 .ms-next   .ms-countdown { color: #92400e; }
 .ms-urgent .ms-countdown { color: #b91c1c; }
 
 /* ── Empty / Error / Loading ── */
-.empty {
-  text-align: center; padding: 60px 20px;
-  color: #aeaeb2; font-size: 0.9rem;
-}
+.empty { text-align: center; padding: 60px 20px; color: #aeaeb2; font-size: 0.9rem; }
 .empty-icon { font-size: 2.8rem; display: block; margin-bottom: 14px; }
 .error-banner {
   background: #fef3c7; border: 1px solid #fcd34d;
@@ -308,6 +333,7 @@ body {
     <div class="tab active" id="tab-arr" onclick="switchTab('arr')">🛬 入港</div>
     <div class="tab"        id="tab-dep" onclick="switchTab('dep')">🛫 出港</div>
     <div class="tab"        id="tab-all" onclick="switchTab('all')">🔍 全航班</div>
+    <div class="tab-indicator" id="tabIndicator"></div>
   </div>
 </div>
 
@@ -381,13 +407,13 @@ const CITY = {
 
 /* ── 狀態對照 ── */
 const ST_MAP = [
-  [/(準時|On.?Time|正常)/i,          'ontime', '準時'],
-  [/(延誤|Delay)/i,                  'delay',  '延誤'],
-  [/(落地|Arrived?|抵達|已到)/i,      'landed', '落地'],
-  [/(起飛|Depart|出發|已出發)/i,      'depart', '已起飛'],
-  [/(登機|Board)/i,                  'board',  '登機中'],
-  [/(取消|Cancel)/i,                 'cancel',   '取消'],
-  [/(轉降|Divert)/i,                 'diverted', '轉降'],
+  [/(準時|On.?Time|正常)/i,          'ontime',   '準時'],
+  [/(延誤|Delay)/i,                   'delay',    '延誤'],
+  [/(落地|Arrived?|抵達|已到)/i,       'landed',   '落地'],
+  [/(起飛|Depart|出發|已出發)/i,       'depart',   '已起飛'],
+  [/(登機|Board)/i,                   'board',    '登機中'],
+  [/(取消|Cancel)/i,                  'cancel',   '取消'],
+  [/(轉降|Divert)/i,                  'diverted', '轉降'],
 ];
 
 /* ── 出港 TAT 里程碑 ── */
@@ -398,6 +424,10 @@ const MILESTONES = [
   { key:'gate',  label:'關艙門',   offset:-15  },
   { key:'std',   label:'起飛',     offset:0    },
 ];
+
+/* ── Tab 順序（用於判斷滑動方向） ── */
+const TAB_ORDER  = { arr: 0, dep: 1, all: 2 };
+const TAB_PANELS = { arr: 'listArr', dep: 'listDep', all: 'panelAll' };
 
 let _arrData = [], _depData = [], _allArr = [], _allDep = [];
 let _tab = 'arr';
@@ -455,9 +485,9 @@ function buildTimeHtml(label, schIso, estIso, actIso) {
 
 /* ── 資源大格 ── */
 function buildResBlock(icon, label, value, highlight, prevValue) {
-  const hasVal    = !!(value && value.trim());
+  const hasVal     = !!(value && value.trim());
   const hasChanged = prevValue && hasVal && prevValue !== value;
-  const blockCls  = hasChanged
+  const blockCls   = hasChanged
     ? 'res-block res-gate-changed'
     : (highlight && hasVal ? 'res-block res-highlighted' : 'res-block');
 
@@ -533,8 +563,8 @@ function buildTAT(stdIso, etdIso) {
 function renderCard(f, mode, showDirBadge) {
   const isArr = mode === 'arr';
 
-  const airline  = f.AirlineID    || '??';
-  const fltNum   = f.FlightNumber || '—';
+  const airline   = f.AirlineID    || '??';
+  const fltNum    = f.FlightNumber || '—';
   const counterAp = isArr ? (f.DepartureAirportID || '') : (f.ArrivalAirportID || '');
   const cityName  = CITY[counterAp] || counterAp || '—';
 
@@ -548,32 +578,33 @@ function renderCard(f, mode, showDirBadge) {
   const counter = f.CheckCounter  || f.CheckInCounter  || f.CheckInArea  || '';
   const terminal = f.Terminal     || f.ArrivalTerminal || f.DepartureTerminal || '';
   const acType  = f.AcType || '';
-  const status   = parseStatus(
+  const status  = parseStatus(
     (isArr ? f.ArrivalRemark : f.DepartureRemark) || f.Remark || f.FlightStatus || ''
   );
 
   const dm = delayMin(sch, est);
-  const isDelayed = !act && est && dm >= 5;
-  const isDone    = !!act;
-
+  const isDelayed  = !act && est && dm >= 5;
+  const isDone     = !!act;
   const isDiverted = status.cls === 'diverted';
+
   const cardCls = [
     'card',
-    isDiverted          ? 'card-diverted' : '',
-    !isDiverted && isDelayed ? 'card-delayed' : '',
-    isDone              ? 'card-done'    : '',
+    isDiverted              ? 'card-diverted' : '',
+    !isDiverted && isDelayed ? 'card-delayed'  : '',
+    isDone                  ? 'card-done'      : '',
   ].filter(Boolean).join(' ');
 
-  const airlineCN  = AIRLINE_CN[airline] || '';
-  const dirBadge = showDirBadge
+  const airlineCN = AIRLINE_CN[airline] || '';
+  const dirBadge  = showDirBadge
     ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
     : '';
 
-  const prevGate   = _gateChanges[fltNum]  ? _gateChanges[fltNum].from  : undefined;
-  const acTypeChg  = _acTypeChanges[fltNum];
+  const prevGate  = _gateChanges[fltNum]  ? _gateChanges[fltNum].from  : undefined;
+  const acTypeChg = _acTypeChanges[fltNum];
   const acTypeBadge = acTypeChg
     ? `<span class="badge-actype badge-actype-changed">${acTypeChg.from} → ${acTypeChg.to}</span>`
     : (acType ? `<span class="badge-actype">${acType}</span>` : '');
+
   const resGrid = isArr
     ? `<div class="res-grid">
         ${buildResBlock('', '登機門', gate, true, prevGate)}
@@ -584,9 +615,9 @@ function renderCard(f, mode, showDirBadge) {
         ${buildResBlock('', '報到櫃檯', counter, true)}
        </div>`;
 
-  const timeHtml   = buildTimeHtml(isArr ? 'STA' : 'STD', sch, est, act);
-  const tatHtml    = !isArr ? buildTAT(sch, est) : '';
-  const updatedAt  = f.UpdateTime ? fmtHHMM(f.UpdateTime) : '';
+  const timeHtml  = buildTimeHtml(isArr ? 'STA' : 'STD', sch, est, act);
+  const tatHtml   = !isArr ? buildTAT(sch, est) : '';
+  const updatedAt = f.UpdateTime ? fmtHHMM(f.UpdateTime) : '';
 
   return `<div class="${cardCls}">
     <div class="card-meta">
@@ -613,23 +644,77 @@ function renderCard(f, mode, showDirBadge) {
   </div>`;
 }
 
-/* ── Tab 切換 ── */
-function switchTab(tab) {
-  _tab = tab;
-  ['arr','dep','all'].forEach(t => {
-    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+/* ── 卡片錯開入場 ── */
+function staggerCards(container, interval) {
+  container.querySelectorAll('.card').forEach((c, i) => {
+    c.style.animationDelay = Math.min(i * (interval || 42), 380) + 'ms';
+    c.classList.add('card-anim');
   });
-  document.getElementById('listArr').style.display  = tab === 'arr' ? '' : 'none';
-  document.getElementById('listDep').style.display  = tab === 'dep' ? '' : 'none';
-  document.getElementById('panelAll').style.display = tab === 'all' ? '' : 'none';
+}
 
-  const hint = document.getElementById('airlineHint');
-  if (tab === 'all') {
-    hint.textContent = 'TPE 全部即時航班';
-    runSearch();
-  } else {
-    renderAirlineHint();
+/* ── Tab 指示器滑動到目標位置 ── */
+function updateTabIndicator(tab) {
+  const el  = document.getElementById('tab-' + tab);
+  const ind = document.getElementById('tabIndicator');
+  if (el && ind) {
+    ind.style.left  = el.offsetLeft + 'px';
+    ind.style.width = el.offsetWidth + 'px';
   }
+}
+
+/* ── Tab 切換（含方向感滑動過場） ── */
+function switchTab(tab) {
+  if (tab === _tab) return;
+
+  const goRight  = TAB_ORDER[tab] > TAB_ORDER[_tab];
+  const outX     = goRight ? '-22px' : '22px';
+  const inX      = goRight ?  '22px' : '-22px';
+
+  const outPanel = document.getElementById(TAB_PANELS[_tab]);
+  const inPanel  = document.getElementById(TAB_PANELS[tab]);
+
+  /* 立即更新 tab label + 指示線 */
+  ['arr','dep','all'].forEach(t =>
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab)
+  );
+  updateTabIndicator(tab);
+
+  /* 舊面板淡出 + 位移 */
+  outPanel.style.transition = 'opacity 0.16s ease-in, transform 0.16s ease-in';
+  outPanel.style.opacity    = '0';
+  outPanel.style.transform  = `translateX(${outX})`;
+
+  setTimeout(() => {
+    outPanel.style.display    = 'none';
+    outPanel.style.transition = '';
+    outPanel.style.opacity    = '';
+    outPanel.style.transform  = '';
+
+    /* 新面板從對側滑入 */
+    inPanel.style.opacity   = '0';
+    inPanel.style.transform = `translateX(${inX})`;
+    inPanel.style.display   = '';
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      inPanel.style.transition = 'opacity 0.3s cubic-bezier(0.22,1,0.36,1), transform 0.3s cubic-bezier(0.22,1,0.36,1)';
+      inPanel.style.opacity    = '1';
+      inPanel.style.transform  = 'translateX(0)';
+      setTimeout(() => {
+        inPanel.style.transition = '';
+        inPanel.style.opacity    = '';
+        inPanel.style.transform  = '';
+      }, 320);
+    }));
+
+    _tab = tab;
+    const hint = document.getElementById('airlineHint');
+    if (tab === 'all') {
+      hint.textContent = 'TPE 全部即時航班';
+      runSearch();
+    } else {
+      renderAirlineHint();
+    }
+  }, 170);
 }
 
 function renderAirlineHint() {
@@ -639,7 +724,7 @@ function renderAirlineHint() {
   }
 }
 
-/* ── 全航班搜尋（多維度）── */
+/* ── 全航班搜尋 ── */
 function onSearchInput() {
   clearTimeout(_searchTimer);
   _searchTimer = setTimeout(runSearch, 250);
@@ -653,7 +738,6 @@ function runSearch() {
 
   hintEl.style.display = 'none';
 
-  // 合併並按排班時間升序排列
   const allSorted = [
     ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
     ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
@@ -663,24 +747,21 @@ function runSearch() {
     return ta.localeCompare(tb);
   });
 
-  // 無查詢時直接列出全部
   if (!q) {
     countEl.textContent = `共 ${allSorted.length} 筆航班`;
-    resEl.innerHTML     = allSorted.map(f => renderCard(f, f._dir, true)).join('');
+    resEl.innerHTML = allSorted.map(f => renderCard(f, f._dir, true)).join('');
+    staggerCards(resEl, 32);
     return;
   }
 
-  // 有查詢時過濾
-  // TDX 的 FlightNumber 只存數字（如 "12"），AirlineID 分開存（"JX"）
-  // 合併成 "JX12" 再比對，讓使用者輸入完整航班號也能找到
   const results = allSorted.filter(f => {
-    const flt      = (f.FlightNumber || '').toUpperCase();
-    const fullFlt  = ((f.AirlineID || '') + (f.FlightNumber || '')).toUpperCase();
-    const al       = (f.AirlineID || '').toUpperCase();
-    const ap       = (f.DepartureAirportID || f.ArrivalAirportID || '').toUpperCase();
-    const gate     = (f.Gate || '').toUpperCase();
-    const counter  = (f.CheckCounter || f.CheckInCounter || f.CheckInArea || '').toUpperCase();
-    const baggage  = (f.BaggageClaim || '').toUpperCase();
+    const flt     = (f.FlightNumber || '').toUpperCase();
+    const fullFlt = ((f.AirlineID || '') + (f.FlightNumber || '')).toUpperCase();
+    const al      = (f.AirlineID || '').toUpperCase();
+    const ap      = (f.DepartureAirportID || f.ArrivalAirportID || '').toUpperCase();
+    const gate    = (f.Gate || '').toUpperCase();
+    const counter = (f.CheckCounter || f.CheckInCounter || f.CheckInArea || '').toUpperCase();
+    const baggage = (f.BaggageClaim || '').toUpperCase();
     return fullFlt.includes(q) || flt.includes(q)
         || al.startsWith(q) || ap.startsWith(q)
         || gate.includes(q) || counter.includes(q) || baggage.includes(q);
@@ -690,6 +771,7 @@ function runSearch() {
   resEl.innerHTML = results.length
     ? results.map(f => renderCard(f, f._dir, true)).join('')
     : `<div class="empty"><span class="empty-icon">🔍</span>查無「${q}」相關航班</div>`;
+  if (results.length) staggerCards(resEl, 32);
 }
 
 /* ── 主載入 ── */
@@ -716,12 +798,12 @@ async function load() {
     window._airlines = data.airlines || [];
     renderAirlineHint();
 
-    _arrData = data.arrivals      || [];
-    _depData = data.departures    || [];
-    _allArr  = data.all_arrivals  || [];
+    _arrData = data.arrivals       || [];
+    _depData = data.departures     || [];
+    _allArr  = data.all_arrivals   || [];
     _allDep  = data.all_departures || [];
 
-    // 登機門變更追蹤
+    /* 登機門變更追蹤 */
     const newGates = {};
     [..._allArr, ..._allDep].forEach(f => {
       const g = f.Gate || f.ArrivalGate || f.DepartureGate || '';
@@ -731,14 +813,13 @@ async function load() {
       _gateChanges = {};
       Object.keys(newGates).forEach(flt => {
         const prev = _prevGates[flt];
-        if (prev && prev !== newGates[flt]) {
+        if (prev && prev !== newGates[flt])
           _gateChanges[flt] = { from: prev, to: newGates[flt] };
-        }
       });
     }
     _prevGates = newGates;
 
-    // 機型變更追蹤
+    /* 機型變更追蹤 */
     const newAcTypes = {};
     [..._allArr, ..._allDep].forEach(f => {
       if (f.FlightNumber && f.AcType) newAcTypes[f.FlightNumber] = f.AcType;
@@ -747,20 +828,23 @@ async function load() {
       _acTypeChanges = {};
       Object.keys(newAcTypes).forEach(flt => {
         const prev = _prevAcTypes[flt];
-        if (prev && prev !== newAcTypes[flt]) {
+        if (prev && prev !== newAcTypes[flt])
           _acTypeChanges[flt] = { from: prev, to: newAcTypes[flt] };
-        }
       });
     }
     _prevAcTypes = newAcTypes;
 
-    document.getElementById('listArr').innerHTML = _arrData.length
+    const arrEl = document.getElementById('listArr');
+    arrEl.innerHTML = _arrData.length
       ? _arrData.map(f => renderCard(f, 'arr')).join('')
       : `<div class="empty"><span class="empty-icon">🛬</span>目前無 AirAsia 入港航班</div>`;
+    if (_arrData.length) staggerCards(arrEl);
 
-    document.getElementById('listDep').innerHTML = _depData.length
+    const depEl = document.getElementById('listDep');
+    depEl.innerHTML = _depData.length
       ? _depData.map(f => renderCard(f, 'dep')).join('')
       : `<div class="empty"><span class="empty-icon">🛫</span>目前無 AirAsia 出港航班</div>`;
+    if (_depData.length) staggerCards(depEl);
 
     if (_tab === 'all') runSearch();
 
@@ -776,6 +860,9 @@ async function load() {
 load();
 setInterval(load, 30000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+/* 等 layout 完成後定位指示線 */
+requestAnimationFrame(() => updateTabIndicator('arr'));
 </script>
 </body>
 </html>
