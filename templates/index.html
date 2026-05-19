@@ -359,7 +359,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
           let cls = "e-run";
           if (line.includes("找到"))          cls = "e-found";
           else if (line.includes("錯誤") || line.includes("失敗")) cls = "e-error";
-          return `<div class="${cls}">${line}</div>`;
+          const safe = line.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+          return `<div class="${cls}">${safe}</div>`;
         }).join("");
       }
     } catch(_) {}

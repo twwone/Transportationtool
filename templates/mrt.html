@@ -330,6 +330,8 @@ function demoMins(t) {
 let _demoTick = null;
 function startDemoTick() {
   if (_demoTick) return;
+  // 確保實時計時器已停止，避免 refreshTick 被兩個 interval 同時遞減
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
   _demoTick = setInterval(() => {
     renderStations();
     refreshTick--;
@@ -408,6 +410,8 @@ async function fetchNow() {
 
 function startRefreshTimer() {
   if (refreshTimer) clearInterval(refreshTimer);
+  // 確保 demo 計時器已停止，避免 refreshTick 被兩個 interval 同時遞減
+  if (_demoTick) { clearInterval(_demoTick); _demoTick = null; }
   refreshTimer = setInterval(() => {
     refreshTick--;
     document.getElementById("refreshCountdown").textContent =

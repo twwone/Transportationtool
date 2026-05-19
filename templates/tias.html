@@ -843,8 +843,29 @@ async function load() {
   }
 }
 
+/* ── 自動輪詢管理：頁面隱藏時暫停，避免背景佔用流量與電池 ── */
+let _loadTimer = null;
+
+function _startAutoLoad() {
+  clearInterval(_loadTimer);
+  _loadTimer = setInterval(load, 30000);
+}
+function _stopAutoLoad() {
+  clearInterval(_loadTimer);
+  _loadTimer = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    _stopAutoLoad();
+  } else {
+    load();
+    _startAutoLoad();
+  }
+});
+
 load();
-setInterval(load, 30000);
+_startAutoLoad();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
 /* 等 layout 完成後定位指示線 */
@@ -863,6 +884,10 @@ window.addEventListener('pageshow', e => {
   document.body.style.animationName = 'none';
   void document.body.offsetWidth;
   document.body.style.animationName = '';
+
+  /* bfcache 恢復：重啟自動輪詢並立即更新一次 */
+  load();
+  _startAutoLoad();
 
   /* 重播現有卡片錯排 */
   const arrEl = document.getElementById('listArr');

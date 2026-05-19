@@ -560,10 +560,10 @@ function render() {
     </div>`;
   }).join('');
 
-  /* 入場動畫 */
+  /* 入場動畫（最大錯排延遲 380ms，超過的卡片一起出現，避免等待 2 秒）*/
   if (_initialLoad) {
     cardList.querySelectorAll('.amenity-card').forEach((card, i) => {
-      card.style.animationDelay = (i * 38) + 'ms';
+      card.style.animationDelay = Math.min(i * 38, 380) + 'ms';
       card.classList.add('card-in');
     });
   } else {
