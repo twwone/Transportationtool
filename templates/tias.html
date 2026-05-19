@@ -97,6 +97,11 @@ body {
 .card-done {
   opacity: 0.55;
 }
+/* 轉降 */
+.card-diverted {
+  border-color: #c026d3;
+  background: #fdf4ff;
+}
 
 /* ── 1. Meta row：airline · [dir] · status · terminal ── */
 .card-meta {
@@ -119,8 +124,9 @@ body {
 .st-landed  { background: #dbeafe; color: #1e40af; }
 .st-depart  { background: #dbeafe; color: #1e40af; }
 .st-board   { background: #ede9fe; color: #5b21b6; }
-.st-cancel  { background: #fee2e2; color: #991b1b; }
-.st-unknown { background: #f3f4f6; color: #6b7280; }
+.st-cancel   { background: #fee2e2; color: #991b1b; }
+.st-diverted { background: #fae8ff; color: #86198f; border: 1px solid #e879f9; }
+.st-unknown  { background: #f3f4f6; color: #6b7280; }
 .badge-terminal {
   margin-left: auto;
   font-size: 0.7rem; color: #636366;
@@ -380,7 +386,8 @@ const ST_MAP = [
   [/(落地|Arrived?|抵達|已到)/i,      'landed', '落地'],
   [/(起飛|Depart|出發|已出發)/i,      'depart', '已起飛'],
   [/(登機|Board)/i,                  'board',  '登機中'],
-  [/(取消|Cancel)/i,                 'cancel', '取消'],
+  [/(取消|Cancel)/i,                 'cancel',   '取消'],
+  [/(轉降|Divert)/i,                 'diverted', '轉降'],
 ];
 
 /* ── 出港 TAT 里程碑 ── */
@@ -549,10 +556,12 @@ function renderCard(f, mode, showDirBadge) {
   const isDelayed = !act && est && dm >= 5;
   const isDone    = !!act;
 
+  const isDiverted = status.cls === 'diverted';
   const cardCls = [
     'card',
-    isDelayed ? 'card-delayed' : '',
-    isDone    ? 'card-done'    : '',
+    isDiverted          ? 'card-diverted' : '',
+    !isDiverted && isDelayed ? 'card-delayed' : '',
+    isDone              ? 'card-done'    : '',
   ].filter(Boolean).join(' ');
 
   const airlineCN  = AIRLINE_CN[airline] || '';
