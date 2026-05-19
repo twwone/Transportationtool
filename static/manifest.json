@@ -1,11 +1,11 @@
 {
   "name": "交通助理",
   "short_name": "交通助理",
-  "description": "高鐵刷票 + 桃園機場捷運即時到站",
+  "description": "高鐵刷票・機場捷運・航班看板・週班表",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f13",
-  "theme_color": "#0f0f13",
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -13,6 +13,12 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    },
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ]
 }
