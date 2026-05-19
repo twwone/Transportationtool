@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>機場設施指南</title>
+<title>機場設施指南 · Airport Facilities</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -83,17 +83,23 @@ body {
 .header-title {
   flex: 1;
   text-align: center;
-  font-size: 1.05rem;
+}
+.header-title-zh {
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text);
-  white-space: nowrap;
+  line-height: 1.2;
+}
+.header-title-en {
+  font-size: 0.68rem;
+  color: var(--sub);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 .header-spacer { width: 56px; flex-shrink: 0; }
 
 /* ── 搜尋框 ── */
-.search-wrap {
-  padding: 8px 0 10px;
-}
+.search-wrap { padding: 8px 0 10px; }
 .search-box {
   display: flex;
   align-items: center;
@@ -145,25 +151,29 @@ body {
   border: 1.5px solid var(--border);
   border-radius: 10px;
   background: var(--card);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--sub);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  line-height: 1.3;
 }
+.term-btn .t-zh { display: block; }
+.term-btn .t-en { display: block; font-size: 0.65rem; font-weight: 400; opacity: 0.75; }
 .term-btn.active {
   background: #0e7490;
   border-color: #0e7490;
   color: #fff;
   box-shadow: 0 3px 10px rgba(14,116,144,0.3);
 }
+.term-btn.active .t-en { opacity: 0.85; }
 .term-btn:active:not(.active) { transform: scale(0.96); }
 
 /* ── 分類按鈕格 ── */
 .cats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 7px;
   padding: 6px 0 12px;
 }
 .cat-btn {
@@ -171,47 +181,49 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   background: var(--card);
   border: 1.5px solid var(--border);
   border-radius: 14px;
-  padding: 10px 4px 8px;
+  padding: 9px 4px 7px;
   cursor: pointer;
   transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
-  overflow: hidden;
 }
 .cat-btn:active { transform: scale(0.93); }
 .cat-btn.active {
   box-shadow: 0 4px 14px rgba(0,0,0,0.12);
   transform: translateY(-2px) scale(1.02);
+  border-color: var(--cat-color, #0e7490);
+  background: color-mix(in srgb, var(--cat-color, #0e7490) 8%, white);
 }
-.cat-emoji { font-size: 1.35rem; line-height: 1; }
-.cat-label {
-  font-size: 0.68rem;
-  font-weight: 600;
+.cat-emoji { font-size: 1.25rem; line-height: 1; }
+.cat-label-zh {
+  font-size: 0.65rem;
+  font-weight: 700;
   color: var(--sub);
   text-align: center;
   line-height: 1.2;
   transition: color 0.2s;
 }
-.cat-btn.active .cat-label { font-weight: 700; }
-
-/* 分類 active 色彩由 JS 注入 --cat-color 變數 */
-.cat-btn.active {
-  border-color: var(--cat-color, #0e7490);
-  background: color-mix(in srgb, var(--cat-color, #0e7490) 8%, white);
+.cat-label-en {
+  font-size: 0.58rem;
+  font-weight: 400;
+  color: #b0b0b5;
+  text-align: center;
+  line-height: 1.1;
 }
-.cat-btn.active .cat-label { color: var(--cat-color, #0e7490); }
+.cat-btn.active .cat-label-zh { color: var(--cat-color, #0e7490); }
+.cat-btn.active .cat-label-en { color: var(--cat-color, #0e7490); opacity: 0.7; }
 
 /* ── 主體卡片列表 ── */
 .body {
-  padding: 0 16px env(safe-area-inset-bottom, 24px);
+  padding: 0 16px;
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
 }
 
 .section-title {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--sub);
   text-transform: uppercase;
@@ -231,7 +243,7 @@ body {
   border-radius: 16px;
   padding: 14px 16px;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s;
-  opacity: 0;  /* JS 觸發入場 */
+  opacity: 0;
   will-change: transform;
 }
 .amenity-card.card-in {
@@ -262,54 +274,56 @@ body {
   .amenity-card:hover .card-icon { transform: scale(1.08) rotate(-4deg); }
 }
 .card-main { flex: 1; min-width: 0; }
-.card-name {
+
+.card-name-zh {
   font-size: 0.97rem;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 3px;
+  line-height: 1.2;
+}
+.card-name-en {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--sub);
+  margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .card-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
+  margin-top: 5px;
 }
 .badge {
   display: inline-flex;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 20px;
   white-space: nowrap;
 }
-.badge-terminal {
-  background: #e0f7fa;
-  color: #0e7490;
-  border: 1px solid #b2ebf2;
-}
-.badge-floor {
-  background: #f3f4f6;
-  color: #4b5563;
-  border: 1px solid #e5e7eb;
-}
-.badge-zone {
-  background: #f8f9fa;
-  color: #636366;
-  border: 1px solid #e5e5ea;
-  font-weight: 500;
-}
-.badge-cat {
-  border: 1px solid;
-}
-.card-desc {
+.badge-terminal { background: #e0f7fa; color: #0e7490; border: 1px solid #b2ebf2; }
+.badge-floor    { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+.badge-zone     { background: #f8f9fa; color: #636366; border: 1px solid #e5e5ea; font-weight: 500; }
+.badge-cat      { border: 1px solid; }
+
+.card-descs { margin-top: 9px; }
+.card-desc-zh {
   font-size: 0.8rem;
-  color: #636366;
+  color: #3a3a3c;
   line-height: 1.55;
-  margin-top: 8px;
+}
+.card-desc-en {
+  font-size: 0.76rem;
+  color: #8e8e93;
+  line-height: 1.5;
+  margin-top: 4px;
+  font-style: italic;
 }
 
 /* ── 空態 ── */
@@ -321,15 +335,15 @@ body {
 }
 .empty.show { display: block; }
 .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
-.empty-msg { font-size: 0.88rem; color: var(--sub); line-height: 1.6; }
+.empty-msg { font-size: 0.88rem; color: var(--sub); line-height: 1.7; }
 
 /* ── 頁腳注記 ── */
 .footer-note {
   text-align: center;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: #c7c7cc;
   padding: 20px 16px 8px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 /* ── loading ── */
@@ -350,7 +364,7 @@ body {
 .dot:nth-child(3) { animation-delay: 0.4s; }
 @keyframes dotPulse {
   0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40%           { transform: scale(1);   opacity: 1;   }
+  40%           { transform: scale(1);   opacity: 1; }
 }
 </style>
 </head>
@@ -361,7 +375,10 @@ body {
     <a href="/" class="back-btn" id="backBtn">
       <span class="back-arrow">‹</span> 返回
     </a>
-    <div class="header-title">✈️ 機場設施指南</div>
+    <div class="header-title">
+      <div class="header-title-zh">✈️ 機場設施指南</div>
+      <div class="header-title-en">Airport Facilities · TPE</div>
+    </div>
     <div class="header-spacer"></div>
   </div>
 
@@ -370,21 +387,31 @@ body {
       <span class="search-icon">🔍</span>
       <input class="search-input" id="searchInput"
              type="search" inputmode="search"
-             placeholder="搜尋設施、位置、關鍵字…" autocomplete="off">
+             placeholder="搜尋設施 · Search facilities…" autocomplete="off">
       <button class="search-clear" id="searchClear" aria-label="清除">✕</button>
     </div>
   </div>
 
   <div class="terminal-wrap" id="terminalWrap">
-    <button class="term-btn active" data-t="all">全航廈</button>
-    <button class="term-btn" data-t="T1">第一航廈</button>
-    <button class="term-btn" data-t="T2">第二航廈</button>
+    <button class="term-btn active" data-t="all">
+      <span class="t-zh">全航廈</span>
+      <span class="t-en">All Terminals</span>
+    </button>
+    <button class="term-btn" data-t="T1">
+      <span class="t-zh">第一航廈</span>
+      <span class="t-en">Terminal 1</span>
+    </button>
+    <button class="term-btn" data-t="T2">
+      <span class="t-zh">第二航廈</span>
+      <span class="t-en">Terminal 2</span>
+    </button>
   </div>
 
   <div class="cats-grid" id="catsGrid">
     <button class="cat-btn active" data-cat="all">
       <span class="cat-emoji">🗂️</span>
-      <span class="cat-label">全部</span>
+      <span class="cat-label-zh">全部</span>
+      <span class="cat-label-en">All</span>
     </button>
     <!-- 分類按鈕由 JS 動態插入 -->
   </div>
@@ -398,10 +425,11 @@ body {
   <div id="cardList" class="card-list"></div>
   <div id="empty" class="empty">
     <div class="empty-icon">🔍</div>
-    <div class="empty-msg">找不到符合的設施<br>試試其他關鍵字或分類</div>
+    <div class="empty-msg">找不到符合的設施<br><span style="font-size:0.82rem;color:#b0b0b5">No matching facilities found</span></div>
   </div>
   <div class="footer-note" id="footerNote" style="display:none">
-    桃園國際機場 TPE・設施位置資料僅供快速參考<br>實際位置以現場標示及廣播為準
+    桃園國際機場 TPE · 設施位置資料僅供快速參考<br>
+    <span style="font-size:0.65rem">Taoyuan Int'l Airport · Location data for reference only. Please follow on-site signage.</span>
   </div>
 </div>
 
@@ -413,6 +441,20 @@ let _activeTerminal= 'all';
 let _searchQ       = '';
 let _initialLoad   = true;
 
+/* 區域中英對照 */
+const ZONE_EN = {
+  '出境安檢後':         'Post-Security (Airside)',
+  '出境大廳（安檢前）': 'Departure Hall (Landside)',
+  '出境大廳':           'Departure Hall',
+  '入境大廳':           'Arrival Hall',
+  '行李提領大廳':       'Baggage Claim Hall',
+  '安檢前海關查驗':     'Pre-Security / Customs',
+  '全航廈':             'Entire Terminal',
+  '各樓層洗手間旁':     'Each Floor (Restroom)',
+  '旅客服務中心':       'Passenger Svc Center',
+  '報到區服務台':       'Check-in Service Desk',
+};
+
 /* ── 渲染分類按鈕 ── */
 function buildCats(cats) {
   const grid = document.getElementById('catsGrid');
@@ -421,7 +463,10 @@ function buildCats(cats) {
     btn.className = 'cat-btn';
     btn.dataset.cat = key;
     btn.style.setProperty('--cat-color', meta.color);
-    btn.innerHTML = `<span class="cat-emoji">${meta.emoji}</span><span class="cat-label">${meta.label}</span>`;
+    btn.innerHTML =
+      `<span class="cat-emoji">${meta.emoji}</span>` +
+      `<span class="cat-label-zh">${meta.label}</span>` +
+      `<span class="cat-label-en">${meta.label_en || ''}</span>`;
     grid.appendChild(btn);
   });
   grid.querySelectorAll('.cat-btn').forEach(btn => {
@@ -444,9 +489,13 @@ function filtered() {
     const q = _searchQ.trim().toLowerCase();
     if (!q) return matchTerm && matchCat;
     const haystack = [
-      item.name, item.desc, item.zone, item.floor, item.terminal,
+      item.name, item.name_en || '',
+      item.desc, item.desc_en || '',
+      item.zone, ZONE_EN[item.zone] || '',
+      item.floor, item.terminal,
       ...(item.tags || []),
-      (_categories[item.category] || {}).label || '',
+      (_categories[item.category] || {}).label    || '',
+      (_categories[item.category] || {}).label_en || '',
     ].join(' ').toLowerCase();
     return matchTerm && matchCat && haystack.includes(q);
   });
@@ -454,7 +503,7 @@ function filtered() {
 
 /* ── 渲染卡片 ── */
 function render() {
-  const list = filtered();
+  const list     = filtered();
   const cardList = document.getElementById('cardList');
   const empty    = document.getElementById('empty');
   const title    = document.getElementById('sectionTitle');
@@ -472,33 +521,42 @@ function render() {
   title.style.display = 'block';
   footer.style.display = 'block';
 
-  const catLabel = _activeCat === 'all' ? '所有設施' : (_categories[_activeCat] || {}).label || '';
-  const termLabel = _activeTerminal === 'all' ? '' : ` · ${_activeTerminal === 'T1' ? '第一航廈' : '第二航廈'}`;
-  title.textContent = `${catLabel}${termLabel}（${list.length} 筆）`;
+  const cat    = _categories[_activeCat] || {};
+  const catZh  = _activeCat === 'all' ? '所有設施' : (cat.label    || '');
+  const catEn  = _activeCat === 'all' ? 'All'      : (cat.label_en || '');
+  const termZh = _activeTerminal === 'all' ? '' : ` · ${_activeTerminal === 'T1' ? '第一航廈' : '第二航廈'}`;
+  const termEn = _activeTerminal === 'all' ? '' : ` · ${_activeTerminal === 'T1' ? 'Terminal 1' : 'Terminal 2'}`;
+  title.textContent = `${catZh}${termZh} / ${catEn}${termEn} (${list.length})`;
 
   cardList.innerHTML = list.map(item => {
-    const cat   = _categories[item.category] || {emoji: '📌', label: '', color: '#8e8e93'};
-    const color = cat.color || '#8e8e93';
-    const bgHex = hexToAlpha(color, 0.12);
+    const catMeta = _categories[item.category] || {emoji:'📌', label:'', label_en:'', color:'#8e8e93'};
+    const color   = catMeta.color || '#8e8e93';
+    const bgRgba  = hexToAlpha(color, 0.11);
+    const zoneEn  = ZONE_EN[item.zone] || item.zone;
     return `
     <div class="amenity-card" style="border-color:${color}22">
       <div class="card-top">
-        <div class="card-icon" style="background:${bgHex}">
-          ${cat.emoji}
+        <div class="card-icon" style="background:${bgRgba}">
+          ${catMeta.emoji}
         </div>
         <div class="card-main">
-          <div class="card-name">${item.name}</div>
+          <div class="card-name-zh">${item.name}</div>
+          ${item.name_en ? `<div class="card-name-en">${item.name_en}</div>` : ''}
           <div class="card-meta">
             <span class="badge badge-terminal">${item.terminal}</span>
             <span class="badge badge-floor">${item.floor}</span>
             ${item.zone ? `<span class="badge badge-zone">${item.zone}</span>` : ''}
           </div>
         </div>
-        <span class="badge badge-cat" style="background:${bgHex};color:${color};border-color:${color}55;align-self:flex-start;margin-top:2px">
-          ${cat.label}
+        <span class="badge badge-cat" style="background:${bgRgba};color:${color};border-color:${color}55;align-self:flex-start;margin-top:2px;flex-shrink:0">
+          ${catMeta.label}
         </span>
       </div>
-      ${item.desc ? `<div class="card-desc">${item.desc}</div>` : ''}
+      ${(item.desc || item.desc_en) ? `
+      <div class="card-descs">
+        ${item.desc    ? `<div class="card-desc-zh">${item.desc}</div>` : ''}
+        ${item.desc_en ? `<div class="card-desc-en">${item.desc_en}</div>` : ''}
+      </div>` : ''}
     </div>`;
   }).join('');
 
@@ -536,7 +594,7 @@ async function loadData() {
     _initialLoad = false;
   } catch(e) {
     document.getElementById('loading').innerHTML =
-      '<div style="color:#ef4444;font-size:0.88rem">載入失敗，請重新整理</div>';
+      '<div style="color:#ef4444;font-size:0.88rem;text-align:center">載入失敗 / Failed to load<br>請重新整理 / Please refresh</div>';
   }
 }
 
