@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="高鐵刷票">
 <meta name="theme-color" content="#f2f2f7">
+<script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
@@ -271,12 +272,19 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
 
   let poll = null;
 
-  // 還原上次填寫的欄位
-  ["tg_token", "tg_chat_id"].forEach(key => {
-    const el  = document.getElementById(key);
-    const val = localStorage.getItem(key);
-    if (el && val) el.value = val;
-  });
+  // 套用設定檔（含舊版 tg key 遷移）
+  (function applyProfile() {
+    const p = Config.getActive();
+    const map = { origin: p.thsr.origin, destination: p.thsr.destination,
+                  seat_type: p.thsr.seatType, discount: p.thsr.discount,
+                  interval: p.thsr.interval };
+    for (const [id, val] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    }
+    if (p.tg.token)  { const el = document.getElementById('tg_token');   if (el) el.value = p.tg.token;  }
+    if (p.tg.chatId) { const el = document.getElementById('tg_chat_id'); if (el) el.value = p.tg.chatId; }
+  })();
 
   // 頁面載入時同步伺服器狀態，關掉網頁重開仍可按暫停
   (async function init() {
@@ -310,6 +318,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
     const tg_chat_id  = tgChatEl ? tgChatEl.value.trim() : "";
     if (tg_token)    localStorage.setItem("tg_token",   tg_token);
     if (tg_chat_id)  localStorage.setItem("tg_chat_id", tg_chat_id);
+    Config.save({
+      thsr: { origin, destination, seatType: seat_type, discount, interval },
+      tg:   { token: tg_token, chatId: tg_chat_id }
+    });
 
     if (!date)                        { alert("請選擇日期"); return; }
     if (origin === destination)       { alert("出發站與到達站不能相同"); return; }
@@ -376,19 +388,7 @@ document.addEventListener("touchend", function(e) {
   if (now - _lastTap < 300) e.preventDefault();
   _lastTap = now;
 }, { passive: false });
-</script>
-<script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
-/* ── 防縮放（iOS 雙保險） ── */
-document.addEventListener("touchmove", function(e) {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false });
-let _lastTap = 0;
-document.addEventListener("touchend", function(e) {
-  const now = Date.now();
-  if (now - _lastTap < 300) e.preventDefault();
-  _lastTap = now;
-}, { passive: false });
 </script>
 </div><!-- /scroll-content -->
 </body>

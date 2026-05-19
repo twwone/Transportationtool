@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
 <meta name="theme-color" content="#f2f2f7">
+<script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
@@ -214,6 +215,109 @@ body {
   text-align: center;
   animation: headerIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
 }
+
+/* ── 用戶設定檔 chip ── */
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 5px 13px 5px 9px;
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  font-size: 0.76rem;
+  color: #3a3a3c;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: rgba(255,255,255,0.62);
+  font-family: inherit;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+.profile-chip:active { transform: scale(0.93); }
+.pc-chevron { font-size: 0.62rem; color: #8e8e93; }
+
+/* ── 底部 Sheet ── */
+.sheet-overlay {
+  position: fixed; inset: 0;
+  background: transparent;
+  z-index: 199;
+  pointer-events: none;
+  transition: background 0.3s ease;
+}
+.sheet-overlay.open { background: rgba(0,0,0,0.22); pointer-events: auto; }
+.profile-sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(242, 242, 247, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 24px 24px 0 0;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 200;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  max-height: 72vh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+}
+.profile-sheet.open { transform: translateY(0); }
+.sh-handle { width: 36px; height: 4px; background: rgba(60,60,67,0.25); border-radius: 100px; margin: 12px auto 0; }
+.sh-label  { font-size: 0.72rem; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: .05em; padding: 16px 20px 6px; }
+.sh-section { background: rgba(255,255,255,0.82); border-radius: 16px; margin: 0 16px 12px; overflow: hidden; }
+.sh-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(60,60,67,0.08);
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.sh-row:last-child { border-bottom: none; }
+.sh-row:active { background: rgba(0,0,0,0.04); }
+.sh-check { width: 20px; font-size: 0.88rem; color: #059669; }
+.sh-name  { flex: 1; font-size: 0.92rem; color: #1c1c1e; }
+.sh-row.active .sh-name { font-weight: 700; }
+.sh-del { font-size: 0.72rem; color: #ff3b30; background: none; border: none; padding: 4px 8px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit; }
+.sh-add { display: flex; align-items: center; gap: 8px; padding: 10px 16px; }
+.sh-add input {
+  flex: 1; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid rgba(60,60,67,0.2);
+  background: rgba(255,255,255,0.9);
+  font-size: 0.88rem; color: #1c1c1e; outline: none; font-family: inherit;
+}
+.sh-add input:focus { border-color: #059669; }
+.sh-add button {
+  padding: 8px 16px; border-radius: 10px;
+  background: #059669; color: #fff;
+  font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; font-family: inherit;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.sh-add button:active { transform: scale(0.93); }
+.sh-bkup { display: flex; gap: 8px; padding: 10px 16px; }
+.sh-bkup button {
+  flex: 1; padding: 9px; border-radius: 10px; font-size: 0.78rem;
+  font-weight: 600; border: none; cursor: pointer; font-family: inherit;
+  background: rgba(60,60,67,0.1); color: #1c1c1e;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.sh-bkup button:active { transform: scale(0.94); }
+.sh-import-wrap { padding: 0 16px 10px; display: none; }
+.sh-import-wrap textarea {
+  width: 100%; padding: 8px 10px; border-radius: 10px;
+  border: 1px solid rgba(60,60,67,0.2); background: rgba(255,255,255,0.9);
+  font-size: 0.72rem; color: #1c1c1e; resize: none; height: 56px;
+  font-family: monospace; outline: none; display: block;
+}
+.sh-import-wrap button {
+  margin-top: 6px; width: 100%; padding: 8px; border-radius: 10px;
+  background: #059669; color: #fff; font-size: 0.82rem; font-weight: 700;
+  border: none; cursor: pointer; font-family: inherit;
+}
 </style>
 </head>
 <body>
@@ -221,6 +325,11 @@ body {
 <div class="header">
   <h1>🚉 交通助理</h1>
   <p>選擇你需要的交通工具</p>
+  <button class="profile-chip" onclick="openSheet()">
+    <span>👤</span>
+    <span id="profileLabel">—</span>
+    <span class="pc-chevron">▾</span>
+  </button>
 </div>
 
 <div class="grid">
@@ -282,6 +391,32 @@ body {
 </div>
 
 <div class="footer">Transportation Assistant</div>
+
+<!-- 用戶設定檔 底部 Sheet -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
+<div class="profile-sheet" id="profileSheet">
+  <div class="sh-handle"></div>
+  <div class="sh-label">使用者</div>
+  <div class="sh-section" id="profileList"></div>
+  <div class="sh-section">
+    <div class="sh-add">
+      <input id="newName" type="text" placeholder="新用戶名稱" maxlength="16"
+             onkeydown="if(event.key==='Enter')addProfile()">
+      <button onclick="addProfile()">新增</button>
+    </div>
+  </div>
+  <div class="sh-label">設定備份</div>
+  <div class="sh-section">
+    <div class="sh-bkup">
+      <button onclick="exportCfg()">📋 複製備份碼</button>
+      <button onclick="toggleImport()">📥 貼上還原</button>
+    </div>
+    <div class="sh-import-wrap" id="importWrap">
+      <textarea id="importInput" placeholder="貼上備份碼…"></textarea>
+      <button onclick="doImport()">確認還原</button>
+    </div>
+  </div>
+</div>
 
 <script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
@@ -359,7 +494,71 @@ window.addEventListener('pageshow', e => {
     card.style.animation =
       `cardSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) ${100 + i * 72}ms both`;
   });
+  _renderProfiles();
 });
+
+/* ── 用戶設定檔 管理 ── */
+function _renderProfiles() {
+  const { profiles, active } = Config.getAll();
+  const pArr = Object.values(profiles);
+  document.getElementById('profileLabel').textContent = (profiles[active] || pArr[0]).name;
+  document.getElementById('profileList').innerHTML = pArr.map(p => `
+    <div class="sh-row${p.id === active ? ' active' : ''}" onclick="selectProfile('${p.id}')">
+      <span class="sh-check">${p.id === active ? '✓' : ''}</span>
+      <span class="sh-name">${p.name.replace(/</g,'&lt;')}</span>
+      ${pArr.length > 1
+        ? `<button class="sh-del" onclick="event.stopPropagation();delProfile('${p.id}')">刪除</button>`
+        : ''}
+    </div>
+  `).join('');
+}
+
+function openSheet()  {
+  _renderProfiles();
+  document.getElementById('profileSheet').classList.add('open');
+  document.getElementById('sheetOverlay').classList.add('open');
+}
+function closeSheet() {
+  document.getElementById('profileSheet').classList.remove('open');
+  document.getElementById('sheetOverlay').classList.remove('open');
+}
+function selectProfile(id) { Config.setActive(id); _renderProfiles(); closeSheet(); }
+function delProfile(id)     { if (Config.del(id)) _renderProfiles(); }
+function addProfile() {
+  const n = document.getElementById('newName').value.trim();
+  if (!n) { document.getElementById('newName').focus(); return; }
+  Config.create(n);
+  document.getElementById('newName').value = '';
+  _renderProfiles();
+}
+function exportCfg() {
+  const b64 = Config.exportB64();
+  (navigator.clipboard?.writeText(b64) || Promise.reject())
+    .then(() => alert('備份碼已複製！換裝置時貼上還原即可'))
+    .catch(() => {
+      const ta = document.getElementById('importInput');
+      ta.value = b64;
+      document.getElementById('importWrap').style.display = 'block';
+      ta.select();
+    });
+}
+function toggleImport() {
+  const w = document.getElementById('importWrap');
+  w.style.display = w.style.display === 'block' ? 'none' : 'block';
+}
+function doImport() {
+  const b64 = document.getElementById('importInput').value.trim();
+  if (Config.importB64(b64)) {
+    _renderProfiles();
+    document.getElementById('importWrap').style.display = 'none';
+    document.getElementById('importInput').value = '';
+    alert('設定已還原！');
+  } else {
+    alert('備份碼格式錯誤，請確認是否完整');
+  }
+}
+
+_renderProfiles();
 </script>
 </body>
 </html>

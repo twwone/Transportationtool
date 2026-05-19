@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
 <meta name="theme-color" content="#f2f2f7">
+<script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
@@ -347,7 +348,7 @@ body {
 </div>
 
 <script>
-let _filter = 1;
+let _filter = Config.getActive().schedule.airasiaOnly ? 1 : 0;
 
 /* ── 藥丸滑動到 active 按鈕位置 ── */
 function updateTogglePill() {
@@ -361,6 +362,7 @@ function updateTogglePill() {
 
 function setFilter(v) {
   _filter = v;
+  Config.save({ schedule: { airasiaOnly: v === 1 } });
   document.getElementById('btn-aa').classList.toggle('active',  v === 1);
   document.getElementById('btn-all').classList.toggle('active', v === 0);
   updateTogglePill();
@@ -482,6 +484,9 @@ function render(d) {
   });
 }
 
+/* 根據 profile 設定初始 toggle 狀態 */
+document.getElementById('btn-aa').classList.toggle('active',  _filter === 1);
+document.getElementById('btn-all').classList.toggle('active', _filter === 0);
 load();
 
 /* 初始化藥丸位置（等 layout 完成） */

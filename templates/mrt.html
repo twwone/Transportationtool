@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
+<script src="/static/config.js"></script>
 <meta name="theme-color" content="#f2f2f7">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -294,7 +295,7 @@ const HAS_TDX  = {{ has_tdx | tojson }};
 
 let direction   = 0;         // 0: 往台北, 1: 往桃園
 let liveData    = [];        // 最新 API 回應
-let starredId   = localStorage.getItem("mrt_starred") || "";
+let starredId   = Config.getActive().mrt.starred || "";
 let refreshTick = 30;
 let refreshTimer = null;
 
@@ -530,6 +531,7 @@ function formatHHMM(isoStr) {
 function toggleStar(id) {
   starredId = starredId === id ? "" : id;
   localStorage.setItem("mrt_starred", starredId);
+  Config.save({ mrt: { starred: starredId } });
   renderHomeBar();
   renderStations();
 }
