@@ -74,8 +74,8 @@ body {
   border-radius: 6px;
   box-shadow: 0 1px 6px rgba(0,0,0,0.13);
   transition:
-    left  0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    left  0.3s cubic-bezier(0.25, 1, 0.5, 1),
+    width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   pointer-events: none;
   will-change: left, width;
 }
@@ -97,7 +97,7 @@ body {
   background: transparent;
   box-shadow: none;
 }
-.toggle-btn:active { transform: scale(0.93); transition-duration: 0.07s; }
+.toggle-btn:active { transform: scale(0.93); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
 .topbar-title {
   font-weight: 700;
   font-size: 1rem;
@@ -128,9 +128,13 @@ body {
   margin-bottom: 12px;
   will-change: transform;
   transition:
-    transform      0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow     0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color   0.2s  ease;
+    transform      0.3s cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow     0.3s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color   0.2s ease;
+}
+.day-card:active {
+  transform: scale(0.965) !important;
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 @media (hover: hover) {
   .day-card:hover {
@@ -218,6 +222,13 @@ body {
   align-items: flex-end;
   height: 52px;
   gap: 1px;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(142,142,147,0.2) 0px, rgba(142,142,147,0.2) 3px, transparent 3px, transparent 8px),
+    repeating-linear-gradient(90deg, rgba(142,142,147,0.2) 0px, rgba(142,142,147,0.2) 3px, transparent 3px, transparent 8px),
+    repeating-linear-gradient(90deg, rgba(142,142,147,0.2) 0px, rgba(142,142,147,0.2) 3px, transparent 3px, transparent 8px);
+  background-size: 100% 1px, 100% 1px, 100% 1px;
+  background-position: 0 25%, 0 50%, 0 75%;
+  background-repeat: repeat-x, repeat-x, repeat-x;
 }
 .hour-col {
   flex: 1;
@@ -225,22 +236,22 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 0;
+  gap: 1px;
   transition: opacity 0.12s;
 }
 .hour-col:hover { opacity: 0.75; }
 .bar-dep {
   background: var(--green);
-  border-radius: 1px 1px 0 0;
+  border-radius: 100px;
   min-height: 0;
-  transition: height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .bar-arr {
   background: var(--teal);
   opacity: 0.55;
-  border-radius: 1px 1px 0 0;
+  border-radius: 100px;
   min-height: 0;
-  transition: height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .hour-axis {
   display: flex;

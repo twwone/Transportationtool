@@ -67,21 +67,22 @@ body {
 .card {
   display: block;
   text-decoration: none;
-  background: #ffffff;
-  border: 1px solid #e5e5ea;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 20px;
   padding: 26px 22px;
-  /* 複合貝茲曲線：懸停彈出用 spring，active 收縮用快速 */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 20px 40px -4px rgba(0, 0, 0, 0.05);
   transition:
-    transform      0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color   0.2s  ease,
-    background     0.2s  ease,
-    box-shadow     0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    transform      0.3s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color   0.2s ease,
+    background     0.2s ease,
+    box-shadow     0.3s cubic-bezier(0.25, 1, 0.5, 1);
   cursor: pointer;
   position: relative;
   overflow: hidden;
   will-change: transform;
-  /* 預設隱藏，讓 JS 觸發入場動畫 */
   opacity: 0;
 }
 .card::before {
@@ -95,23 +96,21 @@ body {
 @media (hover: hover) {
   .card:hover {
     transform: translateY(-5px) scale(1.012);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.11);
+    box-shadow: 0 8px 20px -2px rgba(0, 0, 0, 0.06), 0 32px 56px -8px rgba(0, 0, 0, 0.12);
   }
   .card:hover::before { opacity: 1; }
   .card:hover .arrow  { transform: translateX(5px); }
 }
 .card:active {
   transform: scale(0.965) !important;
-  transition-duration: 0.08s !important;
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
 /* 高鐵卡片 */
-.card-thsr { border-color: #ffe0b0; }
 .card-thsr::before { background: radial-gradient(ellipse at 80% 20%, #ff950015, transparent 60%); }
 .card-thsr:hover { border-color: #ff9500; background: #fffaf4; }
 
 /* 捷運卡片 */
-.card-mrt { border-color: #ddd6fe; }
 .card-mrt::before { background: radial-gradient(ellipse at 80% 20%, #7c3aed15, transparent 60%); }
 .card-mrt:hover { border-color: #7c3aed; background: #faf8ff; }
 
@@ -163,7 +162,6 @@ body {
 .card-mrt:hover  .arrow { color: #7c3aed; }
 
 /* Widget 卡片 */
-.card-widget { border-color: #d1d9ff; }
 .card-widget::before { background: radial-gradient(ellipse at 80% 20%, #6366f115, transparent 60%); }
 .card-widget:hover { border-color: #6366f1; background: #f8f8ff; }
 .card-widget .icon-wrap { background: #eef2ff; }
@@ -171,7 +169,6 @@ body {
 .card-widget:hover .arrow { color: #6366f1; }
 
 /* 航空看板卡片 */
-.card-tias { border-color: #bfdbfe; }
 .card-tias::before { background: radial-gradient(ellipse at 80% 20%, #1a56db12, transparent 60%); }
 .card-tias:hover { border-color: #1a56db; background: #eff6ff; }
 .card-tias .icon-wrap { background: #dbeafe; }
@@ -179,7 +176,6 @@ body {
 .card-tias:hover .arrow { color: #1a56db; }
 
 /* 週班表卡片 */
-.card-schedule { border-color: #bbf7d0; }
 .card-schedule::before { background: radial-gradient(ellipse at 80% 20%, #05966915, transparent 60%); }
 .card-schedule:hover { border-color: #059669; background: #f0fdf4; }
 .card-schedule .icon-wrap { background: #dcfce7; }
@@ -187,7 +183,6 @@ body {
 .card-schedule:hover .arrow { color: #059669; }
 
 /* 機場設施卡片 */
-.card-amenities { border-color: #a5f3fc; }
 .card-amenities::before { background: radial-gradient(ellipse at 80% 20%, #0891b215, transparent 60%); }
 .card-amenities:hover { border-color: #0891b2; background: #ecfeff; }
 .card-amenities .icon-wrap { background: #cffafe; }
