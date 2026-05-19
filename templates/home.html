@@ -298,26 +298,6 @@ body {
   transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .sh-add button:active { transform: scale(0.93); }
-.sh-bkup { display: flex; gap: 8px; padding: 10px 16px; }
-.sh-bkup button {
-  flex: 1; padding: 9px; border-radius: 10px; font-size: 0.78rem;
-  font-weight: 600; border: none; cursor: pointer; font-family: inherit;
-  background: rgba(60,60,67,0.1); color: #1c1c1e;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
-}
-.sh-bkup button:active { transform: scale(0.94); }
-.sh-import-wrap { padding: 0 16px 10px; display: none; }
-.sh-import-wrap textarea {
-  width: 100%; padding: 8px 10px; border-radius: 10px;
-  border: 1px solid rgba(60,60,67,0.2); background: rgba(255,255,255,0.9);
-  font-size: 0.72rem; color: #1c1c1e; resize: none; height: 56px;
-  font-family: monospace; outline: none; display: block;
-}
-.sh-import-wrap button {
-  margin-top: 6px; width: 100%; padding: 8px; border-radius: 10px;
-  background: #059669; color: #fff; font-size: 0.82rem; font-weight: 700;
-  border: none; cursor: pointer; font-family: inherit;
-}
 .sh-sync {
   font-size: 0.82rem; background: none; border: none; padding: 4px 6px;
   border-radius: 8px; cursor: pointer; font-family: inherit; opacity: 0.3;
@@ -432,17 +412,6 @@ body {
     <div class="sh-sync-import">
       <input id="syncKeyInput" type="text" placeholder="貼上 8 碼同步碼…" maxlength="8">
       <button onclick="doImportSync()">匯入</button>
-    </div>
-  </div>
-  <div class="sh-label">設定備份</div>
-  <div class="sh-section">
-    <div class="sh-bkup">
-      <button onclick="exportCfg()">📋 複製備份碼</button>
-      <button onclick="toggleImport()">📥 貼上還原</button>
-    </div>
-    <div class="sh-import-wrap" id="importWrap">
-      <textarea id="importInput" placeholder="貼上備份碼…"></textarea>
-      <button onclick="doImport()">確認還原</button>
     </div>
   </div>
 </div>
@@ -563,33 +532,6 @@ function addProfile() {
   document.getElementById('newName').value = '';
   _renderProfiles();
 }
-function exportCfg() {
-  const b64 = Config.exportB64();
-  (navigator.clipboard?.writeText(b64) || Promise.reject())
-    .then(() => alert('備份碼已複製！換裝置時貼上還原即可'))
-    .catch(() => {
-      const ta = document.getElementById('importInput');
-      ta.value = b64;
-      document.getElementById('importWrap').style.display = 'block';
-      ta.select();
-    });
-}
-function toggleImport() {
-  const w = document.getElementById('importWrap');
-  w.style.display = w.style.display === 'block' ? 'none' : 'block';
-}
-function doImport() {
-  const b64 = document.getElementById('importInput').value.trim();
-  if (Config.importB64(b64)) {
-    _renderProfiles();
-    document.getElementById('importWrap').style.display = 'none';
-    document.getElementById('importInput').value = '';
-    alert('設定已還原！');
-  } else {
-    alert('備份碼格式錯誤，請確認是否完整');
-  }
-}
-
 /* ── 雲端同步 UI ── */
 async function syncProfile(id) {
   const { profiles } = Config.getAll();
