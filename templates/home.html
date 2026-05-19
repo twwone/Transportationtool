@@ -186,6 +186,14 @@ body {
 .card-schedule .card-title { color: #047857; }
 .card-schedule:hover .arrow { color: #059669; }
 
+/* 機場設施卡片 */
+.card-amenities { border-color: #a5f3fc; }
+.card-amenities::before { background: radial-gradient(ellipse at 80% 20%, #0891b215, transparent 60%); }
+.card-amenities:hover { border-color: #0891b2; background: #ecfeff; }
+.card-amenities .icon-wrap { background: #cffafe; }
+.card-amenities .card-title { color: #0e7490; }
+.card-amenities:hover .arrow { color: #0891b2; }
+
 .footer {
   margin-top: 40px;
   font-size: 0.7rem;
@@ -242,6 +250,17 @@ body {
       <div class="card-text">
         <div class="card-title">週班表</div>
         <div class="card-desc">未來 7 天定期航班分布・尖峰日預測・時段分析</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+  </a>
+
+  <a href="/amenities" class="card card-amenities">
+    <div class="card-inner">
+      <div class="icon-wrap">🗺️</div>
+      <div class="card-text">
+        <div class="card-title">機場設施指南</div>
+        <div class="card-desc">育嬰室・換匯・退稅・行李・醫療・ATM・快速定位 TPE 全設施</div>
       </div>
       <div class="arrow">›</div>
     </div>

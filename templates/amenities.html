@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>機場設施指南</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f2f2f7">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.988); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+:root {
+  --bg:      #f2f2f7;
+  --card:    #ffffff;
+  --border:  #e5e5ea;
+  --text:    #1c1c1e;
+  --sub:     #8e8e93;
+  --accent:  #0e7490;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  animation: pageIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── 頂部 header ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(242,242,247,0.88);
+  backdrop-filter: saturate(1.6) blur(18px);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0 10px;
+}
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: #0e7490;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px 4px 2px;
+  border-radius: 8px;
+  transition: background 0.15s, transform 0.15s;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.back-btn:active { transform: scale(0.93); background: rgba(14,116,144,0.1); }
+.back-arrow { font-size: 1.2rem; line-height: 1; }
+.header-title {
+  flex: 1;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+.header-spacer { width: 56px; flex-shrink: 0; }
+
+/* ── 搜尋框 ── */
+.search-wrap {
+  padding: 8px 0 10px;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 13px;
+  padding: 10px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-box:focus-within {
+  border-color: #0e7490;
+  box-shadow: 0 0 0 3px rgba(14,116,144,0.12);
+}
+.search-icon { font-size: 1rem; color: var(--sub); flex-shrink: 0; }
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.search-input::placeholder { color: var(--sub); }
+.search-clear {
+  background: #c7c7cc;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  font-size: 0.65rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.search-clear.visible { opacity: 1; }
+
+/* ── 航廈切換 ── */
+.terminal-wrap {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 10px;
+}
+.term-btn {
+  flex: 1;
+  padding: 7px 0;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sub);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.term-btn.active {
+  background: #0e7490;
+  border-color: #0e7490;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(14,116,144,0.3);
+}
+.term-btn:active:not(.active) { transform: scale(0.96); }
+
+/* ── 分類按鈕格 ── */
+.cats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 6px 0 12px;
+}
+.cat-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 4px 8px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  overflow: hidden;
+}
+.cat-btn:active { transform: scale(0.93); }
+.cat-btn.active {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  transform: translateY(-2px) scale(1.02);
+}
+.cat-emoji { font-size: 1.35rem; line-height: 1; }
+.cat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--sub);
+  text-align: center;
+  line-height: 1.2;
+  transition: color 0.2s;
+}
+.cat-btn.active .cat-label { font-weight: 700; }
+
+/* 分類 active 色彩由 JS 注入 --cat-color 變數 */
+.cat-btn.active {
+  border-color: var(--cat-color, #0e7490);
+  background: color-mix(in srgb, var(--cat-color, #0e7490) 8%, white);
+}
+.cat-btn.active .cat-label { color: var(--cat-color, #0e7490); }
+
+/* ── 主體卡片列表 ── */
+.body {
+  padding: 0 16px env(safe-area-inset-bottom, 24px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sub);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 0 8px 2px;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.amenity-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s;
+  opacity: 0;  /* JS 觸發入場 */
+  will-change: transform;
+}
+.amenity-card.card-in {
+  animation: cardIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (hover: hover) {
+  .amenity-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.09);
+  }
+}
+.amenity-card:active { transform: scale(0.97) !important; }
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.card-icon {
+  width: 42px; height: 42px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (hover: hover) {
+  .amenity-card:hover .card-icon { transform: scale(1.08) rotate(-4deg); }
+}
+.card-main { flex: 1; min-width: 0; }
+.card-name {
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.badge-terminal {
+  background: #e0f7fa;
+  color: #0e7490;
+  border: 1px solid #b2ebf2;
+}
+.badge-floor {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+.badge-zone {
+  background: #f8f9fa;
+  color: #636366;
+  border: 1px solid #e5e5ea;
+  font-weight: 500;
+}
+.badge-cat {
+  border: 1px solid;
+}
+.card-desc {
+  font-size: 0.8rem;
+  color: #636366;
+  line-height: 1.55;
+  margin-top: 8px;
+}
+
+/* ── 空態 ── */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  display: none;
+  animation: fadeIn 0.3s ease both;
+}
+.empty.show { display: block; }
+.empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.empty-msg { font-size: 0.88rem; color: var(--sub); line-height: 1.6; }
+
+/* ── 頁腳注記 ── */
+.footer-note {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #c7c7cc;
+  padding: 20px 16px 8px;
+  line-height: 1.6;
+}
+
+/* ── loading ── */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 0;
+  gap: 6px;
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #0e7490;
+  animation: dotPulse 1.2s ease-in-out infinite;
+}
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotPulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40%           { transform: scale(1);   opacity: 1;   }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <a href="/" class="back-btn" id="backBtn">
+      <span class="back-arrow">‹</span> 返回
+    </a>
+    <div class="header-title">✈️ 機場設施指南</div>
+    <div class="header-spacer"></div>
+  </div>
+
+  <div class="search-wrap">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="searchInput"
+             type="search" inputmode="search"
+             placeholder="搜尋設施、位置、關鍵字…" autocomplete="off">
+      <button class="search-clear" id="searchClear" aria-label="清除">✕</button>
+    </div>
+  </div>
+
+  <div class="terminal-wrap" id="terminalWrap">
+    <button class="term-btn active" data-t="all">全航廈</button>
+    <button class="term-btn" data-t="T1">第一航廈</button>
+    <button class="term-btn" data-t="T2">第二航廈</button>
+  </div>
+
+  <div class="cats-grid" id="catsGrid">
+    <button class="cat-btn active" data-cat="all">
+      <span class="cat-emoji">🗂️</span>
+      <span class="cat-label">全部</span>
+    </button>
+    <!-- 分類按鈕由 JS 動態插入 -->
+  </div>
+</div>
+
+<div class="body">
+  <div id="loading" class="loading">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+  <div id="sectionTitle" class="section-title" style="display:none"></div>
+  <div id="cardList" class="card-list"></div>
+  <div id="empty" class="empty">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-msg">找不到符合的設施<br>試試其他關鍵字或分類</div>
+  </div>
+  <div class="footer-note" id="footerNote" style="display:none">
+    桃園國際機場 TPE・設施位置資料僅供快速參考<br>實際位置以現場標示及廣播為準
+  </div>
+</div>
+
+<script>
+let _allData       = [];
+let _categories    = {};
+let _activeCat     = 'all';
+let _activeTerminal= 'all';
+let _searchQ       = '';
+let _initialLoad   = true;
+
+/* ── 渲染分類按鈕 ── */
+function buildCats(cats) {
+  const grid = document.getElementById('catsGrid');
+  Object.entries(cats).forEach(([key, meta]) => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn';
+    btn.dataset.cat = key;
+    btn.style.setProperty('--cat-color', meta.color);
+    btn.innerHTML = `<span class="cat-emoji">${meta.emoji}</span><span class="cat-label">${meta.label}</span>`;
+    grid.appendChild(btn);
+  });
+  grid.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.cat;
+      if (_activeCat === cat) return;
+      _activeCat = cat;
+      grid.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+  });
+}
+
+/* ── 篩選邏輯 ── */
+function filtered() {
+  return _allData.filter(item => {
+    const matchTerm = _activeTerminal === 'all' || item.terminal === _activeTerminal;
+    const matchCat  = _activeCat === 'all' || item.category === _activeCat;
+    const q = _searchQ.trim().toLowerCase();
+    if (!q) return matchTerm && matchCat;
+    const haystack = [
+      item.name, item.desc, item.zone, item.floor, item.terminal,
+      ...(item.tags || []),
+      (_categories[item.category] || {}).label || '',
+    ].join(' ').toLowerCase();
+    return matchTerm && matchCat && haystack.includes(q);
+  });
+}
+
+/* ── 渲染卡片 ── */
+function render() {
+  const list = filtered();
+  const cardList = document.getElementById('cardList');
+  const empty    = document.getElementById('empty');
+  const title    = document.getElementById('sectionTitle');
+  const footer   = document.getElementById('footerNote');
+
+  if (list.length === 0) {
+    cardList.innerHTML = '';
+    empty.classList.add('show');
+    title.style.display = 'none';
+    footer.style.display = 'none';
+    return;
+  }
+
+  empty.classList.remove('show');
+  title.style.display = 'block';
+  footer.style.display = 'block';
+
+  const catLabel = _activeCat === 'all' ? '所有設施' : (_categories[_activeCat] || {}).label || '';
+  const termLabel = _activeTerminal === 'all' ? '' : ` · ${_activeTerminal === 'T1' ? '第一航廈' : '第二航廈'}`;
+  title.textContent = `${catLabel}${termLabel}（${list.length} 筆）`;
+
+  cardList.innerHTML = list.map(item => {
+    const cat   = _categories[item.category] || {emoji: '📌', label: '', color: '#8e8e93'};
+    const color = cat.color || '#8e8e93';
+    const bgHex = hexToAlpha(color, 0.12);
+    return `
+    <div class="amenity-card" style="border-color:${color}22">
+      <div class="card-top">
+        <div class="card-icon" style="background:${bgHex}">
+          ${cat.emoji}
+        </div>
+        <div class="card-main">
+          <div class="card-name">${item.name}</div>
+          <div class="card-meta">
+            <span class="badge badge-terminal">${item.terminal}</span>
+            <span class="badge badge-floor">${item.floor}</span>
+            ${item.zone ? `<span class="badge badge-zone">${item.zone}</span>` : ''}
+          </div>
+        </div>
+        <span class="badge badge-cat" style="background:${bgHex};color:${color};border-color:${color}55;align-self:flex-start;margin-top:2px">
+          ${cat.label}
+        </span>
+      </div>
+      ${item.desc ? `<div class="card-desc">${item.desc}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  /* 入場動畫 */
+  if (_initialLoad) {
+    cardList.querySelectorAll('.amenity-card').forEach((card, i) => {
+      card.style.animationDelay = (i * 38) + 'ms';
+      card.classList.add('card-in');
+    });
+  } else {
+    cardList.querySelectorAll('.amenity-card').forEach(card => {
+      card.style.opacity = '1';
+    });
+  }
+}
+
+/* ── 16進位色帶 alpha ── */
+function hexToAlpha(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/* ── 載入資料 ── */
+async function loadData() {
+  try {
+    const res  = await fetch('/api/amenities');
+    const json = await res.json();
+    _allData    = json.data    || [];
+    _categories = json.categories || {};
+    document.getElementById('loading').style.display = 'none';
+    buildCats(_categories);
+    render();
+    _initialLoad = false;
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      '<div style="color:#ef4444;font-size:0.88rem">載入失敗，請重新整理</div>';
+  }
+}
+
+/* ── 搜尋 ── */
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+let _searchTimer;
+searchInput.addEventListener('input', () => {
+  _searchQ = searchInput.value;
+  searchClear.classList.toggle('visible', _searchQ.length > 0);
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(render, 60);
+});
+searchClear.addEventListener('click', () => {
+  searchInput.value = '';
+  _searchQ = '';
+  searchClear.classList.remove('visible');
+  render();
+  searchInput.focus();
+});
+
+/* ── 航廈切換 ── */
+document.getElementById('terminalWrap').querySelectorAll('.term-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.t;
+    if (_activeTerminal === t) return;
+    _activeTerminal = t;
+    document.querySelectorAll('.term-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
+/* ── 返回按鈕出場動畫 ── */
+document.getElementById('backBtn').addEventListener('click', e => {
+  e.preventDefault();
+  document.body.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
+  document.body.style.opacity    = '0';
+  document.body.style.transform  = 'scale(0.96) translateY(-8px)';
+  setTimeout(() => { location.href = '/'; }, 190);
+});
+
+/* ── bfcache 還原 ── */
+window.addEventListener('pageshow', e => {
+  if (!e.persisted) return;
+  document.body.style.animationName = 'none';
+  void document.body.offsetWidth;
+  document.body.style.animationName = '';
+  if (_allData.length) {
+    _initialLoad = false;
+    render();
+  }
+});
+
+/* ── 初始載入 ── */
+loadData();
+</script>
+</body>
+</html>

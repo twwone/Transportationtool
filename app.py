@@ -679,6 +679,184 @@ def schedule_debug():
     })
 
 
+# ──────────────────────────────────────────────
+#  機場設施指南（/amenities）
+#  TDX basic 層無 AirportFacility API → 使用精選靜態資料備援
+# ──────────────────────────────────────────────
+_TDX_AMENITY   = "https://tdx.transportdata.tw/api/basic/v2/Air/AirportFacility"
+_AMENITY_TTL   = 3600
+_amenity_cache: dict = {"data": None, "expires_at": 0.0, "source": "static"}
+_amenity_lock  = threading.Lock()
+
+_AMENITY_CATEGORIES = {
+    "nursery":    {"label": "育嬰室",   "emoji": "🍼", "color": "#f43f5e"},
+    "water":      {"label": "飲水機",   "emoji": "💧", "color": "#0ea5e9"},
+    "exchange":   {"label": "換匯",     "emoji": "💱", "color": "#f59e0b"},
+    "taxrefund":  {"label": "退稅",     "emoji": "🧾", "color": "#10b981"},
+    "banking":    {"label": "銀行/ATM", "emoji": "🏦", "color": "#6366f1"},
+    "luggage":    {"label": "行李",     "emoji": "🧳", "color": "#8b5cf6"},
+    "medical":    {"label": "醫療",     "emoji": "🏥", "color": "#ef4444"},
+    "shower":     {"label": "淋浴",     "emoji": "🚿", "color": "#06b6d4"},
+    "prayer":     {"label": "祈禱室",   "emoji": "🛐", "color": "#84cc16"},
+    "shop":       {"label": "商店",     "emoji": "🏪", "color": "#f97316"},
+    "info":       {"label": "服務台",   "emoji": "ℹ️",  "color": "#3b82f6"},
+    "accessible": {"label": "無障礙",   "emoji": "♿",  "color": "#64748b"},
+}
+
+# 桃園國際機場（TPE）精選設施靜態資料
+_TPE_AMENITIES = [
+    # ── 育嬰室 ──────────────────────────────────
+    {"id":1,  "name":"育嬰室",           "category":"nursery",   "terminal":"T1","floor":"3F",  "zone":"出境安檢後","desc":"安全檢查後候機廊道 A 側，近 A4 登機門旁，提供哺乳、換尿布設備","tags":["育嬰","哺乳","換尿布","嬰兒"]},
+    {"id":2,  "name":"育嬰室",           "category":"nursery",   "terminal":"T1","floor":"B1F", "zone":"入境大廳", "desc":"行李提領大廳 A 轉盤旁，入境通關後即可使用","tags":["育嬰","哺乳","嬰兒"]},
+    {"id":3,  "name":"育嬰室",           "category":"nursery",   "terminal":"T2","floor":"3F",  "zone":"出境安檢後","desc":"安全檢查後 D 廊道入口，近免稅商店，24 小時開放","tags":["育嬰","哺乳","換尿布","嬰兒"]},
+    {"id":4,  "name":"育嬰室",           "category":"nursery",   "terminal":"T2","floor":"1F",  "zone":"入境大廳", "desc":"入境出口右轉，計程車搭乘處前方走廊","tags":["育嬰","哺乳","嬰兒"]},
+    # ── 飲水機 ──────────────────────────────────
+    {"id":5,  "name":"飲水機",           "category":"water",     "terminal":"T1","floor":"3F",  "zone":"出境安檢後","desc":"A/B 登機廊道各設兩台，溫熱冷三溫，免費使用","tags":["飲水","開水","熱水","冷水"]},
+    {"id":6,  "name":"飲水機",           "category":"water",     "terminal":"T2","floor":"3F",  "zone":"出境安檢後","desc":"D/E 廊道各廊道入口均有設置，建議進安檢後再補水","tags":["飲水","開水","熱水"]},
+    {"id":7,  "name":"飲水機",           "category":"water",     "terminal":"T1","floor":"B1F", "zone":"入境大廳", "desc":"行李轉盤大廳出口走廊右側牆面","tags":["飲水","開水"]},
+    {"id":8,  "name":"飲水機",           "category":"water",     "terminal":"T2","floor":"1F",  "zone":"入境大廳", "desc":"入境出口通道兩側，靠近旅客服務中心","tags":["飲水","開水"]},
+    # ── 外幣兌換 ─────────────────────────────────
+    {"id":9,  "name":"臺灣銀行 換匯",    "category":"exchange",  "terminal":"T1","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"出境報到大廳左側，安全檢查前，鄰近旅平險服務台","tags":["換匯","外幣","台銀","兌換","換錢"]},
+    {"id":10, "name":"臺灣銀行 換匯",    "category":"exchange",  "terminal":"T1","floor":"3F",  "zone":"出境安檢後","desc":"安檢後 A 廊道入口右側，可兌換日圓、美金、歐元等主要幣別","tags":["換匯","外幣","台銀","兌換","換錢"]},
+    {"id":11, "name":"臺灣銀行 換匯",    "category":"exchange",  "terminal":"T1","floor":"B1F", "zone":"入境大廳", "desc":"行李轉盤出口後，入境通關前走廊","tags":["換匯","外幣","台銀","兌換"]},
+    {"id":12, "name":"臺灣銀行 換匯",    "category":"exchange",  "terminal":"T2","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"報到大廳 D 排報到區右側，人工服務 06:30–22:00","tags":["換匯","外幣","台銀","兌換","換錢"]},
+    {"id":13, "name":"臺灣銀行 換匯",    "category":"exchange",  "terminal":"T2","floor":"3F",  "zone":"出境安檢後","desc":"安檢後 E 廊道起點，免稅區入口旁","tags":["換匯","外幣","台銀","兌換"]},
+    {"id":14, "name":"兆豐銀行 換匯",    "category":"exchange",  "terminal":"T1","floor":"1F",  "zone":"入境大廳", "desc":"入境出口右側大廳，提供 24 小時 ATM 及人工換匯","tags":["換匯","外幣","兆豐","兌換","換錢"]},
+    # ── 退稅 ───────────────────────────────────
+    {"id":15, "name":"Global Blue 退稅", "category":"taxrefund", "terminal":"T1","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"出境安全檢查前，出發大廳左翼服務台，可退現金或刷回信用卡","tags":["退稅","Tax Refund","Global Blue","購物退稅"]},
+    {"id":16, "name":"Global Blue 退稅", "category":"taxrefund", "terminal":"T2","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"報到大廳中央走道左側，D 排報到區斜前方","tags":["退稅","Tax Refund","Global Blue","購物退稅"]},
+    {"id":17, "name":"Premier Tax Free", "category":"taxrefund", "terminal":"T2","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"緊鄰 Global Blue 服務台，同處可一次辦理兩家退稅","tags":["退稅","Tax Refund","Premier","購物退稅"]},
+    {"id":18, "name":"海關退稅蓋章",     "category":"taxrefund", "terminal":"T1","floor":"3F",  "zone":"安檢前海關查驗","desc":"未開箱退稅商品需在此蓋章後才可至服務台領款，位於安檢排隊旁","tags":["退稅","海關","蓋章","驗貨"]},
+    {"id":19, "name":"海關退稅蓋章",     "category":"taxrefund", "terminal":"T2","floor":"3F",  "zone":"安檢前海關查驗","desc":"出境安檢入口旁海關查驗台，持退稅收據蓋章後再辦理退款","tags":["退稅","海關","蓋章","驗貨"]},
+    # ── 銀行/ATM ─────────────────────────────────
+    {"id":20, "name":"ATM（臺灣銀行）",  "category":"banking",   "terminal":"T1","floor":"1F",  "zone":"入境大廳", "desc":"入境出口大廳轉角，可提領台幣及外幣，24 小時服務","tags":["ATM","提款","台銀","提款機","現金"]},
+    {"id":21, "name":"ATM（臺灣銀行）",  "category":"banking",   "terminal":"T1","floor":"3F",  "zone":"出境大廳", "desc":"出境報到大廳，換匯服務台旁外側牆面","tags":["ATM","提款","台銀","現金"]},
+    {"id":22, "name":"ATM（兆豐銀行）",  "category":"banking",   "terminal":"T2","floor":"3F",  "zone":"出境大廳", "desc":"報到大廳 7-Eleven 便利商店旁，24 小時開放","tags":["ATM","提款","兆豐","現金"]},
+    {"id":23, "name":"ATM（中華郵政）",  "category":"banking",   "terminal":"T2","floor":"1F",  "zone":"入境大廳", "desc":"入境旅客服務中心旁，支援 VISA/Master 海外提款","tags":["ATM","提款","郵局","現金"]},
+    {"id":24, "name":"旅行平安保險",     "category":"banking",   "terminal":"T1","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"臺灣銀行換匯台旁保險服務台，可當場購買旅遊平安險","tags":["保險","旅平險","投保","意外險"]},
+    {"id":25, "name":"旅行平安保險",     "category":"banking",   "terminal":"T2","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"兆豐銀行服務台可辦旅平險，亦有自動投保機","tags":["保險","旅平險","投保","意外險"]},
+    # ── 行李服務 ─────────────────────────────────
+    {"id":26, "name":"行李寄存",         "category":"luggage",   "terminal":"T1","floor":"B1F", "zone":"行李提領大廳","desc":"行李轉盤大廳出口右側，24 小時服務，依件數/天數計費","tags":["寄存","行李","寄放","存放"]},
+    {"id":27, "name":"行李寄存",         "category":"luggage",   "terminal":"T2","floor":"1F",  "zone":"入境大廳", "desc":"入境通關後一樓，近巴士售票處，可短期或多日寄放","tags":["寄存","行李","寄放","存放"]},
+    {"id":28, "name":"行李縮膜包裝",     "category":"luggage",   "terminal":"T1","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"報到大廳中央服務台附近，依件計費，可防止行李箱損壞","tags":["包裝","纏膜","行李保護","縮膜"]},
+    {"id":29, "name":"行李縮膜包裝",     "category":"luggage",   "terminal":"T2","floor":"3F",  "zone":"出境大廳", "desc":"D 排報到區左側，服務時間 06:00–最後班機","tags":["包裝","纏膜","行李保護","縮膜"]},
+    {"id":30, "name":"DHL 快遞服務",     "category":"luggage",   "terminal":"T2","floor":"3F",  "zone":"出境大廳", "desc":"報到大廳旁，可辦理國際快遞寄件及超重行李單獨托運","tags":["快遞","DHL","托運","寄件","寄包裹"]},
+    {"id":31, "name":"行李超重寄送",     "category":"luggage",   "terminal":"T1","floor":"3F",  "zone":"出境大廳", "desc":"各航空公司報到櫃台可詢問超重行李加購，或洽機場快遞服務","tags":["超重","行李","加購","托運"]},
+    # ── 醫療/急救 ─────────────────────────────────
+    {"id":32, "name":"醫療急救站",       "category":"medical",   "terminal":"T1","floor":"3F",  "zone":"出境大廳", "desc":"出境大廳靠近 A 出口，設有 AED 及基本急救設備，24 小時有護理人員","tags":["醫療","急救","AED","護士","救護"]},
+    {"id":33, "name":"醫療急救站",       "category":"medical",   "terminal":"T2","floor":"3F",  "zone":"出境大廳", "desc":"出境大廳中央服務台旁，有 AED 掛壁，駐點護理人員","tags":["醫療","急救","AED","護士","救護"]},
+    {"id":34, "name":"機場診所",         "category":"medical",   "terminal":"T2","floor":"1F",  "zone":"入境大廳", "desc":"入境出口右側，提供一般門診及藥品，服務時間 08:00–20:00","tags":["診所","藥局","看診","藥品","醫療"]},
+    {"id":35, "name":"AED 體外電擊器",   "category":"medical",   "terminal":"T1","floor":"3F",  "zone":"出境安檢後","desc":"A/B 各登機廊道均設有 AED，紅色標示清楚，同仁可協助使用","tags":["AED","急救","心臟","電擊器"]},
+    {"id":36, "name":"AED 體外電擊器",   "category":"medical",   "terminal":"T2","floor":"3F",  "zone":"出境安檢後","desc":"D/E 廊道入口及中段各設一台，位置有黃色地板標示","tags":["AED","急救","心臟","電擊器"]},
+    # ── 淋浴/休憩 ─────────────────────────────────
+    {"id":37, "name":"淋浴間",           "category":"shower",    "terminal":"T1","floor":"3F",  "zone":"出境安檢後","desc":"安檢後 A 廊道近 A10 登機門，需付費購票，提供毛巾備品","tags":["淋浴","沐浴","梳洗","盥洗"]},
+    {"id":38, "name":"淋浴間",           "category":"shower",    "terminal":"T2","floor":"3F",  "zone":"出境安檢後","desc":"安檢後 D 廊道，近星宇貴賓室附近，付費對外開放","tags":["淋浴","沐浴","梳洗","盥洗"]},
+    # ── 祈禱室 ──────────────────────────────────
+    {"id":39, "name":"祈禱室",           "category":"prayer",    "terminal":"T1","floor":"3F",  "zone":"出境安檢後","desc":"安檢後 B 廊道，近 B5 登機門附近，設有洗淨設備，全日開放","tags":["祈禱","禮拜","穆斯林","清真","伊斯蘭"]},
+    {"id":40, "name":"祈禱室",           "category":"prayer",    "terminal":"T2","floor":"3F",  "zone":"出境安檢後","desc":"安檢後 E 廊道，近 E1 登機門，設有獨立洗淨區，指向麥加方向","tags":["祈禱","禮拜","穆斯林","清真","伊斯蘭"]},
+    # ── 商店/便利 ─────────────────────────────────
+    {"id":41, "name":"7-Eleven",         "category":"shop",      "terminal":"T1","floor":"3F",  "zone":"出境大廳（安檢前）","desc":"出境報到大廳，可購買旅行用品、食品飲料，24 小時營業","tags":["超商","7-11","便利商店","購物"]},
+    {"id":42, "name":"7-Eleven",         "category":"shop",      "terminal":"T2","floor":"3F",  "zone":"出境大廳", "desc":"報到大廳近中央服務台，24 小時，備有雨衣、轉接頭等旅行小物","tags":["超商","7-11","便利商店","購物"]},
+    {"id":43, "name":"藥妝店（松本清）", "category":"shop",      "terminal":"T2","floor":"3F",  "zone":"出境安檢後","desc":"免稅區入口旁，可購買護膚品、藥妝，結合免稅折扣","tags":["藥妝","美妝","保養","松本清"]},
+    # ── 旅客服務台 ───────────────────────────────
+    {"id":44, "name":"旅客服務中心",     "category":"info",      "terminal":"T1","floor":"1F",  "zone":"入境大廳", "desc":"入境出口正對面，提供旅遊諮詢、地圖索取、WiFi 分享器租借","tags":["服務台","諮詢","WiFi","SIM卡","問路","WiFi租借"]},
+    {"id":45, "name":"旅客服務中心",     "category":"info",      "terminal":"T2","floor":"1F",  "zone":"入境大廳", "desc":"入境通關後一樓，近巴士售票處，提供中英日語服務","tags":["服務台","諮詢","WiFi","SIM卡","問路","巴士"]},
+    {"id":46, "name":"機場Wi-Fi",        "category":"info",      "terminal":"T1","floor":"全廳", "zone":"全航廈",   "desc":"全航廈免費 Wi-Fi：Airport-Free-WiFi_auto；登入後直接使用","tags":["WiFi","網路","免費","上網"]},
+    {"id":47, "name":"機場Wi-Fi",        "category":"info",      "terminal":"T2","floor":"全廳", "zone":"全航廈",   "desc":"全航廈免費 Wi-Fi：Airport-Free-WiFi_auto；無需密碼直接連線","tags":["WiFi","網路","免費","上網"]},
+    {"id":48, "name":"SIM 卡販售",       "category":"info",      "terminal":"T1","floor":"1F",  "zone":"入境大廳", "desc":"旅客服務中心及中華電信櫃台，可購買台灣數據 SIM，中英文服務","tags":["SIM卡","網路","電話卡","中華電信","遠傳"]},
+    # ── 無障礙設施 ───────────────────────────────
+    {"id":49, "name":"無障礙洗手間",     "category":"accessible","terminal":"T1","floor":"各樓", "zone":"各樓層洗手間旁","desc":"各樓層一般廁所旁均設無障礙廁所，門口有輪椅標示，空間寬敞","tags":["無障礙","殘障","輪椅","廁所"]},
+    {"id":50, "name":"無障礙洗手間",     "category":"accessible","terminal":"T2","floor":"各樓", "zone":"各樓層洗手間旁","desc":"T2 各樓層廁所均附設無障礙廁所，部分含嬰兒換尿布台","tags":["無障礙","殘障","輪椅","廁所"]},
+    {"id":51, "name":"輪椅借用服務",     "category":"accessible","terminal":"T1","floor":"1F",  "zone":"旅客服務中心","desc":"入境大廳旅客服務中心可免費借用輪椅，行動不便旅客可事先通知航空公司安排","tags":["輪椅","借用","無障礙","行動不便"]},
+    {"id":52, "name":"輪椅借用服務",     "category":"accessible","terminal":"T2","floor":"1F",  "zone":"旅客服務中心","desc":"提供輪椅免費借用，亦可至各航空公司報到台申請電動輪椅協助","tags":["輪椅","借用","無障礙","行動不便"]},
+]
+
+
+def _fetch_amenities() -> tuple[list, str]:
+    """回傳 (amenity_list, source)；1h 快取，TDX 失敗則用靜態資料。"""
+    with _amenity_lock:
+        if _amenity_cache["data"] and time.time() < _amenity_cache["expires_at"]:
+            return _amenity_cache["data"], _amenity_cache["source"]
+
+    token = _get_tdx_token()
+    if token:
+        try:
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            r = _requests.get(
+                _TDX_AMENITY, headers=headers,
+                params={"$format": "JSON", "$top": 1000, "$filter": "AirportID eq 'TPE'"},
+                timeout=12,
+            )
+            if r.status_code == 200:
+                body = r.json()
+                raw  = body if isinstance(body, list) else body.get("data", [])
+                if raw:
+                    cleaned = _clean_tdx_amenities(raw)
+                    with _amenity_lock:
+                        _amenity_cache.update({"data": cleaned, "expires_at": time.time() + _AMENITY_TTL, "source": "tdx"})
+                    return cleaned, "tdx"
+        except Exception:
+            pass
+
+    with _amenity_lock:
+        _amenity_cache.update({"data": _TPE_AMENITIES, "expires_at": time.time() + _AMENITY_TTL, "source": "static"})
+    return _TPE_AMENITIES, "static"
+
+
+def _clean_tdx_amenities(raw: list) -> list:
+    """TDX AirportFacility 欄位轉為統一格式（若 API 有朝一日開放）。"""
+    result = []
+    cat_map = {
+        "nursery": "nursery", "baby": "nursery",
+        "water":   "water",   "drink": "water",
+        "exchange":"exchange","currency":"exchange","fx":"exchange",
+        "tax":     "taxrefund","refund":"taxrefund",
+        "atm":     "banking", "bank":"banking","insurance":"banking",
+        "luggage": "luggage", "baggage":"luggage","storage":"luggage",
+        "medical": "medical", "clinic":"medical","pharmacy":"medical",
+        "shower":  "shower",
+        "prayer":  "prayer",  "worship":"prayer",
+        "shop":    "shop",    "store":"shop","convenience":"shop",
+        "info":    "info",    "service":"info",
+        "access":  "accessible","wheelchair":"accessible",
+    }
+    for i, a in enumerate(raw):
+        name_obj = a.get("FacilityName", {})
+        name = name_obj.get("Zh_tw", "") if isinstance(name_obj, dict) else str(name_obj or "")
+        loc_obj = a.get("LocationDescription", {})
+        desc = loc_obj.get("Zh_tw", "") if isinstance(loc_obj, dict) else str(loc_obj or "")
+        raw_cat = str(a.get("FacilityType", "")).lower()
+        cat = next((v for k, v in cat_map.items() if k in raw_cat), "info")
+        result.append({
+            "id":       i + 1,
+            "name":     name or a.get("FacilityID", ""),
+            "category": cat,
+            "terminal": a.get("TerminalID", ""),
+            "floor":    a.get("Floor", ""),
+            "zone":     a.get("Area", ""),
+            "desc":     desc,
+            "tags":     [name],
+        })
+    return result
+
+
+@app.route("/amenities")
+def amenities():
+    return render_template("amenities.html")
+
+
+@app.route("/api/amenities")
+def amenities_api():
+    data, source = _fetch_amenities()
+    return jsonify({
+        "data":       data,
+        "categories": _AMENITY_CATEGORIES,
+        "source":     source,
+        "count":      len(data),
+        "updated_at": time.strftime("%H:%M:%S"),
+    })
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")
