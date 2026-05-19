@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>週班表 – 交通助理</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,22 +57,27 @@ body {
 }
 .back-link:active { transform: scale(0.88); opacity: 0.65; }
 
-/* ── Toggle with sliding pill ── */
+/* ── Toggle with sliding pill — 動態島式 ── */
 .toggle-wrap {
   position: relative;
   display: flex;
-  background: #f2f2f7;
-  border-radius: 8px;
+  background: rgba(118, 118, 128, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 100px;
   padding: 2px;
   gap: 0;
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 /* 滑動背景藥丸 */
 .toggle-pill {
   position: absolute;
   top: 2px; bottom: 2px;
   background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.13);
+  border-radius: 100px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(255,255,255,0.6);
   transition:
     left  0.3s cubic-bezier(0.25, 1, 0.5, 1),
     width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -84,8 +89,8 @@ body {
   z-index: 1;
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
   border: none;
   cursor: pointer;
   background: transparent;
@@ -498,6 +503,17 @@ window.addEventListener('pageshow', e => {
 
   requestAnimationFrame(updateTogglePill);
 });
+
+/* ── 防縮放（iOS 雙保險） ── */
+document.addEventListener('touchmove', function(e) {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+let _lastTap = 0;
+document.addEventListener('touchend', function(e) {
+  const now = Date.now();
+  if (now - _lastTap < 300) e.preventDefault();
+  _lastTap = now;
+}, { passive: false });
 </script>
 </body>
 </html>

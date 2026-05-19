@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>高鐵刷票</title>
 
 <!-- PWA / 加入主畫面 -->
@@ -365,9 +365,29 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
       }
     } catch(_) {}
   }
+/* ── 防縮放（iOS 雙保險） ── */
+document.addEventListener("touchmove", function(e) {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+let _lastTap = 0;
+document.addEventListener("touchend", function(e) {
+  const now = Date.now();
+  if (now - _lastTap < 300) e.preventDefault();
+  _lastTap = now;
+}, { passive: false });
 </script>
 <script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+/* ── 防縮放（iOS 雙保險） ── */
+document.addEventListener("touchmove", function(e) {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+let _lastTap = 0;
+document.addEventListener("touchend", function(e) {
+  const now = Date.now();
+  if (now - _lastTap < 300) e.preventDefault();
+  _lastTap = now;
+}, { passive: false });
 </script>
 </div><!-- /scroll-content -->
 </body>

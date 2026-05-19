@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>航空資訊看板</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
@@ -910,6 +910,16 @@ window.addEventListener('pageshow', e => {
   /* 指示線重新定位 */
   requestAnimationFrame(() => updateTabIndicator(_tab));
 });
+/* ── 防縮放（iOS 雙保險） ── */
+document.addEventListener("touchmove", function(e) {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+let _lastTap = 0;
+document.addEventListener("touchend", function(e) {
+  const now = Date.now();
+  if (now - _lastTap < 300) e.preventDefault();
+  _lastTap = now;
+}, { passive: false });
 </script>
 </body>
 </html>

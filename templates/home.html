@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>交通助理</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
@@ -70,28 +70,45 @@ body {
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 20px;
+  border-radius: 24px;
   padding: 26px 22px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 20px 40px -4px rgba(0, 0, 0, 0.05);
   transition:
-    transform      0.3s cubic-bezier(0.25, 1, 0.5, 1),
-    border-color   0.2s ease,
-    background     0.2s ease,
-    box-shadow     0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    transform    0.3s cubic-bezier(0.25, 1, 0.5, 1),
+    background   0.2s ease,
+    box-shadow   0.3s cubic-bezier(0.25, 1, 0.5, 1);
   cursor: pointer;
   position: relative;
   overflow: hidden;
   will-change: transform;
   opacity: 0;
 }
+/* hover 色光暈 */
 .card::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 20px;
+  border-radius: 24px;
   opacity: 0;
   transition: opacity 0.22s;
+}
+/* iOS 2026 光學折射邊框 — 漸層由上亮到下暗模擬頂光折射 */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.68) 0%,
+    rgba(255, 255, 255, 0.08) 55%,
+    rgba(255, 255, 255, 0.22) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 @media (hover: hover) {
   .card:hover {
@@ -108,11 +125,11 @@ body {
 
 /* 高鐵卡片 */
 .card-thsr::before { background: radial-gradient(ellipse at 80% 20%, #ff950015, transparent 60%); }
-.card-thsr:hover { border-color: #ff9500; background: #fffaf4; }
+.card-thsr:hover { background: #fffaf4; }
 
 /* 捷運卡片 */
 .card-mrt::before { background: radial-gradient(ellipse at 80% 20%, #7c3aed15, transparent 60%); }
-.card-mrt:hover { border-color: #7c3aed; background: #faf8ff; }
+.card-mrt:hover { background: #faf8ff; }
 
 .card-inner {
   display: flex;
@@ -163,28 +180,28 @@ body {
 
 /* Widget 卡片 */
 .card-widget::before { background: radial-gradient(ellipse at 80% 20%, #6366f115, transparent 60%); }
-.card-widget:hover { border-color: #6366f1; background: #f8f8ff; }
+.card-widget:hover { background: #f8f8ff; }
 .card-widget .icon-wrap { background: #eef2ff; }
 .card-widget .card-title { color: #4f46e5; }
 .card-widget:hover .arrow { color: #6366f1; }
 
 /* 航空看板卡片 */
 .card-tias::before { background: radial-gradient(ellipse at 80% 20%, #1a56db12, transparent 60%); }
-.card-tias:hover { border-color: #1a56db; background: #eff6ff; }
+.card-tias:hover { background: #eff6ff; }
 .card-tias .icon-wrap { background: #dbeafe; }
 .card-tias .card-title { color: #1e40af; }
 .card-tias:hover .arrow { color: #1a56db; }
 
 /* 週班表卡片 */
 .card-schedule::before { background: radial-gradient(ellipse at 80% 20%, #05966915, transparent 60%); }
-.card-schedule:hover { border-color: #059669; background: #f0fdf4; }
+.card-schedule:hover { background: #f0fdf4; }
 .card-schedule .icon-wrap { background: #dcfce7; }
 .card-schedule .card-title { color: #047857; }
 .card-schedule:hover .arrow { color: #059669; }
 
 /* 機場設施卡片 */
 .card-amenities::before { background: radial-gradient(ellipse at 80% 20%, #0891b215, transparent 60%); }
-.card-amenities:hover { border-color: #0891b2; background: #ecfeff; }
+.card-amenities:hover { background: #ecfeff; }
 .card-amenities .icon-wrap { background: #cffafe; }
 .card-amenities .card-title { color: #0e7490; }
 .card-amenities:hover .arrow { color: #0891b2; }
@@ -267,6 +284,17 @@ body {
 
 <script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+/* ── 防縮放（iOS 雙保險） ── */
+document.addEventListener('touchmove', function(e) {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+let _lastTap = 0;
+document.addEventListener('touchend', function(e) {
+  const now = Date.now();
+  if (now - _lastTap < 300) e.preventDefault();
+  _lastTap = now;
+}, { passive: false });
 
 /* ── 卡片錯開入場 ── */
 document.querySelectorAll('.grid .card').forEach((card, i) => {
