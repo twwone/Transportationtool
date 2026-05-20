@@ -988,7 +988,14 @@ async function load() {
   btn.disabled  = true;
 
   try {
-    const res  = await fetch('/api/tias/flights');
+    const _ac  = new AbortController();
+    const _tid = setTimeout(() => _ac.abort(), 12000);
+    let res;
+    try {
+      res = await fetch('/api/tias/flights', { signal: _ac.signal });
+    } finally {
+      clearTimeout(_tid);
+    }
     const data = await res.json();
 
     if (!data.configured) {

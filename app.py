@@ -283,7 +283,7 @@ def _fetch_metadata() -> tuple[dict, dict]:
     try:
         r = _requests.get(
             _TDX_AIRLINE, headers=headers,
-            params={"$format": "JSON", "$top": 2000}, timeout=15,
+            params={"$format": "JSON", "$top": 2000}, timeout=8,
         )
         r.raise_for_status()
         body = r.json()
@@ -304,7 +304,7 @@ def _fetch_metadata() -> tuple[dict, dict]:
     try:
         r = _requests.get(
             _TDX_AIRPORT, headers=headers,
-            params={"$format": "JSON", "$top": 2000}, timeout=15,
+            params={"$format": "JSON", "$top": 2000}, timeout=8,
         )
         r.raise_for_status()
         body = r.json()
@@ -355,7 +355,7 @@ def _fetch_tias():
                 f"{_TDX_FIDS}/{direction}/TPE",
                 headers=headers,
                 params={"$format": "JSON", "$top": 1000},
-                timeout=12,
+                timeout=8,
             )
             r.raise_for_status()
             body = r.json()
