@@ -321,6 +321,21 @@ body {
   font-size: 0.82rem; color: #78350f; margin: 12px;
 }
 .loading { text-align: center; padding: 40px 20px; color: #aeaeb2; font-size: 0.85rem; }
+
+/* ── 全航班時間軸分隔線 ── */
+.now-divider {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 0; margin: 4px 0 8px;
+}
+.now-line {
+  flex: 1; height: 1.5px;
+  background: linear-gradient(90deg, transparent, #1a56db 40%, transparent);
+}
+.now-label {
+  font-size: 0.72rem; font-weight: 700; color: #1a56db;
+  background: #eff6ff; padding: 4px 10px; border-radius: 20px;
+  border: 1px solid #bfdbfe; white-space: nowrap;
+}
 </style>
 </head>
 <body>
@@ -712,11 +727,9 @@ function runSearch() {
   const countEl = document.getElementById('searchCount');
   const resEl   = document.getElementById('allResults');
 
-  /* 無關鍵字時只顯示提示 + 航班總數，不渲染所有卡片（避免 jank 凍結） */
+  /* 無關鍵字時顯示全部航班按時間排序 */
   if (!q) {
-    hintEl.style.display = '';
-    countEl.textContent  = `共 ${_allArr.length + _allDep.length} 筆航班可搜尋`;
-    resEl.innerHTML      = '';
+    renderAllByTime();
     return;
   }
 
@@ -752,6 +765,63 @@ function runSearch() {
   resEl.innerHTML = results.length
     ? results.map(f => renderCard(f, f._dir, true)).join('')
     : `<div class="empty"><span class="empty-icon">🔍</span>查無「${q}」相關航班</div>`;
+}
+
+/* ── 全航班時間軸視圖 ── */
+function renderAllByTime() {
+  const hintEl  = document.getElementById('searchHint');
+  const countEl = document.getElementById('searchCount');
+  const resEl   = document.getElementById('allResults');
+
+  hintEl.style.display = 'none';
+
+  if (!_allArr.length && !_allDep.length) {
+    resEl.innerHTML     = '<div class="empty"><span class="empty-icon">✈️</span>暫無航班資料</div>';
+    countEl.textContent = '';
+    return;
+  }
+
+  const now    = new Date();
+  const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const allSorted = [
+    ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
+    ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
+  ].sort((a, b) => {
+    const ta = a.ScheduleArrivalTime || a.ScheduleDepartureTime || '';
+    const tb = b.ScheduleArrivalTime || b.ScheduleDepartureTime || '';
+    return ta.localeCompare(tb);
+  });
+
+  countEl.textContent = `共 ${allSorted.length} 筆航班`;
+
+  const nowDividerHtml = `<div class="now-divider" id="nowDivider">
+    <span class="now-line"></span>
+    <span class="now-label">▶ 現在 ${nowStr}</span>
+    <span class="now-line"></span>
+  </div>`;
+
+  let html = '';
+  let nowInserted = false;
+
+  for (const f of allSorted) {
+    const schIso = f.ScheduleArrivalTime || f.ScheduleDepartureTime || '';
+    if (!nowInserted && schIso && new Date(schIso) > now) {
+      html += nowDividerHtml;
+      nowInserted = true;
+    }
+    html += renderCard(f, f._dir, true);
+  }
+
+  if (!nowInserted) html += nowDividerHtml;
+
+  resEl.innerHTML = html;
+
+  /* 自動捲動到「現在」分隔線 */
+  setTimeout(() => {
+    const el = document.getElementById('nowDivider');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
 }
 
 /* ── 主載入 ── */
