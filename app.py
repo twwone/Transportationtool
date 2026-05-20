@@ -395,7 +395,18 @@ def tias_flights_api():
     if not ok:
         return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
 
-    airline_map, airport_map = _fetch_metadata()  # 24 h 快取，幾乎無額外延遲
+    airline_map, airport_map = _fetch_metadata()
+
+    # 只回傳本次航班裡實際出現的代碼，避免傳送全球 2000 筆進瀏覽器造成記憶體崩潰
+    all_flights = arr_all + dep_all
+    used_airlines = {f.get("AirlineID") for f in all_flights if f.get("AirlineID")}
+    used_airports = {
+        code for f in all_flights
+        for code in (f.get("DepartureAirportID"), f.get("ArrivalAirportID"))
+        if code
+    }
+    filtered_airline_map = {k: v for k, v in airline_map.items() if k in used_airlines}
+    filtered_airport_map = {k: v for k, v in airport_map.items() if k in used_airports}
 
     return jsonify({
         "configured":     True,
@@ -404,8 +415,8 @@ def tias_flights_api():
         "all_arrivals":   arr_all,
         "all_departures": dep_all,
         "airlines":       _TIAS_AIRLINES,
-        "airline_map":    airline_map,   # {code: {zh, en}}
-        "airport_map":    airport_map,   # {iata: {zh, en, ap_zh}}
+        "airline_map":    filtered_airline_map,
+        "airport_map":    filtered_airport_map,
         "updated_at":     time.strftime("%H:%M:%S"),
     })
 
