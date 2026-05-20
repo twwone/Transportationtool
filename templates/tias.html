@@ -961,11 +961,17 @@ function renderAllByTime() {
 
   resEl.innerHTML = html;
 
-  /* 自動捲動到「現在」分隔線 */
+  /* 自動捲動到「現在」分隔線（iOS Safari PWA 用 scrollTo 避免崩潰） */
   setTimeout(() => {
     const el = document.getElementById('nowDivider');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 80);
+    if (!el) return;
+    try {
+      const top = el.getBoundingClientRect().top + window.pageYOffset - 60;
+      window.scrollTo({ top: Math.max(0, top) });
+    } catch (_) {
+      el.scrollIntoView();
+    }
+  }, 200);
 }
 
 /* ── 主載入 ── */
