@@ -208,6 +208,13 @@ body {
 .card-amenities .card-title { color: #0e7490; }
 .card-amenities:hover .arrow { color: #0891b2; }
 
+/* 簽證指南卡片 */
+.card-visa::before { background: radial-gradient(ellipse at 80% 20%, #f59e0b15, transparent 60%); }
+.card-visa:hover { background: #fffbeb; }
+.card-visa .icon-wrap { background: #fef3c7; }
+.card-visa .card-title { color: #b45309; }
+.card-visa:hover .arrow { color: #d97706; }
+
 .footer {
   margin-top: 40px;
   font-size: 0.7rem;
@@ -385,6 +392,17 @@ body {
       <div class="card-text">
         <div class="card-title">機場設施指南</div>
         <div class="card-desc">育嬰室・換匯・退稅・行李・醫療・ATM・快速定位 TPE 全設施</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+  </a>
+
+  <a href="/visa-guide" class="card card-visa">
+    <div class="card-inner">
+      <div class="icon-wrap">🛂</div>
+      <div class="card-text">
+        <div class="card-title">簽證口袋指南</div>
+        <div class="card-desc">台灣出發・日韓美越泰・免簽 / ESTA / K-ETA 文件清單一覽</div>
       </div>
       <div class="arrow">›</div>
     </div>

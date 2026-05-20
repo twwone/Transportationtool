@@ -857,6 +857,11 @@ def _clean_tdx_amenities(raw: list) -> list:
     return result
 
 
+@app.route("/visa-guide")
+def visa_guide():
+    return render_template("visa-guide.html")
+
+
 @app.route("/amenities")
 def amenities():
     return render_template("amenities.html")

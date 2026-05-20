@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>簽證指南</title>
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f2f2f7">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overscroll-behavior: none; height: 100%; }
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.988); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes cardSlide {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  min-height: 100vh;
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+  animation: pageIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+body.exit { animation: pageIn 0.18s cubic-bezier(0.4, 0, 1, 1) reverse both; }
+
+/* ── Top bar ── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(242, 242, 247, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(60, 60, 67, 0.1);
+  padding: max(14px, env(safe-area-inset-top) + 8px) 16px 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #007aff;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 2px;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.back-btn:active { opacity: 0.5; }
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #1c1c1e;
+  letter-spacing: -0.2px;
+}
+.topbar-spacer { width: 60px; flex-shrink: 0; }
+
+/* ── Search ── */
+.search-wrap {
+  padding: 10px 16px 6px;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(118, 118, 128, 0.12);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.search-box input {
+  flex: 1;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #1c1c1e;
+  outline: none;
+}
+.search-box input::placeholder { color: #8e8e93; }
+.search-icon { font-size: 0.85rem; color: #8e8e93; }
+.clear-btn {
+  background: rgba(60, 60, 67, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  font-size: 0.62rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.clear-btn.hidden { display: none; }
+
+/* ── Filter chips ── */
+.chips {
+  display: flex;
+  gap: 8px;
+  padding: 6px 16px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  background: rgba(255,255,255,0.72);
+  color: #3a3a3c;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.18s;
+}
+.chip.active {
+  background: #1c1c1e;
+  color: #fff;
+  border-color: transparent;
+}
+.chip:active { transform: scale(0.93); }
+
+/* ── Count bar ── */
+.count-bar {
+  padding: 0 16px 8px;
+  font-size: 0.72rem;
+  color: #8e8e93;
+  font-weight: 500;
+}
+
+/* ── Country card ── */
+.list { padding: 0 16px; }
+.country-card {
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+  position: relative;
+  opacity: 0;
+  /* border set via JS */
+}
+.country-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(155deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.06) 55%, rgba(255,255,255,0.18) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.flag-wrap {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.9rem;
+  flex-shrink: 0;
+}
+.card-meta { flex: 1; min-width: 0; }
+.country-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c1c1e;
+  margin-bottom: 4px;
+}
+.visa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.badge-free    { background: #d3f9d8; color: #2b8a3e; }
+.badge-evisa   { background: #dbe4ff; color: #3b5bdb; }
+.badge-required{ background: #fff3bf; color: #e67700; }
+
+.stay-days {
+  margin-top: 5px;
+  font-size: 0.76rem;
+  color: #8e8e93;
+}
+.chevron {
+  font-size: 0.75rem;
+  color: #c7c7cc;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
+}
+.country-card.open .chevron { transform: rotate(90deg); }
+
+/* ── Expand body ── */
+.card-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.card-body.open { max-height: 800px; }
+.card-body-inner {
+  padding: 0 18px 18px;
+  border-top: 1px solid rgba(60,60,67,0.08);
+}
+
+.section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #8e8e93;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 12px 0 7px;
+}
+
+/* Docs list */
+.doc-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(60,60,67,0.06);
+}
+.doc-row:last-child { border-bottom: none; }
+.doc-icon {
+  font-size: 0.8rem;
+  margin-top: 1px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+.doc-info { flex: 1; }
+.doc-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+.doc-note {
+  font-size: 0.74rem;
+  color: #8e8e93;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.doc-tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.doc-tag.must { background: #ffe3e3; color: #c92a2a; }
+.doc-tag.opt  { background: #f1f3f5; color: #868e96; }
+
+/* Tips */
+.tip-row {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 0.8rem;
+  color: #3a3a3c;
+  line-height: 1.5;
+}
+.tip-dot { flex-shrink: 0; color: #868e96; margin-top: 1px; }
+
+/* Official link */
+.official-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: rgba(0, 122, 255, 0.07);
+  color: #007aff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.official-link:active { opacity: 0.6; }
+
+/* ── Empty state ── */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #8e8e93;
+  font-size: 0.9rem;
+}
+.empty-icon { font-size: 2.4rem; display: block; margin-bottom: 10px; }
+
+/* ── Disclaimer ── */
+.disclaimer {
+  margin: 4px 16px 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 149, 0, 0.08);
+  border: 1px solid rgba(255, 149, 0, 0.2);
+  font-size: 0.72rem;
+  color: #8e4f00;
+  line-height: 1.5;
+}
+.disclaimer strong { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()">‹ 返回</button>
+  <div class="topbar-title">🛂 簽證口袋指南</div>
+  <div class="topbar-spacer"></div>
+</div>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input id="searchInput" type="search" placeholder="搜尋國家…" autocomplete="off"
+           oninput="onSearch(this.value)">
+    <button class="clear-btn hidden" id="clearBtn" onclick="clearSearch()">✕</button>
+  </div>
+</div>
+
+<div class="chips">
+  <div class="chip active" data-filter="all" onclick="setFilter('all',this)">全部</div>
+  <div class="chip" data-filter="free"     onclick="setFilter('free',this)">免簽</div>
+  <div class="chip" data-filter="evisa"    onclick="setFilter('evisa',this)">電子授權</div>
+  <div class="chip" data-filter="required" onclick="setFilter('required',this)">需簽證</div>
+</div>
+
+<div class="count-bar" id="countBar"></div>
+
+<div class="disclaimer">
+  <strong>⚠️ 注意：</strong>本指南資料僅供參考，出發前請至
+  <strong>外交部領事事務局</strong>或各國官方移民機關確認最新入境規定。
+</div>
+
+<div class="list" id="cardList"></div>
+
+<script>
+let _data = [];
+let _filter = 'all';
+let _query  = '';
+
+async function init() {
+  try {
+    const r = await fetch('/static/visa-data.json');
+    const j = await r.json();
+    _data = j.routes || [];
+    render();
+  } catch(e) {
+    document.getElementById('cardList').innerHTML =
+      '<div class="empty"><span class="empty-icon">⚠️</span>資料載入失敗</div>';
+  }
+}
+
+function badgeClass(ec) {
+  if (ec === 'free')     return 'badge-free';
+  if (ec === 'evisa')    return 'badge-evisa';
+  return 'badge-required';
+}
+
+function render() {
+  const q = _query.toLowerCase();
+  const filtered = _data.filter(r => {
+    if (_filter !== 'all' && r.entry_class !== _filter) return false;
+    if (!q) return true;
+    return r.country_zh.includes(q) || r.country_en.toLowerCase().includes(q) || r.id.toLowerCase().includes(q);
+  });
+
+  document.getElementById('countBar').textContent =
+    filtered.length === _data.length
+      ? `共 ${_data.length} 個目的地`
+      : `顯示 ${filtered.length} / ${_data.length} 個目的地`;
+
+  if (!filtered.length) {
+    document.getElementById('cardList').innerHTML =
+      '<div class="empty"><span class="empty-icon">🔍</span>找不到符合的目的地</div>';
+    return;
+  }
+
+  document.getElementById('cardList').innerHTML = filtered.map((r, i) => {
+    const docs = r.required_docs.map(d => `
+      <div class="doc-row">
+        <span class="doc-icon">${d.required ? '✅' : '⬜'}</span>
+        <div class="doc-info">
+          <span class="doc-label">${d.label}</span>
+          <span class="doc-tag ${d.required ? 'must' : 'opt'}">${d.required ? '必要' : '建議'}</span>
+          ${d.note ? `<div class="doc-note">${d.note}</div>` : ''}
+        </div>
+      </div>`).join('');
+
+    const tips = r.tips.map(t => `
+      <div class="tip-row">
+        <span class="tip-dot">•</span>
+        <span>${t}</span>
+      </div>`).join('');
+
+    return `
+    <div class="country-card" id="card-${r.id}" style="border-left: 4px solid ${r.color};">
+      <div class="card-header" onclick="toggleCard('${r.id}')">
+        <div class="flag-wrap" style="background:${r.icon_bg}">${r.flag}</div>
+        <div class="card-meta">
+          <div class="country-name">${r.country_zh} <span style="font-size:0.8rem;font-weight:500;color:#8e8e93">${r.country_en}</span></div>
+          <span class="visa-badge ${badgeClass(r.entry_class)}">${r.visa_type}</span>
+          <div class="stay-days">🗓 最長停留 ${r.stay_days} 天</div>
+        </div>
+        <span class="chevron">›</span>
+      </div>
+      <div class="card-body" id="body-${r.id}">
+        <div class="card-body-inner">
+          <div class="section-title">所需文件</div>
+          ${docs}
+          <div class="section-title">注意事項</div>
+          ${tips}
+          <a class="official-link" href="${r.official_url}" target="_blank" rel="noopener">
+            🔗 官方入境規定網頁
+          </a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  /* staggered entry */
+  document.querySelectorAll('.country-card').forEach((el, i) => {
+    el.style.animation = `cardSlide 0.5s cubic-bezier(0.22,1,0.36,1) ${60 + i * 60}ms both`;
+  });
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  const body = document.getElementById('body-' + id);
+  const isOpen = card.classList.contains('open');
+  card.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+}
+
+function setFilter(val, el) {
+  _filter = val;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function onSearch(val) {
+  _query = val;
+  document.getElementById('clearBtn').classList.toggle('hidden', !val);
+  render();
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  onSearch('');
+}
+
+function goBack() {
+  document.body.classList.add('exit');
+  setTimeout(() => { location.href = '/'; }, 160);
+}
+
+/* prevent double-tap zoom */
+document.addEventListener('touchend', function(e) {
+  const now = Date.now();
+  if (now - (_lastTap||0) < 300) e.preventDefault();
+  _lastTap = now;
+}, { passive: false });
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+{
+  "updated": "2026-05-20",
+  "source_note": "資料以現行規定為準，出發前請至外交部領事事務局或各國官方入境網站確認最新規定。",
+  "routes": [
+    {
+      "id": "JP",
+      "country_zh": "日本",
+      "country_en": "Japan",
+      "flag": "🇯🇵",
+      "visa_type": "免簽",
+      "visa_type_en": "Visa-Free",
+      "entry_class": "free",
+      "stay_days": 90,
+      "color": "#e03131",
+      "bg_color": "#fff5f5",
+      "icon_bg": "#ffc9c9",
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期須超過預計停留天數" },
+        { "label": "回程或續程機票", "required": false, "note": "入境時可能被要求出示" },
+        { "label": "住宿訂房紀錄", "required": false, "note": "建議備妥，偶爾被查" },
+        { "label": "足夠旅費", "required": false, "note": "每日約 ¥15,000 為參考" }
+      ],
+      "tips": [
+        "停留上限 90 天，期滿須離境",
+        "同一入境日起算，不得以短期出境方式規避停留日數",
+        "持觀光簽不得打工，Working Holiday 需另行申請"
+      ],
+      "official_url": "https://www.mofa.go.jp/j_info/visit/visa/index.html"
+    },
+    {
+      "id": "KR",
+      "country_zh": "韓國",
+      "country_en": "South Korea",
+      "flag": "🇰🇷",
+      "visa_type": "K-ETA（需申請）",
+      "visa_type_en": "K-ETA Required",
+      "entry_class": "evisa",
+      "stay_days": 90,
+      "color": "#1971c2",
+      "bg_color": "#e7f5ff",
+      "icon_bg": "#a5d8ff",
+      "conditions": ["持有效中華民國護照", "事先申請 K-ETA"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期須超過預計停留天數" },
+        { "label": "K-ETA 電子旅行授權", "required": true, "note": "10,000 韓圓，有效期 2 年，可於 k-eta.go.kr 申請" },
+        { "label": "回程或續程機票", "required": false, "note": "建議備妥" },
+        { "label": "住宿訂房紀錄", "required": false, "note": "入境時可能被問及" }
+      ],
+      "tips": [
+        "K-ETA 建議出發前至少 72 小時申請，約 30 分鐘以內核准",
+        "K-ETA 一次申請可多次入境，有效期 2 年",
+        "Jeju 島部分航班可豁免 K-ETA，但仍建議提前申請",
+        "停留上限 90 天（6 個月期間）"
+      ],
+      "official_url": "https://www.k-eta.go.kr"
+    },
+    {
+      "id": "US",
+      "country_zh": "美國",
+      "country_en": "United States",
+      "flag": "🇺🇸",
+      "visa_type": "ESTA（需申請）",
+      "visa_type_en": "ESTA Required",
+      "entry_class": "evisa",
+      "stay_days": 90,
+      "color": "#1864ab",
+      "bg_color": "#e8f4fd",
+      "icon_bg": "#74c0fc",
+      "conditions": ["持有效中華民國護照", "事先申請 ESTA"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "須含電子晶片（ePassport），效期超過停留天數" },
+        { "label": "ESTA 電子旅行授權", "required": true, "note": "USD $21，有效期 2 年，於 esta.cbp.dhs.gov 申請" },
+        { "label": "回程機票", "required": false, "note": "入境審查時常被要求出示" },
+        { "label": "住宿地址", "required": false, "note": "海關申報表需填寫，請事先記下" }
+      ],
+      "tips": [
+        "ESTA 須在登機前取得，建議出發 72 小時前申請",
+        "停留上限 90 天，期間不得受薪工作或就學",
+        "入境時由 CBP 人員決定最終核准，ESTA 核准不等於保證入境",
+        "曾持其他護照前往伊朗、伊拉克、敘利亞、北韓者，需改申請 B 簽"
+      ],
+      "official_url": "https://esta.cbp.dhs.gov"
+    },
+    {
+      "id": "VN",
+      "country_zh": "越南",
+      "country_en": "Vietnam",
+      "flag": "🇻🇳",
+      "visa_type": "免簽 45 天",
+      "visa_type_en": "Visa-Free 45 Days",
+      "entry_class": "free",
+      "stay_days": 45,
+      "color": "#c92a2a",
+      "bg_color": "#fff5f5",
+      "icon_bg": "#ffa8a8",
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期須超過 6 個月" },
+        { "label": "回程或續程機票", "required": false, "note": "入境官員可能要求出示" },
+        { "label": "住宿訂房", "required": false, "note": "建議備妥，偶爾被查" }
+      ],
+      "tips": [
+        "2023 年 8 月起對台灣護照免簽，停留上限 45 天",
+        "如需延長，可申請 E-Visa（電子簽證），最長 90 天",
+        "E-Visa 費用約 USD $25，於 evisa.xuatnhapcanh.gov.vn 申請",
+        "多次入境免簽後若需再訪，仍可免簽（無冷卻期限制）"
+      ],
+      "official_url": "https://evisa.xuatnhapcanh.gov.vn"
+    },
+    {
+      "id": "TH",
+      "country_zh": "泰國",
+      "country_en": "Thailand",
+      "flag": "🇹🇭",
+      "visa_type": "免簽 60 天",
+      "visa_type_en": "Visa-Free 60 Days",
+      "entry_class": "free",
+      "stay_days": 60,
+      "color": "#2f9e44",
+      "bg_color": "#ebfbee",
+      "icon_bg": "#b2f2bb",
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期超過 6 個月" },
+        { "label": "回程或續程機票", "required": false, "note": "入境時可能要求出示" },
+        { "label": "住宿訂房", "required": false, "note": "建議備妥" },
+        { "label": "旅費證明", "required": false, "note": "每人每行 20,000 泰銖為參考" }
+      ],
+      "tips": [
+        "2024 年延長免簽停留至 60 天",
+        "可在境內延簽一次（30 天），費用約 1,900 泰銖",
+        "多次出入境不受次數限制，但持續留泰超過 90 天可能被查",
+        "使用 Thailand Pass 免除部分入境文件程序"
+      ],
+      "official_url": "https://www.thaiembassy.com/thailand-visa/thailand-visa-exemption"
+    }
+  ]
+}
