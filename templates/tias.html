@@ -928,16 +928,23 @@ function renderAllByTime() {
   const now    = new Date();
   const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
+  const winStart = new Date(now.getTime() - 2 * 60 * 60 * 1000);  // 2 小時前
+  const winEnd   = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12 小時後
+
   const allSorted = [
     ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
     ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
-  ].sort((a, b) => {
+  ].filter(f => {
+    const t = new Date(f.ScheduleArrivalTime || f.ScheduleDepartureTime || '');
+    return isNaN(t) || (t >= winStart && t <= winEnd);
+  }).sort((a, b) => {
     const ta = a.ScheduleArrivalTime || a.ScheduleDepartureTime || '';
     const tb = b.ScheduleArrivalTime || b.ScheduleDepartureTime || '';
     return ta.localeCompare(tb);
   });
 
-  countEl.textContent = `共 ${allSorted.length} 筆航班`;
+  const total = _allArr.length + _allDep.length;
+  countEl.textContent = `顯示 ${allSorted.length} / ${total} 筆（前2h ～ 後12h）`;
 
   const nowDividerHtml = `<div class="now-divider" id="nowDivider">
     <span class="now-line"></span>
