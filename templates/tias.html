@@ -840,7 +840,7 @@ function switchTab(tab) {
     const hint = document.getElementById('airlineHint');
     if (tab === 'all') {
       hint.textContent = 'TPE 全部即時航班';
-      setTimeout(runSearch, 0);
+      setTimeout(runSearch, 320);
     } else {
       renderAirlineHint();
     }
