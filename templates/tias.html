@@ -446,6 +446,12 @@ body {
 /* airline_map: { "AK": {zh:"亞洲航空", en:"AirAsia"}, ... }                       */
 /* airport_map: { "KUL": {zh:"吉隆坡", en:"Kuala Lumpur", ap_zh:"..."}, ... }       */
 
+/* 動畫結束後移除 body transform，否則 position:fixed 會定位錯誤 */
+document.body.addEventListener('animationend', function() {
+  this.style.animation = 'none';
+  this.style.opacity   = '1';
+}, { once: true });
+
 /* ── 狀態對照 ── */
 const ST_MAP = [
   [/(準時|On.?Time|正常)/i,          'ontime',   '準時'],
