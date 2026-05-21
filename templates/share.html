@@ -12,6 +12,8 @@
 <meta name="apple-mobile-web-app-title" content="交通助理">
 <meta name="theme-color" content="#f0f4ff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<script src="/static/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overscroll-behavior:none;overflow-x:hidden;height:100%}
@@ -383,21 +385,16 @@ body::before{
 </div>
 
 <script>
-// ── 設定 ──────────────────────────────────────────────
-// 本地 / Zeabur 後端（Vercel 前端呼叫 Zeabur 時填 Zeabur URL）
-const SHARE_API = '';
-// 圖片上傳：Imgur Client-ID（申請後替換此值）
-// 申請：https://api.imgur.com/oauth2/addclient → 選 Anonymous usage
-const IMGUR_CID = '';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+const IMGUR_CID = '';  // 填入 Imgur Client-ID 後圖片同步功能啟用
 
-// ── 狀態 ──────────────────────────────────────────────
 let room = null;
 let pollTid = null, debTid = null;
 let pushing = false;
-let known = { text: '', image_url: '' };
+let knownText = '';
 let detectedUrl = null;
 
-// ── Spring buttons ─────────────────────────────────────
+// ── Spring buttons ──────────────────────────────────────
 document.querySelectorAll('button').forEach(el => {
   el.addEventListener('pointerdown', () => {
     el.style.transition = 'transform .1s cubic-bezier(.34,1.56,.64,1)';
@@ -412,25 +409,21 @@ document.querySelectorAll('button').forEach(el => {
   );
 });
 
-// ── API ────────────────────────────────────────────────
-async function api(path, opts = {}) {
-  return fetch(SHARE_API + path, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
-    ...opts
-  });
-}
-
 // ── 建立房間 ────────────────────────────────────────────
 async function doCreate() {
   const btn = document.getElementById('createBtn');
   btn.disabled = true;
   btn.querySelector('.c-title').innerHTML = '<span class="sp"></span>建立中…';
   try {
-    const r = await api('/api/share/room', { method: 'POST' });
-    if (!r.ok) throw new Error();
-    const d = await r.json();
-    room = d.code;
-    enterSync(d.code);
+    let code = null;
+    for (let i = 0; i < 10; i++) {
+      const c = String(Math.floor(1000 + Math.random() * 9000));
+      const { error } = await supa.from('share_rooms').insert({ room_code: c, text: '' });
+      if (!error) { code = c; break; }
+    }
+    if (!code) throw new Error();
+    room = code;
+    enterSync(code);
   } catch {
     alert('建立失敗，請重試');
   } finally {
@@ -446,24 +439,19 @@ async function doJoin() {
   const err = document.getElementById('joinErr');
   const btn = document.getElementById('joinBtn');
   err.classList.remove('show'); inp.classList.remove('error');
-
   if (code.length !== 4) { inp.classList.add('error'); setTimeout(() => inp.classList.remove('error'), 600); return; }
-
   btn.innerHTML = '<span class="sp"></span>';
   btn.disabled = true;
   try {
-    const r = await api('/api/share/room/' + code);
-    if (!r.ok) {
+    const { data } = await supa.from('share_rooms').select('text').eq('room_code', code).single();
+    if (!data) {
       inp.classList.add('error'); err.classList.add('show');
       setTimeout(() => inp.classList.remove('error'), 600);
       return;
     }
-    const d = await r.json();
-    room = code;
-    known = { text: d.text, image_url: d.image_url };
-    document.getElementById('ta').value = d.text || '';
-    if (d.image_url) showImg(d.image_url);
-    detectUrl(d.text || '');
+    room = code; knownText = data.text || '';
+    document.getElementById('ta').value = knownText;
+    detectUrl(knownText);
     enterSync(code);
   } catch { alert('連線失敗，請重試'); }
   finally { btn.innerHTML = '加入'; btn.disabled = false; }
@@ -480,7 +468,7 @@ function enterSync(code) {
   setTimeout(() => document.getElementById('ta').focus(), 120);
 }
 
-// ── Polling ─────────────────────────────────────────────
+// ── Polling（1.5s）─────────────────────────────────────
 function startPoll() {
   clearInterval(pollTid);
   pollTid = setInterval(doPoll, 1500);
@@ -489,23 +477,18 @@ function startPoll() {
 async function doPoll() {
   if (!room || pushing) return;
   try {
-    const r = await api('/api/share/room/' + room);
-    if (r.status === 404) { clearInterval(pollTid); showExpired(); return; }
-    if (!r.ok) return;
-    const d = await r.json();
+    const { data } = await supa.from('share_rooms').select('text').eq('room_code', room).single();
+    if (!data) { clearInterval(pollTid); showExpired(); return; }
     const ta = document.getElementById('ta');
-    if (d.text !== known.text && document.activeElement !== ta) {
-      ta.value = d.text || '';
-      detectUrl(d.text || '');
+    if (data.text !== knownText && document.activeElement !== ta) {
+      ta.value = data.text || '';
+      detectUrl(data.text || '');
+      knownText = data.text || '';
     }
-    if (d.image_url !== known.image_url) {
-      d.image_url ? showImg(d.image_url) : hideImg();
-    }
-    known = { text: d.text, image_url: d.image_url };
   } catch {}
 }
 
-// ── Push text ───────────────────────────────────────────
+// ── Push text（debounce 300ms）─────────────────────────
 document.getElementById('ta').addEventListener('input', () => {
   detectUrl(document.getElementById('ta').value);
   clearTimeout(debTid); debTid = setTimeout(pushText, 300);
@@ -515,10 +498,18 @@ async function pushText() {
   if (!room) return;
   pushing = true;
   const text = document.getElementById('ta').value;
-  known.text = text;
+  knownText = text;
   setSyncing(true);
-  try { await api('/api/share/room/' + room, { method: 'PUT', body: JSON.stringify({ text }) }); }
-  catch {} finally { pushing = false; setSyncing(false); }
+  try {
+    await supa.from('share_rooms')
+      .update({ text, updated_at: new Date().toISOString() })
+      .eq('room_code', room);
+    // 清除超過 1 小時閒置的舊房間
+    await supa.from('share_rooms')
+      .delete()
+      .lt('updated_at', new Date(Date.now() - 3600000).toISOString());
+  } catch {}
+  finally { pushing = false; setSyncing(false); }
 }
 
 function setSyncing(v) {
@@ -538,13 +529,13 @@ function detectUrl(text) {
 }
 function openUrl() { if (detectedUrl) window.open(detectedUrl, '_blank', 'noopener,noreferrer'); }
 
-// ── 圖片上傳 ─────────────────────────────────────────────
+// ── 圖片上傳（Imgur，申請 Client-ID 後啟用）──────────────
 function pickImg() { document.getElementById('fileIn').click(); }
 
 async function onImgFile(file) {
   if (!file) return;
   if (!IMGUR_CID) {
-    alert('請先在 share.html 的 IMGUR_CID 填入你的 Imgur Client-ID\n申請：https://api.imgur.com/oauth2/addclient');
+    alert('圖片同步功能需要 Imgur Client-ID，申請後填入 share.html 的 IMGUR_CID');
     return;
   }
   const st = document.getElementById('upStatus');
@@ -563,8 +554,12 @@ async function onImgFile(file) {
     const res = await r.json();
     if (!res.success) throw new Error(res.data?.error || '上傳失敗');
     const url = res.data.link;
-    showImg(url); known.image_url = url;
-    await api('/api/share/room/' + room, { method: 'PUT', body: JSON.stringify({ image_url: url }) });
+    showImg(url);
+    // 將圖片 URL 附加到文字末尾以跨裝置同步
+    const ta = document.getElementById('ta');
+    ta.value = (ta.value ? ta.value + '\n' : '') + url;
+    knownText = ta.value;
+    pushText();
     st.classList.remove('show');
   } catch(e) {
     alert('圖片上傳失敗：' + e.message);
@@ -596,10 +591,7 @@ function compress(file, maxDim, q) {
 
 function showImg(url) { document.getElementById('imgEl').src = url; document.getElementById('imgWrap').classList.add('show'); }
 function hideImg() { document.getElementById('imgWrap').classList.remove('show'); document.getElementById('imgEl').src = ''; }
-async function clearImg() {
-  hideImg(); known.image_url = '';
-  if (room) await api('/api/share/room/' + room, { method: 'PUT', body: JSON.stringify({ image_url: '' }) });
-}
+function clearImg() { hideImg(); }
 
 // ── 複製房間碼 ──────────────────────────────────────────
 async function copyCode() {
@@ -628,10 +620,10 @@ async function doCopy() {
 // ── 清空 ────────────────────────────────────────────────
 function doClear() { document.getElementById('ta').value = ''; detectUrl(''); pushText(); }
 
-// ── 過期 ────────────────────────────────────────────────
+// ── 過期/離開 ───────────────────────────────────────────
 function showExpired() {
   document.getElementById('expireOverlay').classList.add('show');
-  room = null; expireAt = null;
+  room = null;
 }
 
 function backToA() {
@@ -643,7 +635,7 @@ function backToA() {
   document.getElementById('ta').value = '';
   document.getElementById('joinInput').value = '';
   hideImg(); detectUrl('');
-  known = { text: '', image_url: '' };
+  knownText = '';
 }
 </script>
 </body>
