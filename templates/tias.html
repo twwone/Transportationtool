@@ -934,8 +934,8 @@ function runSearch() {
     ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
     ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
   ].sort((a, b) => {
-    const ta = a.ScheduleArrivalTime || a.ScheduleDepartureTime || '';
-    const tb = b.ScheduleArrivalTime || b.ScheduleDepartureTime || '';
+    const ta = (a._dir === 'arr' ? a.ScheduleArrivalTime : a.ScheduleDepartureTime) || '';
+    const tb = (b._dir === 'arr' ? b.ScheduleArrivalTime : b.ScheduleDepartureTime) || '';
     return ta.localeCompare(tb);
   });
 
@@ -978,24 +978,35 @@ function renderAllByTime() {
 
   const now    = new Date();
   const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const total  = _allArr.length + _allDep.length;
 
-  const winStart = new Date(now.getTime() - 2 * 60 * 60 * 1000);  // 2 小時前
-  const winEnd   = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12 小時後
-
-  const allSorted = [
+  const allBase = [
     ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
     ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
-  ].filter(f => {
-    const t = new Date(f.ScheduleArrivalTime || f.ScheduleDepartureTime || '');
-    return isNaN(t) || (t >= winStart && t <= winEnd);
-  }).sort((a, b) => {
-    const ta = a.ScheduleArrivalTime || a.ScheduleDepartureTime || '';
-    const tb = b.ScheduleArrivalTime || b.ScheduleDepartureTime || '';
+  ].sort((a, b) => {
+    const ta = (a._dir === 'arr' ? a.ScheduleArrivalTime : a.ScheduleDepartureTime) || '';
+    const tb = (b._dir === 'arr' ? b.ScheduleArrivalTime : b.ScheduleDepartureTime) || '';
     return ta.localeCompare(tb);
   });
 
-  const total = _allArr.length + _allDep.length;
-  countEl.textContent = `顯示 ${allSorted.length} / ${total} 筆（前2h ～ 後12h）`;
+  /* 先嘗試時間窗口（前 4h ～ 後 12h） */
+  const winStart = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+  const winEnd   = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+
+  let allSorted = allBase.filter(f => {
+    const iso = f._dir === 'arr' ? f.ScheduleArrivalTime : f.ScheduleDepartureTime;
+    if (!iso) return true;
+    const t = new Date(iso);
+    return isNaN(t) || (t >= winStart && t <= winEnd);
+  });
+
+  /* 窗口內無航班（深夜/清晨）→ 顯示全天 */
+  const windowed = allSorted.length > 0;
+  if (!windowed) allSorted = allBase;
+
+  countEl.textContent = windowed
+    ? `顯示 ${allSorted.length} / ${total} 筆（前4h ～ 後12h）`
+    : `全天 ${allSorted.length} 筆（本時段無航班，顯示完整班表）`;
 
   const nowDividerHtml = `<div class="now-divider" id="nowDivider">
     <span class="now-line"></span>
@@ -1007,7 +1018,7 @@ function renderAllByTime() {
   let nowInserted = false;
 
   for (const f of allSorted) {
-    const schIso = f.ScheduleArrivalTime || f.ScheduleDepartureTime || '';
+    const schIso = (f._dir === 'arr' ? f.ScheduleArrivalTime : f.ScheduleDepartureTime) || '';
     if (!nowInserted && schIso && new Date(schIso) > now) {
       html += nowDividerHtml;
       nowInserted = true;
