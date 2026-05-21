@@ -346,6 +346,10 @@ let currentRoom = null;
 let channel     = null;
 let debounceTimer;
 
+/* 頁面載入立刻預熱 WebSocket，減少後續加入時的冷啟動延遲 */
+const _warmup = supa.channel('_warmup');
+_warmup.subscribe(s => { if (s === 'SUBSCRIBED') supa.removeChannel(_warmup); });
+
 function randCode() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
@@ -441,21 +445,30 @@ function enterSyncMode(code) {
   setTimeout(() => document.getElementById('syncTextarea').focus(), 150);
 }
 
-/* ── Realtime 訂閱（Broadcast，不依賴 DB 事件）── */
+/* ── Realtime 訂閱（Broadcast）── */
 function subscribeRoom(code) {
   if (channel) supa.removeChannel(channel);
   channel = supa.channel('share:' + code, {
     config: { broadcast: { self: false } }
   });
+
+  const ta = document.getElementById('syncTextarea');
+  ta.disabled = true;
+  ta.placeholder = '連線中…';
+
   channel
     .on('broadcast', { event: 'text' }, ({ payload }) => {
-      const ta = document.getElementById('syncTextarea');
-      /* 只在對方輸入時更新，避免游標跳位 */
-      if (document.activeElement !== ta) {
-        ta.value = payload.text ?? '';
-      }
+      if (document.activeElement !== ta) ta.value = payload.text ?? '';
     })
-    .subscribe();
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') {
+        ta.disabled = false;
+        ta.placeholder = '在這裡輸入文字或網址，對方裝置會即時同步…';
+        ta.focus();
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        ta.placeholder = '連線失敗，請重新整理頁面';
+      }
+    });
 }
 
 /* ── 推送文字（debounce 150ms）── */
