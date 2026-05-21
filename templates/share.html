@@ -109,16 +109,6 @@ body::before{
 }
 .sync-dot.syncing{background:#f59e0b;animation:pulse .8s ease-in-out infinite}
 
-/* countdown pill */
-.cd-pill{
-  display:none;align-items:center;gap:4px;
-  padding:5px 9px;border-radius:100px;
-  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);
-  font-size:.72rem;font-weight:700;color:var(--danger);
-  font-variant-numeric:tabular-nums;letter-spacing:.02em;white-space:nowrap;flex-shrink:0;
-}
-.cd-pill.show{display:flex}
-.cd-pill.urgent{animation:pulse 1s ease-in-out infinite}
 
 /* ── Content ── */
 .content{
@@ -317,10 +307,6 @@ body::before{
     <span class="sync-dot" id="syncDot"></span>
     <span id="pillCode">----</span>
   </div>
-  <div class="cd-pill" id="cdPill">
-    <span>⏱</span>
-    <span id="cdText">5:00</span>
-  </div>
 </div>
 
 <div class="content">
@@ -405,8 +391,8 @@ const SHARE_API = '';
 const IMGUR_CID = '';
 
 // ── 狀態 ──────────────────────────────────────────────
-let room = null, expireAt = null;
-let pollTid = null, cdTid = null, debTid = null;
+let room = null;
+let pollTid = null, debTid = null;
 let pushing = false;
 let known = { text: '', image_url: '' };
 let detectedUrl = null;
@@ -443,7 +429,7 @@ async function doCreate() {
     const r = await api('/api/share/room', { method: 'POST' });
     if (!r.ok) throw new Error();
     const d = await r.json();
-    room = d.code; expireAt = d.expire_at;
+    room = d.code;
     enterSync(d.code);
   } catch {
     alert('建立失敗，請重試');
@@ -473,7 +459,7 @@ async function doJoin() {
       return;
     }
     const d = await r.json();
-    room = code; expireAt = d.expire_at;
+    room = code;
     known = { text: d.text, image_url: d.image_url };
     document.getElementById('ta').value = d.text || '';
     if (d.image_url) showImg(d.image_url);
@@ -490,23 +476,8 @@ function enterSync(code) {
   document.getElementById('topTitle').textContent = '剪貼簿';
   document.getElementById('pillCode').textContent = code;
   document.getElementById('roomPill').classList.add('show');
-  document.getElementById('cdPill').classList.add('show');
-  startCountdown(); startPoll();
+  startPoll();
   setTimeout(() => document.getElementById('ta').focus(), 120);
-}
-
-// ── 倒數 ────────────────────────────────────────────────
-function startCountdown() {
-  clearInterval(cdTid);
-  tick(); cdTid = setInterval(tick, 1000);
-  function tick() {
-    const rem = Math.max(0, expireAt - Date.now() / 1000);
-    const m = Math.floor(rem / 60), s = Math.floor(rem % 60);
-    document.getElementById('cdText').textContent = m + ':' + String(s).padStart(2,'0');
-    const pill = document.getElementById('cdPill');
-    if (rem < 60) pill.classList.add('urgent'); else pill.classList.remove('urgent');
-    if (rem <= 0) { clearInterval(cdTid); clearInterval(pollTid); showExpired(); }
-  }
 }
 
 // ── Polling ─────────────────────────────────────────────
@@ -519,10 +490,9 @@ async function doPoll() {
   if (!room || pushing) return;
   try {
     const r = await api('/api/share/room/' + room);
-    if (r.status === 404) { clearInterval(pollTid); clearInterval(cdTid); showExpired(); return; }
+    if (r.status === 404) { clearInterval(pollTid); showExpired(); return; }
     if (!r.ok) return;
     const d = await r.json();
-    expireAt = d.expire_at;
     const ta = document.getElementById('ta');
     if (d.text !== known.text && document.activeElement !== ta) {
       ta.value = d.text || '';
@@ -670,8 +640,6 @@ function backToA() {
   document.getElementById('stateA').style.display = '';
   document.getElementById('topTitle').textContent = '跨裝置剪貼簿';
   document.getElementById('roomPill').classList.remove('show');
-  document.getElementById('cdPill').classList.remove('show');
-  document.getElementById('cdPill').classList.remove('urgent');
   document.getElementById('ta').value = '';
   document.getElementById('joinInput').value = '';
   hideImg(); detectUrl('');

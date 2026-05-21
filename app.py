@@ -807,14 +807,14 @@ def amenities_api():
 # ──────────────────────────────────────────────
 _SHARE: dict = {}
 _SHARE_LOCK  = threading.Lock()
-_SHARE_TTL   = 300  # 5 分鐘
+_SHARE_TTL   = 3600  # 1 小時閒置刪除
 
 def _share_cleanup():
     while True:
-        time.sleep(30)
-        now = time.time()
+        time.sleep(300)
+        cutoff = time.time() - _SHARE_TTL
         with _SHARE_LOCK:
-            expired = [k for k, v in _SHARE.items() if v["expire_at"] < now]
+            expired = [k for k, v in _SHARE.items() if v["updated_at"] < cutoff]
             for k in expired:
                 del _SHARE[k]
 
@@ -834,18 +834,18 @@ def share():
 def share_create():
     if request.method == "OPTIONS":
         return _sc(jsonify({}))
-    expire_at = time.time() + _SHARE_TTL
+    now = time.time()
     code = None
     for _ in range(10):
         c = str(random.randint(1000, 9999))
         with _SHARE_LOCK:
             if c not in _SHARE:
-                _SHARE[c] = {"text": "", "image_url": "", "expire_at": expire_at}
+                _SHARE[c] = {"text": "", "image_url": "", "updated_at": now}
                 code = c
                 break
     if not code:
         return _sc(jsonify({"error": "retry later"})), 503
-    return _sc(jsonify({"code": code, "expire_at": expire_at}))
+    return _sc(jsonify({"code": code}))
 
 @app.route("/api/share/room/<code>", methods=["GET", "PUT", "DELETE", "OPTIONS"])
 def share_room(code):
@@ -855,20 +855,21 @@ def share_room(code):
     if request.method == "GET":
         with _SHARE_LOCK:
             room = dict(_SHARE.get(code) or {})
-        if not room or room["expire_at"] < now:
+        if not room or time.time() - room["updated_at"] > _SHARE_TTL:
             with _SHARE_LOCK:
                 _SHARE.pop(code, None)
             return _sc(jsonify({"error": "not found"})), 404
-        return _sc(jsonify({"text": room["text"], "image_url": room["image_url"], "expire_at": room["expire_at"]}))
+        return _sc(jsonify({"text": room["text"], "image_url": room["image_url"]}))
     elif request.method == "PUT":
         with _SHARE_LOCK:
             room = _SHARE.get(code)
-            if not room or room["expire_at"] < now:
+            if not room or time.time() - room["updated_at"] > _SHARE_TTL:
                 _SHARE.pop(code, None)
                 return _sc(jsonify({"error": "not found"})), 404
             body = request.get_json(silent=True) or {}
             if "text"      in body: room["text"]      = body["text"]
             if "image_url" in body: room["image_url"] = body["image_url"]
+            room["updated_at"] = time.time()
         return _sc(jsonify({"ok": True}))
     elif request.method == "DELETE":
         with _SHARE_LOCK:
