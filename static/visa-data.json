@@ -1,5 +1,5 @@
 {
-  "updated": "2026-05-20",
+  "updated": "2026-05-21",
   "source_note": "資料以現行規定為準，出發前請至外交部領事事務局或各國官方入境網站確認最新規定。",
   "routes": [
     {
@@ -11,9 +11,11 @@
       "visa_type_en": "Visa-Free",
       "entry_class": "free",
       "stay_days": 90,
+      "pinned": true,
       "color": "#e03131",
       "bg_color": "#fff5f5",
       "icon_bg": "#ffc9c9",
+      "search_tags": ["日本", "japan", "東京", "osaka", "tokyo"],
       "conditions": ["持有效中華民國護照"],
       "required_docs": [
         { "label": "中華民國護照", "required": true, "note": "效期須超過預計停留天數" },
@@ -26,6 +28,11 @@
         "同一入境日起算，不得以短期出境方式規避停留日數",
         "持觀光簽不得打工，Working Holiday 需另行申請"
       ],
+      "warnings": [
+        "❌ 護照效期不足（少於停留天數）→ 建議效期至少剩餘 3 個月以上",
+        "❌ 大量現金入境（超過 100 萬日圓或等值外幣）→ 須填報稅關申報書",
+        "❌ 持外國護照不可使用日本電子海關通道（外籍旅客需走人工櫃台）"
+      ],
       "official_url": "https://www.mofa.go.jp/j_info/visit/visa/index.html"
     },
     {
@@ -37,13 +44,15 @@
       "visa_type_en": "K-ETA Required",
       "entry_class": "evisa",
       "stay_days": 90,
+      "pinned": true,
       "color": "#1971c2",
       "bg_color": "#e7f5ff",
       "icon_bg": "#a5d8ff",
+      "search_tags": ["韓國", "korea", "首爾", "seoul", "釜山", "busan"],
       "conditions": ["持有效中華民國護照", "事先申請 K-ETA"],
       "required_docs": [
         { "label": "中華民國護照", "required": true, "note": "效期須超過預計停留天數" },
-        { "label": "K-ETA 電子旅行授權", "required": true, "note": "10,000 韓圓，有效期 2 年，可於 k-eta.go.kr 申請" },
+        { "label": "K-ETA 電子旅行授權", "required": true, "note": "10,000 韓圓，有效期 2 年，於 k-eta.go.kr 申請" },
         { "label": "回程或續程機票", "required": false, "note": "建議備妥" },
         { "label": "住宿訂房紀錄", "required": false, "note": "入境時可能被問及" }
       ],
@@ -51,7 +60,12 @@
         "K-ETA 建議出發前至少 72 小時申請，約 30 分鐘以內核准",
         "K-ETA 一次申請可多次入境，有效期 2 年",
         "Jeju 島部分航班可豁免 K-ETA，但仍建議提前申請",
-        "停留上限 90 天（6 個月期間）"
+        "停留上限 90 天（6 個月期間內計算）"
+      ],
+      "warnings": [
+        "❌ 未持 K-ETA → 無法辦理 Check-in，需現場協助申請（可能誤機）",
+        "❌ K-ETA 申請中（Pending）→ 不可視同已核准，須等待核准通知才能登機",
+        "❌ 曾被韓國拒絕入境者 → K-ETA 可能自動拒絕，須申請正式 C-3 簽證"
       ],
       "official_url": "https://www.k-eta.go.kr"
     },
@@ -64,9 +78,11 @@
       "visa_type_en": "ESTA Required",
       "entry_class": "evisa",
       "stay_days": 90,
+      "pinned": true,
       "color": "#1864ab",
       "bg_color": "#e8f4fd",
       "icon_bg": "#74c0fc",
+      "search_tags": ["美國", "usa", "america", "紐約", "洛杉磯", "LA", "NY"],
       "conditions": ["持有效中華民國護照", "事先申請 ESTA"],
       "required_docs": [
         { "label": "中華民國護照", "required": true, "note": "須含電子晶片（ePassport），效期超過停留天數" },
@@ -80,6 +96,11 @@
         "入境時由 CBP 人員決定最終核准，ESTA 核准不等於保證入境",
         "曾持其他護照前往伊朗、伊拉克、敘利亞、北韓者，需改申請 B 簽"
       ],
+      "warnings": [
+        "❌ ESTA 被拒（Denied）→ 不得登機，需向美國大使館申請 B-1/B-2 簽證",
+        "❌ 非電子護照（無晶片）→ 無法使用 VWP/ESTA，須改申請傳統簽證",
+        "❌ 曾被美國驅逐或拒絕入境 → ESTA 不適用，必須向大使館申請正式簽證"
+      ],
       "official_url": "https://esta.cbp.dhs.gov"
     },
     {
@@ -91,9 +112,11 @@
       "visa_type_en": "Visa-Free 45 Days",
       "entry_class": "free",
       "stay_days": 45,
+      "pinned": true,
       "color": "#c92a2a",
       "bg_color": "#fff5f5",
       "icon_bg": "#ffa8a8",
+      "search_tags": ["越南", "vietnam", "胡志明", "河內", "hanoi", "ho chi minh", "峴港", "danang"],
       "conditions": ["持有效中華民國護照"],
       "required_docs": [
         { "label": "中華民國護照", "required": true, "note": "效期須超過 6 個月" },
@@ -102,9 +125,14 @@
       ],
       "tips": [
         "2023 年 8 月起對台灣護照免簽，停留上限 45 天",
-        "如需延長，可申請 E-Visa（電子簽證），最長 90 天",
-        "E-Visa 費用約 USD $25，於 evisa.xuatnhapcanh.gov.vn 申請",
-        "多次入境免簽後若需再訪，仍可免簽（無冷卻期限制）"
+        "如需延長，可申請 E-Visa（電子簽證），最長 90 天，費用約 USD $25",
+        "多次入境免簽後若需再訪，仍可免簽（無冷卻期限制）",
+        "越南各大城市（河內、胡志明、峴港）均適用"
+      ],
+      "warnings": [
+        "❌ 護照效期未滿 6 個月 → 越南海關可能拒絕入境，地勤應提前告知旅客",
+        "❌ 攜帶超過 USD $5,000 或等值現金入境 → 須向海關申報",
+        "❌ 攜帶政治敏感物品（含南海地圖等）→ 可能被海關查扣"
       ],
       "official_url": "https://evisa.xuatnhapcanh.gov.vn"
     },
@@ -117,9 +145,11 @@
       "visa_type_en": "Visa-Free 60 Days",
       "entry_class": "free",
       "stay_days": 60,
-      "color": "#2f9e44",
-      "bg_color": "#ebfbee",
-      "icon_bg": "#b2f2bb",
+      "pinned": true,
+      "color": "#7048e8",
+      "bg_color": "#f3f0ff",
+      "icon_bg": "#d0bfff",
+      "search_tags": ["泰國", "thailand", "曼谷", "bangkok", "普吉", "phuket", "清邁", "chiang mai"],
       "conditions": ["持有效中華民國護照"],
       "required_docs": [
         { "label": "中華民國護照", "required": true, "note": "效期超過 6 個月" },
@@ -131,9 +161,348 @@
         "2024 年延長免簽停留至 60 天",
         "可在境內延簽一次（30 天），費用約 1,900 泰銖",
         "多次出入境不受次數限制，但持續留泰超過 90 天可能被查",
-        "使用 Thailand Pass 免除部分入境文件程序"
+        "使用 Thailand Pass 可免除部分入境文件程序"
+      ],
+      "warnings": [
+        "❌ 護照效期未滿 6 個月 → 泰國海關可能拒絕入境",
+        "❌ 持單程票且無旅費證明 → 可能被地勤拒絕 Check-in",
+        "❌ 攜帶電子菸或 Vape → 違法，最高罰款 30,000 泰銖並可能被拘留"
       ],
       "official_url": "https://www.thaiembassy.com/thailand-visa/thailand-visa-exemption"
+    },
+    {
+      "id": "SG",
+      "country_zh": "新加坡",
+      "country_en": "Singapore",
+      "flag": "🇸🇬",
+      "visa_type": "免簽 30 天",
+      "visa_type_en": "Visa-Free 30 Days",
+      "entry_class": "free",
+      "stay_days": 30,
+      "pinned": true,
+      "color": "#e03131",
+      "bg_color": "#fff5f5",
+      "icon_bg": "#ffc9c9",
+      "search_tags": ["新加坡", "singapore", "SG", "獅城", "樟宜"],
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期須超過 6 個月" },
+        { "label": "回程或續程機票", "required": true, "note": "新加坡入境審查嚴格，必須持有" },
+        { "label": "住宿訂房紀錄", "required": false, "note": "建議備妥" },
+        { "label": "足夠旅費", "required": false, "note": "移民局非常重視財力證明" }
+      ],
+      "tips": [
+        "免簽 30 天，可於移民局（ICA）申請延長",
+        "樟宜機場轉機 96 小時以內可申請 STSL 短暫免費入境觀光",
+        "攜帶任何種類電子菸、Vape 均違法，罰款最高 SGD $10,000",
+        "未經申報大量現金（超過 SGD $20,000）→ 須向海關申報"
+      ],
+      "warnings": [
+        "❌ 缺乏回程機票 → 地勤應拒絕 Check-in，航空公司須負擔遣返費用",
+        "❌ 護照效期未滿 6 個月 → 入境被拒，地勤必須確認",
+        "❌ 攜帶電子菸或 Vape 入境 → 違法，可能當場被拘留查扣"
+      ],
+      "official_url": "https://www.ica.gov.sg/enter-transit-depart/entering-singapore"
+    },
+    {
+      "id": "MY",
+      "country_zh": "馬來西亞",
+      "country_en": "Malaysia",
+      "flag": "🇲🇾",
+      "visa_type": "免簽 30 天",
+      "visa_type_en": "Visa-Free 30 Days",
+      "entry_class": "free",
+      "stay_days": 30,
+      "pinned": false,
+      "color": "#1971c2",
+      "bg_color": "#e7f5ff",
+      "icon_bg": "#a5d8ff",
+      "search_tags": ["馬來西亞", "malaysia", "MY", "吉隆坡", "KL", "kuala lumpur", "檳城", "penang", "亞庇", "kota kinabalu"],
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期須超過 6 個月" },
+        { "label": "回程或續程機票", "required": false, "note": "入境時可能要求出示" },
+        { "label": "住宿訂房", "required": false, "note": "建議備妥" }
+      ],
+      "tips": [
+        "免簽 30 天，可申請延長（Social Visit Pass）",
+        "KLIA2 為亞航（AirAsia）主要航站，注意 KLIA 與 KLIA2 為不同航站",
+        "攜帶毒品（即使少量）面臨極嚴厲法律制裁，包含死刑",
+        "衣著建議保守，進入清真寺需著長袖長褲並頭巾"
+      ],
+      "warnings": [
+        "❌ 攜帶任何毒品（即使微量）→ 馬來西亞毒品罪可判死刑，絕對嚴禁",
+        "❌ 護照效期未滿 6 個月 → 可能被拒絕入境",
+        "❌ 旅客誤搭航廈：KLIA 與 KLIA2 相距遠 → 須提前確認搭乘航廈"
+      ],
+      "official_url": "https://www.imi.gov.my"
+    },
+    {
+      "id": "PH",
+      "country_zh": "菲律賓",
+      "country_en": "Philippines",
+      "flag": "🇵🇭",
+      "visa_type": "免簽 30 天",
+      "visa_type_en": "Visa-Free 30 Days",
+      "entry_class": "free",
+      "stay_days": 30,
+      "pinned": false,
+      "color": "#1864ab",
+      "bg_color": "#e8f4fd",
+      "icon_bg": "#74c0fc",
+      "search_tags": ["菲律賓", "philippines", "PH", "馬尼拉", "manila", "宿霧", "cebu", "長灘島", "boracay"],
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期須超過 6 個月" },
+        { "label": "回程或續程機票", "required": true, "note": "菲律賓移民局明確要求，無票可拒絕入境" },
+        { "label": "住宿訂房", "required": false, "note": "建議備妥" }
+      ],
+      "tips": [
+        "免簽 30 天，可在境內向移民局（BOQ）申請延長，每次約 3,000 菲律賓披索",
+        "馬尼拉、宿霧、長灘島主要機場均適用",
+        "菲律賓入境審查特別重視回程機票，缺乏可能被拒絕登機",
+        "注意：馬尼拉尼諾依國際機場（MNL）共有 4 個航廈，務必確認"
+      ],
+      "warnings": [
+        "❌ 未持回程機票 → 菲律賓法規明確要求，地勤可拒絕 Check-in",
+        "❌ 護照效期未滿 6 個月 → 入境被拒，必須事先確認",
+        "❌ 旅遊旺季延簽排隊時間極長 → 建議旅客提前規劃"
+      ],
+      "official_url": "https://immigration.gov.ph"
+    },
+    {
+      "id": "ID",
+      "country_zh": "印尼",
+      "country_en": "Indonesia",
+      "flag": "🇮🇩",
+      "visa_type": "落地免簽 30 天",
+      "visa_type_en": "Free Visa on Arrival 30 Days",
+      "entry_class": "free",
+      "stay_days": 30,
+      "pinned": false,
+      "color": "#e03131",
+      "bg_color": "#fff5f5",
+      "icon_bg": "#ffc9c9",
+      "search_tags": ["印尼", "indonesia", "ID", "峇里島", "巴里島", "bali", "雅加達", "jakarta"],
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期須超過 6 個月" },
+        { "label": "回程或續程機票", "required": true, "note": "入境必要文件" },
+        { "label": "住宿訂房", "required": false, "note": "建議備妥" }
+      ],
+      "tips": [
+        "2023 年 7 月起對台灣護照實施落地免簽（BVKS），30 天免費",
+        "僅限 Ngurah Rai（峇里島）、Soekarno-Hatta（雅加達）等主要國際機場適用",
+        "可於入境後向移民局申請延長 30 天（需前往辦理）",
+        "峇里島海關對煙酒免稅量限制嚴格，請確認最新規定"
+      ],
+      "warnings": [
+        "❌ 護照效期未滿 6 個月 → 被拒入境",
+        "❌ 攜帶毒品（包含大麻）→ 印尼毒品刑法極嚴，最高死刑",
+        "❌ 小型機場或陸路口岸 → 部分不適用落地免簽，需事先確認再出發"
+      ],
+      "official_url": "https://evisa.imigrasi.go.id"
+    },
+    {
+      "id": "CN",
+      "country_zh": "中國大陸",
+      "country_en": "Mainland China",
+      "flag": "🇨🇳",
+      "visa_type": "須持台胞證",
+      "visa_type_en": "Taiwan Resident Permit Required",
+      "entry_class": "required",
+      "stay_days": 180,
+      "pinned": false,
+      "color": "#e03131",
+      "bg_color": "#fff5f5",
+      "icon_bg": "#ffc9c9",
+      "search_tags": ["中國", "大陸", "china", "CN", "北京", "上海", "beijing", "shanghai", "廣州", "guangzhou"],
+      "conditions": ["須持台灣居民來往大陸通行證（台胞證）"],
+      "required_docs": [
+        { "label": "台灣居民來往大陸通行證（台胞證）", "required": true, "note": "由大陸公安機關核發，效期通常 5 年" },
+        { "label": "中華民國護照", "required": false, "note": "中華民國護照在大陸境內不具法律效力，僅供輔助參考" },
+        { "label": "回程機票", "required": false, "note": "建議備妥" }
+      ],
+      "tips": [
+        "中華民國護照不被中國大陸承認，入境須使用台胞證",
+        "台胞證效期通常 5 年，可多次入境，每次停留上限 180 天",
+        "2019 年起推出「台灣居民居住證」，長期居住者可申請",
+        "大陸境內嚴格網路管制，LINE、Facebook、Google 等均無法使用"
+      ],
+      "warnings": [
+        "❌ 僅持中華民國護照 → 大陸境內護照不具效力，地勤須提醒旅客必須持台胞證",
+        "❌ 台胞證效期不足或遺失 → 入境被拒，需提前換發新證",
+        "❌ 未準備 VPN → 大陸境內常用通訊軟體（LINE、WhatsApp）全面封鎖"
+      ],
+      "official_url": "https://www.sef.org.tw/en/index.html"
+    },
+    {
+      "id": "MO",
+      "country_zh": "澳門",
+      "country_en": "Macau SAR",
+      "flag": "🇲🇴",
+      "visa_type": "免簽 30 天",
+      "visa_type_en": "Visa-Free 30 Days",
+      "entry_class": "free",
+      "stay_days": 30,
+      "pinned": false,
+      "color": "#2f9e44",
+      "bg_color": "#ebfbee",
+      "icon_bg": "#b2f2bb",
+      "search_tags": ["澳門", "macau", "macao", "MO"],
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期超過停留天數即可" },
+        { "label": "回程機票或渡輪票", "required": false, "note": "建議備妥" }
+      ],
+      "tips": [
+        "台灣護照入境澳門免簽，停留上限 30 天",
+        "可搭渡輪從香港轉往澳門（外港客運碼頭、氹仔碼頭）",
+        "港珠澳大橋連接香港、珠海、澳門，需事先取得相應許可",
+        "澳門赤鱲角機場（MFM）接受直飛航班"
+      ],
+      "warnings": [
+        "❌ 護照效期過短 → 建議效期超過停留天數至少 3 個月",
+        "❌ 欲前往珠海等大陸城市 → 澳門免簽不等同可入大陸，仍需台胞證"
+      ],
+      "official_url": "https://www.fsm.gov.mo/psp/cht/upper/portal/visitor/tabs/tab2/page1"
+    },
+    {
+      "id": "HK",
+      "country_zh": "香港",
+      "country_en": "Hong Kong SAR",
+      "flag": "🇭🇰",
+      "visa_type": "免簽 30 天",
+      "visa_type_en": "Visa-Free 30 Days",
+      "entry_class": "free",
+      "stay_days": 30,
+      "pinned": true,
+      "color": "#c2255c",
+      "bg_color": "#fff0f6",
+      "icon_bg": "#faa2c1",
+      "search_tags": ["香港", "hong kong", "HK"],
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期超過停留天數" },
+        { "label": "回程機票或船票", "required": false, "note": "建議備妥，入境時可能詢問" },
+        { "label": "住宿訂房", "required": false, "note": "可能被詢問入境目的與住宿地點" }
+      ],
+      "tips": [
+        "台灣護照入境香港免簽，停留上限 30 天",
+        "可搭高鐵（XRL）直達西九龍站，無需在羅湖等地過境",
+        "若擬長期居留或工作，需事先申請正式簽注",
+        "香港國際機場（HKG）為 24 小時運營，轉機旅客眾多"
+      ],
+      "warnings": [
+        "❌ 入境目的不清或停留計畫模糊 → 2020 年後香港入境審查趨嚴，需清楚說明目的",
+        "❌ 護照效期不足 → 建議效期超過停留天數 3 個月以上",
+        "❌ 攜帶政治敏感物品（如抗議相關標語）→《國家安全法》下可能被扣押查問"
+      ],
+      "official_url": "https://www.immd.gov.hk"
+    },
+    {
+      "id": "AU",
+      "country_zh": "澳洲",
+      "country_en": "Australia",
+      "flag": "🇦🇺",
+      "visa_type": "ETA（需申請）",
+      "visa_type_en": "ETA Required",
+      "entry_class": "evisa",
+      "stay_days": 90,
+      "pinned": true,
+      "color": "#1864ab",
+      "bg_color": "#e8f4fd",
+      "icon_bg": "#74c0fc",
+      "search_tags": ["澳洲", "australia", "AU", "雪梨", "sydney", "墨爾本", "melbourne", "布里斯本", "brisbane"],
+      "conditions": ["持有效中華民國護照", "事先申請 ETA（Subclass 601）"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "須含電子晶片（ePassport），效期超過 6 個月" },
+        { "label": "澳洲 ETA（Subclass 601）", "required": true, "note": "AUD $20，可於 Australian ETA App 申請，通常即時核准" },
+        { "label": "回程機票", "required": false, "note": "入境時可能詢問" },
+        { "label": "住宿訂房", "required": false, "note": "建議備妥" }
+      ],
+      "tips": [
+        "ETA (601) 線上申請費 AUD $20，通常數分鐘核准",
+        "ETA 有效期 1 年，每次停留上限 3 個月，可多次入境",
+        "澳洲海關極嚴格：食品、動植物產品一律須申報，否則重罰",
+        "攜帶現金超過 AUD $10,000 須向海關申報"
+      ],
+      "warnings": [
+        "❌ 未取得 ETA 直接搭機 → 無法辦理 Check-in，航空公司須拒絕登機",
+        "❌ 未申報動植物產品（含泡麵、香腸、新鮮水果）→ 最高罰款 AUD $2,664",
+        "❌ 攜帶處方藥超過 3 個月用量 → 需取得醫師證明文件並主動申報"
+      ],
+      "official_url": "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/electronic-travel-authority-601"
+    },
+    {
+      "id": "CA",
+      "country_zh": "加拿大",
+      "country_en": "Canada",
+      "flag": "🇨🇦",
+      "visa_type": "eTA（需申請）",
+      "visa_type_en": "eTA Required",
+      "entry_class": "evisa",
+      "stay_days": 180,
+      "pinned": false,
+      "color": "#c92a2a",
+      "bg_color": "#fff5f5",
+      "icon_bg": "#ffa8a8",
+      "search_tags": ["加拿大", "canada", "CA", "溫哥華", "vancouver", "多倫多", "toronto"],
+      "conditions": ["持有效中華民國護照", "事先申請 eTA"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "須含電子晶片，效期超過停留天數" },
+        { "label": "加拿大 eTA", "required": true, "note": "CAD $7，於 canada.ca 申請，通常數分鐘核准，有效 5 年" },
+        { "label": "回程機票", "required": false, "note": "入境時可能詢問" },
+        { "label": "財力證明", "required": false, "note": "移民官可能詢問旅費來源" }
+      ],
+      "tips": [
+        "eTA 費用 CAD $7，有效期 5 年或至護照到期（以先到者為準）",
+        "每次入境可停留最長 6 個月，由移民官員決定",
+        "由陸路（美加邊境）或海路入境不需 eTA，但須持有效旅行文件",
+        "入境加拿大後可自由往返美國（需持 ESTA 或美簽）"
+      ],
+      "warnings": [
+        "❌ eTA 申請被要求追加資料 → 審查時間可能數天，勿臨時才申請",
+        "❌ 未持電子護照（無晶片）→ 無法申請 eTA，需改申請傳統簽證",
+        "❌ 攜帶大麻製品從海外帶入加拿大 → 即使加拿大國內合法，從境外攜入仍屬違法"
+      ],
+      "official_url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/eta.html"
+    },
+    {
+      "id": "EU",
+      "country_zh": "申根區（歐盟）",
+      "country_en": "Schengen Area",
+      "flag": "🇪🇺",
+      "visa_type": "免簽 90/180 天",
+      "visa_type_en": "Visa-Free 90/180 Days",
+      "entry_class": "free",
+      "stay_days": 90,
+      "pinned": false,
+      "color": "#1c7ed6",
+      "bg_color": "#e7f5ff",
+      "icon_bg": "#a5d8ff",
+      "search_tags": ["申根", "歐洲", "歐盟", "schengen", "europe", "EU", "法國", "france", "德國", "germany", "義大利", "italy", "西班牙", "spain", "荷蘭", "netherlands"],
+      "conditions": ["持有效中華民國護照"],
+      "required_docs": [
+        { "label": "中華民國護照", "required": true, "note": "效期須超過離境日後 3 個月（建議 6 個月以上）" },
+        { "label": "回程或續程機票", "required": true, "note": "申根邊境嚴格查驗，務必持有" },
+        { "label": "住宿訂房紀錄", "required": true, "note": "所有申根國家均要求備妥全程住宿證明" },
+        { "label": "申根旅行保險", "required": true, "note": "須涵蓋所有申根國家，保額至少 EUR €30,000" },
+        { "label": "旅費證明", "required": false, "note": "每日 EUR €50 為各國參考基準" }
+      ],
+      "tips": [
+        "台灣護照享有申根 90/180 天免簽：180 天期間內最多可停留 90 天",
+        "申根區涵蓋 27 個國家（法德義西葡荷等），跨境無需重新入境",
+        "歐盟 ETIAS（類似 ESTA）預計 2026 年啟動，目前尚未正式上線",
+        "英國、愛爾蘭、保加利亞、羅馬尼亞等國不在申根區內，需另行確認"
+      ],
+      "warnings": [
+        "❌ 未持申根旅行保險 → 德國、荷蘭等國入境審查時嚴格查驗，可能被拒",
+        "❌ 未持回程機票或住宿訂房 → 邊境可能拒絕入境",
+        "❌ 停留超過 90 天（在 180 天期間內累計）→ 非法滯留，影響未來入境資格",
+        "❌ ETIAS 正式啟動後忘記申請 → 屆時將無法搭機，建議持續關注官方公告"
+      ],
+      "official_url": "https://home-affairs.ec.europa.eu/policies/schengen-borders-and-visa/schengen-visa_en"
     }
   ]
 }
