@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import time
 import threading
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
@@ -801,9 +802,78 @@ def amenities_api():
     })
 
 
+# ──────────────────────────────────────────────
+#  Share 剪貼簿後端（in-memory，需 Zeabur 常駐行程）
+# ──────────────────────────────────────────────
+_SHARE: dict = {}
+_SHARE_LOCK  = threading.Lock()
+_SHARE_TTL   = 300  # 5 分鐘
+
+def _share_cleanup():
+    while True:
+        time.sleep(30)
+        now = time.time()
+        with _SHARE_LOCK:
+            expired = [k for k, v in _SHARE.items() if v["expire_at"] < now]
+            for k in expired:
+                del _SHARE[k]
+
+threading.Thread(target=_share_cleanup, daemon=True).start()
+
+def _sc(resp):
+    resp.headers["Access-Control-Allow-Origin"]  = "*"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, PUT, POST, DELETE, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return resp
+
 @app.route("/share")
 def share():
     return render_template("share.html")
+
+@app.route("/api/share/room", methods=["POST", "OPTIONS"])
+def share_create():
+    if request.method == "OPTIONS":
+        return _sc(jsonify({}))
+    expire_at = time.time() + _SHARE_TTL
+    code = None
+    for _ in range(10):
+        c = str(random.randint(1000, 9999))
+        with _SHARE_LOCK:
+            if c not in _SHARE:
+                _SHARE[c] = {"text": "", "image_url": "", "expire_at": expire_at}
+                code = c
+                break
+    if not code:
+        return _sc(jsonify({"error": "retry later"})), 503
+    return _sc(jsonify({"code": code, "expire_at": expire_at}))
+
+@app.route("/api/share/room/<code>", methods=["GET", "PUT", "DELETE", "OPTIONS"])
+def share_room(code):
+    if request.method == "OPTIONS":
+        return _sc(jsonify({}))
+    now = time.time()
+    if request.method == "GET":
+        with _SHARE_LOCK:
+            room = dict(_SHARE.get(code) or {})
+        if not room or room["expire_at"] < now:
+            with _SHARE_LOCK:
+                _SHARE.pop(code, None)
+            return _sc(jsonify({"error": "not found"})), 404
+        return _sc(jsonify({"text": room["text"], "image_url": room["image_url"], "expire_at": room["expire_at"]}))
+    elif request.method == "PUT":
+        with _SHARE_LOCK:
+            room = _SHARE.get(code)
+            if not room or room["expire_at"] < now:
+                _SHARE.pop(code, None)
+                return _sc(jsonify({"error": "not found"})), 404
+            body = request.get_json(silent=True) or {}
+            if "text"      in body: room["text"]      = body["text"]
+            if "image_url" in body: room["image_url"] = body["image_url"]
+        return _sc(jsonify({"ok": True}))
+    elif request.method == "DELETE":
+        with _SHARE_LOCK:
+            _SHARE.pop(code, None)
+        return _sc(jsonify({"ok": True}))
 
 
 if __name__ == "__main__":

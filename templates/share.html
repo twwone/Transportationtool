@@ -12,535 +12,670 @@
 <meta name="apple-mobile-web-app-title" content="交通助理">
 <meta name="theme-color" content="#f0f4ff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<script src="/static/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overscroll-behavior: none; overflow-x: hidden; height: 100%; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overscroll-behavior:none;overflow-x:hidden;height:100%}
 
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes pageIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+:root{
+  --bg:#f0f4ff;
+  --surface:rgba(255,255,255,.72);
+  --text:#0f0f1a;
+  --sub:#6b7280;
+  --accent:#3b82f6;
+  --danger:#ef4444;
+  --radius-l:24px;
+  --radius-m:18px;
+  --glass-bg:rgba(255,255,255,.2);
+  --glass-border:rgba(255,255,255,.4);
+  --glass-shadow:0 8px 32px rgba(0,0,0,.08);
 }
-@keyframes shake {
-  0%,100% { transform: translateX(0); }
-  20%     { transform: translateX(-8px); }
-  40%     { transform: translateX(8px); }
-  60%     { transform: translateX(-6px); }
-  80%     { transform: translateX(6px); }
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#000;
+    --surface:rgba(28,28,30,.92);
+    --text:#f2f2f7;
+    --sub:#8e8e93;
+    --accent:#60a5fa;
+    --danger:#ff453a;
+    --glass-bg:rgba(255,255,255,.07);
+    --glass-border:rgba(255,255,255,.12);
+    --glass-shadow:0 8px 32px rgba(0,0,0,.35);
+  }
 }
 
-:root {
-  --bg:      #f0f4ff;
-  --surface: #ffffff;
-  --border:  rgba(0,0,0,0.07);
-  --text:    #0f0f1a;
-  --sub:     #6b7280;
-  --accent:  #3b82f6;
-  --radius-l: 28px;
-  --radius-m: 20px;
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  animation:pageIn .35s cubic-bezier(.22,1,.36,1) both;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both;
+/* mesh gradient bg */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%,rgba(120,119,198,.13) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 60%,rgba(99,179,237,.1) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
 }
 
 /* ── Topbar ── */
-.topbar {
-  width: 100%;
-  background: rgba(240,244,255,0.9);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
-  padding: 12px 16px 14px;
-  padding-top: max(14px, env(safe-area-inset-top) + 10px);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.topbar{
+  position:sticky;top:0;z-index:100;
+  width:100%;
+  background:rgba(240,244,255,.85);
+  backdrop-filter:blur(32px) saturate(180%);
+  -webkit-backdrop-filter:blur(32px) saturate(180%);
+  border-bottom:.5px solid rgba(0,0,0,.06);
+  padding:12px 16px 14px;
+  padding-top:max(14px,env(safe-area-inset-top) + 10px);
+  display:flex;align-items:center;gap:8px;
 }
-.back-btn {
-  color: var(--accent);
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-decoration: none;
-  min-width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
+@media(prefers-color-scheme:dark){
+  .topbar{background:rgba(0,0,0,.85);border-color:rgba(255,255,255,.06);}
 }
-.topbar-title { font-size: 1.08rem; font-weight: 700; flex: 1; min-width: 0; }
+.back-btn{
+  color:var(--accent);font-size:.95rem;font-weight:600;
+  text-decoration:none;min-width:44px;height:44px;
+  display:flex;align-items:center;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+}
+.topbar-title{font-size:1.05rem;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* 房間碼 pill（點擊可複製） */
-.room-pill {
-  display: none;
-  align-items: center;
-  gap: 6px;
-  background: rgba(59,130,246,0.1);
-  border: 1px solid rgba(59,130,246,0.22);
-  border-radius: 100px;
-  padding: 5px 12px 5px 9px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--accent);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  white-space: nowrap;
-  flex-shrink: 0;
+/* room pill */
+.room-pill{
+  display:none;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:100px;
+  background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.22);
+  font-size:.72rem;font-weight:700;color:var(--accent);
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
 }
-.room-pill.show { display: flex; }
-.room-pill-code { font-size: 0.85rem; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.room-pill.show{display:flex}
+.sync-dot{
+  display:inline-block;width:6px;height:6px;
+  border-radius:50%;background:#22c55e;flex-shrink:0;
+  transition:background .4s;
+}
+.sync-dot.syncing{background:#f59e0b;animation:pulse .8s ease-in-out infinite}
+
+/* countdown pill */
+.cd-pill{
+  display:none;align-items:center;gap:4px;
+  padding:5px 9px;border-radius:100px;
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);
+  font-size:.72rem;font-weight:700;color:var(--danger);
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;white-space:nowrap;flex-shrink:0;
+}
+.cd-pill.show{display:flex}
+.cd-pill.urgent{animation:pulse 1s ease-in-out infinite}
 
 /* ── Content ── */
-.content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 32px 20px max(40px, env(safe-area-inset-bottom) + 24px);
-  max-width: 480px;
-  width: 100%;
-  margin: 0 auto;
+.content{
+  flex:1;display:flex;flex-direction:column;
+  padding:24px 16px max(48px,env(safe-area-inset-bottom) + 28px);
+  max-width:480px;width:100%;margin:0 auto;
+  position:relative;z-index:1;
 }
 
-/* ── State A: 選擇模式 ── */
-#stateA {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-#stateB {
-  display: none;
-  flex-direction: column;
-  flex: 1;
-  gap: 16px;
-}
-#stateB.show { display: flex; }
+/* ── State A ── */
+#stateA{display:flex;flex-direction:column;gap:16px}
+#stateB{display:none;flex-direction:column;flex:1;gap:13px}
+#stateB.show{display:flex}
 
-/* 建立新房間按鈕 */
-.create-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 22px 20px;
-  border-radius: var(--radius-l);
-  background: var(--accent);
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  -webkit-tap-highlight-color: transparent;
-  text-align: left;
-  box-shadow: 0 4px 20px rgba(59,130,246,0.3);
-}
-.create-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
-.create-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 2px;
-}
-.create-sub { font-size: 0.76rem; color: rgba(255,255,255,0.72); }
-
-/* 分隔線 */
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--sub);
-  font-size: 0.72rem;
-  font-weight: 500;
-}
-.divider::before, .divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
+/* glass card */
+.glass-card{
+  border-radius:var(--radius-l);
+  backdrop-filter:blur(40px) saturate(200%);
+  -webkit-backdrop-filter:blur(40px) saturate(200%);
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  box-shadow:var(--glass-shadow);
+  padding:20px;
 }
 
-/* 加入房間卡片 */
-.join-card {
-  width: 100%;
-  border-radius: var(--radius-m);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* create btn */
+.create-btn{
+  width:100%;display:flex;align-items:center;gap:16px;
+  padding:22px 20px;border-radius:var(--radius-l);
+  background:var(--accent);border:none;cursor:pointer;
+  font-family:inherit;-webkit-tap-highlight-color:transparent;
+  text-align:left;
+  box-shadow:0 4px 24px rgba(59,130,246,.35);
 }
-.join-label { font-size: 0.78rem; font-weight: 600; color: var(--sub); }
-.join-input-row { display: flex; gap: 10px; }
-.join-input {
-  flex: 1;
-  min-width: 0;
-  padding: 12px 10px;
-  border-radius: 14px;
-  border: 1.5px solid var(--border);
-  background: var(--bg);
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: 0.2em;
-  font-variant-numeric: tabular-nums;
-  outline: none;
-  font-family: inherit;
-  text-align: center;
-  transition: border-color 0.2s;
-  -webkit-appearance: none;
-}
-.join-input:focus { border-color: var(--accent); }
-.join-input.error {
-  border-color: #ef4444;
-  animation: shake 0.4s cubic-bezier(0.36,0.07,0.19,0.97);
-}
-.join-btn {
-  flex-shrink: 0;
-  padding: 12px 20px;
-  border-radius: 14px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.88rem;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  -webkit-tap-highlight-color: transparent;
-}
-.join-error {
-  font-size: 0.76rem;
-  color: #ef4444;
-  display: none;
-  font-weight: 500;
-}
-.join-error.show { display: block; }
+@media(prefers-color-scheme:dark){.create-btn{box-shadow:0 4px 24px rgba(96,165,250,.25)}}
+.c-icon{font-size:1.8rem;line-height:1;flex-shrink:0}
+.c-title{font-size:1rem;font-weight:700;color:#fff;margin-bottom:2px}
+.c-sub{font-size:.75rem;color:rgba(255,255,255,.7)}
 
-/* ── State B: 同步畫面 ── */
-.sync-textarea {
-  flex: 1;
-  width: 100%;
-  border-radius: var(--radius-l);
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-  padding: 18px;
-  font-size: 1rem;
-  color: var(--text);
-  resize: none;
-  outline: none;
-  font-family: inherit;
-  line-height: 1.6;
-  min-height: 300px;
-  -webkit-appearance: none;
-  transition: border-color 0.2s;
-}
-.sync-textarea:focus { border-color: var(--accent); }
+/* divider */
+.divider{display:flex;align-items:center;gap:12px;color:var(--sub);font-size:.72rem;font-weight:500}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(0,0,0,.08)}
+@media(prefers-color-scheme:dark){.divider::before,.divider::after{background:rgba(255,255,255,.08)}}
 
-.action-row { display: flex; gap: 10px; width: 100%; }
-.action-btn {
-  flex: 1;
-  padding: 14px;
-  border-radius: 16px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  -webkit-tap-highlight-color: transparent;
+/* join */
+.join-label{font-size:.78rem;font-weight:600;color:var(--sub);margin-bottom:10px}
+.join-row{display:flex;gap:10px}
+.join-input{
+  flex:1;min-width:0;padding:14px 10px;
+  border-radius:16px;
+  border:1.5px solid rgba(0,0,0,.1);
+  background:rgba(255,255,255,.65);
+  font-size:1.65rem;font-weight:800;color:var(--text);
+  letter-spacing:.25em;font-variant-numeric:tabular-nums;
+  outline:none;font-family:inherit;text-align:center;
+  -webkit-appearance:none;
+  transition:border-color .2s,box-shadow .2s;
 }
-.btn-copy  { background: var(--accent); color: #fff; }
-.btn-clear { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.18); }
+.join-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.join-input.error{border-color:var(--danger);animation:shake .4s}
+@media(prefers-color-scheme:dark){.join-input{background:rgba(44,44,46,.85);border-color:rgba(255,255,255,.1)}}
+.join-btn{
+  flex-shrink:0;padding:14px 22px;border-radius:16px;
+  background:var(--accent);color:#fff;font-size:.9rem;font-weight:700;
+  border:none;cursor:pointer;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 2px 12px rgba(59,130,246,.3);
+}
+.join-err{font-size:.75rem;color:var(--danger);display:none;font-weight:500;margin-top:6px}
+.join-err.show{display:block}
 
-/* ── Dark Mode ── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:      #000;
-    --surface: #1c1c1e;
-    --border:  rgba(255,255,255,0.08);
-    --text:    #f2f2f7;
-    --sub:     #636366;
-    --accent:  #60a5fa;
-  }
-  .topbar {
-    background: rgba(0,0,0,0.88);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.06);
-  }
-  .create-btn { box-shadow: 0 4px 20px rgba(96,165,250,0.2); }
-  .join-card  { box-shadow: none; }
-  .join-input { background: #2c2c2e; }
-  .sync-textarea { box-shadow: none; }
-  .btn-clear {
-    background: rgba(239,68,68,0.15);
-    border-color: rgba(239,68,68,0.25);
-  }
-  .room-pill {
-    background: rgba(96,165,250,0.12);
-    border-color: rgba(96,165,250,0.25);
-  }
+/* ── State B ── */
+
+/* url card */
+.url-card{
+  display:none;border-radius:var(--radius-m);
+  backdrop-filter:blur(40px) saturate(200%);
+  -webkit-backdrop-filter:blur(40px) saturate(200%);
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  box-shadow:var(--glass-shadow);
+  padding:12px 14px;align-items:center;gap:10px;
+  animation:fadeIn .25s ease;
+}
+.url-card.show{display:flex}
+.url-icon{font-size:1.1rem;flex-shrink:0}
+.url-text{flex:1;min-width:0;font-size:.78rem;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.url-open{
+  flex-shrink:0;padding:7px 13px;border-radius:10px;
+  background:var(--accent);color:#fff;font-size:.76rem;font-weight:700;
+  border:none;cursor:pointer;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* image preview */
+.img-wrap{
+  display:none;border-radius:var(--radius-m);overflow:hidden;
+  background:rgba(0,0,0,.06);position:relative;
+  max-height:220px;animation:fadeIn .3s ease;
+}
+.img-wrap.show{display:block}
+.img-wrap img{width:100%;height:100%;object-fit:cover;display:block;max-height:220px}
+.img-overlay{
+  position:absolute;bottom:0;right:0;
+  padding:10px;
+  background:linear-gradient(to top,rgba(0,0,0,.35) 0%,transparent 100%);
+  width:100%;display:flex;justify-content:flex-end;
+}
+.img-del{
+  padding:6px 12px;border-radius:10px;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(8px);
+  color:#fff;font-size:.74rem;font-weight:700;
+  border:none;cursor:pointer;font-family:inherit;
+}
+
+/* upload status */
+.up-status{display:none;font-size:.74rem;color:var(--sub);text-align:center}
+.up-status.show{display:block}
+
+/* textarea */
+.sync-ta{
+  flex:1;width:100%;border-radius:var(--radius-m);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  background:rgba(255,255,255,.52);
+  border:1.5px solid rgba(255,255,255,.6);
+  box-shadow:0 4px 16px rgba(0,0,0,.06);
+  padding:16px;font-size:1rem;color:var(--text);
+  resize:none;outline:none;font-family:inherit;
+  line-height:1.65;min-height:180px;
+  -webkit-appearance:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.sync-ta:focus{border-color:rgba(59,130,246,.4);box-shadow:0 0 0 3px rgba(59,130,246,.08)}
+@media(prefers-color-scheme:dark){.sync-ta{background:rgba(28,28,30,.75);border-color:rgba(255,255,255,.1)}}
+
+/* action row */
+.act-row{display:flex;gap:10px}
+.act-btn{
+  flex:1;padding:14px 8px;border-radius:18px;
+  font-size:.86rem;font-weight:700;border:none;
+  cursor:pointer;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+  white-space:nowrap;
+}
+.btn-copy{background:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(59,130,246,.28)}
+.btn-img{
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(10px);
+  color:var(--text);
+}
+.btn-clear{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.18);color:var(--danger)}
+@media(prefers-color-scheme:dark){.btn-clear{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.28)}}
+
+/* ── Expired overlay ── */
+.expire-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  z-index:200;align-items:center;justify-content:center;padding:24px;
+}
+.expire-overlay.show{display:flex;animation:fadeIn .3s ease}
+.expire-card{
+  background:var(--surface);border-radius:28px;
+  padding:36px 24px;text-align:center;
+  width:100%;max-width:320px;
+  box-shadow:0 24px 80px rgba(0,0,0,.22);
+}
+.expire-icon{font-size:3rem;margin-bottom:14px}
+.expire-title{font-size:1.2rem;font-weight:700;margin-bottom:8px}
+.expire-sub{font-size:.85rem;color:var(--sub);margin-bottom:24px}
+.new-btn{
+  width:100%;padding:16px;border-radius:18px;
+  background:var(--accent);color:#fff;
+  font-size:1rem;font-weight:700;
+  border:none;cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 16px rgba(59,130,246,.32);
+}
+
+/* spinner */
+.sp{
+  display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
+  border-radius:50%;animation:spin .75s linear infinite;
+  vertical-align:middle;margin-right:5px;
 }
 </style>
 </head>
 <body>
 
+<!-- Topbar -->
 <div class="topbar">
   <a href="/" class="back-btn">‹ 返回</a>
-  <div class="topbar-title" id="topbarTitle">跨裝置剪貼簿</div>
-  <div class="room-pill" id="roomPill" onclick="copyRoomCode()" title="點擊複製房間碼">
-    <span>📋</span>
-    <span class="room-pill-code" id="roomPillCode">0000</span>
+  <div class="topbar-title" id="topTitle">跨裝置剪貼簿</div>
+  <div class="room-pill" id="roomPill" onclick="copyCode()" title="點擊複製房間碼">
+    <span class="sync-dot" id="syncDot"></span>
+    <span id="pillCode">----</span>
+  </div>
+  <div class="cd-pill" id="cdPill">
+    <span>⏱</span>
+    <span id="cdText">5:00</span>
   </div>
 </div>
 
 <div class="content">
 
-  <!-- State A: 選擇建立或加入 -->
+  <!-- State A -->
   <div id="stateA">
     <button class="create-btn" id="createBtn" onclick="doCreate()">
-      <span class="create-icon">➕</span>
+      <span class="c-icon">➕</span>
       <div>
-        <div class="create-title">建立新房間</div>
-        <div class="create-sub">產生 4 位碼，讓對方輸入加入</div>
+        <div class="c-title">建立新房間</div>
+        <div class="c-sub">產生 4 位碼，讓對方輸入加入</div>
       </div>
     </button>
 
     <div class="divider">或</div>
 
-    <div class="join-card">
+    <div class="glass-card">
       <div class="join-label">加入現有房間</div>
-      <div class="join-input-row">
+      <div class="join-row">
         <input id="joinInput" class="join-input" type="tel" inputmode="numeric"
                maxlength="4" placeholder="0000"
-               onkeydown="if(event.key==='Enter')joinRoom()">
-        <button class="join-btn" id="joinBtn" onclick="joinRoom()">加入</button>
+               oninput="this.value=this.value.replace(/\D/g,'')"
+               onkeydown="if(event.key==='Enter')doJoin()">
+        <button class="join-btn" id="joinBtn" onclick="doJoin()">加入</button>
       </div>
-      <div class="join-error" id="joinError">找不到此房間，請確認號碼</div>
+      <div class="join-err" id="joinErr">找不到此房間，請確認號碼</div>
     </div>
   </div>
 
-  <!-- State B: 同步畫面 -->
+  <!-- State B -->
   <div id="stateB">
-    <!-- Debug 狀態列 -->
-    <div id="dbg" style="font-size:0.72rem;color:#6b7280;background:rgba(0,0,0,0.05);border-radius:10px;padding:8px 12px;line-height:1.7;word-break:break-all;"></div>
-    <textarea class="sync-textarea" id="syncTextarea"
-      placeholder="在這裡輸入文字或網址，對方裝置會即時同步…"></textarea>
-    <div class="action-row">
-      <button class="action-btn btn-copy"  id="copyBtn"  onclick="doCopy()">📋 複製內容</button>
-      <button class="action-btn btn-clear" id="clearBtn" onclick="doClear()">🗑️ 清空</button>
+    <!-- URL card -->
+    <div class="url-card" id="urlCard">
+      <span class="url-icon">🔗</span>
+      <span class="url-text" id="urlText"></span>
+      <button class="url-open" onclick="openUrl()">安全開啟</button>
     </div>
+
+    <!-- Image -->
+    <div class="img-wrap" id="imgWrap">
+      <img id="imgEl" src="" alt="">
+      <div class="img-overlay">
+        <button class="img-del" onclick="clearImg()">移除圖片</button>
+      </div>
+    </div>
+
+    <!-- Upload status -->
+    <div class="up-status" id="upStatus">上傳中…</div>
+
+    <!-- Textarea -->
+    <textarea class="sync-ta" id="ta"
+      placeholder="在這裡輸入文字或網址，對方裝置即時同步…"></textarea>
+
+    <!-- Actions -->
+    <div class="act-row">
+      <button class="act-btn btn-copy" id="copyBtn" onclick="doCopy()">📋 複製</button>
+      <button class="act-btn btn-img"  id="imgBtn"  onclick="pickImg()">🖼 圖片</button>
+      <button class="act-btn btn-clear"              onclick="doClear()">🗑️ 清空</button>
+    </div>
+
+    <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="onImgFile(this.files[0])">
   </div>
 
 </div>
 
+<!-- Expired overlay -->
+<div class="expire-overlay" id="expireOverlay">
+  <div class="expire-card">
+    <div class="expire-icon">💨</div>
+    <div class="expire-title">房間已銷毀</div>
+    <div class="expire-sub">5 分鐘已到，內容已自動清除</div>
+    <button class="new-btn" onclick="backToA()">建立新房間</button>
+  </div>
+</div>
+
 <script>
-const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+// ── 設定 ──────────────────────────────────────────────
+// 本地 / Zeabur 後端（Vercel 前端呼叫 Zeabur 時填 Zeabur URL）
+const SHARE_API = '';
+// 圖片上傳：Imgur Client-ID（申請後替換此值）
+// 申請：https://api.imgur.com/oauth2/addclient → 選 Anonymous usage
+const IMGUR_CID = '';
 
-let currentRoom   = null;
-let channel       = null;
-let debounceTimer;
-let lastPushTime  = 0;
+// ── 狀態 ──────────────────────────────────────────────
+let room = null, expireAt = null;
+let pollTid = null, cdTid = null, debTid = null;
+let pushing = false;
+let known = { text: '', image_url: '' };
+let detectedUrl = null;
 
-let dbgLines = [];
-function dbg(msg) {
-  const t = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-  dbgLines.push('[' + t + '] ' + msg);
-  if (dbgLines.length > 12) dbgLines.shift();
-  const el = document.getElementById('dbg');
-  if (el) el.textContent = dbgLines.join('\n');
-}
-
-function randCode() {
-  return Math.floor(1000 + Math.random() * 9000).toString();
-}
-
-/* 建立 postgres_changes channel（無 filter，前端自行比對 room_code）*/
-function connectChannel(code) {
-  if (channel) supa.removeChannel(channel);
-  dbg('connectChannel: ' + code);
-  channel = supa.channel('share-db-' + code)
-    .on('postgres_changes', {
-      event:  'UPDATE',
-      schema: 'public',
-      table:  'share_rooms'
-    }, payload => {
-      dbg('收到事件 room=' + payload.new.room_code + ' text=' + (payload.new.text || '').slice(0, 20));
-      if (payload.new.room_code !== currentRoom) { dbg('room 不符，略過'); return; }
-      if (Date.now() - lastPushTime < 1000) { dbg('自己的 echo，略過'); return; }
-      const ta = document.getElementById('syncTextarea');
-      ta.value = payload.new.text ?? '';
-      dbg('textarea 已更新');
-    });
-  return new Promise(resolve => {
-    const t = setTimeout(() => { dbg('subscribe 逾時'); resolve(false); }, 12000);
-    channel.subscribe(status => {
-      dbg('subscribe status: ' + status);
-      if (status === 'SUBSCRIBED')                              { clearTimeout(t); resolve(true);  }
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){ clearTimeout(t); resolve(false); }
-    });
-  });
-}
-
-/* 彈簧按鈕效果 */
-function addSpring(el) {
+// ── Spring buttons ─────────────────────────────────────
+document.querySelectorAll('button').forEach(el => {
   el.addEventListener('pointerdown', () => {
-    el.style.transition = 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)';
-    el.style.transform  = 'scale(0.965)';
+    el.style.transition = 'transform .1s cubic-bezier(.34,1.56,.64,1)';
+    el.style.transform = 'scale(.965)';
     navigator.vibrate?.([8]);
   });
   ['pointerup','pointerleave','pointercancel'].forEach(ev =>
     el.addEventListener(ev, () => {
-      el.style.transition = 'transform 0.55s cubic-bezier(0.34,1.56,0.64,1)';
-      el.style.transform  = 'scale(1)';
+      el.style.transition = 'transform .55s cubic-bezier(.34,1.56,.64,1)';
+      el.style.transform = 'scale(1)';
     })
   );
-}
-document.querySelectorAll('button').forEach(addSpring);
+});
 
-/* ── 建立新房間（DB + WebSocket 平行）── */
+// ── API ────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  return fetch(SHARE_API + path, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts
+  });
+}
+
+// ── 建立房間 ────────────────────────────────────────────
 async function doCreate() {
   const btn = document.getElementById('createBtn');
   btn.disabled = true;
-  btn.querySelector('.create-title').textContent = '連線中…';
-
-  const code = randCode();
-
-  const [subOk, { error }] = await Promise.all([
-    connectChannel(code),
-    supa.from('share_rooms').upsert(
-      { room_code: code, text: '', updated_at: new Date().toISOString() },
-      { onConflict: 'room_code' }
-    )
-  ]);
-
-  btn.disabled = false;
-  btn.querySelector('.create-title').textContent = '建立新房間';
-
-  if (error || !subOk) {
-    if (channel) { supa.removeChannel(channel); channel = null; }
-    alert(error ? '建立失敗，請重試' : '連線失敗，請重試');
-    return;
+  btn.querySelector('.c-title').innerHTML = '<span class="sp"></span>建立中…';
+  try {
+    const r = await api('/api/share/room', { method: 'POST' });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    room = d.code; expireAt = d.expire_at;
+    enterSync(d.code);
+  } catch {
+    alert('建立失敗，請重試');
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('.c-title').textContent = '建立新房間';
   }
-
-  currentRoom = code;
-  enterSyncMode(code);
 }
 
-/* ── 加入房間（DB 驗證 + WebSocket 平行）── */
-async function joinRoom() {
-  const input = document.getElementById('joinInput');
-  const code  = input.value.trim();
-  const errEl = document.getElementById('joinError');
-  const btn   = document.getElementById('joinBtn');
+// ── 加入房間 ────────────────────────────────────────────
+async function doJoin() {
+  const inp = document.getElementById('joinInput');
+  const code = inp.value.trim();
+  const err = document.getElementById('joinErr');
+  const btn = document.getElementById('joinBtn');
+  err.classList.remove('show'); inp.classList.remove('error');
 
-  errEl.classList.remove('show');
-  input.classList.remove('error');
+  if (code.length !== 4) { inp.classList.add('error'); setTimeout(() => inp.classList.remove('error'), 600); return; }
 
-  if (code.length !== 4) {
-    input.classList.add('error');
-    setTimeout(() => input.classList.remove('error'), 600);
-    return;
-  }
-
-  btn.textContent = '連線中…';
+  btn.innerHTML = '<span class="sp"></span>';
   btn.disabled = true;
-
-  const [subOk, { data }] = await Promise.all([
-    connectChannel(code),
-    supa.from('share_rooms').select('room_code, text').eq('room_code', code).single()
-  ]);
-
-  btn.textContent = '加入';
-  btn.disabled = false;
-
-  if (!data) {
-    if (channel) { supa.removeChannel(channel); channel = null; }
-    input.classList.add('error');
-    errEl.classList.add('show');
-    setTimeout(() => input.classList.remove('error'), 600);
-    return;
-  }
-  if (!subOk) {
-    if (channel) { supa.removeChannel(channel); channel = null; }
-    alert('連線失敗，請重試');
-    return;
-  }
-
-  currentRoom = code;
-  document.getElementById('syncTextarea').value = data.text || '';
-  enterSyncMode(code);
+  try {
+    const r = await api('/api/share/room/' + code);
+    if (!r.ok) {
+      inp.classList.add('error'); err.classList.add('show');
+      setTimeout(() => inp.classList.remove('error'), 600);
+      return;
+    }
+    const d = await r.json();
+    room = code; expireAt = d.expire_at;
+    known = { text: d.text, image_url: d.image_url };
+    document.getElementById('ta').value = d.text || '';
+    if (d.image_url) showImg(d.image_url);
+    detectUrl(d.text || '');
+    enterSync(code);
+  } catch { alert('連線失敗，請重試'); }
+  finally { btn.innerHTML = '加入'; btn.disabled = false; }
 }
 
-/* ── 進入同步畫面（此時 channel 已 SUBSCRIBED）── */
-function enterSyncMode(code) {
+// ── 進入同步畫面 ────────────────────────────────────────
+function enterSync(code) {
   document.getElementById('stateA').style.display = 'none';
   document.getElementById('stateB').classList.add('show');
-  document.getElementById('topbarTitle').textContent = '剪貼簿';
-  document.getElementById('roomPillCode').textContent = code;
+  document.getElementById('topTitle').textContent = '剪貼簿';
+  document.getElementById('pillCode').textContent = code;
   document.getElementById('roomPill').classList.add('show');
-  setTimeout(() => document.getElementById('syncTextarea').focus(), 100);
+  document.getElementById('cdPill').classList.add('show');
+  startCountdown(); startPoll();
+  setTimeout(() => document.getElementById('ta').focus(), 120);
 }
 
-/* ── 推送文字（debounce 150ms）── */
-document.getElementById('syncTextarea').addEventListener('input', () => {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(pushText, 150);
-});
-
-function pushText() {
-  if (!currentRoom) return;
-  lastPushTime = Date.now();
-  const text = document.getElementById('syncTextarea').value;
-  dbg('pushText len=' + text.length);
-  /* 寫 DB → 觸發 postgres_changes UPDATE 事件 → 對方收到 */
-  supa.from('share_rooms')
-    .update({ text, updated_at: new Date().toISOString() })
-    .eq('room_code', currentRoom)
-    .then(({ error }) => {
-      dbg('update ' + (error ? '失敗: ' + error.message : '成功'));
-      if (!error)
-        supa.from('share_rooms')
-          .delete()
-          .lt('updated_at', new Date(Date.now() - 43200000).toISOString());
-    });
+// ── 倒數 ────────────────────────────────────────────────
+function startCountdown() {
+  clearInterval(cdTid);
+  tick(); cdTid = setInterval(tick, 1000);
+  function tick() {
+    const rem = Math.max(0, expireAt - Date.now() / 1000);
+    const m = Math.floor(rem / 60), s = Math.floor(rem % 60);
+    document.getElementById('cdText').textContent = m + ':' + String(s).padStart(2,'0');
+    const pill = document.getElementById('cdPill');
+    if (rem < 60) pill.classList.add('urgent'); else pill.classList.remove('urgent');
+    if (rem <= 0) { clearInterval(cdTid); clearInterval(pollTid); showExpired(); }
+  }
 }
 
-/* ── 複製房間碼（點 topbar pill）── */
-async function copyRoomCode() {
-  if (!currentRoom) return;
+// ── Polling ─────────────────────────────────────────────
+function startPoll() {
+  clearInterval(pollTid);
+  pollTid = setInterval(doPoll, 1500);
+}
+
+async function doPoll() {
+  if (!room || pushing) return;
   try {
-    await navigator.clipboard.writeText(currentRoom);
-    const pill = document.getElementById('roomPill');
-    const orig = pill.querySelector('.room-pill-code').textContent;
-    pill.querySelector('span:first-child').textContent = '✅';
-    setTimeout(() => { pill.querySelector('span:first-child').textContent = '📋'; }, 1500);
+    const r = await api('/api/share/room/' + room);
+    if (r.status === 404) { clearInterval(pollTid); clearInterval(cdTid); showExpired(); return; }
+    if (!r.ok) return;
+    const d = await r.json();
+    expireAt = d.expire_at;
+    const ta = document.getElementById('ta');
+    if (d.text !== known.text && document.activeElement !== ta) {
+      ta.value = d.text || '';
+      detectUrl(d.text || '');
+    }
+    if (d.image_url !== known.image_url) {
+      d.image_url ? showImg(d.image_url) : hideImg();
+    }
+    known = { text: d.text, image_url: d.image_url };
   } catch {}
 }
 
-/* ── 複製內容 ── */
+// ── Push text ───────────────────────────────────────────
+document.getElementById('ta').addEventListener('input', () => {
+  detectUrl(document.getElementById('ta').value);
+  clearTimeout(debTid); debTid = setTimeout(pushText, 300);
+});
+
+async function pushText() {
+  if (!room) return;
+  pushing = true;
+  const text = document.getElementById('ta').value;
+  known.text = text;
+  setSyncing(true);
+  try { await api('/api/share/room/' + room, { method: 'PUT', body: JSON.stringify({ text }) }); }
+  catch {} finally { pushing = false; setSyncing(false); }
+}
+
+function setSyncing(v) {
+  document.getElementById('syncDot').classList.toggle('syncing', v);
+}
+
+// ── URL 偵測 ─────────────────────────────────────────────
+const URL_RE = /https?:\/\/[^\s"'<>\]]+/i;
+function detectUrl(text) {
+  const m = text.match(URL_RE);
+  const card = document.getElementById('urlCard');
+  if (m) {
+    detectedUrl = m[0];
+    document.getElementById('urlText').textContent = detectedUrl;
+    card.classList.add('show');
+  } else { detectedUrl = null; card.classList.remove('show'); }
+}
+function openUrl() { if (detectedUrl) window.open(detectedUrl, '_blank', 'noopener,noreferrer'); }
+
+// ── 圖片上傳 ─────────────────────────────────────────────
+function pickImg() { document.getElementById('fileIn').click(); }
+
+async function onImgFile(file) {
+  if (!file) return;
+  if (!IMGUR_CID) {
+    alert('請先在 share.html 的 IMGUR_CID 填入你的 Imgur Client-ID\n申請：https://api.imgur.com/oauth2/addclient');
+    return;
+  }
+  const st = document.getElementById('upStatus');
+  const btn = document.getElementById('imgBtn');
+  st.textContent = '壓縮中…'; st.classList.add('show'); btn.disabled = true;
+  try {
+    const blob = await compress(file, 1200, .82);
+    st.textContent = '上傳中…';
+    const fd = new FormData();
+    fd.append('image', blob, 'share.jpg');
+    const r = await fetch('https://api.imgur.com/3/image', {
+      method: 'POST',
+      headers: { Authorization: 'Client-ID ' + IMGUR_CID },
+      body: fd
+    });
+    const res = await r.json();
+    if (!res.success) throw new Error(res.data?.error || '上傳失敗');
+    const url = res.data.link;
+    showImg(url); known.image_url = url;
+    await api('/api/share/room/' + room, { method: 'PUT', body: JSON.stringify({ image_url: url }) });
+    st.classList.remove('show');
+  } catch(e) {
+    alert('圖片上傳失敗：' + e.message);
+    st.classList.remove('show');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('fileIn').value = '';
+  }
+}
+
+function compress(file, maxDim, q) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else       { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(b => b ? res(b) : rej(new Error('壓縮失敗')), 'image/jpeg', q);
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+
+function showImg(url) { document.getElementById('imgEl').src = url; document.getElementById('imgWrap').classList.add('show'); }
+function hideImg() { document.getElementById('imgWrap').classList.remove('show'); document.getElementById('imgEl').src = ''; }
+async function clearImg() {
+  hideImg(); known.image_url = '';
+  if (room) await api('/api/share/room/' + room, { method: 'PUT', body: JSON.stringify({ image_url: '' }) });
+}
+
+// ── 複製房間碼 ──────────────────────────────────────────
+async function copyCode() {
+  if (!room) return;
+  try {
+    await navigator.clipboard.writeText(room);
+    const el = document.getElementById('pillCode');
+    const orig = el.textContent;
+    el.textContent = '✅'; setTimeout(() => el.textContent = orig, 1500);
+  } catch {}
+}
+
+// ── 複製內容 ────────────────────────────────────────────
 async function doCopy() {
-  const text = document.getElementById('syncTextarea').value;
+  const text = document.getElementById('ta').value;
   if (!text) return;
   try {
     await navigator.clipboard.writeText(text);
     const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
     btn.textContent = '✅ 已複製';
-    setTimeout(() => btn.textContent = '📋 複製內容', 1800);
+    setTimeout(() => btn.textContent = orig, 1800);
   } catch {}
 }
 
-/* ── 清空 ── */
-function doClear() {
-  document.getElementById('syncTextarea').value = '';
-  pushText();
+// ── 清空 ────────────────────────────────────────────────
+function doClear() { document.getElementById('ta').value = ''; detectUrl(''); pushText(); }
+
+// ── 過期 ────────────────────────────────────────────────
+function showExpired() {
+  document.getElementById('expireOverlay').classList.add('show');
+  room = null; expireAt = null;
+}
+
+function backToA() {
+  document.getElementById('expireOverlay').classList.remove('show');
+  document.getElementById('stateB').classList.remove('show');
+  document.getElementById('stateA').style.display = '';
+  document.getElementById('topTitle').textContent = '跨裝置剪貼簿';
+  document.getElementById('roomPill').classList.remove('show');
+  document.getElementById('cdPill').classList.remove('show');
+  document.getElementById('cdPill').classList.remove('urgent');
+  document.getElementById('ta').value = '';
+  document.getElementById('joinInput').value = '';
+  hideImg(); detectUrl('');
+  known = { text: '', image_url: '' };
 }
 </script>
 </body>
