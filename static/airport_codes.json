@@ -1,0 +1,539 @@
+{
+  "updated": "2026-05-21",
+  "airports": [
+    {
+      "iata": "TPE", "icao": "RCTP",
+      "name_zh": "桃園國際機場", "name_en": "Taiwan Taoyuan International Airport",
+      "city_zh": "桃園", "city_en": "Taoyuan",
+      "country_zh": "台灣", "flag": "🇹🇼",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": true,
+      "airasia_terminal": "T2",
+      "airasia_note": "亞航國際航班使用第二航廈（T2），報到櫃台 B 排",
+      "notes": "T1（長榮・中華・星宇・酷航）／T2（亞航・國泰・新航）。快捷通道在 T2 入境大廳左側。",
+      "tags": ["桃園", "TPE", "RCTP", "台灣", "taiwan", "taoyuan", "桃機"]
+    },
+    {
+      "iata": "KHH", "icao": "RCKH",
+      "name_zh": "高雄國際機場", "name_en": "Kaohsiung International Airport",
+      "city_zh": "高雄", "city_en": "Kaohsiung",
+      "country_zh": "台灣", "flag": "🇹🇼",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": true,
+      "airasia_terminal": "T1",
+      "airasia_note": "亞航使用第一航廈（T1），唯一國際線航廈",
+      "notes": "單一航廈，國內線與國際線共用。高捷紅線直達機場站。",
+      "tags": ["高雄", "KHH", "RCKH", "taiwan", "kaohsiung", "小港"]
+    },
+    {
+      "iata": "RMQ", "icao": "RCMQ",
+      "name_zh": "台中清泉崗機場", "name_en": "Taichung International Airport",
+      "city_zh": "台中", "city_en": "Taichung",
+      "country_zh": "台灣", "flag": "🇹🇼",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": false,
+      "airasia_terminal": "T1",
+      "airasia_note": "單一航廈，亞航視航線配置使用",
+      "notes": "軍民共用機場（清泉崗），國際線持續擴張。無捷運，交通較不便。",
+      "tags": ["台中", "RMQ", "RCMQ", "台灣", "taichung", "清泉崗"]
+    },
+    {
+      "iata": "TSA", "icao": "RCSS",
+      "name_zh": "台北松山機場", "name_en": "Taipei Songshan Airport",
+      "city_zh": "台北", "city_en": "Taipei",
+      "country_zh": "台灣", "flag": "🇹🇼",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": false,
+      "airasia_terminal": "—",
+      "airasia_note": "亞航不使用松山，主力在桃園（TPE）",
+      "notes": "以國內線為主，國際線僅限部分日韓點。注意旅客常與 TPE 混淆。",
+      "tags": ["松山", "TSA", "RCSS", "台灣", "taipei", "songshan"]
+    },
+    {
+      "iata": "KUL", "icao": "WMKK",
+      "name_zh": "吉隆坡國際機場 KLIA2", "name_en": "Kuala Lumpur Intl Airport (KLIA2)",
+      "city_zh": "吉隆坡", "city_en": "Kuala Lumpur",
+      "country_zh": "馬來西亞", "flag": "🇲🇾",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": true,
+      "airasia_terminal": "KLIA2",
+      "airasia_note": "亞航集團總部，專屬使用 KLIA2，與主航廈 KLIA 完全不同棟",
+      "notes": "⚠️ KLIA 與 KLIA2 是兩棟獨立航廈，距離遠需接駁，務必確認旅客在 KLIA2 辦理報到。",
+      "tags": ["吉隆坡", "KUL", "WMKK", "馬來西亞", "malaysia", "kuala lumpur", "KLIA2", "亞航總部"]
+    },
+    {
+      "iata": "BKK", "icao": "VTBS",
+      "name_zh": "曼谷蘇凡納布國際機場", "name_en": "Suvarnabhumi International Airport",
+      "city_zh": "曼谷", "city_en": "Bangkok",
+      "country_zh": "泰國", "flag": "🇹🇭",
+      "tz_diff": -1, "tz_label": "比台灣慢 1 小時（UTC+7）",
+      "pinned": true,
+      "airasia_terminal": "T1",
+      "airasia_note": "Thai AirAsia X（長程）使用蘇凡納布；一般亞航短程請確認使用廊曼（DMK）",
+      "notes": "曼谷兩大機場：BKK（蘇凡納布）主力大型；DMK（廊曼）低成本。切勿讓旅客跑錯。",
+      "tags": ["曼谷", "BKK", "VTBS", "泰國", "thailand", "bangkok", "suvarnabhumi", "素萬那普"]
+    },
+    {
+      "iata": "DMK", "icao": "VTBD",
+      "name_zh": "曼谷廊曼國際機場", "name_en": "Don Mueang International Airport",
+      "city_zh": "曼谷", "city_en": "Bangkok",
+      "country_zh": "泰國", "flag": "🇹🇭",
+      "tz_diff": -1, "tz_label": "比台灣慢 1 小時（UTC+7）",
+      "pinned": true,
+      "airasia_terminal": "T1",
+      "airasia_note": "Thai AirAsia（FD）主力據點，T1 辦理報到",
+      "notes": "廊曼為泰航亞航（FD）主機場，距蘇凡納布（BKK）約 25 公里，是不同機場。",
+      "tags": ["廊曼", "DMK", "VTBD", "泰國", "thailand", "bangkok", "don mueang"]
+    },
+    {
+      "iata": "CNX", "icao": "VTCC",
+      "name_zh": "清邁國際機場", "name_en": "Chiang Mai International Airport",
+      "city_zh": "清邁", "city_en": "Chiang Mai",
+      "country_zh": "泰國", "flag": "🇹🇭",
+      "tz_diff": -1, "tz_label": "比台灣慢 1 小時（UTC+7）",
+      "pinned": false,
+      "airasia_terminal": "T1",
+      "airasia_note": "亞航使用第一航廈（T1），唯一國際航廈",
+      "notes": "單一航廈。FD（泰航亞航）直飛台灣。旺季（11–2 月）班次增加，需注意地勤負荷。",
+      "tags": ["清邁", "CNX", "VTCC", "泰國", "thailand", "chiang mai"]
+    },
+    {
+      "iata": "HKT", "icao": "VTSP",
+      "name_zh": "普吉島國際機場", "name_en": "Phuket International Airport",
+      "city_zh": "普吉島", "city_en": "Phuket",
+      "country_zh": "泰國", "flag": "🇹🇭",
+      "tz_diff": -1, "tz_label": "比台灣慢 1 小時（UTC+7）",
+      "pinned": false,
+      "airasia_terminal": "T1",
+      "airasia_note": "亞航使用第一航廈（T1）",
+      "notes": "旺季（11–4 月）班次大增，旅遊旺峰需注意航班延誤與停機位壓力。",
+      "tags": ["普吉島", "HKT", "VTSP", "泰國", "thailand", "phuket"]
+    },
+    {
+      "iata": "SIN", "icao": "WSSS",
+      "name_zh": "新加坡樟宜機場（T4）", "name_en": "Singapore Changi Airport (T4)",
+      "city_zh": "新加坡", "city_en": "Singapore",
+      "country_zh": "新加坡", "flag": "🇸🇬",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": true,
+      "airasia_terminal": "T4",
+      "airasia_note": "亞航使用第四航廈（T4），與 T1/T2/T3 需搭乘免費巴士接駁",
+      "notes": "T4 採「FAST」全自動系統（自助值機＋自助行李托運），流程與其他航廈不同。",
+      "tags": ["新加坡", "SIN", "WSSS", "singapore", "changi", "樟宜", "T4"]
+    },
+    {
+      "iata": "MNL", "icao": "RPLL",
+      "name_zh": "馬尼拉尼諾依國際機場（T3）", "name_en": "Ninoy Aquino Intl Airport (T3)",
+      "city_zh": "馬尼拉", "city_en": "Manila",
+      "country_zh": "菲律賓", "flag": "🇵🇭",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": false,
+      "airasia_terminal": "T3",
+      "airasia_note": "亞航菲律賓（Z2）使用第三航廈（T3）",
+      "notes": "共四個航廈（T1~T4），亞航用 T3。T4 需另外接駁，距離最遠。",
+      "tags": ["馬尼拉", "MNL", "RPLL", "菲律賓", "philippines", "manila", "NAIA"]
+    },
+    {
+      "iata": "SGN", "icao": "VVTS",
+      "name_zh": "胡志明市新山一國際機場", "name_en": "Tan Son Nhat International Airport",
+      "city_zh": "胡志明市", "city_en": "Ho Chi Minh City",
+      "country_zh": "越南", "flag": "🇻🇳",
+      "tz_diff": -1, "tz_label": "比台灣慢 1 小時（UTC+7）",
+      "pinned": false,
+      "airasia_terminal": "T2",
+      "airasia_note": "亞航使用第二航廈（T2，國際線）",
+      "notes": "T1 國內線、T2 國際線。舊稱西貢（Saigon），機場代碼 SGN 即源自此。",
+      "tags": ["胡志明", "SGN", "VVTS", "越南", "vietnam", "ho chi minh", "saigon", "西貢", "新山一"]
+    },
+    {
+      "iata": "DAD", "icao": "VVDN",
+      "name_zh": "峴港國際機場", "name_en": "Da Nang International Airport",
+      "city_zh": "峴港", "city_en": "Da Nang",
+      "country_zh": "越南", "flag": "🇻🇳",
+      "tz_diff": -1, "tz_label": "比台灣慢 1 小時（UTC+7）",
+      "pinned": false,
+      "airasia_terminal": "T2",
+      "airasia_note": "亞航使用第二航廈（T2，國際線）",
+      "notes": "T1 國內線、T2 國際線，兩廈相連但分開使用。越南中部旅遊熱點。",
+      "tags": ["峴港", "DAD", "VVDN", "越南", "vietnam", "da nang", "danang"]
+    },
+    {
+      "iata": "NRT", "icao": "RJAA",
+      "name_zh": "東京成田國際機場", "name_en": "Narita International Airport",
+      "city_zh": "東京（成田）", "city_en": "Tokyo (Narita)",
+      "country_zh": "日本", "flag": "🇯🇵",
+      "tz_diff": 1, "tz_label": "比台灣快 1 小時（UTC+9）",
+      "pinned": true,
+      "airasia_terminal": "T3",
+      "airasia_note": "亞航 X（D7）使用第三航廈（T3），LCC 廉航專屬廈",
+      "notes": "T1（日系大型）、T2（ANA・聯航等）、T3（LCC）。距市區 60km，注意接駁時間。",
+      "tags": ["成田", "NRT", "RJAA", "日本", "japan", "narita", "東京", "tokyo"]
+    },
+    {
+      "iata": "HND", "icao": "RJTT",
+      "name_zh": "東京羽田機場", "name_en": "Tokyo Haneda Airport",
+      "city_zh": "東京（羽田）", "city_en": "Tokyo (Haneda)",
+      "country_zh": "日本", "flag": "🇯🇵",
+      "tz_diff": 1, "tz_label": "比台灣快 1 小時（UTC+9）",
+      "pinned": false,
+      "airasia_terminal": "T3",
+      "airasia_note": "國際線使用第三航廈（T3）",
+      "notes": "T1/T2 國內線、T3 國際線。距市中心最近，被稱為東京最便利機場。",
+      "tags": ["羽田", "HND", "RJTT", "日本", "japan", "haneda", "東京", "tokyo"]
+    },
+    {
+      "iata": "KIX", "icao": "RJBB",
+      "name_zh": "大阪關西國際機場", "name_en": "Kansai International Airport",
+      "city_zh": "大阪", "city_en": "Osaka",
+      "country_zh": "日本", "flag": "🇯🇵",
+      "tz_diff": 1, "tz_label": "比台灣快 1 小時（UTC+9）",
+      "pinned": false,
+      "airasia_terminal": "T1",
+      "airasia_note": "亞航使用第一航廈（T1）",
+      "notes": "T1 主廈、T2 LCC 廉航。建於人工島上，四面環海。台灣直飛班次多。",
+      "tags": ["關西", "KIX", "RJBB", "日本", "japan", "osaka", "大阪", "kansai"]
+    },
+    {
+      "iata": "ICN", "icao": "RKSI",
+      "name_zh": "首爾仁川國際機場", "name_en": "Incheon International Airport",
+      "city_zh": "首爾", "city_en": "Seoul",
+      "country_zh": "韓國", "flag": "🇰🇷",
+      "tz_diff": 1, "tz_label": "比台灣快 1 小時（UTC+9）",
+      "pinned": false,
+      "airasia_terminal": "T1",
+      "airasia_note": "亞航使用第一航廈（T1）",
+      "notes": "T1（大多數外籍航空）、T2（大韓航空・天合聯盟專屬）。注意旅客別跑錯航廈。",
+      "tags": ["仁川", "ICN", "RKSI", "韓國", "korea", "seoul", "首爾", "incheon"]
+    },
+    {
+      "iata": "HKG", "icao": "VHHH",
+      "name_zh": "香港國際機場", "name_en": "Hong Kong International Airport",
+      "city_zh": "香港", "city_en": "Hong Kong",
+      "country_zh": "香港", "flag": "🇭🇰",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": false,
+      "airasia_terminal": "T1",
+      "airasia_note": "亞航使用第一航廈（T1），T2 僅為部分辦理值機用",
+      "notes": "赤鱲角機場（HKIA），全球最繁忙轉機樞紐之一。高峰時段地勤排班壓力大。",
+      "tags": ["香港", "HKG", "VHHH", "hong kong", "赤鱲角"]
+    },
+    {
+      "iata": "MFM", "icao": "VMMC",
+      "name_zh": "澳門國際機場", "name_en": "Macau International Airport",
+      "city_zh": "澳門", "city_en": "Macau",
+      "country_zh": "澳門", "flag": "🇲🇴",
+      "tz_diff": 0, "tz_label": "與台灣相同（UTC+8）",
+      "pinned": false,
+      "airasia_terminal": "—",
+      "airasia_note": "亞航目前無直飛澳門航線，旅客多由 HKG 或 KUL 轉渡輪",
+      "notes": "小型單廈機場，旅客多搭渡輪由香港轉往澳門。港珠澳大橋通車後旅客分流。",
+      "tags": ["澳門", "MFM", "VMMC", "macau", "macao"]
+    }
+  ],
+  "airlines": [
+    {
+      "iata": "AK", "icao": "AXM",
+      "name_zh": "亞洲航空（馬來西亞）", "name_en": "AirAsia Malaysia",
+      "country_zh": "馬來西亞", "flag": "🇲🇾",
+      "hub": "KUL", "alliance": "無",
+      "pinned": true,
+      "notes": "亞航集團旗艦，總部於 KLIA2。低成本模式，以東南亞短中程為主。",
+      "tags": ["亞航", "AK", "AXM", "AirAsia", "馬來西亞", "airasia"]
+    },
+    {
+      "iata": "FD", "icao": "AIQ",
+      "name_zh": "泰國亞洲航空", "name_en": "Thai AirAsia",
+      "country_zh": "泰國", "flag": "🇹🇭",
+      "hub": "DMK", "alliance": "無",
+      "pinned": true,
+      "notes": "廊曼（DMK）為基地，承接泰國境內及短程國際線，是台泰航線主力。",
+      "tags": ["泰國亞航", "FD", "AIQ", "Thai AirAsia", "泰國"]
+    },
+    {
+      "iata": "D7", "icao": "XAX",
+      "name_zh": "亞洲航空 X（長程）", "name_en": "AirAsia X",
+      "country_zh": "馬來西亞", "flag": "🇲🇾",
+      "hub": "KUL", "alliance": "無",
+      "pinned": true,
+      "notes": "長程廉航，執飛 KUL 至東北亞（日韓台）及澳洲等長途航線。",
+      "tags": ["亞航X", "D7", "XAX", "AirAsia X", "長程", "long haul"]
+    },
+    {
+      "iata": "QZ", "icao": "AWQ",
+      "name_zh": "印尼亞洲航空", "name_en": "Indonesia AirAsia",
+      "country_zh": "印尼", "flag": "🇮🇩",
+      "hub": "CGK", "alliance": "無",
+      "pinned": false,
+      "notes": "雅加達蘇加諾-哈達機場（CGK）為基地，覆蓋印尼各島及東南亞。",
+      "tags": ["印尼亞航", "QZ", "AWQ", "Indonesia AirAsia", "印尼"]
+    },
+    {
+      "iata": "Z2", "icao": "EZD",
+      "name_zh": "菲律賓亞洲航空", "name_en": "AirAsia Philippines",
+      "country_zh": "菲律賓", "flag": "🇵🇭",
+      "hub": "MNL", "alliance": "無",
+      "pinned": false,
+      "notes": "馬尼拉 T3 為基地，覆蓋菲律賓國內及東南亞。",
+      "tags": ["菲律賓亞航", "Z2", "EZD", "AirAsia Philippines", "菲律賓"]
+    },
+    {
+      "iata": "CI", "icao": "CAL",
+      "name_zh": "中華航空", "name_en": "China Airlines",
+      "country_zh": "台灣", "flag": "🇹🇼",
+      "hub": "TPE", "alliance": "SkyTeam",
+      "pinned": true,
+      "notes": "台灣最大國際航空，桃園 T1 為主基地，SkyTeam 聯盟成員。",
+      "tags": ["中華航空", "CI", "CAL", "China Airlines", "台灣"]
+    },
+    {
+      "iata": "BR", "icao": "EVA",
+      "name_zh": "長榮航空", "name_en": "EVA Air",
+      "country_zh": "台灣", "flag": "🇹🇼",
+      "hub": "TPE", "alliance": "Star Alliance",
+      "pinned": true,
+      "notes": "台灣第二大國際航空，Star Alliance 成員，桃園 T1 報到。",
+      "tags": ["長榮", "BR", "EVA", "EVA Air", "台灣"]
+    },
+    {
+      "iata": "IT", "icao": "TTW",
+      "name_zh": "台灣虎航", "name_en": "Tigerair Taiwan",
+      "country_zh": "台灣", "flag": "🇹🇼",
+      "hub": "TPE", "alliance": "無",
+      "pinned": false,
+      "notes": "台灣廉航，桃園 T2 為主力，主要飛東北亞與東南亞。",
+      "tags": ["虎航", "IT", "TTW", "Tigerair", "台灣虎航"]
+    },
+    {
+      "iata": "TR", "icao": "TGW",
+      "name_zh": "酷航", "name_en": "Scoot",
+      "country_zh": "新加坡", "flag": "🇸🇬",
+      "hub": "SIN", "alliance": "無",
+      "pinned": false,
+      "notes": "新加坡航空集團旗下廉航，主要飛東南亞、東北亞及澳洲。",
+      "tags": ["酷航", "TR", "TGW", "Scoot", "新加坡"]
+    },
+    {
+      "iata": "MM", "icao": "APJ",
+      "name_zh": "樂桃航空", "name_en": "Peach Aviation",
+      "country_zh": "日本", "flag": "🇯🇵",
+      "hub": "KIX", "alliance": "無",
+      "pinned": false,
+      "notes": "日本廉航，大阪關西（KIX）為主力基地，有直飛台灣航線。",
+      "tags": ["樂桃", "MM", "APJ", "Peach", "日本廉航"]
+    },
+    {
+      "iata": "VJ", "icao": "VJC",
+      "name_zh": "越捷航空", "name_en": "VietJet Air",
+      "country_zh": "越南", "flag": "🇻🇳",
+      "hub": "SGN", "alliance": "無",
+      "pinned": false,
+      "notes": "越南廉航，胡志明市（SGN）與河內（HAN）為主力，有台越直飛航線。",
+      "tags": ["越捷", "VJ", "VJC", "VietJet", "越南"]
+    }
+  ],
+  "codes": [
+    {
+      "code": "HK", "group": "pnr",
+      "label_zh": "艙位已確認", "label_en": "Holding Confirmed",
+      "desc": "旅客訂位已確認，可正常辦理 Check-in。是 GDS 系統中最常見的確認狀態。",
+      "pinned": true,
+      "tags": ["HK", "confirmed", "確認", "訂位", "holding"]
+    },
+    {
+      "code": "HL", "group": "pnr",
+      "label_zh": "候補中", "label_en": "Holding Wait Listed",
+      "desc": "旅客在候補名單中，尚未確認座位。艙位釋出後系統自動轉為 HK。",
+      "pinned": false,
+      "tags": ["HL", "waitlist", "候補"]
+    },
+    {
+      "code": "KK", "group": "pnr",
+      "label_zh": "代理商確認", "label_en": "Confirmed by Agent",
+      "desc": "由代理商側確認，效力等同 HK，可正常 Check-in。",
+      "pinned": false,
+      "tags": ["KK", "confirmed", "代理商"]
+    },
+    {
+      "code": "RQ", "group": "pnr",
+      "label_zh": "申請中", "label_en": "Requested",
+      "desc": "旅客已提出申請，等待航空公司回覆確認，尚不可出票或 Check-in。",
+      "pinned": false,
+      "tags": ["RQ", "requested", "申請中"]
+    },
+    {
+      "code": "TK", "group": "pnr",
+      "label_zh": "時刻更動已確認", "label_en": "Time Change Confirmed",
+      "desc": "航班時刻已更動，旅客或代理需回覆接受（OK）後方可 Check-in。",
+      "pinned": false,
+      "tags": ["TK", "time change", "時刻更動"]
+    },
+    {
+      "code": "UN", "group": "pnr",
+      "label_zh": "無法確認", "label_en": "Unable to Confirm",
+      "desc": "航空公司無法確認此訂位，旅客需重新安排或申請退款。",
+      "pinned": false,
+      "tags": ["UN", "unable", "無法確認"]
+    },
+    {
+      "code": "WL", "group": "pnr",
+      "label_zh": "候補名單", "label_en": "Wait Listed",
+      "desc": "同 HL，旅客在候補名單中。報到時若有空位則可轉換確認。",
+      "pinned": false,
+      "tags": ["WL", "waitlist", "候補"]
+    },
+    {
+      "code": "XX", "group": "pnr",
+      "label_zh": "已取消", "label_en": "Cancelled",
+      "desc": "訂位已取消，不可 Check-in，需重新訂位或確認退款。",
+      "pinned": false,
+      "tags": ["XX", "cancelled", "取消"]
+    },
+    {
+      "code": "SA", "group": "pnr",
+      "label_zh": "依現場座位", "label_en": "Space Available",
+      "desc": "員工票或優待票常用，視當日剩餘座位而定，無保證可登機。",
+      "pinned": false,
+      "tags": ["SA", "space available", "員工票"]
+    },
+    {
+      "code": "NS", "group": "pnr",
+      "label_zh": "未報到（No Show）", "label_en": "No Show",
+      "desc": "旅客未於截止時間前完成 Check-in，視同放棄。須記錄於系統，退票費規則依各航班。",
+      "pinned": true,
+      "tags": ["NS", "no show", "未報到"]
+    },
+    {
+      "code": "SC", "group": "pnr",
+      "label_zh": "班表更動", "label_en": "Schedule Change",
+      "desc": "航班時刻表有異動（非旅客要求）。需通知旅客並重新確認接受。",
+      "pinned": false,
+      "tags": ["SC", "schedule change", "班表"]
+    },
+    {
+      "code": "HX", "group": "pnr",
+      "label_zh": "已取消確認段", "label_en": "Have Cancelled",
+      "desc": "已確認的訂位段被人工或系統取消。",
+      "pinned": false,
+      "tags": ["HX", "cancelled segment"]
+    },
+    {
+      "code": "PAX", "group": "ops",
+      "label_zh": "旅客", "label_en": "Passenger(s)",
+      "desc": "泛指所有搭機旅客。例：「本航班共 186 PAX」。地勤廣播與作業文件最常用縮寫。",
+      "pinned": true,
+      "tags": ["PAX", "passenger", "旅客"]
+    },
+    {
+      "code": "BGG", "group": "ops",
+      "label_zh": "行李", "label_en": "Baggage",
+      "desc": "行李縮寫。包含 Check-in Baggage（托運）與 Carry-on（手提）。",
+      "pinned": true,
+      "tags": ["BGG", "baggage", "行李", "luggage"]
+    },
+    {
+      "code": "PNR", "group": "ops",
+      "label_zh": "旅客訂位記錄", "label_en": "Passenger Name Record",
+      "desc": "GDS 系統中的訂位代碼，通常 6 位英數字（例：ABCD12）。是地勤查詢核心依據。",
+      "pinned": true,
+      "tags": ["PNR", "booking reference", "訂位代號", "record"]
+    },
+    {
+      "code": "ETD", "group": "ops",
+      "label_zh": "預計起飛時間", "label_en": "Estimated Time of Departure",
+      "desc": "預計起飛時間。與 ATD（實際起飛）對應，用於計算延誤幅度。",
+      "pinned": false,
+      "tags": ["ETD", "departure", "起飛", "預計"]
+    },
+    {
+      "code": "ETA", "group": "ops",
+      "label_zh": "預計抵達時間", "label_en": "Estimated Time of Arrival",
+      "desc": "預計抵達時間。機場資訊看板與地勤排班的核心參數。",
+      "pinned": false,
+      "tags": ["ETA", "arrival", "抵達", "預計"]
+    },
+    {
+      "code": "ATD", "group": "ops",
+      "label_zh": "實際起飛時間", "label_en": "Actual Time of Departure",
+      "desc": "航班實際離地起飛的時間，用於確認延誤時數與後續作業。",
+      "pinned": false,
+      "tags": ["ATD", "actual departure", "實際起飛"]
+    },
+    {
+      "code": "ATA", "group": "ops",
+      "label_zh": "實際抵達時間", "label_en": "Actual Time of Arrival",
+      "desc": "航班實際落地時間。入境大廳看板顯示以 ATA 為準。",
+      "pinned": false,
+      "tags": ["ATA", "actual arrival", "實際抵達"]
+    },
+    {
+      "code": "DLY", "group": "ops",
+      "label_zh": "延誤", "label_en": "Delay",
+      "desc": "班機延誤。常用：「本航班 DLY 30 分鐘，ETD 改為 XX:XX」。",
+      "pinned": false,
+      "tags": ["DLY", "delay", "延誤"]
+    },
+    {
+      "code": "WCHR", "group": "ops",
+      "label_zh": "輪椅旅客（可步行至登機口）", "label_en": "Wheelchair to Ramp",
+      "desc": "需要輪椅協助的旅客。WCHR 可步行上下機梯；WCHS 需推輪椅但能自行上梯；WCHC 完全無法自理，需全程協助。",
+      "pinned": true,
+      "tags": ["WCHR", "wheelchair", "輪椅", "WCHS", "WCHC", "無障礙"]
+    },
+    {
+      "code": "UMNR", "group": "ops",
+      "label_zh": "無陪伴兒童", "label_en": "Unaccompanied Minor",
+      "desc": "5–12 歲無成人陪伴單獨搭機的兒童，需地勤全程陪同，屬付費特殊服務。",
+      "pinned": true,
+      "tags": ["UMNR", "unaccompanied minor", "無陪伴兒童", "UM"]
+    },
+    {
+      "code": "SSR", "group": "ops",
+      "label_zh": "特殊服務需求", "label_en": "Special Service Request",
+      "desc": "旅客特殊需求代碼，含輪椅（WCHR）、特殊餐（MOML/VGML）、嬰兒（INFT）等，記錄於 PNR 中。",
+      "pinned": false,
+      "tags": ["SSR", "special service", "特殊需求"]
+    },
+    {
+      "code": "MCT", "group": "ops",
+      "label_zh": "最短轉機時間", "label_en": "Minimum Connecting Time",
+      "desc": "旅客從抵達航班至下一班離境所需最短時間。低於 MCT 通常被視為轉機風險，需主動協助旅客。",
+      "pinned": false,
+      "tags": ["MCT", "minimum connecting time", "轉機", "transit"]
+    },
+    {
+      "code": "FIM", "group": "ops",
+      "label_zh": "航班中斷清單", "label_en": "Flight Interruption Manifest",
+      "desc": "因航班取消或延誤所產生的旅客改機清單。地勤需協助安排替代航班。",
+      "pinned": false,
+      "tags": ["FIM", "flight interruption", "改機", "中斷"]
+    },
+    {
+      "code": "PIR", "group": "ops",
+      "label_zh": "行李異常報告", "label_en": "Property Irregularity Report",
+      "desc": "旅客行李遺失、損毀或延誤時填寫的報告。地勤在入境大廳行李台處理。",
+      "pinned": false,
+      "tags": ["PIR", "lost baggage", "行李遺失", "行李損毀", "行李異常"]
+    },
+    {
+      "code": "MOML", "group": "ops",
+      "label_zh": "穆斯林清真餐", "label_en": "Moslem Meal (Halal)",
+      "desc": "為穆斯林旅客準備的清真餐食（Halal）。馬來西亞・印尼航線常見，需提前確認機上配備。",
+      "pinned": false,
+      "tags": ["MOML", "halal", "清真", "穆斯林餐"]
+    },
+    {
+      "code": "OFFLOAD", "group": "ops",
+      "label_zh": "卸客／禁止登機", "label_en": "Offload / Denied Boarding",
+      "desc": "將旅客從航班中移除。原因含安全疑慮、訂位錯誤、超售（Oversell）或違規行為。須依程序記錄。",
+      "pinned": false,
+      "tags": ["offload", "卸客", "禁止登機", "deny boarding", "denied"]
+    },
+    {
+      "code": "OAL", "group": "ops",
+      "label_zh": "其他航空公司", "label_en": "Other Airline",
+      "desc": "簡稱其他合作或代碼共享航空公司。例：「此 PNR 為 OAL 代碼共享，票務由對方處理」。",
+      "pinned": false,
+      "tags": ["OAL", "other airline", "代碼共享", "codeshare"]
+    }
+  ]
+}

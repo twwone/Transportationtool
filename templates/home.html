@@ -215,6 +215,13 @@ body {
 .card-visa .card-title { color: #b45309; }
 .card-visa:hover .arrow { color: #d97706; }
 
+/* 代碼字典卡片 */
+.card-codes::before { background: radial-gradient(ellipse at 80% 20%, #6d28d915, transparent 60%); }
+.card-codes:hover { background: #f5f3ff; }
+.card-codes .icon-wrap { background: #ede9fe; }
+.card-codes .card-title { color: #5b21b6; }
+.card-codes:hover .arrow { color: #7c3aed; }
+
 .footer {
   margin-top: 40px;
   font-size: 0.7rem;
@@ -403,6 +410,17 @@ body {
       <div class="card-text">
         <div class="card-title">簽證口袋指南</div>
         <div class="card-desc">台灣出發・日韓美越泰・免簽 / ESTA / K-ETA 文件清單一覽</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+  </a>
+
+  <a href="/code-dictionary" class="card card-codes">
+    <div class="card-inner">
+      <div class="icon-wrap">🗂</div>
+      <div class="card-text">
+        <div class="card-title">代碼快查字典</div>
+        <div class="card-desc">機場 IATA・亞航航廈・時差・PNR 狀態碼・地勤作業縮寫一覽</div>
       </div>
       <div class="arrow">›</div>
     </div>
