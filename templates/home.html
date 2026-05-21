@@ -10,300 +10,317 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f0f4ff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
 
-/* ── 關鍵影格 ── */
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(18px) scale(0.986); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+:root {
+  --bg:       #f0f4ff;
+  --surface:  #ffffff;
+  --border:   rgba(0,0,0,0.07);
+  --text:     #0f0f1a;
+  --sub:      #6b7280;
+  --radius-l: 28px;
+  --radius-m: 20px;
 }
-@keyframes headerIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to   { opacity: 1; transform: translateY(0); }
+
+/* ── 動畫 ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
 }
-@keyframes cardSlideUp {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes headerSlide {
+  from { opacity: 0; transform: translateY(-14px); }
+  to   { opacity: 1; transform: none; }
 }
-@keyframes pageOut {
-  to { opacity: 0; transform: scale(0.96) translateY(-10px); }
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f2f2f7;
-  color: #1c1c1e;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: max(24px, env(safe-area-inset-top) + 12px) 20px max(48px, env(safe-area-inset-bottom) + 16px);
+  padding:
+    max(20px, env(safe-area-inset-top) + 8px)
+    16px
+    max(48px, env(safe-area-inset-bottom) + 20px);
 }
-@media (prefers-color-scheme: dark) {
-  body { background: #000; color: #f2f2f7; }
-  .header h1 { color: #f2f2f7; }
-  .header p  { color: #636366; }
-  .card {
-    background: rgba(28, 28, 30, 0.85) !important;
-    border: none;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 20px 40px -4px rgba(0,0,0,0.5);
-  }
-  .card::after {
-    background: linear-gradient(155deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.02) 55%,rgba(255,255,255,0.06) 100%);
-  }
-  .card-title { color: inherit !important; }
-  .card-thsr .card-title { color: #ff9f0a !important; }
-  .card-mrt  .card-title { color: #bf5af2 !important; }
-  .card-widget .card-title { color: #6e6ce8 !important; }
-  .card-tias .card-title   { color: #3b82f6 !important; }
-  .card-schedule .card-title{ color: #30d158 !important; }
-  .card-amenities .card-title{ color: #32ade6 !important; }
-  .card-visa .card-title   { color: #ffd60a !important; }
-  .card-codes .card-title  { color: #bf5af2 !important; }
-  .card-desc { color: #636366; }
-  .card-thsr .icon-wrap { background: rgba(255,149,0,0.15); }
-  .card-mrt  .icon-wrap { background: rgba(124,58,237,0.15); }
-  .card-tias .icon-wrap { background: rgba(59,130,246,0.15); }
-  .card-schedule .icon-wrap{ background: rgba(5,150,105,0.15); }
-  .card-amenities .icon-wrap{ background: rgba(8,145,178,0.15); }
-  .card-visa .icon-wrap { background: rgba(245,158,11,0.15); }
-  .card-codes .icon-wrap{ background: rgba(109,40,217,0.15); }
-  .card-thsr:hover { background: rgba(40,30,10,0.9) !important; }
-  .card-mrt:hover  { background: rgba(30,20,40,0.9) !important; }
-  .card-tias:hover { background: rgba(15,20,40,0.9) !important; }
-  .card-schedule:hover { background: rgba(5,25,15,0.9) !important; }
-  .card-amenities:hover { background: rgba(5,25,30,0.9) !important; }
-  .card-visa:hover { background: rgba(35,25,5,0.9) !important; }
-  .card-codes:hover{ background: rgba(25,10,40,0.9) !important; }
-  .arrow { color: #3a3a3c; }
-  .footer { color: #48484a; }
-  /* profile sheet */
-  .profile-chip { background: rgba(44,44,46,0.9); border-color: rgba(255,255,255,0.1); color: #f2f2f7; }
-  .profile-sheet { background: rgba(28,28,30,0.98); }
-  .sh-section { background: rgba(44,44,46,0.85); }
-  .sh-row { border-bottom-color: rgba(255,255,255,0.06); }
-  .sh-name { color: #f2f2f7; }
-  .sh-label { color: #636366; }
-  .sh-add input, .sh-sync-import input { background: rgba(58,58,60,0.9); border-color: rgba(255,255,255,0.1); color: #f2f2f7; }
-}
+
+/* ── Header ── */
 .header {
-  text-align: center;
-  margin-bottom: 36px;
-  animation: headerIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 22px;
+  animation: headerSlide 0.5s cubic-bezier(0.22,1,0.36,1) both;
 }
-.header h1 {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #1c1c1e;
-  letter-spacing: -0.3px;
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 4px;
 }
-.header p {
-  font-size: 0.82rem;
-  color: #8e8e93;
+.greeting {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--sub);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.header-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.header-sub {
+  font-size: 0.8rem;
+  color: var(--sub);
   margin-top: 6px;
 }
-.grid {
-  display: grid;
-  gap: 16px;
-  width: 100%;
-  max-width: 460px;
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px 7px 10px;
+  background: var(--surface);
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  font-size: 0.76rem;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.2s cubic-bezier(0.25,1,0.5,1), box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  margin-top: 4px;
 }
+.profile-chip:active { transform: scale(0.92); }
+.pc-chevron { font-size: 0.58rem; color: var(--sub); }
+
+/* ── Bento Grid ── */
+.bento {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+}
+
+/* ── 共用卡片底 ── */
 .card {
   display: block;
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 24px;
-  padding: 26px 22px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 20px 40px -4px rgba(0, 0, 0, 0.05);
-  transition:
-    transform    0.3s cubic-bezier(0.25, 1, 0.5, 1),
-    background   0.2s ease,
-    box-shadow   0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  cursor: pointer;
+  border-radius: var(--radius-l);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.3s cubic-bezier(0.25,1,0.5,1),
+    box-shadow 0.3s cubic-bezier(0.25,1,0.5,1);
   will-change: transform;
   opacity: 0;
 }
-/* hover 色光暈 */
-.card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 24px;
-  opacity: 0;
-  transition: opacity 0.22s;
+.card:active {
+  transform: scale(0.955) !important;
+  transition: transform 0.18s cubic-bezier(0.25,1,0.5,1) !important;
 }
-/* iOS 2026 光學折射邊框 — 漸層由上亮到下暗模擬頂光折射 */
-.card::after {
+@media (hover: hover) {
+  .card:hover { transform: translateY(-4px) scale(1.01); }
+}
+
+/* ── Hero 卡片（航空看板，全寬） ── */
+.card-hero {
+  grid-column: 1 / -1;
+  height: 172px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 45%, #0ea5e9 100%);
+  background-size: 200% 200%;
+  animation-name: gradientShift, fadeUp;
+  animation-duration: 8s, 0.6s;
+  animation-timing-function: ease, cubic-bezier(0.22,1,0.36,1);
+  animation-iteration-count: infinite, 1;
+  animation-delay: 0s, 0.05s;
+  animation-fill-mode: none, both;
+  box-shadow: 0 8px 32px rgba(29,78,216,0.3), 0 2px 8px rgba(29,78,216,0.2);
+}
+.card-hero:active { box-shadow: 0 4px 16px rgba(29,78,216,0.2) !important; }
+@media (hover: hover) {
+  .card-hero:hover {
+    box-shadow: 0 16px 40px rgba(29,78,216,0.38), 0 4px 12px rgba(29,78,216,0.2);
+  }
+}
+.hero-inner {
+  position: absolute;
+  inset: 0;
+  padding: 22px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.hero-icon { font-size: 2.6rem; line-height: 1; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2)); }
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 100px;
+  padding: 4px 10px 4px 7px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: livePulse 1.6s ease-in-out infinite;
+}
+.hero-bottom {}
+.hero-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+}
+.hero-desc {
+  font-size: 0.76rem;
+  color: rgba(255,255,255,0.72);
+  line-height: 1.4;
+}
+/* 光折射邊框 */
+.card-hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 24px;
+  border-radius: var(--radius-l);
   padding: 1px;
-  background: linear-gradient(
-    155deg,
-    rgba(255, 255, 255, 0.68) 0%,
-    rgba(255, 255, 255, 0.08) 55%,
-    rgba(255, 255, 255, 0.22) 100%
-  );
+  background: linear-gradient(155deg,rgba(255,255,255,0.45) 0%,rgba(255,255,255,0.04) 60%,rgba(255,255,255,0.15) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: destination-out;
   mask-composite: exclude;
   pointer-events: none;
 }
-@media (hover: hover) {
-  .card:hover {
-    transform: translateY(-5px) scale(1.012);
-    box-shadow: 0 8px 20px -2px rgba(0, 0, 0, 0.06), 0 32px 56px -8px rgba(0, 0, 0, 0.12);
-  }
-  .card:hover::before { opacity: 1; }
-  .card:hover .arrow  { transform: translateX(5px); }
-}
-.card:active {
-  transform: scale(0.965) !important;
-  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
-}
 
-/* 高鐵卡片 */
-.card-thsr::before { background: radial-gradient(ellipse at 80% 20%, #ff950015, transparent 60%); }
-.card-thsr:hover { background: #fffaf4; }
-
-/* 捷運卡片 */
-.card-mrt::before { background: radial-gradient(ellipse at 80% 20%, #7c3aed15, transparent 60%); }
-.card-mrt:hover { background: #faf8ff; }
-
-.card-inner {
+/* ── 小卡片（2 欄）── */
+.card-sm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+  padding: 20px 18px 18px;
+  min-height: 148px;
   display: flex;
-  align-items: center;
-  gap: 18px;
-  position: relative;
-  z-index: 1;
+  flex-direction: column;
+  justify-content: space-between;
 }
-.icon-wrap {
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 1.8rem;
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+.sm-icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 12px;
+  display: block;
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
 }
 @media (hover: hover) {
-  .card:hover .icon-wrap { transform: scale(1.06) rotate(-3deg); }
+  .card-sm:hover .sm-icon { transform: scale(1.12) rotate(-5deg); }
 }
-.card-thsr .icon-wrap { background: #fff3e0; }
-.card-mrt  .icon-wrap { background: #ede9fe; }
-
-.card-text { flex: 1; }
-.card-title {
-  font-size: 1.1rem;
+.sm-body { flex: 1; }
+.sm-title {
+  font-size: 1rem;
   font-weight: 700;
-  color: #1c1c1e;
+  line-height: 1.25;
   margin-bottom: 4px;
 }
-.card-desc {
-  font-size: 0.78rem;
-  color: #8e8e93;
-  line-height: 1.5;
-}
-.card-thsr .card-title { color: #c97000; }
-.card-mrt  .card-title { color: #7c3aed; }
-
-.arrow {
-  font-size: 1.1rem;
-  color: #c7c7cc;
-  transition: color 0.2s, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.card-thsr:hover .arrow { color: #ff9500; }
-.card-mrt:hover  .arrow { color: #7c3aed; }
-
-/* Widget 卡片 */
-.card-widget::before { background: radial-gradient(ellipse at 80% 20%, #6366f115, transparent 60%); }
-.card-widget:hover { background: #f8f8ff; }
-.card-widget .icon-wrap { background: #eef2ff; }
-.card-widget .card-title { color: #4f46e5; }
-.card-widget:hover .arrow { color: #6366f1; }
-
-/* 航空看板卡片 */
-.card-tias::before { background: radial-gradient(ellipse at 80% 20%, #1a56db12, transparent 60%); }
-.card-tias:hover { background: #eff6ff; }
-.card-tias .icon-wrap { background: #dbeafe; }
-.card-tias .card-title { color: #1e40af; }
-.card-tias:hover .arrow { color: #1a56db; }
-
-/* 週班表卡片 */
-.card-schedule::before { background: radial-gradient(ellipse at 80% 20%, #05966915, transparent 60%); }
-.card-schedule:hover { background: #f0fdf4; }
-.card-schedule .icon-wrap { background: #dcfce7; }
-.card-schedule .card-title { color: #047857; }
-.card-schedule:hover .arrow { color: #059669; }
-
-/* 機場設施卡片 */
-.card-amenities::before { background: radial-gradient(ellipse at 80% 20%, #0891b215, transparent 60%); }
-.card-amenities:hover { background: #ecfeff; }
-.card-amenities .icon-wrap { background: #cffafe; }
-.card-amenities .card-title { color: #0e7490; }
-.card-amenities:hover .arrow { color: #0891b2; }
-
-/* 簽證指南卡片 */
-.card-visa::before { background: radial-gradient(ellipse at 80% 20%, #f59e0b15, transparent 60%); }
-.card-visa:hover { background: #fffbeb; }
-.card-visa .icon-wrap { background: #fef3c7; }
-.card-visa .card-title { color: #b45309; }
-.card-visa:hover .arrow { color: #d97706; }
-
-/* 代碼字典卡片 */
-.card-codes::before { background: radial-gradient(ellipse at 80% 20%, #6d28d915, transparent 60%); }
-.card-codes:hover { background: #f5f3ff; }
-.card-codes .icon-wrap { background: #ede9fe; }
-.card-codes .card-title { color: #5b21b6; }
-.card-codes:hover .arrow { color: #7c3aed; }
-
-.footer {
-  margin-top: 40px;
+.sm-desc {
   font-size: 0.7rem;
+  color: var(--sub);
+  line-height: 1.45;
+}
+.sm-arrow {
+  margin-top: 10px;
+  font-size: 0.8rem;
   color: #c7c7cc;
-  text-align: center;
-  animation: headerIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+  transition: color 0.2s, transform 0.28s cubic-bezier(0.22,1,0.36,1);
+}
+@media (hover: hover) {
+  .card-sm:hover .sm-arrow { transform: translateX(4px); }
+}
+/* 每張小卡的底部色條 */
+.card-sm::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 0 0 var(--radius-l) var(--radius-l);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+@media (hover: hover) {
+  .card-sm:hover::before { opacity: 1; }
 }
 
-/* ── 用戶設定檔 chip ── */
-.profile-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 12px;
-  padding: 5px 13px 5px 9px;
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  font-size: 0.76rem;
-  color: #3a3a3c;
-  font-weight: 600;
-  cursor: pointer;
-  background-color: rgba(255,255,255,0.62);
-  font-family: inherit;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
-  -webkit-tap-highlight-color: transparent;
-}
-.profile-chip:active { transform: scale(0.93); }
-.pc-chevron { font-size: 0.62rem; color: #8e8e93; }
+/* 各卡顏色 */
+.card-thsr .sm-title { color: #c2550a; }
+.card-thsr::before   { background: linear-gradient(90deg,#ff9500,#ff6a00); }
+.card-thsr:hover .sm-arrow { color: #ff9500; }
 
-/* ── 底部 Sheet ── */
+.card-mrt .sm-title { color: #6d28d9; }
+.card-mrt::before   { background: linear-gradient(90deg,#8b5cf6,#7c3aed); }
+.card-mrt:hover .sm-arrow { color: #7c3aed; }
+
+.card-schedule .sm-title { color: #047857; }
+.card-schedule::before   { background: linear-gradient(90deg,#10b981,#059669); }
+.card-schedule:hover .sm-arrow { color: #059669; }
+
+.card-amenities .sm-title { color: #0e7490; }
+.card-amenities::before   { background: linear-gradient(90deg,#06b6d4,#0891b2); }
+.card-amenities:hover .sm-arrow { color: #0891b2; }
+
+.card-visa .sm-title { color: #b45309; }
+.card-visa::before   { background: linear-gradient(90deg,#f59e0b,#d97706); }
+.card-visa:hover .sm-arrow { color: #d97706; }
+
+.card-codes .sm-title { color: #5b21b6; }
+.card-codes::before   { background: linear-gradient(90deg,#7c3aed,#6d28d9); }
+.card-codes:hover .sm-arrow { color: #6d28d9; }
+
+/* ── 底部 ── */
+.footer {
+  margin-top: 28px;
+  font-size: 0.66rem;
+  color: #c7c7cc;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: headerSlide 0.5s cubic-bezier(0.22,1,0.36,1) 0.6s both;
+}
+
+/* ── Profile Sheet ── */
 .sheet-overlay {
   position: fixed; inset: 0;
   background: transparent;
@@ -311,21 +328,21 @@ body {
   pointer-events: none;
   transition: background 0.3s ease;
 }
-.sheet-overlay.open { background: rgba(0,0,0,0.22); pointer-events: auto; }
+.sheet-overlay.open { background: rgba(0,0,0,0.28); pointer-events: auto; }
 .profile-sheet {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  background: rgba(242, 242, 247, 0.96);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(242,242,247,0.97);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   border-radius: 24px 24px 0 0;
   padding-bottom: max(24px, env(safe-area-inset-bottom));
   z-index: 200;
   transform: translateY(100%);
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform 0.4s cubic-bezier(0.25,1,0.5,1);
   max-height: 72vh;
   overflow-y: auto;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.1);
 }
 .profile-sheet.open { transform: translateY(0); }
 .sh-handle { width: 36px; height: 4px; background: rgba(60,60,67,0.25); border-radius: 100px; margin: 12px auto 0; }
@@ -357,7 +374,7 @@ body {
   padding: 8px 16px; border-radius: 10px;
   background: #059669; color: #fff;
   font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; font-family: inherit;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform 0.25s cubic-bezier(0.25,1,0.5,1);
 }
 .sh-add button:active { transform: scale(0.93); }
 .sh-sync {
@@ -379,106 +396,151 @@ body {
   padding: 8px 16px; border-radius: 10px;
   background: #3b82f6; color: #fff;
   font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; font-family: inherit;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform 0.25s cubic-bezier(0.25,1,0.5,1);
 }
 .sh-sync-import button:active { transform: scale(0.93); }
+
+/* ── Dark Mode ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:      #000;
+    --surface: #1c1c1e;
+    --border:  rgba(255,255,255,0.07);
+    --text:    #f2f2f7;
+    --sub:     #636366;
+  }
+  .card-hero {
+    background: linear-gradient(135deg, #0c1d4d 0%, #1d3a8a 45%, #075985 100%);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .card-sm {
+    box-shadow: none;
+  }
+  .card-thsr .sm-title { color: #ff9f0a; }
+  .card-mrt  .sm-title { color: #bf5af2; }
+  .card-schedule  .sm-title { color: #30d158; }
+  .card-amenities .sm-title { color: #32ade6; }
+  .card-visa  .sm-title { color: #ffd60a; }
+  .card-codes .sm-title { color: #bf5af2; }
+  .sm-desc  { color: #48484a; }
+  .sm-arrow { color: #3a3a3c; }
+  .footer   { color: #3a3a3c; }
+  .profile-chip { background: #2c2c2e; border-color: rgba(255,255,255,0.08); color: #f2f2f7; }
+  .pc-chevron   { color: #48484a; }
+  .profile-sheet { background: rgba(28,28,30,0.98); }
+  .sh-section { background: rgba(44,44,46,0.85); }
+  .sh-row { border-bottom-color: rgba(255,255,255,0.06); }
+  .sh-name  { color: #f2f2f7; }
+  .sh-label { color: #636366; }
+  .sh-add input, .sh-sync-import input {
+    background: rgba(58,58,60,0.9); border-color: rgba(255,255,255,0.1); color: #f2f2f7;
+  }
+}
 </style>
 </head>
 <body>
 
+<!-- Header -->
 <div class="header">
-  <h1>🚉 交通助理</h1>
-  <p>選擇你需要的交通工具</p>
-  <button class="profile-chip" onclick="openSheet()">
-    <span>👤</span>
-    <span id="profileLabel">—</span>
-    <span class="pc-chevron">▾</span>
-  </button>
+  <div class="header-top">
+    <div>
+      <div class="greeting" id="greeting">交通助理</div>
+      <div class="header-title">Transport</div>
+    </div>
+    <button class="profile-chip" onclick="openSheet()">
+      <span>👤</span>
+      <span id="profileLabel">—</span>
+      <span class="pc-chevron">▾</span>
+    </button>
+  </div>
+  <div class="header-sub" id="headerSub">選擇你需要的功能</div>
 </div>
 
-<div class="grid">
-  <a href="https://thsr-ticket-bot-j7qr.onrender.com" class="card card-thsr" target="_blank" rel="noopener">
-    <div class="card-inner">
-      <div class="icon-wrap">🚄</div>
-      <div class="card-text">
-        <div class="card-title">高鐵刷票</div>
-        <div class="card-desc">自動偵測放票，找到座位立即 Telegram 通知</div>
+<!-- Bento Grid -->
+<div class="bento">
+
+  <!-- 航空資訊看板（Hero） -->
+  <a href="/tias" class="card card-hero">
+    <div class="hero-inner">
+      <div class="hero-top">
+        <span class="hero-icon">✈️</span>
+        <div class="live-badge">
+          <div class="live-dot"></div>
+          LIVE
+        </div>
       </div>
-      <div class="arrow">›</div>
+      <div class="hero-bottom">
+        <div class="hero-title">航空資訊看板</div>
+        <div class="hero-desc">AirAsia 入離港即時動態・登機門・地勤時程倒數</div>
+      </div>
     </div>
   </a>
 
-  <a href="/mrt" class="card card-mrt">
-    <div class="card-inner">
-      <div class="icon-wrap">🚇</div>
-      <div class="card-text">
-        <div class="card-title">桃園機場捷運</div>
-        <div class="card-desc">即時到站倒數，直達車 / 普通車分開顯示</div>
-      </div>
-      <div class="arrow">›</div>
+  <!-- 高鐵刷票 -->
+  <a href="https://thsr-ticket-bot-j7qr.onrender.com" class="card card-sm card-thsr" target="_blank" rel="noopener">
+    <span class="sm-icon">🚄</span>
+    <div class="sm-body">
+      <div class="sm-title">高鐵刷票</div>
+      <div class="sm-desc">自動偵測放票，Telegram 即時通知</div>
     </div>
+    <div class="sm-arrow">→</div>
   </a>
 
-  <a href="/tias" class="card card-tias">
-    <div class="card-inner">
-      <div class="icon-wrap">✈️</div>
-      <div class="card-text">
-        <div class="card-title">航空資訊看板</div>
-        <div class="card-desc">AirAsia 入離港即時動態・登機門・地勤時程倒數</div>
-      </div>
-      <div class="arrow">›</div>
+  <!-- 機場捷運 -->
+  <a href="/mrt" class="card card-sm card-mrt">
+    <span class="sm-icon">🚇</span>
+    <div class="sm-body">
+      <div class="sm-title">機場捷運</div>
+      <div class="sm-desc">直達車 / 普通車即時到站倒數</div>
     </div>
+    <div class="sm-arrow">→</div>
   </a>
 
-  <a href="/schedule" class="card card-schedule">
-    <div class="card-inner">
-      <div class="icon-wrap">🗓</div>
-      <div class="card-text">
-        <div class="card-title">週班表</div>
-        <div class="card-desc">未來 7 天定期航班分布・尖峰日預測・時段分析</div>
-      </div>
-      <div class="arrow">›</div>
+  <!-- 週班表 -->
+  <a href="/schedule" class="card card-sm card-schedule">
+    <span class="sm-icon">🗓</span>
+    <div class="sm-body">
+      <div class="sm-title">週班表</div>
+      <div class="sm-desc">7 天航班分布・尖峰日預測</div>
     </div>
+    <div class="sm-arrow">→</div>
   </a>
 
-  <a href="/amenities" class="card card-amenities">
-    <div class="card-inner">
-      <div class="icon-wrap">🗺️</div>
-      <div class="card-text">
-        <div class="card-title">機場設施指南</div>
-        <div class="card-desc">育嬰室・換匯・退稅・行李・醫療・ATM・快速定位 TPE 全設施</div>
-      </div>
-      <div class="arrow">›</div>
+  <!-- 機場設施 -->
+  <a href="/amenities" class="card card-sm card-amenities">
+    <span class="sm-icon">🗺️</span>
+    <div class="sm-body">
+      <div class="sm-title">機場設施</div>
+      <div class="sm-desc">育嬰室・換匯・ATM・醫療快速定位</div>
     </div>
+    <div class="sm-arrow">→</div>
   </a>
 
-  <a href="/visa-guide" class="card card-visa">
-    <div class="card-inner">
-      <div class="icon-wrap">🛂</div>
-      <div class="card-text">
-        <div class="card-title">簽證口袋指南</div>
-        <div class="card-desc">台灣出發・日韓美越泰・免簽 / ESTA / K-ETA 文件清單一覽</div>
-      </div>
-      <div class="arrow">›</div>
+  <!-- 簽證指南 -->
+  <a href="/visa-guide" class="card card-sm card-visa">
+    <span class="sm-icon">🛂</span>
+    <div class="sm-body">
+      <div class="sm-title">簽證指南</div>
+      <div class="sm-desc">日韓美越泰・免簽 / ESTA / K-ETA</div>
     </div>
+    <div class="sm-arrow">→</div>
   </a>
 
-  <a href="/code-dictionary" class="card card-codes">
-    <div class="card-inner">
-      <div class="icon-wrap">🗂</div>
-      <div class="card-text">
-        <div class="card-title">代碼快查字典</div>
-        <div class="card-desc">機場 IATA・亞航航廈・時差・PNR 狀態碼・地勤作業縮寫一覽</div>
-      </div>
-      <div class="arrow">›</div>
+  <!-- 代碼字典 -->
+  <a href="/code-dictionary" class="card card-sm card-codes">
+    <span class="sm-icon">🗂</span>
+    <div class="sm-body">
+      <div class="sm-title">代碼字典</div>
+      <div class="sm-desc">IATA・PNR 狀態・地勤縮寫一覽</div>
     </div>
+    <div class="sm-arrow">→</div>
   </a>
 
 </div>
 
 <div class="footer">Transportation Assistant</div>
 
-<!-- 用戶設定檔 底部 Sheet -->
+<!-- Profile Sheet -->
 <div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
 <div class="profile-sheet" id="profileSheet">
   <div class="sh-handle"></div>
@@ -503,83 +565,77 @@ body {
 <script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
-/* ── 防縮放（iOS 雙保險） ── */
-document.addEventListener('touchmove', function(e) {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false });
+/* ── 防縮放 ── */
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 let _lastTap = 0;
-document.addEventListener('touchend', function(e) {
+document.addEventListener('touchend', e => {
   const now = Date.now();
   if (now - _lastTap < 300) e.preventDefault();
   _lastTap = now;
 }, { passive: false });
 
+/* ── 時間問候 ── */
+(function() {
+  const h = new Date().getHours();
+  const g = h < 5 ? '深夜好' : h < 12 ? '早安' : h < 18 ? '午安' : '晚安';
+  document.getElementById('greeting').textContent = g;
+  const days = ['日','一','二','三','四','五','六'];
+  const now = new Date();
+  const sub = `${now.getMonth()+1}/${now.getDate()}（週${days[now.getDay()]}）`;
+  document.getElementById('headerSub').textContent = sub;
+})();
+
 /* ── 卡片錯開入場 ── */
-document.querySelectorAll('.grid .card').forEach((card, i) => {
+document.querySelectorAll('.bento .card').forEach((card, i) => {
   card.style.animation =
-    `cardSlideUp 0.58s cubic-bezier(0.22, 1, 0.36, 1) ${100 + i * 72}ms both`;
+    `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${80 + i * 60}ms both`;
 });
 
-/* ── 點擊卡片：先讓整格動畫退場，再跳頁 ── */
+/* ── 點擊退場動畫 ── */
 document.querySelectorAll('a.card').forEach(a => {
-  a.addEventListener('click', function (e) {
+  a.addEventListener('click', function(e) {
+    if (this.target === '_blank') return;
     e.preventDefault();
     const href = this.href;
-    const grid   = document.querySelector('.grid');
+    const bento  = document.querySelector('.bento');
     const header = document.querySelector('.header');
     const footer = document.querySelector('.footer');
-    const easing = 'cubic-bezier(0.4, 0, 1, 1)';
-    const dur    = '0.2s';
-
-    [grid, header, footer].forEach(el => {
-      el.style.transition = `opacity ${dur} ${easing}, transform ${dur} ${easing}`;
+    const ease = 'cubic-bezier(0.4,0,1,1)';
+    [bento, header, footer].forEach(el => {
+      el.style.transition = `opacity 0.18s ${ease}, transform 0.18s ${ease}`;
     });
-    grid.style.opacity   = '0';
-    grid.style.transform = 'scale(0.95) translateY(-10px)';
-    header.style.opacity = '0';
-    header.style.transform = 'translateY(-8px)';
-    footer.style.opacity = '0';
-
-    setTimeout(() => { location.href = href; }, 210);
+    bento.style.opacity   = '0';
+    bento.style.transform = 'scale(0.96) translateY(-8px)';
+    header.style.opacity  = '0';
+    header.style.transform = 'translateY(-6px)';
+    footer.style.opacity  = '0';
+    setTimeout(() => { location.href = href; }, 190);
   });
 });
 
-/* ── bfcache 恢復：重播所有入場動畫 ── */
+/* ── bfcache 恢復 ── */
 window.addEventListener('pageshow', e => {
   if (!e.persisted) return;
-
+  const bento  = document.querySelector('.bento');
   const header = document.querySelector('.header');
   const footer = document.querySelector('.footer');
-  const grid   = document.querySelector('.grid');
-  const cards  = document.querySelectorAll('.grid .card');
-
-  /* 清除出場動畫殘留的 inline style，否則 grid / header / footer 仍是 opacity:0 */
-  [grid, header, footer].forEach(el => {
-    el.style.opacity    = '';
-    el.style.transform  = '';
-    el.style.transition = '';
+  const cards  = document.querySelectorAll('.bento .card');
+  [bento, header, footer].forEach(el => {
+    el.style.opacity = ''; el.style.transform = ''; el.style.transition = '';
   });
-
-  /* 停掉已完成的動畫（設為 none 再觸發重播） */
   header.style.animationName = 'none';
   footer.style.animationName = 'none';
   cards.forEach(c => { c.style.animationName = 'none'; });
-
-  void document.body.offsetWidth; /* 單次 reflow */
-
-  /* 恢復 header / footer CSS 定義的動畫 */
+  void document.body.offsetWidth;
   header.style.animationName = '';
   footer.style.animationName = '';
-
-  /* 重播卡片錯排 */
-  cards.forEach((card, i) => {
-    card.style.animation =
-      `cardSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) ${100 + i * 72}ms both`;
+  cards.forEach((c, i) => {
+    c.style.animation = `fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) ${80 + i * 60}ms both`;
   });
   _renderProfiles();
 });
 
-/* ── 用戶設定檔 管理 ── */
+/* ── Profile 管理 ── */
 function _renderProfiles() {
   const { profiles, active } = Config.getAll();
   const pArr = Object.values(profiles);
@@ -597,7 +653,6 @@ function _renderProfiles() {
     </div>
   `).join('');
 }
-
 function openSheet()  {
   _renderProfiles();
   document.getElementById('profileSheet').classList.add('open');
@@ -616,7 +671,6 @@ function addProfile() {
   document.getElementById('newName').value = '';
   _renderProfiles();
 }
-/* ── 雲端同步 UI ── */
 async function syncProfile(id) {
   const { profiles } = Config.getAll();
   const p = profiles[id];
@@ -642,7 +696,6 @@ async function syncProfile(id) {
     }
   }
 }
-
 async function doImportSync() {
   const key = document.getElementById('syncKeyInput').value.trim().toLowerCase();
   if (key.length < 6) { alert('請輸入有效的同步碼'); return; }
@@ -662,10 +715,7 @@ async function doImportSync() {
     alert(r.error || '❌ 匯入失敗，請確認同步碼正確');
   }
 }
-
 _renderProfiles();
-
-/* 背景拉取：若目前 profile 已啟用同步，靜默更新本地資料 */
 (async () => {
   const p = Config.getActive();
   if (!p.syncKey) return;
