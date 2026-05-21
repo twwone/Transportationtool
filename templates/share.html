@@ -395,7 +395,12 @@ const IMGUR_CID = '';  // 填入 Imgur Client-ID 後圖片同步功能啟用
 
 function dbg(msg) {
   const el = document.getElementById('dbg');
-  if (el) el.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+  if (!el) return;
+  const line = new Date().toLocaleTimeString() + ' ' + msg;
+  el.textContent = el.textContent ? el.textContent + '\n' + line : line;
+  // 只保留最後 5 行
+  const lines = el.textContent.split('\n');
+  if (lines.length > 5) el.textContent = lines.slice(-5).join('\n');
 }
 
 // sb_publishable_ 格式的 key 需要 anonymous session 才能讀寫 Supabase
@@ -528,14 +533,16 @@ async function pushText() {
   knownText = text;
   setSyncing(true);
   try {
-    await supa.from('share_rooms')
+    const { error } = await supa.from('share_rooms')
       .update({ text, updated_at: new Date().toISOString() })
       .eq('room_code', room);
+    if (error) dbg('push ERROR code=' + error.code + ' ' + error.message);
+    else dbg('push OK len=' + text.length);
     // 清除超過 1 小時閒置的舊房間
     await supa.from('share_rooms')
       .delete()
       .lt('updated_at', new Date(Date.now() - 3600000).toISOString());
-  } catch {}
+  } catch(e) { dbg('push catch: ' + e.message); }
   finally { pushing = false; setSyncing(false); }
 }
 
