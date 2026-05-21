@@ -385,7 +385,9 @@ body::before{
 </div>
 
 <script>
-const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, storageKey: 'thsr_supa_share' }
+});
 const IMGUR_CID = '';  // 填入 Imgur Client-ID 後圖片同步功能啟用
 
 let room = null;
@@ -477,8 +479,13 @@ function startPoll() {
 async function doPoll() {
   if (!room || pushing) return;
   try {
-    const { data } = await supa.from('share_rooms').select('text').eq('room_code', room).single();
-    if (!data) { clearInterval(pollTid); showExpired(); return; }
+    const { data, error } = await supa.from('share_rooms').select('text').eq('room_code', room).single();
+    if (error) {
+      // PGRST116 = 0 rows returned = 房間確實不存在
+      if (error.code === 'PGRST116') { clearInterval(pollTid); showExpired(); }
+      // 其他錯誤（401 session 過期、網路斷線等）靜默跳過，下次 poll 再試
+      return;
+    }
     const ta = document.getElementById('ta');
     if (data.text !== knownText && document.activeElement !== ta) {
       ta.value = data.text || '';
