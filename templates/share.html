@@ -346,12 +346,27 @@ let currentRoom = null;
 let channel     = null;
 let debounceTimer;
 
-/* 頁面載入立刻預熱 WebSocket，減少後續加入時的冷啟動延遲 */
-const _warmup = supa.channel('_warmup');
-_warmup.subscribe(s => { if (s === 'SUBSCRIBED') supa.removeChannel(_warmup); });
-
 function randCode() {
   return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+/* 建立 channel 並等 SUBSCRIBED，回傳 Promise<boolean> */
+function connectChannel(code) {
+  if (channel) supa.removeChannel(channel);
+  channel = supa.channel('share:' + code, {
+    config: { broadcast: { self: false } }
+  });
+  channel.on('broadcast', { event: 'text' }, ({ payload }) => {
+    const ta = document.getElementById('syncTextarea');
+    if (document.activeElement !== ta) ta.value = payload.text ?? '';
+  });
+  return new Promise(resolve => {
+    const t = setTimeout(() => resolve(false), 12000);
+    channel.subscribe(status => {
+      if (status === 'SUBSCRIBED')                         { clearTimeout(t); resolve(true);  }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') { clearTimeout(t); resolve(false); }
+    });
+  });
 }
 
 /* 彈簧按鈕效果 */
@@ -370,28 +385,36 @@ function addSpring(el) {
 }
 document.querySelectorAll('button').forEach(addSpring);
 
-/* ── 建立房間（建立者點擊） ── */
+/* ── 建立新房間（DB + WebSocket 平行）── */
 async function doCreate() {
   const btn = document.getElementById('createBtn');
   btn.disabled = true;
-  btn.querySelector('.create-title').textContent = '建立中…';
+  btn.querySelector('.create-title').textContent = '連線中…';
 
   const code = randCode();
-  const { error } = await supa.from('share_rooms').upsert(
-    { room_code: code, text: '', updated_at: new Date().toISOString() },
-    { onConflict: 'room_code' }
-  );
+
+  const [subOk, { error }] = await Promise.all([
+    connectChannel(code),
+    supa.from('share_rooms').upsert(
+      { room_code: code, text: '', updated_at: new Date().toISOString() },
+      { onConflict: 'room_code' }
+    )
+  ]);
 
   btn.disabled = false;
   btn.querySelector('.create-title').textContent = '建立新房間';
 
-  if (error) { alert('建立失敗，請重試'); return; }
+  if (error || !subOk) {
+    if (channel) { supa.removeChannel(channel); channel = null; }
+    alert(error ? '建立失敗，請重試' : '連線失敗，請重試');
+    return;
+  }
 
   currentRoom = code;
   enterSyncMode(code);
 }
 
-/* ── 加入房間 ── */
+/* ── 加入房間（DB 驗證 + WebSocket 平行）── */
 async function joinRoom() {
   const input = document.getElementById('joinInput');
   const code  = input.value.trim();
@@ -407,22 +430,27 @@ async function joinRoom() {
     return;
   }
 
-  btn.textContent = '驗證中…';
+  btn.textContent = '連線中…';
   btn.disabled = true;
 
-  const { data } = await supa
-    .from('share_rooms')
-    .select('room_code, text')
-    .eq('room_code', code)
-    .single();
+  const [subOk, { data }] = await Promise.all([
+    connectChannel(code),
+    supa.from('share_rooms').select('room_code, text').eq('room_code', code).single()
+  ]);
 
   btn.textContent = '加入';
   btn.disabled = false;
 
   if (!data) {
+    if (channel) { supa.removeChannel(channel); channel = null; }
     input.classList.add('error');
     errEl.classList.add('show');
     setTimeout(() => input.classList.remove('error'), 600);
+    return;
+  }
+  if (!subOk) {
+    if (channel) { supa.removeChannel(channel); channel = null; }
+    alert('連線失敗，請重試');
     return;
   }
 
@@ -431,44 +459,14 @@ async function joinRoom() {
   enterSyncMode(code);
 }
 
-/* ── 進入同步模式（建立者和加入者都會到這裡）── */
+/* ── 進入同步畫面（此時 channel 已 SUBSCRIBED）── */
 function enterSyncMode(code) {
   document.getElementById('stateA').style.display = 'none';
   document.getElementById('stateB').classList.add('show');
-
-  /* Topbar 更新：標題縮短，顯示房間碼 pill */
   document.getElementById('topbarTitle').textContent = '剪貼簿';
   document.getElementById('roomPillCode').textContent = code;
   document.getElementById('roomPill').classList.add('show');
-
-  subscribeRoom(code);
-  setTimeout(() => document.getElementById('syncTextarea').focus(), 150);
-}
-
-/* ── Realtime 訂閱（Broadcast）── */
-function subscribeRoom(code) {
-  if (channel) supa.removeChannel(channel);
-  channel = supa.channel('share:' + code, {
-    config: { broadcast: { self: false } }
-  });
-
-  const ta = document.getElementById('syncTextarea');
-  ta.disabled = true;
-  ta.placeholder = '連線中…';
-
-  channel
-    .on('broadcast', { event: 'text' }, ({ payload }) => {
-      if (document.activeElement !== ta) ta.value = payload.text ?? '';
-    })
-    .subscribe(status => {
-      if (status === 'SUBSCRIBED') {
-        ta.disabled = false;
-        ta.placeholder = '在這裡輸入文字或網址，對方裝置會即時同步…';
-        ta.focus();
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        ta.placeholder = '連線失敗，請重新整理頁面';
-      }
-    });
+  setTimeout(() => document.getElementById('syncTextarea').focus(), 100);
 }
 
 /* ── 推送文字（debounce 150ms）── */
@@ -477,22 +475,18 @@ document.getElementById('syncTextarea').addEventListener('input', () => {
   debounceTimer = setTimeout(pushText, 150);
 });
 
-async function pushText() {
+function pushText() {
   if (!currentRoom || !channel) return;
   const text = document.getElementById('syncTextarea').value;
-
-  /* Broadcast：即時推給同房間其他裝置 */
   channel.send({ type: 'broadcast', event: 'text', payload: { text } });
-
-  /* 寫 DB：持久化（加入者初始載入用）+ TTL 清理 */
   supa.from('share_rooms')
     .update({ text, updated_at: new Date().toISOString() })
     .eq('room_code', currentRoom)
-    .then(() => {
+    .then(() =>
       supa.from('share_rooms')
         .delete()
-        .lt('updated_at', new Date(Date.now() - 43200000).toISOString());
-    });
+        .lt('updated_at', new Date(Date.now() - 43200000).toISOString())
+    );
 }
 
 /* ── 複製房間碼（點 topbar pill）── */
