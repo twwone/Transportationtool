@@ -329,6 +329,8 @@ body {
 
   <!-- State B: 同步畫面 -->
   <div id="stateB">
+    <!-- Debug 狀態列 -->
+    <div id="dbg" style="font-size:0.72rem;color:#6b7280;background:rgba(0,0,0,0.05);border-radius:10px;padding:8px 12px;line-height:1.7;word-break:break-all;"></div>
     <textarea class="sync-textarea" id="syncTextarea"
       placeholder="在這裡輸入文字或網址，對方裝置會即時同步…"></textarea>
     <div class="action-row">
@@ -346,6 +348,15 @@ let currentRoom = null;
 let channel     = null;
 let debounceTimer;
 
+let dbgLines = [];
+function dbg(msg) {
+  const t = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+  dbgLines.push('[' + t + '] ' + msg);
+  if (dbgLines.length > 12) dbgLines.shift();
+  const el = document.getElementById('dbg');
+  if (el) el.textContent = dbgLines.join('\n');
+}
+
 function randCode() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
@@ -353,19 +364,22 @@ function randCode() {
 /* 建立 postgres_changes channel（無 filter，前端自行比對 room_code）*/
 function connectChannel(code) {
   if (channel) supa.removeChannel(channel);
+  dbg('connectChannel: ' + code);
   channel = supa.channel('share-db-' + code)
     .on('postgres_changes', {
       event:  'UPDATE',
       schema: 'public',
       table:  'share_rooms'
     }, payload => {
-      if (payload.new.room_code !== currentRoom) return;
+      dbg('收到事件 room=' + payload.new.room_code + ' text=' + (payload.new.text || '').slice(0, 20));
+      if (payload.new.room_code !== currentRoom) { dbg('room 不符，略過'); return; }
       const ta = document.getElementById('syncTextarea');
       if (document.activeElement !== ta) ta.value = payload.new.text ?? '';
     });
   return new Promise(resolve => {
-    const t = setTimeout(() => resolve(false), 12000);
+    const t = setTimeout(() => { dbg('subscribe 逾時'); resolve(false); }, 12000);
     channel.subscribe(status => {
+      dbg('subscribe status: ' + status);
       if (status === 'SUBSCRIBED')                              { clearTimeout(t); resolve(true);  }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){ clearTimeout(t); resolve(false); }
     });
@@ -481,15 +495,18 @@ document.getElementById('syncTextarea').addEventListener('input', () => {
 function pushText() {
   if (!currentRoom) return;
   const text = document.getElementById('syncTextarea').value;
+  dbg('pushText len=' + text.length);
   /* 寫 DB → 觸發 postgres_changes UPDATE 事件 → 對方收到 */
   supa.from('share_rooms')
     .update({ text, updated_at: new Date().toISOString() })
     .eq('room_code', currentRoom)
-    .then(() =>
-      supa.from('share_rooms')
-        .delete()
-        .lt('updated_at', new Date(Date.now() - 43200000).toISOString())
-    );
+    .then(({ error }) => {
+      dbg('update ' + (error ? '失敗: ' + error.message : '成功'));
+      if (!error)
+        supa.from('share_rooms')
+          .delete()
+          .lt('updated_at', new Date(Date.now() - 43200000).toISOString());
+    });
 }
 
 /* ── 複製房間碼（點 topbar pill）── */
