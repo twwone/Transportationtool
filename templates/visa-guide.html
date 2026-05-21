@@ -8,7 +8,8 @@
 <link rel="apple-touch-icon" href="/static/icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; height: 100%; }
@@ -359,6 +360,42 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   font-size: 0.7rem; color: #8a4f00; line-height: 1.5;
 }
 .disclaimer strong { font-weight: 700; }
+
+@media (prefers-color-scheme: dark) {
+  body { background: #000; color: #f2f2f7; }
+  .topbar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .topbar-title { color: #f2f2f7; }
+  .back-btn { color: #0a84ff; }
+  .search-wrap { background: #1c1c1e; border-color: #2c2c2e; }
+  .search-wrap:focus-within { border-color: #0a84ff; }
+  .search-wrap input { color: #f2f2f7; }
+  .search-wrap input::placeholder { color: #48484a; }
+  .search-icon { color: #48484a; }
+  .country-card { background: #1c1c1e; }
+  .country-card:hover { background: #2c2c2e; }
+  .country-name { color: #f2f2f7; }
+  .country-sub  { color: #636366; }
+  .country-toggle { background: #2c2c2e; color: #636366; }
+  .badge-free    { background: rgba(43,138,62,0.2);  color: #4ade80; }
+  .badge-evisa   { background: rgba(59,91,219,0.2);  color: #818cf8; }
+  .badge-required{ background: rgba(230,119,0,0.2);  color: #fb923c; }
+  .badge-valid   { background: rgba(43,138,62,0.2);  color: #4ade80; }
+  .badge-warn    { background: rgba(201,42,42,0.2);  color: #f87171; }
+  .doc-tag.must  { background: rgba(201,42,42,0.15); color: #f87171; }
+  .doc-tag.opt   { background: #2c2c2e;               color: #636366; }
+  .detail-section { background: #1c1c1e; border-color: #2c2c2e; }
+  .detail-section h4 { color: #8e8e93; }
+  .tip-row { color: #8e8e93; }
+  .tip-dot { color: #48484a; }
+  .country-link { color: #0a84ff; }
+  .disclaimer {
+    background: rgba(255,149,0,0.06);
+    border-color: rgba(255,149,0,0.2);
+    color: #636366;
+  }
+  .section-header { color: #636366; }
+  .flag-wrap { opacity: 0.9; }
+}
 </style>
 </head>
 <body>

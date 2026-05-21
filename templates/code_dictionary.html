@@ -8,7 +8,8 @@
 <link rel="apple-touch-icon" href="/static/icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; height: 100%; }
@@ -258,6 +259,43 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   color: #8e8e93; font-size: 0.9rem;
 }
 .empty-icon { font-size: 2.4rem; display: block; margin-bottom: 10px; }
+
+@media (prefers-color-scheme: dark) {
+  body { background: #000; color: #f2f2f7; }
+  .topbar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .topbar-title { color: #f2f2f7; }
+  .back-btn { color: #0a84ff; }
+  .search-wrap { background: #1c1c1e; border-color: #2c2c2e; }
+  .search-wrap:focus-within { border-color: #0a84ff; }
+  .search-wrap input { color: #f2f2f7; }
+  .search-wrap input::placeholder { color: #48484a; }
+  .search-icon { color: #48484a; }
+  .filter-row { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .filter-btn { color: #48484a; border-color: #3a3a3c; }
+  .filter-btn.active { background: rgba(29,78,216,0.2); border-color: rgba(96,165,250,0.4); color: #60a5fa; }
+  .card-row { background: #1c1c1e; border-color: #2c2c2e; }
+  .card-row:hover { background: #2c2c2e; }
+  .code-text  { color: #f2f2f7; }
+  .name-text  { color: #8e8e93; }
+  .detail-key { color: #636366; }
+  .detail-val { color: #8e8e93; }
+  .detail-val strong { color: #fb923c; }
+  .type-airport  { background: rgba(29,78,216,0.2);   color: #60a5fa; }
+  .type-airline  { background: rgba(194,65,12,0.2);   color: #fb923c; }
+  .type-pnr      { background: rgba(124,58,237,0.2);  color: #c084fc; }
+  .type-ops      { background: rgba(21,128,61,0.2);   color: #4ade80; }
+  .badge-type-airport { background: rgba(29,78,216,0.2);  color: #60a5fa; }
+  .badge-type-airline { background: rgba(194,65,12,0.2);  color: #fb923c; }
+  .badge-type-pnr     { background: rgba(124,58,237,0.2); color: #c084fc; }
+  .badge-type-ops     { background: rgba(21,128,61,0.2);  color: #4ade80; }
+  .badge-tz           { background: #2c2c2e; color: #636366; }
+  .badge-terminal     { background: rgba(133,77,14,0.2);  color: #fbbf24; }
+  .see-also   { background: rgba(29,78,216,0.15); color: #60a5fa; }
+  .copy-btn   { color: #48484a; }
+  .copy-btn:hover { color: #0a84ff; }
+  .empty { color: #48484a; }
+  .detail-panel { background: #1c1c1e; border-top-color: #2c2c2e; }
+}
 </style>
 </head>
 <body>

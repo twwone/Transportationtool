@@ -10,7 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
@@ -381,6 +382,51 @@ body {
 .picker-check { font-size: 1rem; color: #c7c7cc; flex-shrink: 0; transition: color 0.15s; }
 .picker-checked { border-color: #bfdbfe; background: #eff6ff; }
 .picker-checked .picker-check { color: #1a56db; }
+
+@media (prefers-color-scheme: dark) {
+  body { background: #000; color: #f2f2f7; }
+  .topbar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .topbar-title { color: #f2f2f7; }
+  .back-btn { color: #60a5fa; }
+  .refresh-btn { color: #60a5fa; }
+  .refresh-btn:hover { background: rgba(96,165,250,0.1); }
+  .tab-bar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .tab { color: #636366; border-bottom-color: #2c2c2e; }
+  .tab.active { color: #60a5fa; }
+  .tab-active-bar { background: #60a5fa; }
+  .flight-card { background: #1c1c1e; border-color: #2c2c2e; }
+  .flight-card:hover { border-color: #3a3a3c; }
+  .card-delayed  { background: rgba(251,146,60,0.08);  border-color: rgba(251,146,60,0.35); }
+  .card-diverted { background: rgba(192,38,211,0.08); border-color: rgba(192,38,211,0.35); }
+  .flight-airline { color: #8e8e93; }
+  .flight-num  { color: #f2f2f7; }
+  .airport-badge { background: rgba(26,86,219,0.2); color: #60a5fa; }
+  .delay-badge   { background: rgba(194,65,12,0.15); color: #fb923c; }
+  .badge-dir-arr { background: rgba(5,150,105,0.2);  color: #4ade80; }
+  .badge-dir-dep { background: rgba(30,64,175,0.2);  color: #93c5fd; }
+  .st-ontime   { background: rgba(5,150,105,0.2);  color: #4ade80; }
+  .st-delay    { background: rgba(154,52,18,0.2);  color: #fb923c; }
+  .st-landed   { background: rgba(30,64,175,0.2);  color: #93c5fd; }
+  .st-depart   { background: rgba(30,64,175,0.2);  color: #93c5fd; }
+  .st-board    { background: rgba(91,33,182,0.2);  color: #c4b5fd; }
+  .st-cancel   { background: rgba(153,27,27,0.2);  color: #f87171; }
+  .st-diverted { background: rgba(134,25,143,0.2); color: #e879f9; border-color: rgba(232,121,249,0.3); }
+  .st-unknown  { background: rgba(107,114,128,0.15); color: #9ca3af; }
+  .time-sch { color: #8e8e93; }
+  .time-sch.through { color: #48484a; }
+  .time-est { color: #fb923c; }
+  .empty-state { color: #48484a; }
+  .section-label { color: #636366; }
+  .airline-row { background: #1c1c1e; border-color: #2c2c2e; }
+  .picker-id   { background: rgba(26,86,219,0.15); color: #60a5fa; }
+  .picker-name { color: #f2f2f7; }
+  .picker-check { color: #3a3a3c; }
+  .picker-checked { background: rgba(26,86,219,0.15); border-color: rgba(26,86,219,0.4); }
+  .picker-checked .picker-check { color: #60a5fa; }
+  .sheet-overlay.open { background: rgba(0,0,0,0.55); }
+  .picker-sheet { background: #1c1c1e; }
+  .sh-done { color: #60a5fa; }
+}
 </style>
 </head>
 <body>

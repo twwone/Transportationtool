@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
 <script src="/static/config.js"></script>
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
@@ -257,6 +258,41 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+  body { background: #000; color: #f2f2f7; }
+  .topbar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .topbar-row1 .topbar-title { color: #f2f2f7; }
+  .back-btn { color: #bf5af2; }
+  .refresh-info { color: #48484a; }
+  .dir-toggle { background: #2c2c2e; }
+  .dir-btn { color: #48484a; }
+  .dir-btn.active { background: rgba(124,58,237,0.25); color: #bf5af2; }
+  .hs-chip { border-color: rgba(124,58,237,0.3); color: #bf5af2; }
+  .hs-chip.active { background: rgba(124,58,237,0.2); }
+  .hs-label { color: #48484a; }
+  .setup-banner { background: #1c1c1e; border-color: #2c2c2e; color: #8e8e93; }
+  .setup-banner strong { color: #bf5af2; }
+  .setup-banner code { background: #2c2c2e; border-color: #3a3a3c; color: #8e8e93; }
+  .station-row { background: #1c1c1e; border-color: #2c2c2e; }
+  .station-row.home-highlight { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.08); }
+  .station-id { background: rgba(124,58,237,0.15); border-color: rgba(124,58,237,0.3); color: #bf5af2; }
+  .station-name { color: #f2f2f7; }
+  .star-btn { color: #3a3a3c; }
+  .star-btn.starred { color: #f59e0b; }
+  .train-pill { background: #2c2c2e; border-color: #3a3a3c; }
+  .train-type { color: #8e8e93; }
+  .train-label.express { color: #c084fc; }
+  .train-label.local   { color: #818cf8; }
+  .cnt-urgent { color: #f87171; }
+  .cnt-soon   { color: #fb923c; }
+  .cnt-normal { color: #4ade80; }
+  .cnt-none   { color: #3a3a3c; }
+  .cnt-unit   { color: #48484a; }
+  .no-data    { color: #636366; }
+  .refresh-bar { color: #48484a; }
+  .refresh-bar button { background: rgba(124,58,237,0.2); color: #bf5af2; }
 }
 </style>
 </head>

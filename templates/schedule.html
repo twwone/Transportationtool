@@ -10,7 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -327,6 +328,40 @@ body {
   transition: opacity 0.14s ease-out;
 }
 #cards.fading { opacity: 0; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --green:  #30d158;
+    --green2: #32d74b;
+    --gl:     rgba(48,209,88,0.18);
+    --teal:   #32ade6;
+  }
+  body { background: #000; color: #f2f2f7; }
+  .topbar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .topbar-title { color: #f2f2f7; }
+  .back-btn { color: #30d158; }
+  .airasia-toggle { background: #2c2c2e; }
+  .airasia-btn { color: #48484a; }
+  .airasia-btn.active { background: rgba(5,150,105,0.25); color: #30d158; }
+  .day-card { background: #1c1c1e; border-color: #2c2c2e; }
+  .day-card:hover { border-color: #3a3a3c; }
+  .day-card.today { border-color: var(--green); }
+  .day-card.peak-high { border-color: #f87171; }
+  .day-card.peak-mid  { border-color: #fbbf24; }
+  .day-label { color: #8e8e93; }
+  .day-date  { color: #636366; }
+  .badge-today { background: rgba(48,209,88,0.15);  color: var(--green); }
+  .badge-high  { background: rgba(239,68,68,0.15);  color: #f87171; }
+  .badge-mid   { background: rgba(245,158,11,0.15); color: #fbbf24; }
+  .count-item label { color: #48484a; }
+  .detail-card { background: #1c1c1e; border-color: #2c2c2e; }
+  .detail-title { color: #8e8e93; }
+  .hour-label { color: #48484a; }
+  .hour-none  { color: #3a3a3c; }
+  .chart-legend { color: #48484a; }
+  .leg-dot { opacity: 0.85; }
+  .setup-error { background: #1c1c1e; border-color: #2c2c2e; color: #636366; }
+}
 </style>
 </head>
 <body>
