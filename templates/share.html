@@ -350,21 +350,24 @@ function randCode() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-/* 建立 channel 並等 SUBSCRIBED，回傳 Promise<boolean> */
+/* 建立 postgres_changes channel（無 filter，前端自行比對 room_code）*/
 function connectChannel(code) {
   if (channel) supa.removeChannel(channel);
-  channel = supa.channel('share:' + code, {
-    config: { broadcast: { self: false } }
-  });
-  channel.on('broadcast', { event: 'text' }, ({ payload }) => {
-    const ta = document.getElementById('syncTextarea');
-    if (document.activeElement !== ta) ta.value = payload.text ?? '';
-  });
+  channel = supa.channel('share-db-' + code)
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'share_rooms'
+    }, payload => {
+      if (payload.new.room_code !== currentRoom) return;
+      const ta = document.getElementById('syncTextarea');
+      if (document.activeElement !== ta) ta.value = payload.new.text ?? '';
+    });
   return new Promise(resolve => {
     const t = setTimeout(() => resolve(false), 12000);
     channel.subscribe(status => {
-      if (status === 'SUBSCRIBED')                         { clearTimeout(t); resolve(true);  }
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') { clearTimeout(t); resolve(false); }
+      if (status === 'SUBSCRIBED')                              { clearTimeout(t); resolve(true);  }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){ clearTimeout(t); resolve(false); }
     });
   });
 }
@@ -476,9 +479,9 @@ document.getElementById('syncTextarea').addEventListener('input', () => {
 });
 
 function pushText() {
-  if (!currentRoom || !channel) return;
+  if (!currentRoom) return;
   const text = document.getElementById('syncTextarea').value;
-  channel.send({ type: 'broadcast', event: 'text', payload: { text } });
+  /* 寫 DB → 觸發 postgres_changes UPDATE 事件 → 對方收到 */
   supa.from('share_rooms')
     .update({ text, updated_at: new Date().toISOString() })
     .eq('room_code', currentRoom)
