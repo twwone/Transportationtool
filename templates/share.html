@@ -374,6 +374,9 @@ body::before{
 
 </div>
 
+<!-- Debug bar（診斷用，確認正常後移除）-->
+<div id="dbg" style="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.75);color:#0f0;font:11px/1.6 monospace;padding:4px 8px;z-index:9999;white-space:pre-wrap;max-height:100px;overflow:auto"></div>
+
 <!-- Expired overlay -->
 <div class="expire-overlay" id="expireOverlay">
   <div class="expire-card">
@@ -390,11 +393,21 @@ const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
 });
 const IMGUR_CID = '';  // 填入 Imgur Client-ID 後圖片同步功能啟用
 
+function dbg(msg) {
+  const el = document.getElementById('dbg');
+  if (el) el.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+}
+
 // sb_publishable_ 格式的 key 需要 anonymous session 才能讀寫 Supabase
-// 已有 session 就沿用（autoRefreshToken 會自動續期），沒有就建一個
 (async () => {
-  const { data: { session } } = await supa.auth.getSession();
-  if (!session) await supa.auth.signInAnonymously();
+  dbg('auth: 取得 session 中…');
+  const { data: { session }, error: se } = await supa.auth.getSession();
+  if (se) { dbg('auth: getSession 失敗 ' + JSON.stringify(se)); return; }
+  if (session) { dbg('auth: 已有 session uid=' + session.user.id.slice(0,8)); return; }
+  dbg('auth: 無 session，signInAnonymously…');
+  const { error: ae } = await supa.auth.signInAnonymously();
+  if (ae) dbg('auth: signInAnonymously 失敗 ' + JSON.stringify(ae));
+  else dbg('auth: anonymous session 建立成功');
 })();
 
 let room = null;
@@ -488,18 +501,18 @@ async function doPoll() {
   try {
     const { data, error } = await supa.from('share_rooms').select('text').eq('room_code', room).single();
     if (error) {
-      // PGRST116 = 0 rows returned = 房間確實不存在
+      dbg('poll error code=' + error.code + ' msg=' + error.message);
       if (error.code === 'PGRST116') { clearInterval(pollTid); showExpired(); }
-      // 其他錯誤（401 session 過期、網路斷線等）靜默跳過，下次 poll 再試
       return;
     }
+    dbg('poll OK text=' + (data.text || '').slice(0, 20));
     const ta = document.getElementById('ta');
     if (data.text !== knownText && document.activeElement !== ta) {
       ta.value = data.text || '';
       detectUrl(data.text || '');
       knownText = data.text || '';
     }
-  } catch {}
+  } catch(e) { dbg('poll catch: ' + e.message); }
 }
 
 // ── Push text（debounce 300ms）─────────────────────────
