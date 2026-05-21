@@ -420,6 +420,7 @@ let pollTid = null, debTid = null;
 let pushing = false;
 let knownText = '';
 let detectedUrl = null;
+let lastTyped = 0;  // 自己最後一次打字的時間戳
 
 // ── Spring buttons ──────────────────────────────────────
 document.querySelectorAll('button').forEach(el => {
@@ -512,7 +513,8 @@ async function doPoll() {
     }
     dbg('poll OK text=' + (data.text || '').slice(0, 20));
     const ta = document.getElementById('ta');
-    if (data.text !== knownText && document.activeElement !== ta) {
+    const isSelfTyping = Date.now() - lastTyped < 2000;
+    if (data.text !== knownText && !isSelfTyping) {
       ta.value = data.text || '';
       detectUrl(data.text || '');
       knownText = data.text || '';
@@ -522,6 +524,7 @@ async function doPoll() {
 
 // ── Push text（debounce 300ms）─────────────────────────
 document.getElementById('ta').addEventListener('input', () => {
+  lastTyped = Date.now();
   detectUrl(document.getElementById('ta').value);
   clearTimeout(debTid); debTid = setTimeout(pushText, 300);
 });
