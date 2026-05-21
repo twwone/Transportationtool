@@ -238,38 +238,24 @@ body {
   min-height: 148px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
 }
 .sm-icon {
-  font-size: 2rem;
+  font-size: 2.2rem;
   line-height: 1;
-  margin-bottom: 12px;
-  display: block;
   transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
 }
 @media (hover: hover) {
   .card-sm:hover .sm-icon { transform: scale(1.12) rotate(-5deg); }
 }
-.sm-body { flex: 1; }
 .sm-title {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  line-height: 1.25;
-  margin-bottom: 4px;
-}
-.sm-desc {
-  font-size: 0.7rem;
-  color: var(--sub);
-  line-height: 1.45;
-}
-.sm-arrow {
-  margin-top: 10px;
-  font-size: 0.8rem;
-  color: #c7c7cc;
-  transition: color 0.2s, transform 0.28s cubic-bezier(0.22,1,0.36,1);
-}
-@media (hover: hover) {
-  .card-sm:hover .sm-arrow { transform: translateX(4px); }
+  line-height: 1.3;
+  letter-spacing: -0.1px;
 }
 /* 每張小卡的底部色條 */
 .card-sm::before {
@@ -422,8 +408,6 @@ body {
   .card-amenities .sm-title { color: #32ade6; }
   .card-visa  .sm-title { color: #ffd60a; }
   .card-codes .sm-title { color: #bf5af2; }
-  .sm-desc  { color: #48484a; }
-  .sm-arrow { color: #3a3a3c; }
   .footer   { color: #3a3a3c; }
   .profile-chip { background: #2c2c2e; border-color: rgba(255,255,255,0.08); color: #f2f2f7; }
   .pc-chevron   { color: #48484a; }
@@ -470,70 +454,45 @@ body {
         </div>
       </div>
       <div class="hero-bottom">
-        <div class="hero-title">航空資訊看板</div>
-        <div class="hero-desc">AirAsia 入離港即時動態・登機門・地勤時程倒數</div>
+        <div class="hero-title">Flight Info</div>
       </div>
     </div>
   </a>
 
-  <!-- 高鐵刷票 -->
+  <!-- THSR Ticket -->
   <a href="https://thsr-ticket-bot-j7qr.onrender.com" class="card card-sm card-thsr" target="_blank" rel="noopener">
     <span class="sm-icon">🚄</span>
-    <div class="sm-body">
-      <div class="sm-title">高鐵刷票</div>
-      <div class="sm-desc">自動偵測放票，Telegram 即時通知</div>
-    </div>
-    <div class="sm-arrow">→</div>
+    <div class="sm-title">THSR Ticket</div>
   </a>
 
-  <!-- 機場捷運 -->
+  <!-- MRT Train -->
   <a href="/mrt" class="card card-sm card-mrt">
     <span class="sm-icon">🚇</span>
-    <div class="sm-body">
-      <div class="sm-title">機場捷運</div>
-      <div class="sm-desc">直達車 / 普通車即時到站倒數</div>
-    </div>
-    <div class="sm-arrow">→</div>
+    <div class="sm-title">MRT Train</div>
   </a>
 
-  <!-- 週班表 -->
+  <!-- Weekly Schedule -->
   <a href="/schedule" class="card card-sm card-schedule">
     <span class="sm-icon">🗓</span>
-    <div class="sm-body">
-      <div class="sm-title">週班表</div>
-      <div class="sm-desc">7 天航班分布・尖峰日預測</div>
-    </div>
-    <div class="sm-arrow">→</div>
+    <div class="sm-title">Weekly Schedule</div>
   </a>
 
-  <!-- 機場設施 -->
+  <!-- Airport Map -->
   <a href="/amenities" class="card card-sm card-amenities">
     <span class="sm-icon">🗺️</span>
-    <div class="sm-body">
-      <div class="sm-title">機場設施</div>
-      <div class="sm-desc">育嬰室・換匯・ATM・醫療快速定位</div>
-    </div>
-    <div class="sm-arrow">→</div>
+    <div class="sm-title">Airport Map</div>
   </a>
 
-  <!-- 簽證指南 -->
+  <!-- Visa Guide -->
   <a href="/visa-guide" class="card card-sm card-visa">
     <span class="sm-icon">🛂</span>
-    <div class="sm-body">
-      <div class="sm-title">簽證指南</div>
-      <div class="sm-desc">日韓美越泰・免簽 / ESTA / K-ETA</div>
-    </div>
-    <div class="sm-arrow">→</div>
+    <div class="sm-title">Visa Guide</div>
   </a>
 
-  <!-- 代碼字典 -->
+  <!-- Code Book -->
   <a href="/code-dictionary" class="card card-sm card-codes">
     <span class="sm-icon">🗂</span>
-    <div class="sm-body">
-      <div class="sm-title">代碼字典</div>
-      <div class="sm-desc">IATA・PNR 狀態・地勤縮寫一覽</div>
-    </div>
-    <div class="sm-arrow">→</div>
+    <div class="sm-title">Code Book</div>
   </a>
 
 </div>
