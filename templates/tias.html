@@ -1040,22 +1040,30 @@ async function load() {
 
   try {
     const _ac  = new AbortController();
-    const _tid = setTimeout(() => _ac.abort(), 12000);
+    const _tid = setTimeout(() => _ac.abort(), 20000);
     let res;
     try {
       res = await fetch('/api/tias/flights', { signal: _ac.signal });
     } finally {
       clearTimeout(_tid);
     }
-    const data = await res.json();
 
-    if (!data.configured) {
-      document.getElementById('errWrap').innerHTML =
-        `<div class="error-banner">⚠️ TDX API 未設定，請確認環境變數 TDX_CLIENT_ID / TDX_CLIENT_SECRET。</div>`;
-      document.getElementById('listArr').innerHTML = '';
-      document.getElementById('listDep').innerHTML = '';
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (!data.configured) {
+        document.getElementById('errWrap').innerHTML =
+          `<div class="error-banner">⚠️ TDX API 未設定，請確認環境變數 TDX_CLIENT_ID / TDX_CLIENT_SECRET。</div>`;
+        document.getElementById('listArr').innerHTML = '';
+        document.getElementById('listDep').innerHTML = '';
+      } else {
+        document.getElementById('errWrap').innerHTML =
+          `<div class="error-banner">⚠️ 航班資料暫時無法取得，自動重試中…</div>`;
+        setTimeout(() => load(), 5000);
+      }
       return;
     }
+
+    const data = await res.json();
 
     document.getElementById('errWrap').innerHTML = '';
     document.getElementById('updateLabel').textContent = `更新 ${data.updated_at}`;

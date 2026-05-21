@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import time
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
 from flask import Flask, render_template, request, jsonify
@@ -335,11 +336,11 @@ def _fetch_metadata() -> tuple[dict, dict]:
 
 def _fetch_tias():
     """命中 30 秒快取就直接回傳，否則重打 TDX FIDS 並更新快取。
-    API 失敗時保留舊快取，避免回傳空資料覆蓋正常資料。"""
+    入港/出港改為平行請求，最差只等 1 次 timeout 而非 2 次。
+    任一方向 API 失敗時保留舊快取，避免回傳空資料覆蓋正常資料。"""
     with _tias_lock:
         if _tias_cache["arr"] is not None and time.time() < _tias_cache["expires_at"]:
             return _tias_cache["arr"], _tias_cache["dep"], True
-        # 保留舊快取供 API 失敗時 fallback
         stale = (_tias_cache.get("arr"), _tias_cache.get("dep"))
 
     token = _get_tdx_token()
@@ -357,26 +358,39 @@ def _fetch_tias():
                 f"{_TDX_FIDS}/{direction}/TPE",
                 headers=headers,
                 params={"$format": "JSON", "$top": 1000},
-                timeout=8,
+                timeout=10,
             )
             r.raise_for_status()
             body = r.json()
             data = body if isinstance(body, list) else body.get("data", [])
-            # 只保留今日航班，並依排班時間升序排列
             filtered = [f for f in data if f.get("FlightDate", "") == today]
             filtered.sort(key=lambda f: f.get(time_field, ""))
             return filtered, True
         except Exception:
             return [], False
 
-    arr, arr_ok = _get("Arrival",   "ScheduleArrivalTime")
-    dep, dep_ok = _get("Departure", "ScheduleDepartureTime")
+    # ── 平行發送入港 / 出港兩支 API（最差等 1 個 timeout 而非 2 個）──
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        fut_arr = pool.submit(_get, "Arrival",   "ScheduleArrivalTime")
+        fut_dep = pool.submit(_get, "Departure", "ScheduleDepartureTime")
+        arr, arr_ok = fut_arr.result()
+        dep, dep_ok = fut_dep.result()
 
-    # 任一方向 API 失敗時，回傳舊快取而非空陣列
+    # 任一方向失敗：優先用剛拿到的成功資料 + 舊快取補另一邊
     if not arr_ok or not dep_ok:
         if stale[0] is not None:
-            return stale[0], stale[1], True
-        return None, None, False  # 完全沒資料時告知前端顯示錯誤
+            # 哪邊失敗就用舊快取那邊補回
+            final_arr = arr if arr_ok else stale[0]
+            final_dep = dep if dep_ok else stale[1]
+            with _tias_lock:
+                _tias_cache["arr"] = final_arr
+                _tias_cache["dep"] = final_dep
+                _tias_cache["expires_at"] = time.time() + _TIAS_TTL
+            return final_arr, final_dep, True
+        # 完全沒舊資料：回傳已成功那一邊，讓前端至少能顯示部分資料
+        if arr_ok or dep_ok:
+            return arr, dep, True
+        return None, None, False
 
     with _tias_lock:
         _tias_cache["arr"] = arr
@@ -393,9 +407,12 @@ def tias():
 
 @app.route("/api/tias/flights")
 def tias_flights_api():
+    has_creds = bool(os.environ.get("TDX_CLIENT_ID") and os.environ.get("TDX_CLIENT_SECRET"))
     arr_all, dep_all, ok = _fetch_tias()
     if not ok:
-        return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
+        if not has_creds:
+            return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
+        return jsonify({"error": "TDX API 暫時無法連線，請稍後再試", "configured": True, "retry": True}), 503
 
     airline_map, airport_map = _fetch_metadata()
 
