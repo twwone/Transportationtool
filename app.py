@@ -46,28 +46,30 @@ def _get_tdx_token() -> str | None:
     client_secret = os.environ.get("TDX_CLIENT_SECRET", "")
     if not client_id or not client_secret:
         return None
+    now = time.time()
     with _tdx_lock:
-        now = time.time()
         if _tdx_cache["token"] and now < _tdx_cache["expires_at"] - 60:
             return _tdx_cache["token"]
-        try:
-            resp = _requests.post(
-                "https://tdx.transportdata.tw/auth/realms/TDXConnect"
-                "/protocol/openid-connect/token",
-                data={
-                    "grant_type":    "client_credentials",
-                    "client_id":     client_id,
-                    "client_secret": client_secret,
-                },
-                timeout=10,
-            )
-            data = resp.json()
-            token = data.get("access_token")
+    # 鎖釋放後再發 HTTP，避免 token 刷新期間阻塞所有 API 呼叫
+    try:
+        resp = _requests.post(
+            "https://tdx.transportdata.tw/auth/realms/TDXConnect"
+            "/protocol/openid-connect/token",
+            data={
+                "grant_type":    "client_credentials",
+                "client_id":     client_id,
+                "client_secret": client_secret,
+            },
+            timeout=10,
+        )
+        data = resp.json()
+        token = data.get("access_token")
+        with _tdx_lock:
             _tdx_cache["token"]      = token
             _tdx_cache["expires_at"] = now + data.get("expires_in", 300)
-            return token
-        except Exception:
-            # 刷新失敗時回傳舊 token 作為備援（可能仍有效）
+        return token
+    except Exception:
+        with _tdx_lock:
             return _tdx_cache.get("token")
 
 # ──────────────────────────────────────────────

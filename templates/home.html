@@ -10,7 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
 <script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,6 +44,53 @@ body {
   align-items: center;
   justify-content: center;
   padding: max(24px, env(safe-area-inset-top) + 12px) 20px max(48px, env(safe-area-inset-bottom) + 16px);
+}
+@media (prefers-color-scheme: dark) {
+  body { background: #000; color: #f2f2f7; }
+  .header h1 { color: #f2f2f7; }
+  .header p  { color: #636366; }
+  .card {
+    background: rgba(28, 28, 30, 0.85) !important;
+    border: none;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 20px 40px -4px rgba(0,0,0,0.5);
+  }
+  .card::after {
+    background: linear-gradient(155deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.02) 55%,rgba(255,255,255,0.06) 100%);
+  }
+  .card-title { color: inherit !important; }
+  .card-thsr .card-title { color: #ff9f0a !important; }
+  .card-mrt  .card-title { color: #bf5af2 !important; }
+  .card-widget .card-title { color: #6e6ce8 !important; }
+  .card-tias .card-title   { color: #3b82f6 !important; }
+  .card-schedule .card-title{ color: #30d158 !important; }
+  .card-amenities .card-title{ color: #32ade6 !important; }
+  .card-visa .card-title   { color: #ffd60a !important; }
+  .card-codes .card-title  { color: #bf5af2 !important; }
+  .card-desc { color: #636366; }
+  .card-thsr .icon-wrap { background: rgba(255,149,0,0.15); }
+  .card-mrt  .icon-wrap { background: rgba(124,58,237,0.15); }
+  .card-tias .icon-wrap { background: rgba(59,130,246,0.15); }
+  .card-schedule .icon-wrap{ background: rgba(5,150,105,0.15); }
+  .card-amenities .icon-wrap{ background: rgba(8,145,178,0.15); }
+  .card-visa .icon-wrap { background: rgba(245,158,11,0.15); }
+  .card-codes .icon-wrap{ background: rgba(109,40,217,0.15); }
+  .card-thsr:hover { background: rgba(40,30,10,0.9) !important; }
+  .card-mrt:hover  { background: rgba(30,20,40,0.9) !important; }
+  .card-tias:hover { background: rgba(15,20,40,0.9) !important; }
+  .card-schedule:hover { background: rgba(5,25,15,0.9) !important; }
+  .card-amenities:hover { background: rgba(5,25,30,0.9) !important; }
+  .card-visa:hover { background: rgba(35,25,5,0.9) !important; }
+  .card-codes:hover{ background: rgba(25,10,40,0.9) !important; }
+  .arrow { color: #3a3a3c; }
+  .footer { color: #48484a; }
+  /* profile sheet */
+  .profile-chip { background: rgba(44,44,46,0.9); border-color: rgba(255,255,255,0.1); color: #f2f2f7; }
+  .profile-sheet { background: rgba(28,28,30,0.98); }
+  .sh-section { background: rgba(44,44,46,0.85); }
+  .sh-row { border-bottom-color: rgba(255,255,255,0.06); }
+  .sh-name { color: #f2f2f7; }
+  .sh-label { color: #636366; }
+  .sh-add input, .sh-sync-import input { background: rgba(58,58,60,0.9); border-color: rgba(255,255,255,0.1); color: #f2f2f7; }
 }
 .header {
   text-align: center;

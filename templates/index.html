@@ -12,7 +12,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="高鐵刷票">
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
 <script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,6 +41,8 @@ body {
   color: #ff9500;
   font-size: 0.85rem;
   text-decoration: none;
+  padding: 6px 2px;
+  min-width: 44px;
 }
 .topbar-title {
   font-size: 1.05rem;
@@ -126,13 +129,20 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
 .dot.error { background: #ef4444; }
 .dot.stopped { background: #aeaeb2; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+@keyframes foundPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+  70%  { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
 .status-msg { font-size: 0.88rem; color: #6c6c70; }
 .found-box {
-  background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px;
-  padding: 14px 16px; text-align: center; color: #16a34a;
-  font-weight: 600; font-size: 1rem; margin-bottom: 12px; display: none;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1px solid #86efac; border-radius: 14px;
+  padding: 18px 16px; text-align: center; color: #15803d;
+  font-weight: 700; font-size: 1.05rem; margin-bottom: 12px; display: none;
+  line-height: 1.5;
 }
-.found-box.show { display: block; }
+.found-box.show { display: block; animation: foundPulse 1.2s ease-out 0.1s 3; }
 .log {
   background: #f9f9f9; border: 1px solid #e5e5ea; border-radius: 10px;
   padding: 12px; height: 190px; overflow-y: auto;
@@ -141,6 +151,40 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
 .log .e-run { color: #8e8e93; }
 .log .e-found { color: #16a34a; font-weight: 600; }
 .log .e-error { color: #dc2626; }
+
+/* ── Dark Mode ── */
+@media (prefers-color-scheme: dark) {
+  body { background: #000; color: #f2f2f7; }
+  .topbar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .topbar-title { color: #f2f2f7; }
+  .card { background: #1c1c1e; border-color: #2c2c2e; box-shadow: none; }
+  .card-title { color: #636366; }
+  label { color: #636366; }
+  select, input {
+    background: #2c2c2e; border-color: #3a3a3c;
+    color: #f2f2f7;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23636366' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center; padding-right: 28px;
+  }
+  select:focus, input:focus { border-color: #ff9f0a; }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.4; }
+  .btn-stop { background: rgba(220,38,38,0.15); border-color: rgba(220,38,38,0.4); color: #f87171; }
+  .btn-stop:hover:not(:disabled) { background: rgba(220,38,38,0.25); }
+  .status-msg { color: #8e8e93; }
+  .dot { background: #3a3a3c; }
+  .dot.stopped { background: #48484a; }
+  .found-box {
+    background: linear-gradient(135deg, rgba(5,46,22,0.9), rgba(2,44,34,0.9));
+    border-color: rgba(34,197,94,0.4); color: #4ade80;
+  }
+  .log { background: #2c2c2e; border-color: #3a3a3c; color: #636366; }
+  .log .e-run { color: #636366; }
+  .log .e-found { color: #4ade80; }
+  .log .e-error { color: #f87171; }
+  div[style*="color:#4caf50"] { color: #4ade80 !important; }
+}
 </style>
 </head>
 <body>
