@@ -16,330 +16,330 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f0f4ff;
   color: #1c1c1e;
   min-height: 100vh;
-  padding: 0 0 48px;
+  padding-bottom: 48px;
+  animation: pageIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* ── 頂部 ── */
+/* ── Topbar ── */
 .topbar {
-  background: rgba(240,244,255,0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: none;
+  background: rgba(240,244,255,0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   box-shadow: 0 1px 0 rgba(0,0,0,0.06);
-  padding: 12px 20px 12px;
-  padding-top: max(12px, env(safe-area-inset-top) + 8px);
+  padding: 12px 16px 16px;
+  padding-top: max(14px, env(safe-area-inset-top) + 10px);
   position: sticky;
   top: 0;
   z-index: 100;
 }
-.topbar-row1 {
+.topbar-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 14px;
 }
 .back-btn {
   color: #7c3aed;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 600;
   text-decoration: none;
+  min-width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  -webkit-tap-highlight-color: transparent;
 }
 .topbar-title {
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   font-weight: 700;
-  color: #1c1c1e;
   flex: 1;
 }
-.refresh-info {
-  font-size: 0.7rem;
-  color: #aeaeb2;
-}
-
-/* 方向切換 */
-.dir-toggle {
-  display: flex;
-  background: #f0f4ff;
-  border-radius: 10px;
-  padding: 3px;
-  gap: 3px;
-}
-.dir-btn {
-  flex: 1;
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  color: #aeaeb2;
-  background: transparent;
-}
-.dir-btn.active {
-  background: #ede9fe;
-  color: #7c3aed;
-}
-
-/* 常用站快捷 */
-.home-station-bar {
-  padding: 10px 0 0;
+.topbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
-.hs-label { font-size: 0.72rem; color: #aeaeb2; }
-.hs-chip {
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid #ddd6fe;
+.update-time {
+  font-size: 0.65rem;
+  color: #aeaeb2;
+}
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(124,58,237,0.1);
+  border: none;
   color: #7c3aed;
-  background: transparent;
+  font-size: 1.1rem;
   cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, transform 0.15s;
 }
-.hs-chip.active { background: #ede9fe; }
+.icon-btn:active { transform: scale(0.85); }
 
-/* ── 主要內容 ── */
-.content {
-  padding: 14px 16px;
+/* ── Direction Toggle ── */
+.dir-wrap {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
+  background: rgba(118,118,128,0.12);
+  border-radius: 100px;
+  padding: 3px;
 }
-
-/* 未設定 TDX 提示 */
-.setup-banner {
-  background: #ffffff;
-  border: 1px solid #e5e5ea;
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 16px;
-  font-size: 0.82rem;
-  color: #6c6c70;
-  line-height: 1.7;
+.dir-pill {
+  position: absolute;
+  top: 3px; bottom: 3px;
+  background: #fff;
+  border-radius: 100px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.14);
+  transition: left 0.28s cubic-bezier(0.25,1,0.5,1), width 0.28s cubic-bezier(0.25,1,0.5,1);
+  pointer-events: none;
+  will-change: left, width;
 }
-.setup-banner strong { color: #7c3aed; display: block; margin-bottom: 8px; font-size: 0.9rem; }
-.setup-banner code {
-  background: #f9f9f9;
-  border: 1px solid #e5e5ea;
-  border-radius: 6px;
-  padding: 2px 7px;
-  font-family: "SF Mono", monospace;
-  font-size: 0.78rem;
-  color: #6c6c70;
-}
-
-/* 站點橫列 */
-.station-row {
-  background: #ffffff;
-  border: 1px solid #e5e5ea;
-  border-radius: 12px;
-  padding: 11px 14px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  transition: border-color 0.15s;
-}
-.station-row.home-highlight {
-  border-color: #c4b5fd;
-  background: #faf8ff;
-}
-.station-id {
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: #7c3aed;
-  background: #f3f0ff;
-  border: 1px solid #ddd6fe;
-  border-radius: 5px;
-  padding: 2px 5px;
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
-}
-.station-name {
+.dir-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 100px;
+  border: none;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #1c1c1e;
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.star-btn {
-  background: none;
-  border: none;
-  font-size: 0.95rem;
   cursor: pointer;
-  color: #c7c7cc;
-  transition: color 0.15s;
-  padding: 2px 4px;
-  flex-shrink: 0;
+  color: #8e8e93;
+  background: transparent;
+  position: relative; z-index: 1;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
-.star-btn.starred { color: #f59e0b; }
+.dir-btn.active { color: #7c3aed; }
 
-/* 班次區（右側） */
-.trains-inline {
+/* ── Starred shortcut ── */
+.starred-bar {
+  padding-top: 10px;
   display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.train-pill {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  background: #f9f9f9;
-  border: 1px solid #e5e5ea;
-  border-radius: 8px;
-  padding: 5px 10px;
-  min-width: 52px;
-  gap: 1px;
+  gap: 8px;
 }
-.train-label {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.4px;
+.starred-bar:empty { display: none; }
+.s-label { font-size: 0.7rem; color: #aeaeb2; }
+.s-chip {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 18px;
+  border-radius: 20px;
+  background: #ede9fe;
+  color: #7c3aed;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, transform 0.15s;
 }
-.train-label.express { color: #a0318e; }  /* 直達車：洋紅紫 */
-.train-label.local   { color: #3d40a5; }  /* 普通車：靛藍 */
+.s-chip:active { transform: scale(0.95); background: #ddd6fe; }
 
-.train-countdown {
-  font-size: 1.15rem;
-  font-weight: 800;
-  line-height: 1.1;
-}
-.train-time {
-  font-size: 0.58rem;
-  color: #aeaeb2;
-  white-space: nowrap;
-}
-
-/* 倒數顏色 */
-.cnt-urgent  { color: #dc2626; }   /* < 3 分：紅色 */
-.cnt-soon    { color: #c2410c; }   /* 3–8 分：深橘 */
-.cnt-normal  { color: #16a34a; }   /* > 8 分：綠色 */
-.cnt-none    { color: #c7c7cc; }   /* 無班次 */
-
-/* 更新中 */
-.updating-bar {
-  text-align: center;
-  padding: 12px;
-  font-size: 0.72rem;
-  color: #aeaeb2;
+/* ── Content ── */
+.content {
+  padding: 14px 14px 0;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-/* 底部更新倒數 */
-.refresh-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  background: #ffffff;
-  border-top: 1px solid #e5e5ea;
-  padding: 10px 20px;
-  padding-bottom: max(10px, env(safe-area-inset-bottom) + 6px);
+/* ── Station card ── */
+.station-card {
+  background: #fff;
+  border: 1.5px solid #e5e5ea;
+  border-radius: 22px;
+  padding: 16px 18px 18px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s cubic-bezier(0.22,1,0.36,1);
+}
+.station-card:active { transform: scale(0.982); }
+.station-card.card-anim {
+  animation: cardIn 0.42s cubic-bezier(0.22,1,0.36,1) both;
+}
+.station-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  border-radius: 0;
+}
+.station-card.urgency-urgent::before { background: #dc2626; }
+.station-card.urgency-soon::before   { background: #ea580c; }
+.station-card.urgency-normal::before { background: #16a34a; }
+.station-card.urgency-none::before   { background: transparent; }
+
+.station-card.home-highlight {
+  border-color: #c4b5fd;
+  background: linear-gradient(140deg, #faf8ff 0%, #f3f0ff 100%);
+  box-shadow: 0 2px 14px rgba(124,58,237,0.1);
+}
+
+.station-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.72rem;
-  color: #aeaeb2;
+  margin-bottom: 14px;
 }
-.refresh-bar button {
-  background: #ede9fe;
-  border: none;
-  color: #7c3aed;
-  font-size: 0.72rem;
-  padding: 5px 12px;
-  border-radius: 8px;
+.station-name {
+  font-size: 1.18rem;
+  font-weight: 700;
+  padding-left: 11px;
+  color: #1c1c1e;
+}
+.star-btn {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none;
   cursor: pointer;
-  font-weight: 600;
+  font-size: 1.35rem;
+  color: #d1d1d6;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s, transform 0.18s;
+  flex-shrink: 0;
 }
+.star-btn:active { transform: scale(0.75); }
+.star-btn.starred { color: #f59e0b; }
 
+/* ── Train pills ── */
+.trains-row {
+  display: flex;
+  gap: 10px;
+  padding-left: 11px;
+}
+.train-pill {
+  flex: 1;
+  background: #f6f6f8;
+  border: 1.5px solid #ebebed;
+  border-radius: 16px;
+  padding: 14px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.pill-type {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+.pill-type.express { color: #a0318e; }
+.pill-type.local   { color: #3d40a5; }
+
+.pill-countdown {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -3px;
+  line-height: 1;
+}
+.pill-unit {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  margin-left: 1px;
+  vertical-align: super;
+}
+.cnt-urgent { color: #dc2626; }
+.cnt-soon   { color: #ea580c; }
+.cnt-normal { color: #16a34a; }
+.cnt-none   { color: #c7c7cc; font-size: 2rem; letter-spacing: 0; }
+
+/* ── Loading / Error ── */
+.loading { text-align: center; padding: 64px 20px; font-size: 0.85rem; color: #aeaeb2; }
+.setup-banner {
+  background: #fff; border: 1px solid #e5e5ea; border-radius: 20px;
+  padding: 24px 20px; font-size: 0.84rem; color: #6c6c70; line-height: 1.7;
+}
+.setup-banner strong { color: #7c3aed; display: block; margin-bottom: 8px; font-size: 0.95rem; }
+
+/* ── Dark Mode ── */
 @media (prefers-color-scheme: dark) {
   body { background: #000; color: #f2f2f7; }
-  .topbar { background: rgba(0,0,0,0.75); box-shadow: 0 1px 0 rgba(255,255,255,0.06); border-bottom: none; }
-  .topbar-row1 .topbar-title { color: #f2f2f7; }
+  .topbar { background: rgba(0,0,0,0.78); box-shadow: 0 1px 0 rgba(255,255,255,0.06); }
+  .topbar-title { color: #f2f2f7; }
   .back-btn { color: #bf5af2; }
-  .refresh-info { color: #48484a; }
-  .dir-toggle { background: #2c2c2e; }
+  .update-time { color: #48484a; }
+  .icon-btn { background: rgba(191,90,242,0.15); color: #bf5af2; }
+  .icon-btn:active { background: rgba(191,90,242,0.25); }
+
+  .dir-wrap { background: rgba(118,118,128,0.18); }
+  .dir-pill { background: #2c2c2e; box-shadow: 0 1px 5px rgba(0,0,0,0.5); }
   .dir-btn { color: #48484a; }
-  .dir-btn.active { background: rgba(124,58,237,0.25); color: #bf5af2; }
-  .hs-chip { border-color: rgba(124,58,237,0.3); color: #bf5af2; }
-  .hs-chip.active { background: rgba(124,58,237,0.2); }
-  .hs-label { color: #48484a; }
-  .setup-banner { background: #1c1c1e; border-color: #2c2c2e; color: #8e8e93; }
-  .setup-banner strong { color: #bf5af2; }
-  .setup-banner code { background: #2c2c2e; border-color: #3a3a3c; color: #8e8e93; }
-  .station-row { background: #1c1c1e; border-color: #2c2c2e; }
-  .station-row.home-highlight { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.08); }
-  .station-id { background: rgba(124,58,237,0.15); border-color: rgba(124,58,237,0.3); color: #bf5af2; }
+  .dir-btn.active { color: #bf5af2; }
+
+  .s-chip { background: rgba(124,58,237,0.2); color: #bf5af2; }
+  .s-chip:active { background: rgba(124,58,237,0.3); }
+
+  .station-card { background: #1c1c1e; border-color: #2c2c2e; }
+  .station-card.home-highlight {
+    border-color: rgba(124,58,237,0.5);
+    background: linear-gradient(140deg, rgba(124,58,237,0.12) 0%, rgba(124,58,237,0.06) 100%);
+    box-shadow: none;
+  }
   .station-name { color: #f2f2f7; }
   .star-btn { color: #3a3a3c; }
   .star-btn.starred { color: #f59e0b; }
   .train-pill { background: #2c2c2e; border-color: #3a3a3c; }
-  .train-type { color: #8e8e93; }
-  .train-label.express { color: #c084fc; }
-  .train-label.local   { color: #818cf8; }
+  .pill-type.express { color: #c084fc; }
+  .pill-type.local   { color: #818cf8; }
   .cnt-urgent { color: #f87171; }
   .cnt-soon   { color: #fb923c; }
   .cnt-normal { color: #4ade80; }
   .cnt-none   { color: #3a3a3c; }
-  .cnt-unit   { color: #48484a; }
-  .no-data    { color: #636366; }
-  .refresh-bar { color: #48484a; }
-  .refresh-bar button { background: rgba(124,58,237,0.2); color: #bf5af2; }
+  .setup-banner { background: #1c1c1e; border-color: #2c2c2e; color: #8e8e93; }
+  .setup-banner strong { color: #bf5af2; }
 }
 </style>
 </head>
 <body>
 
-<!-- 頂部（含常用站，整塊 sticky） -->
 <div class="topbar">
-  <div class="topbar-row1">
+  <div class="topbar-row">
     <a href="/" class="back-btn">‹ 返回</a>
-    <span class="topbar-title">🚇 桃園機場捷運</span>
-    <span class="refresh-info" id="lastUpdate">—</span>
+    <span class="topbar-title">🚇 機場捷運</span>
+    <div class="topbar-right">
+      <span class="update-time" id="lastUpdate">—</span>
+      <button class="icon-btn" onclick="fetchNow()" title="立即更新">↻</button>
+    </div>
   </div>
-  <div class="dir-toggle">
+  <div class="dir-wrap" id="dirWrap">
+    <div class="dir-pill" id="dirPill"></div>
     <button class="dir-btn active" id="btnDir0" onclick="setDir(0)">← 往台北</button>
-    <button class="dir-btn"        id="btnDir1" onclick="setDir(1)">往機場 / 中壢 →</button>
+    <button class="dir-btn"        id="btnDir1" onclick="setDir(1)">往機場 →</button>
   </div>
-  <div class="home-station-bar" id="homeBar">
-    <span class="hs-label">⭐ 常用站：</span>
-  </div>
+  <div class="starred-bar" id="homeBar"></div>
 </div>
 
-<!-- 主內容 -->
 <div class="content" id="content">
-  <div class="updating-bar">載入中...</div>
-</div>
-
-<!-- 底部更新列 -->
-<div class="refresh-bar">
-  <span id="refreshCountdown">—</span>
-  <button onclick="fetchNow()">立即更新</button>
+  <div class="loading">載入中…</div>
 </div>
 
 <script>
 const STATIONS = {{ stations | tojson }};
 const HAS_TDX  = {{ has_tdx | tojson }};
 
-let direction   = 0;         // 0: 往台北, 1: 往桃園
-let liveData    = [];        // 最新 API 回應
-let starredId   = Config.getActive().mrt.starred || "";
-let refreshTick = 30;
+let direction    = 0;
+let liveData     = [];
+let starredId    = Config.getActive().mrt.starred || "";
+let refreshTick  = 30;
 let refreshTimer = null;
-
-// ── Demo 模擬資料 ──
-let _demoStart = 0;   // Date.now() when data was generated
+let _demoStart   = 0;
 
 function generateDemoData() {
   _demoStart = Date.now();
@@ -350,13 +350,7 @@ function generateDemoData() {
         const base1 = ((si * 7 + type * 3 + dir * 11) % 18) + 2;
         const base2 = base1 + (type === 1 ? 18 : 15);
         [base1, base2].forEach(mins => {
-          rows.push({
-            StationID:       st.id,
-            Direction:       dir,
-            TrainType:       type,
-            _baseMins:       mins,   // 生成時的整數分鐘
-            StationSequence: si + 1,
-          });
+          rows.push({ StationID: st.id, Direction: dir, TrainType: type, _baseMins: mins, StationSequence: si + 1 });
         });
       });
     });
@@ -364,70 +358,64 @@ function generateDemoData() {
   return rows;
 }
 
-// 取得目前剩餘分鐘（整數）
 function demoMins(t) {
   const elapsed = (Date.now() - _demoStart) / 60000;
   return Math.max(0, Math.round(t._baseMins - elapsed));
 }
 
-// demo 模式每秒重繪
 let _demoTick = null;
 function startDemoTick() {
   if (_demoTick) return;
-  // 確保實時計時器已停止，避免 refreshTick 被兩個 interval 同時遞減
   if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
   _demoTick = setInterval(() => {
     renderStations();
     refreshTick--;
-    document.getElementById("refreshCountdown").textContent =
-      `Demo 模式・${Math.max(0, refreshTick)} 秒後模擬更新`;
     if (refreshTick <= 0) {
       liveData = generateDemoData();
       refreshTick = 30;
       document.getElementById("lastUpdate").textContent =
-        "模擬更新 " + new Date().toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+        new Date().toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit"});
     }
   }, 1000);
 }
 
-// ── 初始化 ──
 (function init() {
+  updateDirPill();
   renderHomeBar();
   if (HAS_TDX) {
     fetchNow();
     startRefreshTimer();
   } else {
-    // Demo 模式：用模擬資料跑完整 UI
     liveData = generateDemoData();
-    document.getElementById("lastUpdate").textContent = "Demo 模式";
+    document.getElementById("lastUpdate").textContent = "Demo";
     renderStations();
     startDemoTick();
   }
 })();
 
-// ── 方向切換 ──
+function updateDirPill() {
+  const btn  = document.getElementById('btnDir' + direction);
+  const pill = document.getElementById('dirPill');
+  if (!btn || !pill) return;
+  pill.style.left  = btn.offsetLeft + 'px';
+  pill.style.width = btn.offsetWidth + 'px';
+}
+
 function setDir(d) {
   direction = d;
   document.getElementById("btnDir0").classList.toggle("active", d === 0);
   document.getElementById("btnDir1").classList.toggle("active", d === 1);
+  updateDirPill();
   renderStations();
 }
 
-// ── 常用站列 ──
 function renderHomeBar() {
   const bar = document.getElementById("homeBar");
-  bar.innerHTML = '<span class="hs-label">⭐ 常用站：</span>';
-  if (!starredId) {
-    bar.innerHTML += '<span style="font-size:0.72rem;color:#334;">點各站 ☆ 設定</span>';
-    return;
-  }
+  if (!starredId) { bar.innerHTML = ''; return; }
   const st = STATIONS.find(s => s.id === starredId);
-  if (!st) return;
-  const chip = document.createElement("button");
-  chip.className = "hs-chip active";
-  chip.textContent = st.name;
-  chip.onclick = () => scrollToStation(starredId);
-  bar.appendChild(chip);
+  if (!st) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `<span class="s-label">⭐</span>
+    <button class="s-chip" onclick="scrollToStation('${starredId}')">${st.name}</button>`;
 }
 
 function scrollToStation(id) {
@@ -435,7 +423,6 @@ function scrollToStation(id) {
   if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-// ── 取資料 ──
 async function fetchNow() {
   refreshTick = 30;
   try {
@@ -445,76 +432,66 @@ async function fetchNow() {
     if (json.error)       { renderError(json.error); return; }
     liveData = json.data || [];
     document.getElementById("lastUpdate").textContent =
-      "更新 " + new Date().toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+      new Date().toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit"});
     renderStations();
-  } catch(e) {
-    renderError(String(e));
-  }
+  } catch(e) { renderError(String(e)); }
 }
 
 function startRefreshTimer() {
   if (refreshTimer) clearInterval(refreshTimer);
-  // 確保 demo 計時器已停止，避免 refreshTick 被兩個 interval 同時遞減
   if (_demoTick) { clearInterval(_demoTick); _demoTick = null; }
   refreshTimer = setInterval(() => {
     refreshTick--;
-    document.getElementById("refreshCountdown").textContent =
-      `每 30 秒更新・${refreshTick} 秒後重整`;
     if (refreshTick <= 0) fetchNow();
   }, 1000);
 }
 
-// ── 渲染各站（橫列式）──
 function renderStations() {
   const content = document.getElementById("content");
-  let html = "";
-
   const orderedStations = starredId
-    ? [
-        ...STATIONS.filter(s => s.id === starredId),
-        ...STATIONS.filter(s => s.id !== starredId),
-      ]
+    ? [...STATIONS.filter(s => s.id === starredId), ...STATIONS.filter(s => s.id !== starredId)]
     : STATIONS;
 
+  let html = '';
   for (const st of orderedStations) {
-    const isHome = st.id === starredId;
+    const isHome  = st.id === starredId;
     const trains  = getTrainsForStation(st.id, direction);
     const express = trains.filter(t => t.TrainType === 1)[0];
     const local   = trains.filter(t => t.TrainType === 2)[0];
+    const first   = express || local;
+    const urgency = first
+      ? (first._mins < 3 ? 'urgent' : first._mins <= 8 ? 'soon' : 'normal')
+      : 'none';
 
-    html += `
-      <div class="station-row ${isHome ? "home-highlight" : ""}" id="card-${st.id}">
-        <span class="station-id">${st.id}</span>
+    html += `<div class="station-card urgency-${urgency}${isHome ? ' home-highlight' : ''}" id="card-${st.id}">
+      <div class="station-header">
         <span class="station-name">${st.name}</span>
-        <div class="trains-inline">
-          ${renderPill(express, "express", "直達")}
-          ${renderPill(local,   "local",   "普通")}
-        </div>
-        <button class="star-btn ${isHome ? "starred" : ""}"
-                onclick="toggleStar('${st.id}')" title="設為常用站">
-          ${isHome ? "★" : "☆"}
+        <button class="star-btn${isHome ? ' starred' : ''}" onclick="toggleStar('${st.id}')">
+          ${isHome ? '★' : '☆'}
         </button>
-      </div>`;
+      </div>
+      <div class="trains-row">
+        ${renderPill(express, "express", "直達")}
+        ${renderPill(local,   "local",   "普通")}
+      </div>
+    </div>`;
   }
   content.innerHTML = html;
 }
 
 function renderPill(train, typeClass, label) {
-  if (!train) {
-    return `<div class="train-pill">
-      <span class="train-label ${typeClass}">${label}</span>
-      <span class="train-countdown cnt-none">—</span>
-    </div>`;
-  }
+  if (!train) return `<div class="train-pill">
+    <span class="pill-type ${typeClass}">${label}</span>
+    <span class="pill-countdown cnt-none">—</span>
+  </div>`;
   const mins = train._mins;
   const cls  = mins < 3 ? "cnt-urgent" : mins <= 8 ? "cnt-soon" : "cnt-normal";
   return `<div class="train-pill">
-    <span class="train-label ${typeClass}">${label}</span>
-    <span class="train-countdown ${cls}">${mins}<small style="font-size:0.5em;font-weight:500"> 分</small></span>
+    <span class="pill-type ${typeClass}">${label}</span>
+    <span class="pill-countdown ${cls}">${mins}<small class="pill-unit">分</small></span>
   </div>`;
 }
 
-// 直達車實際停靠站（兩方向相同）
 const EXPRESS_STOPS = new Set(["A1", "A12", "A13", "A17", "A18"]);
 
 function getTrainsForStation(stationId, dir) {
@@ -528,58 +505,31 @@ function getTrainsForStation(stationId, dir) {
       const mins = t._baseMins !== undefined
         ? demoMins(t)
         : (typeof t.EstimateTime === "number" ? t.EstimateTime : 999);
-
       let trainType;
       if (t._baseMins !== undefined) {
-        // Demo 模式：沿用原本設定的類型
         trainType = t.TrainType;
       } else if (dir === 1) {
-        // 往機場：終點 A13（機場T2）= 直達(1)；終點 A22（老街溪）= 普通(2)
         trainType = t.DestinationStationID === "A13" ? 1 : 2;
       } else {
-        // 往台北：兩種車終點都是 A1，API 無法區分。
-        // 直達車不停靠非停靠站，非停靠站的所有班次均為普通車。
         trainType = EXPRESS_STOPS.has(stationId) ? undefined : 2;
       }
       return { ...t, _mins: mins, TrainType: trainType };
     })
     .filter(t => t._mins >= 0 && t._mins < 999)
     .sort((a, b) => a._mins - b._mins)
-    .map((t, i) => ({
-      ...t,
-      // 直達停靠站往台北方向：第1班給直達槽、第2班給普通槽（最佳近似）
-      TrainType: t.TrainType ?? (i === 0 ? 1 : 2),
-    }));
+    .map((t, i) => ({ ...t, TrainType: t.TrainType ?? (i === 0 ? 1 : 2) }));
 }
 
-
-function minutesFromNow(isoStr) {
-  if (!isoStr) return 999;
-  const diff = (new Date(isoStr) - Date.now()) / 60000;
-  return Math.max(0, Math.round(diff));
-}
-
-function formatHHMM(isoStr) {
-  if (!isoStr) return "—";
-  const d = new Date(isoStr);
-  if (isNaN(d)) return isoStr.slice(11, 16) || "—";
-  return d.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit"});
-}
-
-// ── 常用站切換 ──
 function toggleStar(id) {
   starredId = starredId === id ? "" : id;
-  localStorage.setItem("mrt_starred", starredId);
   Config.save({ mrt: { starred: starredId } });
   renderHomeBar();
   renderStations();
 }
 
-// ── 未設定 TDX（API 回傳 configured:false 時才呼叫）──
 function renderNoTDX() {
-  // 切換成 demo 模式，不顯示錯誤畫面
   liveData = generateDemoData();
-  document.getElementById("lastUpdate").textContent = "Demo 模式";
+  document.getElementById("lastUpdate").textContent = "Demo";
   renderStations();
   startDemoTick();
 }
@@ -588,29 +538,15 @@ function renderError(msg) {
   document.getElementById("content").innerHTML =
     `<div class="setup-banner"><strong>⚠️ 資料載入失敗</strong>${msg}</div>`;
 }
-/* ── 防縮放（iOS 雙保險） ── */
-document.addEventListener("touchmove", function(e) {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false });
+
+document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 let _lastTap = 0;
-document.addEventListener("touchend", function(e) {
+document.addEventListener("touchend", e => {
   const now = Date.now();
   if (now - _lastTap < 300) e.preventDefault();
   _lastTap = now;
 }, { passive: false });
-</script>
-<script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
-/* ── 防縮放（iOS 雙保險） ── */
-document.addEventListener("touchmove", function(e) {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false });
-let _lastTap = 0;
-document.addEventListener("touchend", function(e) {
-  const now = Date.now();
-  if (now - _lastTap < 300) e.preventDefault();
-  _lastTap = now;
-}, { passive: false });
 </script>
 </body>
 </html>

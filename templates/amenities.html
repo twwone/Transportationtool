@@ -54,11 +54,12 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(242,242,247,0.88);
-  backdrop-filter: saturate(1.6) blur(18px);
-  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  background: rgba(240,244,255,0.9);
+  backdrop-filter: saturate(1.6) blur(22px);
+  -webkit-backdrop-filter: saturate(1.6) blur(22px);
   padding: env(safe-area-inset-top, 0px) 16px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
 }
 .header-row {
   display: flex;
@@ -108,15 +109,18 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--card);
-  border: 1.5px solid var(--border);
-  border-radius: 13px;
-  padding: 10px 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  background: rgba(255,255,255,0.95);
+  border: 1.5px solid rgba(255,255,255,0.7);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 .search-box:focus-within {
-  border-color: #0e7490;
-  box-shadow: 0 0 0 3px rgba(14,116,144,0.12);
+  box-shadow: 0 0 0 3.5px rgba(14,116,144,0.2), 0 4px 16px rgba(0,0,0,0.06);
+  transform: scale(1.01);
 }
 .search-icon { font-size: 1rem; color: var(--sub); flex-shrink: 0; }
 .search-input {
@@ -151,9 +155,9 @@ body {
 }
 .term-btn {
   flex: 1;
-  padding: 7px 0;
+  padding: 10px 0;
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--card);
   font-size: 0.78rem;
   font-weight: 600;
@@ -185,11 +189,11 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   background: var(--card);
   border: 1.5px solid var(--border);
-  border-radius: 14px;
-  padding: 9px 4px 7px;
+  border-radius: 16px;
+  padding: 12px 4px 10px;
   cursor: pointer;
   transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
@@ -201,7 +205,7 @@ body {
   border-color: var(--cat-color, #0e7490);
   background: color-mix(in srgb, var(--cat-color, #0e7490) 8%, white);
 }
-.cat-emoji { font-size: 1.25rem; line-height: 1; }
+.cat-emoji { font-size: 1.45rem; line-height: 1; }
 .cat-label-zh {
   font-size: 0.65rem;
   font-weight: 700;
@@ -244,8 +248,8 @@ body {
 .amenity-card {
   background: var(--card);
   border: 1.5px solid var(--border);
-  border-radius: 16px;
-  padding: 14px 16px;
+  border-radius: 20px;
+  padding: 16px 18px;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s;
   opacity: 0;
   will-change: transform;
@@ -267,10 +271,10 @@ body {
   gap: 12px;
 }
 .card-icon {
-  width: 42px; height: 42px;
-  border-radius: 11px;
+  width: 48px; height: 48px;
+  border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   flex-shrink: 0;
   transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -280,7 +284,7 @@ body {
 .card-main { flex: 1; min-width: 0; }
 
 .card-name-zh {
-  font-size: 0.97rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text);
   line-height: 1.2;

@@ -60,13 +60,15 @@ body {
 .back-btn:active { transform: scale(0.86); opacity: 0.6; }
 .topbar-title { font-size: 1rem; font-weight: 700; flex: 1; }
 .refresh-btn {
-  background: none; border: none; color: #1a56db;
-  font-size: 0.8rem; cursor: pointer; padding: 4px 8px;
-  border-radius: 8px;
-  transition: background 0.15s, transform 0.18s cubic-bezier(0.22,1,0.36,1), color 0.15s;
+  background: rgba(26,86,219,0.08); border: none; color: #1a56db;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer; padding: 7px 13px;
+  border-radius: 20px;
+  transition: background 0.15s, transform 0.18s cubic-bezier(0.22,1,0.36,1);
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
-.refresh-btn:hover  { background: #eff6ff; }
-.refresh-btn:active { transform: scale(0.88); color: #1e40af; }
+.refresh-btn:hover  { background: rgba(26,86,219,0.14); }
+.refresh-btn:active { transform: scale(0.9); }
 .spin { animation: spin 0.7s linear infinite; display: inline-block; }
 
 /* ── Tabs ── */
@@ -145,10 +147,10 @@ body {
 .card {
   background: #fff;
   border: 1.5px solid #e5e5ea;
-  border-radius: 18px;
-  padding: 14px 15px 14px;
+  border-radius: 22px;
+  padding: 16px 16px 16px;
   margin-bottom: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
   transition:
     border-color 0.2s,
     background   0.2s,
@@ -222,13 +224,13 @@ body {
   margin-bottom: 2px; letter-spacing: 0.2px;
 }
 .hero-flt {
-  font-size: 1.85rem; font-weight: 800;
-  letter-spacing: -1px; line-height: 1;
+  font-size: 2.2rem; font-weight: 800;
+  letter-spacing: -1.5px; line-height: 1;
   color: #1c1c1e;
 }
 .hero-ap { text-align: right; }
 .hero-iata {
-  font-size: 1.6rem; font-weight: 800;
+  font-size: 2rem; font-weight: 800;
   letter-spacing: -0.5px; line-height: 1;
   color: #1c1c1e;
 }
@@ -266,14 +268,14 @@ body {
   gap: 8px; margin-bottom: 0;
 }
 .res-block {
-  background: #f9f9f9; border: 1.5px solid #e5e5ea;
-  border-radius: 12px; padding: 10px 12px;
+  background: #f7f7f9; border: 1.5px solid #ebebed;
+  border-radius: 16px; padding: 12px 14px;
   transition: border-color 0.2s, background 0.2s;
 }
 .res-block.res-highlighted { background: #eff6ff; border-color: #bfdbfe; }
 .res-icon-lbl { font-size: 0.82rem; font-weight: 600; color: #636366; margin-bottom: 6px; }
 .res-val {
-  font-size: 1.5rem; font-weight: 800;
+  font-size: 1.8rem; font-weight: 800;
   color: #1c1c1e; letter-spacing: -0.5px; line-height: 1;
 }
 .res-val.res-val-sm { font-size: 1.1rem; letter-spacing: 0; }
@@ -438,7 +440,7 @@ body {
   <div class="topbar-row">
     <a href="/" class="back-btn">‹ 返回</a>
     <span class="topbar-title">✈️ 航空資訊看板</span>
-    <button class="refresh-btn" onclick="openAirlinePicker()" title="選擇監控航空">⚙️</button>
+    <button class="refresh-btn" onclick="openAirlinePicker()">航司 ▾</button>
     <button class="refresh-btn" id="refreshBtn" onclick="load(true)">↻ 重整</button>
   </div>
   <div class="tabs">
