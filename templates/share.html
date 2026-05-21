@@ -386,9 +386,16 @@ body::before{
 
 <script>
 const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, storageKey: 'thsr_supa_share' }
+  auth: { persistSession: true, autoRefreshToken: true }
 });
 const IMGUR_CID = '';  // 填入 Imgur Client-ID 後圖片同步功能啟用
+
+// sb_publishable_ 格式的 key 需要 anonymous session 才能讀寫 Supabase
+// 已有 session 就沿用（autoRefreshToken 會自動續期），沒有就建一個
+(async () => {
+  const { data: { session } } = await supa.auth.getSession();
+  if (!session) await supa.auth.signInAnonymously();
+})();
 
 let room = null;
 let pollTid = null, debTid = null;
