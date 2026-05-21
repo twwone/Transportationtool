@@ -141,15 +141,13 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 
 /* ── Entry card ── */
 .entry-card {
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.96);
   border-radius: 22px;
   margin-bottom: 11px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 6px 18px rgba(0,0,0,0.05);
   position: relative;
-  will-change: transform, opacity;
-  transition: all 0.3s cubic-bezier(0.25,1,0.5,1);
+  transition: box-shadow 0.2s ease;
 }
 .entry-card::after {
   content: ''; position: absolute; inset: 0; border-radius: 20px;
@@ -253,6 +251,9 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   background: rgba(60,60,67,0.08); color: #3a3a3c;
 }
 
+/* Load more sentinel */
+#loadSentinel { height: 1px; }
+
 /* ── Empty state ── */
 .empty {
   text-align: center; padding: 56px 20px;
@@ -345,29 +346,30 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 
 <div class="count-bar" id="countBar"></div>
 <div class="list" id="cardList"></div>
+<div id="loadSentinel"></div>
 
 <script>
-let _entries = [];
-let _cat = 'all';
-let _query = '';
-let _rafId = null;
+const PAGE_SIZE = 40;
+let _entries   = [];
+let _filtered  = [];
+let _rendered  = 0;
+let _cat       = 'all';
+let _query     = '';
+let _debounceT = null;
+let _observer  = null;
 
-/* ── Fetch & merge all data into unified entries ── */
+/* ── Fetch & merge all data ── */
 async function init() {
   try {
     const r = await fetch('/static/airport_codes.json');
     const d = await r.json();
-
     const airports = (d.airports || []).map(a => ({ ...a, _type: 'airport' }));
     const airlines = (d.airlines || []).map(a => ({ ...a, _type: 'airline' }));
     const codes    = (d.codes || []).map(c => ({
       ...c, _type: c.group === 'pnr' ? 'pnr' : 'ops'
     }));
-
     _entries = [...airports, ...airlines, ...codes];
     render();
-
-    /* Auto-focus — iOS needs a user gesture, but this works on desktop + some iOS */
     setTimeout(() => {
       try { document.getElementById('searchInput').focus(); } catch(e) {}
     }, 350);
@@ -377,74 +379,52 @@ async function init() {
   }
 }
 
-/* ── Quick-select hot tag ── */
+/* ── Hot tag ── */
 function hotSearch(code) {
   const input = document.getElementById('searchInput');
   input.value = code;
   onSearch(code);
-  input.focus();
 }
 
-/* ── Matching logic ── */
+/* ── Matching ── */
 function matches(e, q) {
   if (!q) return true;
   const lq = q.toLowerCase();
-  const fields = [
-    e.iata, e.icao, e.code,
-    e.name_zh, e.name_en,
-    e.city_zh, e.city_en,
-    e.country_zh,
-    e.label_zh, e.label_en
-  ].filter(Boolean).map(f => f.toLowerCase());
-  if (fields.some(f => f.includes(lq))) return true;
+  const fs = [e.iata, e.icao, e.code, e.name_zh, e.name_en,
+              e.city_zh, e.city_en, e.country_zh, e.label_zh, e.label_en]
+    .filter(Boolean).map(f => f.toLowerCase());
+  if (fs.some(f => f.includes(lq))) return true;
   if (e.tags && e.tags.some(t => t.toLowerCase().includes(lq))) return true;
   return false;
 }
 
-/* ── Build card HTML ── */
-function typeLabel(t) {
-  return { airport: '機場', airline: '航空公司', pnr: '預訂代碼', ops: '作業縮寫' }[t] || t;
-}
+/* ── Card builders ── */
 function tzBadge(diff) {
   if (diff === 0) return '🕗 同台灣';
-  if (diff > 0)  return `🕗 快 ${diff}h`;
+  if (diff > 0)   return `🕗 快 ${diff}h`;
   return `🕗 慢 ${Math.abs(diff)}h`;
 }
-
 function buildAirportCard(e) {
-  const terminalBadge = e.airasia_terminal && e.airasia_terminal !== '—'
+  const tb = e.airasia_terminal && e.airasia_terminal !== '—'
     ? `<span class="badge badge-terminal">亞航 ${e.airasia_terminal}</span>` : '';
-  return `
-    <div class="badge-row">
-      <span class="badge badge-type-airport">機場</span>
-      <span class="badge badge-tz">${tzBadge(e.tz_diff)}</span>
-      ${terminalBadge}
-    </div>`;
+  return `<div class="badge-row"><span class="badge badge-type-airport">機場</span><span class="badge badge-tz">${tzBadge(e.tz_diff)}</span>${tb}</div>`;
 }
 function buildAirlineCard(e) {
-  return `
-    <div class="badge-row">
-      <span class="badge badge-type-airline">航空公司</span>
-      <span class="alliance-badge">${e.alliance}</span>
-    </div>`;
+  return `<div class="badge-row"><span class="badge badge-type-airline">航空公司</span><span class="alliance-badge">${e.alliance}</span></div>`;
 }
 function buildCodeCard(e) {
   const cls = e._type === 'pnr' ? 'badge-type-pnr' : 'badge-type-ops';
   const lbl = e._type === 'pnr' ? '預訂代碼' : '作業縮寫';
   return `<div class="badge-row"><span class="badge ${cls}">${lbl}</span></div>`;
 }
-
 function buildExpandedAirport(e) {
   const rows = [];
-  if (e.tz_label)         rows.push(['時區', e.tz_label]);
-  if (e.airasia_terminal && e.airasia_terminal !== '—')
-                          rows.push(['亞航廈', e.airasia_terminal]);
-  if (e.airasia_note)     rows.push(['亞航備註', e.airasia_note]);
-  if (e.icao)             rows.push(['ICAO', e.icao]);
-  if (e.notes)            rows.push(['地勤備註', e.notes]);
-  return rows.map(([k,v]) =>
-    `<div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>`
-  ).join('');
+  if (e.tz_label) rows.push(['時區', e.tz_label]);
+  if (e.airasia_terminal && e.airasia_terminal !== '—') rows.push(['亞航廈', e.airasia_terminal]);
+  if (e.airasia_note) rows.push(['亞航備註', e.airasia_note]);
+  if (e.icao) rows.push(['ICAO', e.icao]);
+  if (e.notes) rows.push(['地勤備註', e.notes]);
+  return rows.map(([k,v]) => `<div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>`).join('');
 }
 function buildExpandedAirline(e) {
   const rows = [];
@@ -452,49 +432,32 @@ function buildExpandedAirline(e) {
   if (e.alliance) rows.push(['聯盟', `<span class="alliance-badge">${e.alliance}</span>`]);
   if (e.icao)     rows.push(['ICAO', e.icao]);
   if (e.notes)    rows.push(['備註', e.notes]);
-  return rows.map(([k,v]) =>
-    `<div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>`
-  ).join('');
+  return rows.map(([k,v]) => `<div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>`).join('');
 }
 function buildExpandedCode(e) {
-  const rows = [];
-  rows.push(['全稱', e.label_en]);
+  const rows = [['全稱', e.label_en]];
   if (e.desc) rows.push(['說明', e.desc]);
-  return rows.map(([k,v]) =>
-    `<div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>`
-  ).join('');
+  return rows.map(([k,v]) => `<div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>`).join('');
 }
 
 function buildCard(e, idx) {
-  const id   = `c${idx}`;
+  const id = `c${idx}`;
   const code = e.iata || e.code || '??';
-  const codeCls = { airport: 'type-airport', airline: 'type-airline', pnr: 'type-pnr', ops: 'type-ops' }[e._type];
-
+  const codeCls = { airport:'type-airport', airline:'type-airline', pnr:'type-pnr', ops:'type-ops' }[e._type];
   const namePrimary = e.name_zh || e.label_zh || '';
-  const nameSub = e._type === 'airport'
-    ? `${e.name_en} · ${e.city_zh} ${e.flag}`
-    : e._type === 'airline'
-    ? `${e.name_en} · ${e.country_zh} ${e.flag}`
-    : e.label_en;
-
+  const nameSub = e._type === 'airport' ? `${e.name_en} · ${e.city_zh} ${e.flag}`
+                : e._type === 'airline' ? `${e.name_en} · ${e.country_zh} ${e.flag}`
+                : e.label_en;
   const badgeHtml = e._type === 'airport' ? buildAirportCard(e)
                   : e._type === 'airline' ? buildAirlineCard(e)
                   : buildCodeCard(e);
-
   const expandedHtml = e._type === 'airport' ? buildExpandedAirport(e)
                      : e._type === 'airline' ? buildExpandedAirline(e)
                      : buildExpandedCode(e);
-
-  const leftBorder = {
-    airport: '#1d4ed8', airline: '#c2410c', pnr: '#7c3aed', ops: '#15803d'
-  }[e._type];
-
-  return `
-  <div class="entry-card" id="card-${id}" style="border-left:4px solid ${leftBorder}">
+  const leftBorder = { airport:'#1d4ed8', airline:'#c2410c', pnr:'#7c3aed', ops:'#15803d' }[e._type];
+  return `<div class="entry-card" id="card-${id}" style="border-left:4px solid ${leftBorder}">
     <div class="card-header" onclick="toggleCard('${id}')">
-      <div class="header-left">
-        <div class="code-badge ${codeCls}">${code}</div>
-      </div>
+      <div class="header-left"><div class="code-badge ${codeCls}">${code}</div></div>
       <div class="card-meta">
         <div class="card-name">${namePrimary}</div>
         <div class="card-sub">${nameSub}</div>
@@ -503,60 +466,89 @@ function buildCard(e, idx) {
       <span class="chevron">›</span>
     </div>
     <div class="card-body" id="body-${id}">
-      <div class="card-body-inner">
-        ${expandedHtml}
-      </div>
+      <div class="card-body-inner">${expandedHtml}</div>
     </div>
   </div>`;
 }
 
-/* ── Render ── */
-function scheduleRender() {
-  if (_rafId) cancelAnimationFrame(_rafId);
-  _rafId = requestAnimationFrame(() => { render(); _rafId = null; });
-}
-
+/* ── Render first PAGE_SIZE cards, then append on scroll ── */
 function render() {
   const q = _query.trim().toLowerCase();
-  const filtered = _entries.filter(e => {
+  _filtered = _entries.filter(e => {
     if (_cat !== 'all' && e._type !== _cat) return false;
     return matches(e, q);
   });
+  _rendered = 0;
 
-  document.getElementById('countBar').textContent =
-    filtered.length === _entries.length
-      ? `共 ${_entries.length} 筆`
-      : `顯示 ${filtered.length} / ${_entries.length} 筆`;
+  const bar = document.getElementById('countBar');
+  bar.textContent = _filtered.length === _entries.length
+    ? `共 ${_entries.length} 筆`
+    : `顯示 ${_filtered.length} / ${_entries.length} 筆`;
 
-  if (!filtered.length) {
-    document.getElementById('cardList').innerHTML =
-      '<div class="empty"><span class="empty-icon">🔍</span>找不到符合的代碼</div>';
+  const list = document.getElementById('cardList');
+  if (!_filtered.length) {
+    list.innerHTML = '<div class="empty"><span class="empty-icon">🔍</span>找不到符合的代碼</div>';
+    disconnectObserver();
     return;
   }
 
-  document.getElementById('cardList').innerHTML =
-    filtered.map((e, i) => buildCard(e, i)).join('');
+  const chunk = _filtered.slice(0, PAGE_SIZE);
+  list.innerHTML = chunk.map((e, i) => buildCard(e, i)).join('');
+  _rendered = chunk.length;
 
-  /* 60fps staggered fade-in via CSS transitions */
-  const cards = document.querySelectorAll('.entry-card');
-  cards.forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(14px) scale(0.975)';
-    el.style.transition = 'none';
+  /* Stagger only first 15 */
+  const cards = list.querySelectorAll('.entry-card');
+  const STAGGER = 15;
+  cards.forEach((el, i) => {
+    if (i < STAGGER) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(10px)';
+    }
   });
   requestAnimationFrame(() => {
     cards.forEach((el, i) => {
-      const d = i * 35;
-      el.style.transition =
-        `opacity 0.4s cubic-bezier(0.25,1,0.5,1) ${d}ms,` +
-        `transform 0.4s cubic-bezier(0.25,1,0.5,1) ${d}ms`;
-      el.style.opacity = '1';
-      el.style.transform = 'none';
+      if (i < STAGGER) {
+        el.style.transition = `opacity 0.3s ease ${i*28}ms, transform 0.3s ease ${i*28}ms`;
+        el.style.opacity = '1';
+        el.style.transform = 'none';
+      }
     });
   });
+
+  setupObserver();
 }
 
-/* ── Toggle card (spring height) ── */
+/* ── Infinite scroll via IntersectionObserver ── */
+function setupObserver() {
+  disconnectObserver();
+  if (_rendered >= _filtered.length) return;
+  const sentinel = document.getElementById('loadSentinel');
+  _observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) appendMore();
+  }, { rootMargin: '200px' });
+  _observer.observe(sentinel);
+}
+
+function disconnectObserver() {
+  if (_observer) { _observer.disconnect(); _observer = null; }
+}
+
+function appendMore() {
+  if (_rendered >= _filtered.length) { disconnectObserver(); return; }
+  const list = document.getElementById('cardList');
+  const chunk = _filtered.slice(_rendered, _rendered + PAGE_SIZE);
+  const frag = document.createDocumentFragment();
+  chunk.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.innerHTML = buildCard(e, _rendered + i);
+    frag.appendChild(div.firstElementChild);
+  });
+  list.appendChild(frag);
+  _rendered += chunk.length;
+  if (_rendered >= _filtered.length) disconnectObserver();
+}
+
+/* ── Toggle card expand ── */
 function toggleCard(id) {
   const card  = document.getElementById('card-' + id);
   const body  = document.getElementById('body-' + id);
@@ -571,21 +563,17 @@ function toggleCard(id) {
     body.style.height = '0px';
     body.style.transition = 'none';
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        body.style.transition = 'height 0.5s cubic-bezier(0.34,1.56,0.64,1)';
-        body.style.height = h + 'px';
-        setTimeout(() => { body.style.height = 'auto'; body.style.transition = ''; }, 530);
-      });
+      body.style.transition = 'height 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+      body.style.height = h + 'px';
+      setTimeout(() => { body.style.height = 'auto'; body.style.transition = ''; }, 420);
     });
   } else {
     body.style.height = body.offsetHeight + 'px';
     body.style.transition = 'none';
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        body.style.transition = 'height 0.28s cubic-bezier(0.4,0,1,1)';
-        body.style.height = '0px';
-        setTimeout(() => { body.style.transition = ''; }, 300);
-      });
+      body.style.transition = 'height 0.22s ease';
+      body.style.height = '0px';
+      setTimeout(() => { body.style.transition = ''; }, 240);
     });
   }
 }
@@ -595,13 +583,14 @@ function setCat(val, el) {
   _cat = val;
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
-  scheduleRender();
+  render();
 }
 
 function onSearch(val) {
   _query = val;
   document.getElementById('clearBtn').classList.toggle('hidden', !val);
-  scheduleRender();
+  clearTimeout(_debounceT);
+  _debounceT = setTimeout(render, 150);
 }
 
 function clearSearch() {
@@ -614,7 +603,6 @@ function goBack() {
   setTimeout(() => { location.href = '/'; }, 160);
 }
 
-/* Search input listener */
 document.getElementById('searchInput').addEventListener('input', function() {
   onSearch(this.value);
 });
