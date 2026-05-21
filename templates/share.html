@@ -441,41 +441,45 @@ function enterSyncMode(code) {
   setTimeout(() => document.getElementById('syncTextarea').focus(), 150);
 }
 
-/* ── Realtime 訂閱 ── */
+/* ── Realtime 訂閱（Broadcast，不依賴 DB 事件）── */
 function subscribeRoom(code) {
   if (channel) supa.removeChannel(channel);
-  channel = supa.channel('room:' + code)
-    .on('postgres_changes', {
-      event:  'UPDATE',
-      schema: 'public',
-      table:  'share_rooms',
-      filter: 'room_code=eq.' + code
-    }, payload => {
+  channel = supa.channel('share:' + code, {
+    config: { broadcast: { self: false } }
+  });
+  channel
+    .on('broadcast', { event: 'text' }, ({ payload }) => {
       const ta = document.getElementById('syncTextarea');
-      /* 對方輸入中時才更新，避免游標跳位 */
+      /* 只在對方輸入時更新，避免游標跳位 */
       if (document.activeElement !== ta) {
-        ta.value = payload.new.text || '';
+        ta.value = payload.text ?? '';
       }
     })
     .subscribe();
 }
 
-/* ── 推送文字（debounce 300ms）── */
+/* ── 推送文字（debounce 150ms）── */
 document.getElementById('syncTextarea').addEventListener('input', () => {
   clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(pushText, 300);
+  debounceTimer = setTimeout(pushText, 150);
 });
 
 async function pushText() {
-  if (!currentRoom) return;
+  if (!currentRoom || !channel) return;
   const text = document.getElementById('syncTextarea').value;
-  await supa.from('share_rooms')
+
+  /* Broadcast：即時推給同房間其他裝置 */
+  channel.send({ type: 'broadcast', event: 'text', payload: { text } });
+
+  /* 寫 DB：持久化（加入者初始載入用）+ TTL 清理 */
+  supa.from('share_rooms')
     .update({ text, updated_at: new Date().toISOString() })
-    .eq('room_code', currentRoom);
-  /* 順帶清理 12 小時前的舊房間 */
-  await supa.from('share_rooms')
-    .delete()
-    .lt('updated_at', new Date(Date.now() - 43200000).toISOString());
+    .eq('room_code', currentRoom)
+    .then(() => {
+      supa.from('share_rooms')
+        .delete()
+        .lt('updated_at', new Date(Date.now() - 43200000).toISOString());
+    });
 }
 
 /* ── 複製房間碼（點 topbar pill）── */
