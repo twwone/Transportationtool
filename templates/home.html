@@ -296,6 +296,10 @@ body {
 .card-codes::before   { background: linear-gradient(90deg,#7c3aed,#6d28d9); }
 .card-codes:hover .sm-arrow { color: #6d28d9; }
 
+.card-share .sm-title { color: #1d4ed8; }
+.card-share::before   { background: linear-gradient(90deg,#3b82f6,#2563eb); }
+.card-share:hover .sm-arrow { color: #2563eb; }
+
 /* ── 底部 ── */
 .footer {
   margin-top: 28px;
@@ -407,7 +411,8 @@ body {
   .card-schedule  .sm-title { color: #30d158; }
   .card-amenities .sm-title { color: #32ade6; }
   .card-visa  .sm-title { color: #ffd60a; }
-  .card-codes .sm-title { color: #bf5af2; }
+  .card-codes  .sm-title { color: #bf5af2; }
+  .card-share  .sm-title { color: #60a5fa; }
   .footer   { color: #3a3a3c; }
   .profile-chip { background: #2c2c2e; border-color: rgba(255,255,255,0.08); color: #f2f2f7; }
   .pc-chevron   { color: #48484a; }
@@ -493,6 +498,12 @@ body {
   <a href="/code-dictionary" class="card card-sm card-codes">
     <span class="sm-icon">🗂</span>
     <div class="sm-title">Code Book</div>
+  </a>
+
+  <!-- Clipboard -->
+  <a href="/share" class="card card-sm card-share">
+    <span class="sm-icon">📋</span>
+    <div class="sm-title">Clipboard</div>
   </a>
 
 </div>

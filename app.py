@@ -801,6 +801,11 @@ def amenities_api():
     })
 
 
+@app.route("/share")
+def share():
+    return render_template("share.html")
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>跨裝置剪貼簿</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="交通助理">
+<meta name="theme-color" content="#f0f4ff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<script src="/static/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overscroll-behavior: none; height: 100%; }
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-6px); }
+  80%     { transform: translateX(6px); }
+}
+
+:root {
+  --bg:      #f0f4ff;
+  --surface: #ffffff;
+  --border:  rgba(0,0,0,0.07);
+  --text:    #0f0f1a;
+  --sub:     #6b7280;
+  --accent:  #3b82f6;
+  --radius-l: 28px;
+  --radius-m: 20px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* ── Topbar ── */
+.topbar {
+  background: rgba(240,244,255,0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+  padding: 12px 16px 14px;
+  padding-top: max(14px, env(safe-area-inset-top) + 10px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.back-btn {
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  min-width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.topbar-title { font-size: 1.08rem; font-weight: 700; flex: 1; }
+.status-pill {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  background: rgba(52,199,89,0.12);
+  border: 1px solid rgba(52,199,89,0.25);
+  border-radius: 100px;
+  padding: 4px 10px 4px 7px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #16a34a;
+  letter-spacing: 0.02em;
+}
+.status-pill.show { display: flex; }
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+/* ── Content ── */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 20px max(40px, env(safe-area-inset-bottom) + 24px);
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── State A: 配對畫面 ── */
+#stateA {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+#stateB {
+  width: 100%;
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  gap: 16px;
+}
+#stateB.show { display: flex; }
+
+/* Glass Card */
+.glass-card {
+  width: 100%;
+  border-radius: 24px;
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.55);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  padding: 32px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.room-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--sub);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.room-code-display {
+  font-size: 4.8rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.room-refresh-btn {
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 100px;
+  padding: 8px 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: var(--sub);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Join section */
+.join-card {
+  width: 100%;
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.join-label { font-size: 0.78rem; font-weight: 600; color: var(--sub); }
+.join-input-row { display: flex; gap: 10px; }
+.join-input {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  font-family: inherit;
+  text-align: center;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.join-input:focus { border-color: var(--accent); }
+.join-input.error {
+  border-color: #ef4444;
+  animation: shake 0.4s cubic-bezier(0.36,0.07,0.19,0.97);
+}
+.join-btn {
+  padding: 12px 22px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.join-error {
+  font-size: 0.76rem;
+  color: #ef4444;
+  display: none;
+  font-weight: 500;
+}
+.join-error.show { display: block; }
+
+/* ── State B: 同步畫面 ── */
+.sync-textarea {
+  flex: 1;
+  width: 100%;
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  padding: 18px;
+  font-size: 1rem;
+  color: var(--text);
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.6;
+  min-height: 300px;
+  -webkit-appearance: none;
+  transition: border-color 0.2s;
+}
+.sync-textarea:focus { border-color: var(--accent); }
+
+.action-row { display: flex; gap: 10px; width: 100%; }
+.action-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-copy  { background: var(--accent); color: #fff; }
+.btn-clear { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.18); }
+
+/* ── Dark Mode ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:      #000;
+    --surface: #1c1c1e;
+    --border:  rgba(255,255,255,0.08);
+    --text:    #f2f2f7;
+    --sub:     #636366;
+    --accent:  #60a5fa;
+  }
+  .topbar {
+    background: rgba(0,0,0,0.88);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .glass-card {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.12);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .join-card   { box-shadow: none; }
+  .join-input  { background: #2c2c2e; }
+  .sync-textarea { box-shadow: none; }
+  .btn-clear {
+    background: rgba(239,68,68,0.15);
+    border-color: rgba(239,68,68,0.25);
+  }
+  .room-refresh-btn {
+    background: rgba(96,165,250,0.12);
+    border-color: rgba(96,165,250,0.25);
+  }
+  .status-pill {
+    background: rgba(52,199,89,0.15);
+    border-color: rgba(52,199,89,0.3);
+    color: #4ade80;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="back-btn">‹ 返回</a>
+  <div class="topbar-title">跨裝置剪貼簿</div>
+  <div class="status-pill" id="statusPill">
+    <div class="status-dot"></div>
+    <span id="statusText">房間 0000</span>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- State A: 配對畫面 -->
+  <div id="stateA">
+    <div class="glass-card">
+      <div class="room-label">你的房間號碼</div>
+      <div class="room-code-display" id="myCode">—</div>
+      <button class="room-refresh-btn" id="refreshBtn">🔄 換一個</button>
+    </div>
+
+    <div class="divider">或加入現有房間</div>
+
+    <div class="join-card">
+      <div class="join-label">輸入對方的房間號碼</div>
+      <div class="join-input-row">
+        <input id="joinInput" class="join-input" type="tel" inputmode="numeric"
+               maxlength="4" placeholder="0000"
+               onkeydown="if(event.key==='Enter')joinRoom()">
+        <button class="join-btn" id="joinBtn" onclick="joinRoom()">加入</button>
+      </div>
+      <div class="join-error" id="joinError">找不到此房間，請確認號碼</div>
+    </div>
+  </div>
+
+  <!-- State B: 同步畫面 -->
+  <div id="stateB">
+    <textarea class="sync-textarea" id="syncTextarea"
+      placeholder="在這裡輸入文字或網址，對方裝置會即時同步…"></textarea>
+    <div class="action-row">
+      <button class="action-btn btn-copy"  id="copyBtn"  onclick="doCopy()">📋 複製</button>
+      <button class="action-btn btn-clear" id="clearBtn" onclick="doClear()">🗑️ 清空</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let currentRoom = null;
+let channel     = null;
+let debounceTimer;
+
+function randCode() {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+function addSpring(el) {
+  el.addEventListener('pointerdown', () => {
+    el.style.transition = 'transform 0.1s cubic-bezier(0.34,1.56,0.64,1)';
+    el.style.transform  = 'scale(0.965)';
+    navigator.vibrate?.([8]);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev =>
+    el.addEventListener(ev, () => {
+      el.style.transition = 'transform 0.55s cubic-bezier(0.34,1.56,0.64,1)';
+      el.style.transform  = 'scale(1)';
+    })
+  );
+}
+document.querySelectorAll('button').forEach(addSpring);
+
+/* ── 建立房間 ── */
+async function createRoom(code, retry) {
+  retry = retry || 0;
+  const { error } = await supa.from('share_rooms').upsert(
+    { room_code: code, text: '', updated_at: new Date().toISOString() },
+    { onConflict: 'room_code' }
+  );
+  if (error && retry < 5) return createRoom(randCode(), retry + 1);
+  currentRoom = code;
+  document.getElementById('myCode').textContent = code;
+}
+
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  document.getElementById('myCode').textContent = '…';
+  await createRoom(randCode());
+});
+
+/* ── 加入房間 ── */
+async function joinRoom() {
+  const input = document.getElementById('joinInput');
+  const code  = input.value.trim();
+  const errEl = document.getElementById('joinError');
+  const btn   = document.getElementById('joinBtn');
+
+  errEl.classList.remove('show');
+  input.classList.remove('error');
+
+  if (code.length !== 4) {
+    input.classList.add('error');
+    setTimeout(() => input.classList.remove('error'), 600);
+    return;
+  }
+
+  btn.textContent = '驗證中…';
+  btn.disabled = true;
+
+  const { data } = await supa.from('share_rooms')
+    .select('room_code, text')
+    .eq('room_code', code)
+    .single();
+
+  btn.textContent = '加入';
+  btn.disabled = false;
+
+  if (!data) {
+    input.classList.add('error');
+    errEl.classList.add('show');
+    setTimeout(() => input.classList.remove('error'), 600);
+    return;
+  }
+
+  currentRoom = code;
+  document.getElementById('syncTextarea').value = data.text || '';
+  enterSyncMode(code);
+}
+
+/* ── 切換到同步畫面 ── */
+function enterSyncMode(code) {
+  document.getElementById('stateA').style.display = 'none';
+  document.getElementById('stateB').classList.add('show');
+
+  document.getElementById('statusText').textContent = '房間 ' + code;
+  document.getElementById('statusPill').classList.add('show');
+
+  subscribeRoom(code);
+  setTimeout(() => document.getElementById('syncTextarea').focus(), 100);
+}
+
+/* ── Realtime 訂閱 ── */
+function subscribeRoom(code) {
+  if (channel) supa.removeChannel(channel);
+  channel = supa.channel('room:' + code)
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'share_rooms',
+      filter: 'room_code=eq.' + code
+    }, payload => {
+      const ta = document.getElementById('syncTextarea');
+      if (document.activeElement !== ta) {
+        ta.value = payload.new.text || '';
+      }
+    })
+    .subscribe();
+}
+
+/* ── 推送文字（debounce 300ms）── */
+document.getElementById('syncTextarea').addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(pushText, 300);
+});
+
+async function pushText() {
+  if (!currentRoom) return;
+  const text = document.getElementById('syncTextarea').value;
+  await supa.from('share_rooms').upsert({ room_code: currentRoom, text });
+  // 順帶清理 12 小時前的舊房間
+  await supa.from('share_rooms')
+    .delete()
+    .lt('updated_at', new Date(Date.now() - 43200000).toISOString());
+}
+
+/* ── 複製 / 清空 ── */
+async function doCopy() {
+  const text = document.getElementById('syncTextarea').value;
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ 已複製';
+    setTimeout(() => btn.textContent = '📋 複製', 1800);
+  } catch {}
+}
+
+function doClear() {
+  document.getElementById('syncTextarea').value = '';
+  pushText();
+}
+
+/* ── 啟動 ── */
+createRoom(randCode());
+</script>
+</body>
+</html>
