@@ -364,7 +364,7 @@ def _fetch_tias():
             r = _requests.get(
                 f"{_TDX_FIDS}/{direction}/TPE",
                 headers=headers,
-                params={"$format": "JSON", "$top": 1000},
+                params={"$format": "JSON", "$top": 1000, "$orderby": "FlightDate desc"},
                 timeout=10,
             )
             r.raise_for_status()
