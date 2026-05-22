@@ -1123,13 +1123,22 @@ function renderAllByTime() {
     return isNaN(t) || (t >= winStart && t <= winEnd);
   });
 
-  /* 窗口內無航班（深夜/清晨）→ 顯示全天 */
-  const windowed = allSorted.length > 0;
+  /* 接下來 2h 內無班機（凌晨/清晨 FIDS 資料尚未載入）→ 展開全天 */
+  const near2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  const hasNearFlight = allSorted.some(f => {
+    const iso = f._dir === 'arr' ? f.ScheduleArrivalTime : f.ScheduleDepartureTime;
+    if (!iso) return false;
+    const t = new Date(iso);
+    return !isNaN(t) && t > now && t <= near2h;
+  });
+
+  /* 窗口內無班機 或 近 2h 無班機 → 顯示全天 */
+  const windowed = allSorted.length > 0 && hasNearFlight;
   if (!windowed) allSorted = allBase;
 
   countEl.textContent = windowed
     ? `顯示 ${allSorted.length} / ${total} 筆（前4h ～ 後12h）`
-    : `全天 ${allSorted.length} 筆（本時段無航班，顯示完整班表）`;
+    : `全天 ${allSorted.length} 筆（附近無班機，顯示完整班表）`;
 
   const nowDividerHtml = `<div class="now-divider" id="nowDivider">
     <span class="now-line"></span>
