@@ -358,20 +358,24 @@ def _fetch_tias():
         return None, None, False
 
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-    today = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
+    now_tw  = _dt.now(_tz(_td(hours=8)))
+    today     = now_tw.strftime("%Y-%m-%d")
+    yesterday = (now_tw - _td(days=1)).strftime("%Y-%m-%d")
+    valid_dates = {today, yesterday}
 
     def _get(direction: str, time_field: str) -> tuple:
         try:
             r = _requests.get(
                 f"{_TDX_FIDS}/{direction}/TPE",
                 headers=headers,
-                params={"$format": "JSON", "$top": 1000, "$orderby": "FlightDate desc"},
+                # $top=2000 確保取到今天+昨天的班機（凌晨班機 FlightDate 可能是前一天）
+                params={"$format": "JSON", "$top": 2000, "$orderby": "FlightDate desc"},
                 timeout=10,
             )
             r.raise_for_status()
             body = r.json()
             data = body if isinstance(body, list) else body.get("data", [])
-            filtered = [f for f in data if f.get("FlightDate", "") == today]
+            filtered = [f for f in data if f.get("FlightDate", "") in valid_dates]
             filtered.sort(key=lambda f: f.get(time_field, ""))
             return filtered, True
         except Exception:
