@@ -109,17 +109,77 @@ body::before{
 }
 #weatherArea{display:flex;flex-direction:column;gap:24px}
 
-/* ── Location bar ── */
-.loc-bar{display:flex;align-items:center;gap:10px}
-.loc-select{
-  flex:1;padding:11px 14px;border-radius:14px;
+/* ── METAR card ── */
+.metar-card{
+  border-radius:var(--radius-l);padding:16px 20px 14px;
+  background:rgba(14,30,60,.55);
+  backdrop-filter:blur(40px) saturate(180%);
+  -webkit-backdrop-filter:blur(40px) saturate(180%);
+  border:1px solid rgba(96,165,250,.25);
+  box-shadow:0 4px 24px rgba(59,130,246,.12);
+  animation:cardIn .3s cubic-bezier(.22,1,.36,1) both;
+  color:#e2e8f0;
+}
+@media(prefers-color-scheme:light){
+  .metar-card{background:rgba(15,40,100,.72);color:#dbeafe}
+}
+.metar-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.metar-icao{font-size:.82rem;font-weight:800;letter-spacing:.08em;color:#93c5fd}
+.metar-station{font-size:.78rem;color:rgba(226,232,240,.65);margin-left:6px}
+.metar-time{font-size:.7rem;color:rgba(226,232,240,.5)}
+.metar-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.metar-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:8px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);
+  font-size:.76rem;font-weight:600;color:#e2e8f0;
+}
+.metar-raw{
+  font-size:.65rem;font-family:"SF Mono","Menlo",monospace;
+  color:rgba(226,232,240,.4);word-break:break-all;line-height:1.5;
+  display:none;
+}
+.metar-raw.show{display:block}
+.metar-toggle{
+  font-size:.68rem;color:#60a5fa;background:none;border:none;
+  cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;
+}
+
+/* ── Location search ── */
+.loc-bar{display:flex;align-items:center;gap:10px;position:relative}
+.loc-search-wrap{flex:1;position:relative}
+.loc-search-input{
+  width:100%;padding:11px 14px;border-radius:14px;
   background:var(--glass-bg);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border:1px solid var(--glass-border);
   color:var(--text);font-family:inherit;font-size:.88rem;font-weight:600;
-  outline:none;-webkit-appearance:none;
-  box-shadow:var(--glass-shadow);cursor:pointer;
+  outline:none;box-shadow:var(--glass-shadow);
 }
+.loc-search-input::placeholder{color:var(--sub);font-weight:400}
+.loc-search-results{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;
+  background:var(--surface);border:1px solid var(--glass-border);
+  border-radius:14px;overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,.18);
+  display:none;max-height:260px;overflow-y:auto;
+}
+.loc-search-results.show{display:block}
+.loc-result-item{
+  padding:11px 16px;font-size:.86rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:.5px solid var(--glass-border);
+  -webkit-tap-highlight-color:transparent;
+}
+.loc-result-item:last-child{border-bottom:none}
+.loc-result-item:hover,.loc-result-item:active{background:rgba(59,130,246,.08)}
+.loc-result-name{font-weight:600;color:var(--text)}
+.loc-result-county{font-size:.74rem;color:var(--sub)}
+.loc-result-star{font-size:.9rem;color:var(--accent);opacity:.6;cursor:pointer;padding:2px 0 2px 8px}
+.loc-result-star.saved{opacity:1}
 .loc-gps-btn{
   flex-shrink:0;width:44px;height:44px;border-radius:14px;
   background:var(--glass-bg);
@@ -130,6 +190,26 @@ body::before{
   display:flex;align-items:center;justify-content:center;
   box-shadow:var(--glass-shadow);
   -webkit-tap-highlight-color:transparent;
+}
+
+/* ── Favorites ── */
+.fav-section{display:none;flex-direction:column;gap:8px}
+.fav-section.show{display:flex}
+.fav-label{font-size:.7rem;font-weight:700;color:var(--sub);letter-spacing:.06em;text-transform:uppercase;padding:0 2px}
+.fav-chips{display:flex;flex-wrap:wrap;gap:8px}
+.fav-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 12px;border-radius:20px;
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  font-size:.8rem;font-weight:600;color:var(--text);
+  cursor:pointer;box-shadow:var(--glass-shadow);
+  -webkit-tap-highlight-color:transparent;
+  transition:background .15s;
+}
+.fav-chip:hover{background:rgba(59,130,246,.1)}
+.fav-chip-x{
+  font-size:.75rem;color:var(--sub);background:none;border:none;
+  padding:0;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent;
 }
 
 /* ── Geo pill ── */
@@ -338,16 +418,27 @@ body::before{
   <button class="refresh-btn" id="refreshBtn" onclick="loadWeather()" title="重新整理">↻</button>
 </div>
 
+<div id="metarBanner" style="background:rgba(14,30,60,.6);backdrop-filter:blur(32px);border-bottom:1px solid rgba(96,165,250,.18);padding:10px 18px 10px;display:none">
+  <div style="max-width:520px;margin:0 auto">
+    <div class="metar-card" id="metarCard" style="margin:0;border:none;background:transparent;box-shadow:none;padding:0"></div>
+  </div>
+</div>
+
 <div class="content">
 
   <div class="loc-bar">
-    <select class="loc-select" id="locSelect" onchange="onSelectChange()">
-      <option value="" disabled selected>📍 選擇站點…</option>
-      {% for p in presets %}
-      <option value="{{ p.lat }},{{ p.lon }},{{ p.name }},{{ p.county }}">{{ p.label }}</option>
-      {% endfor %}
-    </select>
+    <div class="loc-search-wrap">
+      <input class="loc-search-input" id="locSearch" type="text"
+             placeholder="🔍 搜尋地區，例如：大安區、花蓮市…" autocomplete="off"
+             oninput="onSearchInput()" onfocus="onSearchFocus()" />
+      <div class="loc-search-results" id="searchResults"></div>
+    </div>
     <button class="loc-gps-btn" id="gpsBtn" onclick="requestGPS()" title="GPS 定位">📡</button>
+  </div>
+
+  <div class="fav-section" id="favSection">
+    <div class="fav-label">⭐ 常用地區</div>
+    <div class="fav-chips" id="favChips"></div>
   </div>
 
   <div class="geo-pill" id="geoPill">
@@ -355,17 +446,156 @@ body::before{
     <span id="geoText">GPS 已定位</span>
   </div>
 
-  <div id="weatherArea">
-    <div class="skeleton" id="skeleton" style="display:none"></div>
-  </div>
+  <div id="weatherArea"></div>
 
 </div>
 
 <script>
-const PRESETS = {{ presets | tojson }};
+const DISTRICTS = {{ districts | tojson }};
+// each entry: {l, n, c, lat, lon}  (label, name, county, lat, lon)
+
 let currentLat = null, currentLon = null;
 let currentName = null, currentCounty = null;
 let isGPS = false;
+
+// ── Favorites ──────────────────────────────────────────
+const FAV_KEY = 'wx_favorites_v2';
+function getFavs() {
+  try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch { return []; }
+}
+function saveFavs(arr) { localStorage.setItem(FAV_KEY, JSON.stringify(arr)); }
+function isFav(label) { return getFavs().some(f => f.l === label); }
+function toggleFav(d) {
+  let favs = getFavs();
+  const idx = favs.findIndex(f => f.l === d.l);
+  if (idx >= 0) favs.splice(idx, 1); else favs.unshift(d);
+  saveFavs(favs);
+  renderFavs();
+  renderResults(lastQuery);
+}
+function renderFavs() {
+  const sec   = document.getElementById('favSection');
+  const chips = document.getElementById('favChips');
+  const favs  = getFavs();
+  if (!favs.length || currentLat !== null) { sec.classList.remove('show'); return; }
+  sec.classList.add('show');
+  chips.innerHTML = favs.map(f => `
+    <div class="fav-chip" onclick="selectDistrict(${f.lat},${f.lon},'${esc(f.n)}','${esc(f.c)}','${esc(f.l)}')">
+      ${esc(f.l)}
+      <button class="fav-chip-x" onclick="event.stopPropagation();removeFav('${esc(f.l)}')">×</button>
+    </div>`).join('');
+}
+function removeFav(label) {
+  saveFavs(getFavs().filter(f => f.l !== label));
+  renderFavs();
+  renderResults(lastQuery);
+}
+function esc(s) { return s.replace(/'/g,"&#39;"); }
+
+// ── Search ──────────────────────────────────────────────
+let lastQuery = '';
+function onSearchInput() {
+  const q = document.getElementById('locSearch').value.trim();
+  lastQuery = q;
+  if (!q) { hideResults(); renderFavs(); return; }
+  document.getElementById('favSection').classList.remove('show');
+  const hits = DISTRICTS.filter(d =>
+    d.l.includes(q) || d.n.includes(q) || d.c.includes(q)
+  ).slice(0, 12);
+  renderResults(q, hits);
+}
+function onSearchFocus() {
+  const q = document.getElementById('locSearch').value.trim();
+  if (!q) { renderFavs(); return; }
+  onSearchInput();
+}
+function renderResults(q, hits) {
+  const el = document.getElementById('searchResults');
+  if (!hits || !hits.length) { el.classList.remove('show'); el.innerHTML = ''; return; }
+  el.innerHTML = hits.map(d => `
+    <div class="loc-result-item"
+         onclick="selectDistrict(${d.lat},${d.lon},'${esc(d.n)}','${esc(d.c)}','${esc(d.l)}')">
+      <div><span class="loc-result-name">${d.l}</span></div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="loc-result-county">${d.c}</span>
+        <span class="loc-result-star${isFav(d.l)?' saved':''}"
+              onclick="event.stopPropagation();toggleFav(${JSON.stringify(d).replace(/"/g,'&quot;')})"
+              title="${isFav(d.l)?'移除常用':'加入常用'}">${isFav(d.l)?'★':'☆'}</span>
+      </div>
+    </div>`).join('');
+  el.classList.add('show');
+}
+function hideResults() {
+  const el = document.getElementById('searchResults');
+  el.classList.remove('show'); el.innerHTML = '';
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('locSearch').contains(e.target) &&
+      !document.getElementById('searchResults').contains(e.target)) {
+    hideResults();
+  }
+});
+
+function selectDistrict(lat, lon, name, county, label) {
+  currentLat = lat; currentLon = lon;
+  currentName = name; currentCounty = county;
+  isGPS = false;
+  document.getElementById('locSearch').value = label;
+  document.getElementById('geoPill').classList.remove('show');
+  hideResults();
+  document.getElementById('favSection').classList.remove('show');
+  loadWeather();
+}
+
+// ── METAR ───────────────────────────────────────────────
+async function loadMetar() {
+  try {
+    const r = await fetch('/api/metar');
+    const d = await r.json();
+    if (!d.ok && !d.raw) return;
+    renderMetar(d);
+  } catch {}
+}
+function dirLabel(deg) {
+  if (deg === 'VRB') return '風向不定';
+  const dirs = ['北','北北東','東北','東北東','東','東南東','東南','南南東',
+                '南','南南西','西南','西南西','西','西北西','西北','北北西'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+function renderMetar(d) {
+  const banner = document.getElementById('metarBanner');
+  const card   = document.getElementById('metarCard');
+  let chips = '';
+  if (d.wind_ms !== undefined) {
+    const dir = d.wind_dir !== undefined ? dirLabel(d.wind_dir) : '';
+    const gust = d.gust_ms ? ` 陣風${d.gust_ms}` : '';
+    chips += `<span class="metar-chip">💨 ${dir} ${d.wind_kt}kt (${d.wind_ms}m/s${gust})</span>`;
+  }
+  if (d.vis_str) chips += `<span class="metar-chip">👁 ${d.vis_str}</span>`;
+  if (d.temp !== undefined) chips += `<span class="metar-chip">🌡 ${d.temp}° / 露點${d.dew}°</span>`;
+  if (d.qnh)  chips += `<span class="metar-chip">📟 Q${d.qnh}</span>`;
+  if (d.sky)  chips += `<span class="metar-chip">☁️ ${d.sky}</span>`;
+  if (d.wx)   chips += `<span class="metar-chip">🌧 ${d.wx}</span>`;
+  if (d.trend) chips += `<span class="metar-chip" style="color:#86efac">${d.trend}</span>`;
+  const stale = d.stale ? ' (快取)' : '';
+  card.innerHTML = `
+    <div class="metar-header">
+      <div>
+        <span class="metar-icao">RCTP</span>
+        <span class="metar-station">桃園機場 METAR${stale}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${d.time_utc ? `<span class="metar-time">${d.time_utc}</span>` : ''}
+        <button class="metar-toggle" onclick="toggleRaw()">原始報文</button>
+      </div>
+    </div>
+    <div class="metar-chips">${chips || '<span class="metar-chip">資料解析中…</span>'}</div>
+    <div class="metar-raw" id="metarRaw">${d.raw || ''}</div>`;
+  banner.style.display = 'block';
+}
+function toggleRaw() {
+  document.getElementById('metarRaw')?.classList.toggle('show');
+}
 
 function dayLabel(dateStr) {
   if (!dateStr) return '—';
@@ -417,7 +647,9 @@ function requestGPS() {
       currentLat = pos.coords.latitude;
       currentLon = pos.coords.longitude;
       currentName = null; currentCounty = null;
-      document.getElementById('locSelect').value = '';
+      document.getElementById('locSearch').value = '';
+      hideResults();
+      document.getElementById('favSection').classList.remove('show');
       showGeoPill(`GPS ${currentLat.toFixed(3)}, ${currentLon.toFixed(3)}`);
       loadWeather();
     },
@@ -436,17 +668,6 @@ function fallbackToDefault() {
   currentName = '大園區'; currentCounty = '桃園市';
   isGPS = false;
   showGeoPill('預設：桃園機場');
-  loadWeather();
-}
-
-function onSelectChange() {
-  const sel = document.getElementById('locSelect');
-  if (!sel.value) return;
-  const [lat, lon, name, county] = sel.value.split(',');
-  currentLat = parseFloat(lat); currentLon = parseFloat(lon);
-  currentName = name; currentCounty = county;
-  isGPS = false;
-  document.getElementById('geoPill').classList.remove('show');
   loadWeather();
 }
 
@@ -599,6 +820,9 @@ function toggleDesc() {
 }
 
 window.addEventListener('load', () => {
+  renderFavs();
+  loadMetar();
+  setInterval(loadMetar, 30 * 60 * 1000);
   if (navigator.geolocation) requestGPS();
   else fallbackToDefault();
 });
