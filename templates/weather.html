@@ -102,12 +102,12 @@ body::before{
 /* ── Content ── */
 .content{
   flex:1;
-  padding:24px 18px max(80px,env(safe-area-inset-bottom)+56px);
-  max-width:520px;width:100%;margin:0 auto;
+  padding:20px 20px max(80px, env(safe-area-inset-bottom) + 56px);
+  max-width:480px;width:100%;margin:0 auto;
   position:relative;z-index:1;
-  display:flex;flex-direction:column;gap:28px;
+  display:flex;flex-direction:column;gap:24px;
 }
-#weatherArea{display:flex;flex-direction:column;gap:24px}
+#weatherArea{display:flex;flex-direction:column;gap:20px}
 
 /* ── METAR banner ── */
 #metarBanner{padding:10px 20px}
@@ -413,12 +413,6 @@ body::before{
 
 /* ── Mobile overrides ── */
 @media(max-width:480px){
-  .content{
-    padding:16px 20px max(60px,env(safe-area-inset-bottom)+48px);
-    gap:18px;
-  }
-  #weatherArea{gap:16px}
-  #metarBanner{padding:10px 20px}
   .main-card{padding:20px 16px 18px}
   .main-top{margin-bottom:16px}
   .main-temps{margin-bottom:16px}
@@ -430,9 +424,7 @@ body::before{
   .hour-chip{padding:12px 10px;min-width:62px}
   .day-row{padding:14px 16px}
   .section-group{gap:8px}
-  .section-title{padding:2px 2px 0}
   .alert-banner{padding:10px 12px}
-  .fav-chips{gap:6px}
   .fav-chip{padding:6px 10px;font-size:.76rem}
 }
 </style>
@@ -446,7 +438,7 @@ body::before{
 </div>
 
 <div id="metarBanner" style="background:rgba(14,30,60,.6);backdrop-filter:blur(32px);border-bottom:1px solid rgba(96,165,250,.18);display:none">
-  <div style="max-width:520px;margin:0 auto">
+  <div style="max-width:480px;margin:0 auto">
     <div class="metar-card" id="metarCard" style="margin:0;border:none;background:transparent;box-shadow:none;padding:0"></div>
   </div>
 </div>
