@@ -909,14 +909,15 @@ _WEATHER_CACHE_TTL  = 1800
 
 # 縣市 → CWA 鄉鎮預報端點 ID
 _COUNTY_ENDPOINT = {
-    "宜蘭縣": "F-D0047-001", "桃園市": "F-D0047-003", "新竹縣": "F-D0047-005",
-    "苗栗縣": "F-D0047-007", "彰化縣": "F-D0047-009", "南投縣": "F-D0047-011",
-    "雲林縣": "F-D0047-013", "嘉義縣": "F-D0047-015", "屏東縣": "F-D0047-017",
-    "臺東縣": "F-D0047-019", "花蓮縣": "F-D0047-021", "澎湖縣": "F-D0047-023",
-    "基隆市": "F-D0047-025", "新竹市": "F-D0047-027", "嘉義市": "F-D0047-029",
-    "臺北市": "F-D0047-031", "高雄市": "F-D0047-033", "新北市": "F-D0047-035",
-    "臺中市": "F-D0047-037", "臺南市": "F-D0047-039", "連江縣": "F-D0047-041",
-    "金門縣": "F-D0047-043",
+    # 偶數端點 = 12 小時預報，含最高/最低溫、最高體感溫、12h降雨機率
+    "宜蘭縣": "F-D0047-003", "桃園市": "F-D0047-007", "新竹縣": "F-D0047-011",
+    "苗栗縣": "F-D0047-015", "彰化縣": "F-D0047-019", "南投縣": "F-D0047-023",
+    "雲林縣": "F-D0047-027", "嘉義縣": "F-D0047-031", "屏東縣": "F-D0047-035",
+    "臺東縣": "F-D0047-039", "花蓮縣": "F-D0047-043", "澎湖縣": "F-D0047-047",
+    "基隆市": "F-D0047-051", "新竹市": "F-D0047-055", "嘉義市": "F-D0047-059",
+    "臺北市": "F-D0047-063", "高雄市": "F-D0047-067", "新北市": "F-D0047-071",
+    "臺中市": "F-D0047-075", "臺南市": "F-D0047-079", "連江縣": "F-D0047-083",
+    "金門縣": "F-D0047-087",
 }
 
 # Wx 代碼 → emoji（CWA 1-42）
@@ -1030,23 +1031,25 @@ def _wx_emoji(code):
     except Exception:
         return "🌡️"
 
-def _parse_elements(elements):
-    """把 weatherElement 列表解析成 {name: [slot, ...]} 字典。"""
-    out = {}
+def _get_el(elements, name):
+    """從 WeatherElement 列表取出指定名稱的 Time slots。"""
     for el in elements:
-        name = el.get("elementName") or el.get("ElementName", "")
-        slots = el.get("time") or el.get("Time") or []
-        out[name] = slots
-    return out
+        if (el.get("ElementName") or el.get("elementName") or "") == name:
+            return el.get("Time") or el.get("time") or []
+    return []
 
-def _slot_val(slot, idx=0):
-    ev = slot.get("elementValue") or slot.get("ElementValue") or []
-    if idx < len(ev):
-        return (ev[idx].get("value") or ev[idx].get("Value") or "").strip()
+def _ev_get(slot, *keys):
+    """從 ElementValue[0] 取出第一個有值的 key。"""
+    ev = slot.get("ElementValue") or slot.get("elementValue") or []
+    if ev:
+        for k in keys:
+            v = ev[0].get(k)
+            if v is not None:
+                return str(v).strip()
     return ""
 
-def _slot_time(slot):
-    return slot.get("dataTime") or slot.get("startTime") or slot.get("StartTime") or ""
+def _slot_start(slot):
+    return slot.get("StartTime") or slot.get("startTime") or slot.get("dataTime") or ""
 
 def _fetch_cwa(township_info):
     """回傳解析好的天氣 dict；任何錯誤都不拋出。"""
@@ -1076,11 +1079,7 @@ def _fetch_cwa(township_info):
     try:
         r = _requests.get(
             f"{_CWA_BASE}/{endpoint}",
-            params={
-                "Authorization": api_key,
-                "locationName":  api_name,
-                "elementName":   "Wx,PoP12h,T,AT,WS,CI,WeatherDescription",
-            },
+            params={"Authorization": api_key},
             timeout=12,
         )
         if not r.ok:
@@ -1105,83 +1104,93 @@ def _fetch_cwa(township_info):
                 break
 
         if location_item:
-            els = _parse_elements(
-                location_item.get("weatherElement") or
-                location_item.get("WeatherElement") or []
-            )
-            wx_slots  = els.get("Wx", [])
-            t_slots   = els.get("T", [])
-            at_slots  = els.get("AT", [])
-            pop_slots = els.get("PoP12h", [])
-            ws_slots  = els.get("WS", [])
-            desc_slots= els.get("WeatherDescription", [])
+            els = location_item.get("WeatherElement") or location_item.get("weatherElement") or []
 
-            wx_code  = int(_slot_val(wx_slots[0], 1)) if wx_slots else 0
-            wx_text  = _slot_val(wx_slots[0], 0)      if wx_slots else "—"
-            temp     = _slot_val(t_slots[0],   0)     if t_slots  else "—"
-            feels    = _slot_val(at_slots[0],  0)     if at_slots else "—"
-            pop      = _slot_val(pop_slots[0], 0)     if pop_slots else "—"
-            wind     = _slot_val(ws_slots[0],  0)     if ws_slots else "—"
-            desc     = _slot_val(desc_slots[0],0)     if desc_slots else ""
-            updated  = _slot_time(wx_slots[0]) if wx_slots else ""
+            wx_slots   = _get_el(els, "天氣現象")
+            t_hi_slots = _get_el(els, "最高溫度")
+            t_lo_slots = _get_el(els, "最低溫度")
+            t_av_slots = _get_el(els, "平均溫度")
+            at_slots   = _get_el(els, "最高體感溫度")
+            pop_slots  = _get_el(els, "12小時降雨機率")
+            ws_slots   = _get_el(els, "風速")
+            desc_slots = _get_el(els, "天氣預報綜合描述")
+
+            wx_code_s = _ev_get(wx_slots[0],  "WeatherCode")    if wx_slots   else ""
+            wx_text   = _ev_get(wx_slots[0],  "Weather")        if wx_slots   else "—"
+            wx_code   = int(wx_code_s) if wx_code_s else 0
+            temp      = (_ev_get(t_av_slots[0], "Temperature")  if t_av_slots else "") or \
+                        (_ev_get(t_hi_slots[0], "MaxTemperature") if t_hi_slots else "") or "—"
+            feels     = _ev_get(at_slots[0],  "MaxApparentTemperature") if at_slots  else "—"
+            pop       = _ev_get(pop_slots[0], "ProbabilityOfPrecipitation") if pop_slots else "—"
+            wind      = _ev_get(ws_slots[0],  "WindSpeed")      if ws_slots   else "—"
+            desc      = _ev_get(desc_slots[0],"WeatherDescription") if desc_slots else ""
+            updated   = _slot_start(wx_slots[0]) if wx_slots else ""
 
             result["current"] = {
-                "wx":       wx_text,
-                "wx_code":  wx_code,
-                "emoji":    _wx_emoji(wx_code),
-                "temp":     temp,
-                "feels":    feels,
-                "pop12h":   pop,
-                "wind":     wind,
-                "desc":     desc[:120] if desc else "",
-                "updated":  updated[:16].replace("T", " ") if updated else "",
-                "alert":    wx_code in _ALERT_WX_CODES,
+                "wx":      wx_text,
+                "wx_code": wx_code,
+                "emoji":   _wx_emoji(wx_code),
+                "temp":    temp,
+                "feels":   feels,
+                "pop12h":  pop,
+                "wind":    wind,
+                "desc":    desc[:130] if desc else "",
+                "updated": updated[:19].replace("T", " ") if updated else "",
+                "alert":   wx_code in _ALERT_WX_CODES,
             }
 
-            # 3 天預報（每天取一個白天 slot）
+            # ── 3 天預報 ──
             days_seen: list[str] = []
-            forecast_map: dict = {}
+            forecast_map: dict   = {}
             for sl in wx_slots:
-                st = _slot_time(sl)
-                day = st[:10] if st else ""
+                day = _slot_start(sl)[:10]
                 if not day or day in forecast_map:
                     continue
+                wc = _ev_get(sl, "WeatherCode")
                 forecast_map[day] = {
                     "date":    day,
-                    "wx":      _slot_val(sl, 0),
-                    "wx_code": int(_slot_val(sl, 1) or "0"),
-                    "emoji":   _wx_emoji(_slot_val(sl, 1)),
-                    "pop":     "",
+                    "wx":      _ev_get(sl, "Weather"),
+                    "wx_code": int(wc) if wc else 0,
+                    "emoji":   _wx_emoji(wc),
+                    "pop": "", "hi": "—", "lo": "—",
                 }
                 days_seen.append(day)
                 if len(days_seen) >= 3:
                     break
-            # 補填 PoP12h
+
             for sl in pop_slots:
-                day = _slot_time(sl)[:10]
+                day = _slot_start(sl)[:10]
                 if day in forecast_map and not forecast_map[day]["pop"]:
-                    forecast_map[day]["pop"] = _slot_val(sl, 0)
-            # 補填溫度範圍
-            t_map: dict = {}
-            for sl in t_slots:
-                day = _slot_time(sl)[:10]
-                v   = _slot_val(sl, 0)
+                    forecast_map[day]["pop"] = _ev_get(sl, "ProbabilityOfPrecipitation")
+
+            for sl in t_hi_slots:
+                day = _slot_start(sl)[:10]
+                if day not in forecast_map:
+                    continue
+                v = _ev_get(sl, "MaxTemperature")
                 if not v:
                     continue
-                if day not in t_map:
-                    t_map[day] = {"lo": v, "hi": v}
-                else:
-                    try:
-                        fv = float(v)
-                        if fv < float(t_map[day]["lo"]): t_map[day]["lo"] = v
-                        if fv > float(t_map[day]["hi"]): t_map[day]["hi"] = v
-                    except Exception:
-                        pass
-            for day in days_seen:
-                fd = forecast_map[day]
-                tr = t_map.get(day, {})
-                fd["lo"] = tr.get("lo", "—")
-                fd["hi"] = tr.get("hi", "—")
+                cur = forecast_map[day]["hi"]
+                try:
+                    if cur == "—" or float(v) > float(cur):
+                        forecast_map[day]["hi"] = v
+                except Exception:
+                    forecast_map[day]["hi"] = v
+
+            for sl in t_lo_slots:
+                day = _slot_start(sl)[:10]
+                if day not in forecast_map:
+                    continue
+                v = _ev_get(sl, "MinTemperature")
+                if not v:
+                    continue
+                cur = forecast_map[day]["lo"]
+                try:
+                    if cur == "—" or float(v) < float(cur):
+                        forecast_map[day]["lo"] = v
+                except Exception:
+                    forecast_map[day]["lo"] = v
+
             result["forecast"] = [forecast_map[d] for d in days_seen]
 
     except Exception as e:
@@ -1197,25 +1206,18 @@ def _fetch_cwa(township_info):
         if not r2.ok:
             raise ValueError(f"HTTP {r2.status_code}")
         raw2  = r2.json()
-        recs2 = raw2.get("records", {})
-        alts  = (
-            recs2.get("location") or recs2.get("Location") or
-            recs2.get("hazardConditions", {}).get("hazards") or []
-        )
+        locs2 = raw2.get("records", {}).get("location") or []
         alerts = []
-        if isinstance(alts, list):
-            for item in alts:
-                hazards = item.get("hazardConditions", {}).get("hazards") or []
-                if isinstance(hazards, dict):
-                    hazards = hazards.get("hazard", [])
-                    if isinstance(hazards, dict):
-                        hazards = [hazards]
-                for h in hazards:
-                    info = h.get("info", {})
-                    phen = info.get("phenomena", "") or info.get("語言", "")
-                    sig  = info.get("significance", "") or ""
-                    if phen:
-                        alerts.append(f"{phen}{sig}".strip())
+        for loc2 in locs2:
+            hazards = loc2.get("hazardConditions", {}).get("hazards") or []
+            if isinstance(hazards, dict):
+                hazards = [hazards]
+            for h in hazards:
+                info = h.get("info", {})
+                phen = info.get("phenomena", "")
+                sig  = info.get("significance", "")
+                if phen:
+                    alerts.append(f"{phen}{sig}".strip())
         result["alerts"]    = alerts
         result["has_alert"] = len(alerts) > 0
     except Exception:
