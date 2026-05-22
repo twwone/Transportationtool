@@ -3,6 +3,9 @@ import os
 import time
 import threading
 import random
+import hashlib
+import hmac
+import secrets
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
@@ -829,6 +832,20 @@ def _sc(resp):
 @app.route("/share")
 def share():
     return render_template("share.html")
+
+@app.route("/api/share/imagekit-auth")
+def imagekit_auth():
+    private_key = os.environ.get("IMAGEKIT_PRIVATE_KEY", "")
+    if not private_key:
+        return _sc(jsonify({"error": "IMAGEKIT_PRIVATE_KEY not set"})), 503
+    token  = secrets.token_hex(16)
+    expire = int(time.time()) + 3600
+    signature = hmac.new(
+        private_key.encode(),
+        (token + str(expire)).encode(),
+        hashlib.sha1
+    ).hexdigest()
+    return _sc(jsonify({"token": token, "expire": expire, "signature": signature}))
 
 @app.route("/api/share/room", methods=["POST", "OPTIONS"])
 def share_create():
