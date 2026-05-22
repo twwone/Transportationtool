@@ -111,41 +111,39 @@ body::before{
 
 /* ── METAR card ── */
 .metar-card{
-  border-radius:var(--radius-l);padding:16px 20px 14px;
-  background:rgba(14,30,60,.55);
-  backdrop-filter:blur(40px) saturate(180%);
-  -webkit-backdrop-filter:blur(40px) saturate(180%);
-  border:1px solid rgba(96,165,250,.25);
-  box-shadow:0 4px 24px rgba(59,130,246,.12);
-  animation:cardIn .3s cubic-bezier(.22,1,.36,1) both;
+  padding:12px 0 10px;
   color:#e2e8f0;
-}
-@media(prefers-color-scheme:light){
-  .metar-card{background:rgba(15,40,100,.72);color:#dbeafe}
 }
 .metar-header{
   display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:10px;
+  margin-bottom:8px;padding:0 2px;
 }
-.metar-icao{font-size:.82rem;font-weight:800;letter-spacing:.08em;color:#93c5fd}
-.metar-station{font-size:.78rem;color:rgba(226,232,240,.65);margin-left:6px}
-.metar-time{font-size:.7rem;color:rgba(226,232,240,.5)}
-.metar-chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:7px;margin-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.metar-icao{font-size:.8rem;font-weight:800;letter-spacing:.1em;color:#93c5fd}
+.metar-station{font-size:.74rem;color:rgba(226,232,240,.55);margin-left:6px}
+.metar-time{font-size:.68rem;color:rgba(226,232,240,.45)}
+.metar-chips{
+  display:flex;flex-wrap:nowrap;overflow-x:auto;gap:0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  align-items:stretch;
+}
 .metar-chips::-webkit-scrollbar{display:none}
 .metar-chip{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:4px 10px;border-radius:8px;
-  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);
-  font-size:.76rem;font-weight:600;color:#e2e8f0;
+  display:inline-flex;align-items:center;
+  padding:3px 12px;
+  font-size:.76rem;font-weight:600;color:#c7d9f0;
+  white-space:nowrap;flex-shrink:0;
+  border-right:1px solid rgba(255,255,255,.15);
 }
+.metar-chip:first-child{padding-left:2px}
+.metar-chip:last-child{border-right:none}
 .metar-raw{
-  font-size:.65rem;font-family:"SF Mono","Menlo",monospace;
-  color:rgba(226,232,240,.4);word-break:break-all;line-height:1.5;
-  display:none;
+  font-size:.62rem;font-family:"SF Mono","Menlo",monospace;
+  color:rgba(226,232,240,.35);word-break:break-all;line-height:1.5;
+  display:none;padding:8px 2px 0;
 }
 .metar-raw.show{display:block}
 .metar-toggle{
-  font-size:.68rem;color:#60a5fa;background:none;border:none;
+  font-size:.66rem;color:#60a5fa;background:none;border:none;
   cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;
 }
 
@@ -413,13 +411,11 @@ body::before{
 /* ── Mobile overrides ── */
 @media(max-width:480px){
   .content{
-    padding:16px 14px max(60px,env(safe-area-inset-bottom)+48px);
+    padding:16px 16px max(60px,env(safe-area-inset-bottom)+48px);
     gap:18px;
   }
   #weatherArea{gap:16px}
-  #metarBanner{padding:8px 14px}
-  .metar-card{padding:12px 14px 10px}
-  .metar-chip{font-size:.7rem;padding:3px 8px}
+  #metarBanner{padding:10px 16px}
   .main-card{padding:20px 16px 18px}
   .main-top{margin-bottom:16px}
   .main-temps{margin-bottom:16px}
@@ -597,13 +593,13 @@ function renderMetar(d) {
   if (d.wind_ms !== undefined) {
     const dir = d.wind_dir !== undefined ? dirLabel(d.wind_dir) : '';
     const gust = d.gust_ms ? ` 陣風${d.gust_ms}` : '';
-    chips += `<span class="metar-chip">💨 ${dir} ${d.wind_kt}kt (${d.wind_ms}m/s${gust})</span>`;
+    chips += `<span class="metar-chip">${dir} ${d.wind_kt}kt (${d.wind_ms}m/s${gust})</span>`;
   }
-  if (d.vis_str) chips += `<span class="metar-chip">👁 ${d.vis_str}</span>`;
-  if (d.temp !== undefined) chips += `<span class="metar-chip">🌡 ${d.temp}° / 露點${d.dew}°</span>`;
-  if (d.qnh)  chips += `<span class="metar-chip">📟 Q${d.qnh}</span>`;
-  if (d.sky)  chips += `<span class="metar-chip">☁️ ${d.sky}</span>`;
-  if (d.wx)   chips += `<span class="metar-chip">🌧 ${d.wx}</span>`;
+  if (d.vis_str) chips += `<span class="metar-chip">${d.vis_str}</span>`;
+  if (d.temp !== undefined) chips += `<span class="metar-chip">${d.temp}°/${d.dew}°</span>`;
+  if (d.qnh)  chips += `<span class="metar-chip">Q${d.qnh}</span>`;
+  if (d.sky)  chips += `<span class="metar-chip">${d.sky}</span>`;
+  if (d.wx)   chips += `<span class="metar-chip">${d.wx}</span>`;
   if (d.trend) chips += `<span class="metar-chip" style="color:#86efac">${d.trend}</span>`;
   const stale = d.stale ? ' (快取)' : '';
   card.innerHTML = `
