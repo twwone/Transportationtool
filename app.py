@@ -810,7 +810,7 @@ def amenities_api():
 # ──────────────────────────────────────────────
 _SHARE: dict = {}
 _SHARE_LOCK  = threading.Lock()
-_SHARE_TTL   = 86400  # 24 小時閒置刪除
+_SHARE_TTL   = 43200  # 12 小時閒置刪除
 
 def _share_cleanup():
     while True:
