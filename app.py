@@ -839,7 +839,7 @@ def imagekit_auth():
     if not private_key:
         return _sc(jsonify({"error": "IMAGEKIT_PRIVATE_KEY not set"})), 503
     token  = secrets.token_hex(16)
-    expire = int(time.time()) + 3600
+    expire = int(time.time()) + 1800  # ImageKit 要求 < 1 小時，用 30 分鐘留安全邊際
     signature = hmac.new(
         private_key.encode(),
         (token + str(expire)).encode(),
