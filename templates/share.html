@@ -391,7 +391,8 @@ body::before{
 const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
   auth: { persistSession: true, autoRefreshToken: true }
 });
-const IMGUR_CID = '';  // 填入 Imgur Client-ID 後圖片同步功能啟用
+const IK_PUBLIC_KEY    = '';  // 填入 ImageKit Public Key 後圖片同步功能啟用
+const IK_URL_ENDPOINT  = '';  // 例如 https://ik.imagekit.io/your_id
 
 function dbg(msg) {
   const el = document.getElementById('dbg');
@@ -566,13 +567,13 @@ function detectUrl(text) {
 }
 function openUrl() { if (detectedUrl) window.open(detectedUrl, '_blank', 'noopener,noreferrer'); }
 
-// ── 圖片上傳（Imgur，申請 Client-ID 後啟用）──────────────
+// ── 圖片上傳（ImageKit）────────────────────────────────
 function pickImg() { document.getElementById('fileIn').click(); }
 
 async function onImgFile(file) {
   if (!file) return;
-  if (!IMGUR_CID) {
-    alert('圖片同步功能需要 Imgur Client-ID，申請後填入 share.html 的 IMGUR_CID');
+  if (!IK_PUBLIC_KEY || !IK_URL_ENDPOINT) {
+    alert('圖片同步功能需要 ImageKit Public Key 與 URL Endpoint，填入 share.html 的 IK_PUBLIC_KEY / IK_URL_ENDPOINT 後即可使用');
     return;
   }
   const st = document.getElementById('upStatus');
@@ -582,17 +583,18 @@ async function onImgFile(file) {
     const blob = await compress(file, 1200, .82);
     st.textContent = '上傳中…';
     const fd = new FormData();
-    fd.append('image', blob, 'share.jpg');
-    const r = await fetch('https://api.imgur.com/3/image', {
+    fd.append('file', blob, 'share.jpg');
+    fd.append('fileName', 'share-' + Date.now() + '.jpg');
+    fd.append('useUniqueFileName', 'true');
+    const r = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
       method: 'POST',
-      headers: { Authorization: 'Client-ID ' + IMGUR_CID },
+      headers: { Authorization: 'Basic ' + btoa(IK_PUBLIC_KEY + ':') },
       body: fd
     });
     const res = await r.json();
-    if (!res.success) throw new Error(res.data?.error || '上傳失敗');
-    const url = res.data.link;
+    if (!res.url) throw new Error(res.message || '上傳失敗');
+    const url = res.url + '?tr=q-60,w-600';
     showImg(url);
-    // 將圖片 URL 附加到文字末尾以跨裝置同步
     const ta = document.getElementById('ta');
     ta.value = (ta.value ? ta.value + '\n' : '') + url;
     knownText = ta.value;
