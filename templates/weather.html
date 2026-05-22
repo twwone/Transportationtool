@@ -102,11 +102,12 @@ body::before{
 /* ── Content ── */
 .content{
   flex:1;
-  padding:20px 18px max(72px,env(safe-area-inset-bottom)+48px);
+  padding:24px 18px max(80px,env(safe-area-inset-bottom)+56px);
   max-width:520px;width:100%;margin:0 auto;
   position:relative;z-index:1;
-  display:flex;flex-direction:column;gap:20px;
+  display:flex;flex-direction:column;gap:28px;
 }
+#weatherArea{display:flex;flex-direction:column;gap:24px}
 
 /* ── Location bar ── */
 .loc-bar{display:flex;align-items:center;gap:10px}
@@ -179,7 +180,7 @@ body::before{
 
 /* ── Main weather card ── */
 .main-card{
-  border-radius:var(--radius-l);padding:24px 20px 22px;
+  border-radius:var(--radius-l);padding:28px 24px 26px;
   backdrop-filter:blur(40px) saturate(200%);
   -webkit-backdrop-filter:blur(40px) saturate(200%);
   background:var(--glass-bg);
@@ -199,11 +200,11 @@ body::before{
               breatheRedDark 2.4s cubic-bezier(.45,.05,.55,.95) infinite 0.3s;
   }
 }
-.main-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+.main-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:24px}
 .main-loc{font-size:.78rem;font-weight:600;color:var(--sub);margin-bottom:6px}
 .main-wx{font-size:1.08rem;font-weight:700;color:var(--text)}
 .main-emoji{font-size:3.6rem;line-height:1;flex-shrink:0}
-.main-temps{display:flex;align-items:flex-end;gap:10px;margin-bottom:18px}
+.main-temps{display:flex;align-items:flex-end;gap:10px;margin-bottom:22px}
 .main-temp{font-size:3.2rem;font-weight:800;letter-spacing:-1.5px;line-height:1}
 .main-feels{font-size:.84rem;color:var(--sub);padding-bottom:6px}
 .stats-row{
@@ -211,7 +212,7 @@ body::before{
   border:1px solid var(--glass-border);
 }
 .stat{
-  flex:1;padding:12px 8px;text-align:center;
+  flex:1;padding:16px 10px;text-align:center;
   background:rgba(255,255,255,.12);
   border-right:1px solid var(--glass-border);
 }
@@ -221,7 +222,7 @@ body::before{
 .stat-val{font-size:.9rem;font-weight:700;color:var(--text)}
 .stat-lbl{font-size:.66rem;color:var(--sub);margin-top:3px}
 .main-desc{
-  margin-top:14px;padding:12px 14px;border-radius:14px;
+  margin-top:16px;padding:14px 16px;border-radius:14px;
   background:rgba(255,255,255,.12);font-size:.78rem;color:var(--sub);
   line-height:1.7;display:none;overflow:hidden;
 }
@@ -229,7 +230,7 @@ body::before{
 @media(prefers-color-scheme:dark){.main-desc{background:rgba(255,255,255,.05)}}
 .desc-toggle{
   display:none;align-items:center;gap:4px;
-  margin-top:14px;font-size:.75rem;font-weight:600;
+  margin-top:18px;font-size:.75rem;font-weight:600;
   color:var(--accent);background:none;border:none;
   cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;
   width:100%;justify-content:flex-end;
@@ -237,11 +238,11 @@ body::before{
 .desc-toggle.show{display:flex}
 
 /* ── Section group ── */
-.section-group{display:flex;flex-direction:column;gap:8px}
+.section-group{display:flex;flex-direction:column;gap:12px}
 .section-title{
   font-size:.75rem;font-weight:700;color:var(--sub);
   letter-spacing:.07em;text-transform:uppercase;
-  padding:0 4px;
+  padding:4px 4px 0;
 }
 
 /* ── Hourly scroll ── */
@@ -257,15 +258,15 @@ body::before{
 }
 .hourly-scroll{
   display:flex;overflow-x:auto;
-  padding:16px 16px 18px;gap:10px;
+  padding:18px 20px 22px;gap:12px;
   scrollbar-width:none;
   -webkit-overflow-scrolling:touch;
 }
 .hourly-scroll::-webkit-scrollbar{display:none}
 .hour-chip{
   flex-shrink:0;display:flex;flex-direction:column;
-  align-items:center;gap:7px;
-  padding:14px 12px;border-radius:18px;min-width:68px;
+  align-items:center;gap:8px;
+  padding:16px 14px;border-radius:18px;min-width:72px;
   background:rgba(255,255,255,.14);
   border:1px solid rgba(255,255,255,.18);
   transition:background .2s;
@@ -298,7 +299,7 @@ body::before{
 }
 .day-row{
   display:flex;align-items:center;
-  padding:17px 20px;gap:14px;
+  padding:20px 24px;gap:16px;
   border-bottom:.5px solid var(--glass-border);
 }
 .day-row:last-child{border-bottom:none}
@@ -373,7 +374,7 @@ function dayLabel(dateStr) {
     // 用 Asia/Taipei 取得「今天」日期字串，避免 UTC 偏移造成 +0.5 天誤差
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
     const todayMidnight = new Date(todayStr + 'T00:00:00+08:00');
-    const diff = Math.round((d - todayMidnight) / 86400000);
+    const diff = Math.floor((d - todayMidnight) / 86400000);
     if (diff === 0) return '今天';
     if (diff === 1) return '明天';
     if (diff === 2) return '後天';
