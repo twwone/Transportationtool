@@ -15,6 +15,7 @@ from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
 load_dotenv()
+load_dotenv(".env.local", override=True)  # 本機 vercel dev 注入的 KV 環境變數
 
 app = Flask(__name__)
 
@@ -881,6 +882,7 @@ def _sc(resp):
     resp.headers["Access-Control-Allow-Origin"]  = "*"
     resp.headers["Access-Control-Allow-Methods"] = "GET, PUT, POST, DELETE, OPTIONS"
     resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    resp.headers["Cache-Control"] = "no-store"
     return resp
 
 @app.route("/share")
