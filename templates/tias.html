@@ -578,9 +578,42 @@ function _saveWatchCodes() {
   localStorage.setItem('tias_watch_codes', JSON.stringify([..._watchCodes]));
 }
 
+/* ── Codeshare 合併 ─────────────────────────────────────────────────
+   條件：相同 [表訂時間 | 登機門 | 對向機場]，且登機門不為空。
+   回傳新陣列；合併後的主物件多一個 _codeshares: [{AirlineID, FlightNumber}]。 */
+function mergeCodeshares(flights, dir) {
+  const groups = new Map();
+  const order  = [];
+  flights.forEach(f => {
+    const sch  = (dir === 'arr' ? f.ScheduleArrivalTime    : f.ScheduleDepartureTime) || '';
+    const gate = (f.Gate || (dir === 'arr' ? f.ArrivalGate : f.DepartureGate) || '').trim();
+    const ap   = (dir === 'arr' ? f.DepartureAirportID     : f.ArrivalAirportID    || '').trim();
+    if (!gate) { order.push([null, f]); return; }          // 無登機門 → 不合併
+    const key = `${sch}|${gate}|${ap}`;
+    if (!groups.has(key)) { groups.set(key, []); order.push([key, null]); }
+    groups.get(key).push(f);
+  });
+  const result = [];
+  const seen   = new Set();
+  order.forEach(([key, lone]) => {
+    if (lone) { result.push(lone); return; }
+    if (seen.has(key)) return;
+    seen.add(key);
+    const group = groups.get(key);
+    if (group.length === 1) { result.push(group[0]); return; }
+    const base = { ...group[0] };
+    base._codeshares = group.map(g => ({ AirlineID: g.AirlineID, FlightNumber: g.FlightNumber }));
+    result.push(base);
+  });
+  return result;
+}
+
 function applyWatchFilter() {
-  _arrData = _allArr.filter(f => _watchCodes.has(f.AirlineID));
-  _depData = _allDep.filter(f => _watchCodes.has(f.AirlineID));
+  const watched = f => f._codeshares
+    ? f._codeshares.some(c => _watchCodes.has(c.AirlineID))
+    : _watchCodes.has(f.AirlineID);
+  _arrData = _allArr.filter(watched);
+  _depData = _allDep.filter(watched);
 }
 
 function renderWatchTabs() {
@@ -774,8 +807,9 @@ function buildTAT(stdIso, etdIso) {
 function renderCard(f, mode, showDirBadge) {
   const isArr = mode === 'arr';
 
-  const airline   = f.AirlineID    || '??';
-  const fltNum    = f.FlightNumber || '—';
+  const shares    = f._codeshares || null;
+  const airline   = shares ? shares.map(c => c.AirlineID).join('/') : (f.AirlineID || '??');
+  const fltNum    = shares ? shares.map(c => c.FlightNumber).join(' / ') : (f.FlightNumber || '—');
   const counterAp = isArr ? (f.DepartureAirportID || '') : (f.ArrivalAirportID || '');
   const cityName  = (_airportMap[counterAp] || {}).zh || AP_ZH[counterAp] || counterAp || '—';
 
@@ -805,13 +839,19 @@ function renderCard(f, mode, showDirBadge) {
     isDone                  ? 'card-done'      : '',
   ].filter(Boolean).join(' ');
 
-  const airlineCN = (_airlineMap[airline] || {}).zh || '';
+  const airlineCN = shares
+    ? shares.map(c => (_airlineMap[c.AirlineID] || {}).zh || '').filter(Boolean).join(' / ')
+    : ((_airlineMap[f.AirlineID] || {}).zh || '');
+  const airlineBadges = shares
+    ? shares.map(c => `<span class="badge-airline">${c.AirlineID}</span>`).join('')
+    : `<span class="badge-airline">${f.AirlineID || '??'}</span>`;
   const dirBadge  = showDirBadge
     ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
     : '';
 
-  const prevGate  = _gateChanges[fltNum]  ? _gateChanges[fltNum].from  : undefined;
-  const acTypeChg = _acTypeChanges[fltNum];
+  const _fltKey   = shares ? shares[0].FlightNumber : fltNum;
+  const prevGate  = _gateChanges[_fltKey]  ? _gateChanges[_fltKey].from  : undefined;
+  const acTypeChg = _acTypeChanges[_fltKey];
   const acTypeBadge = acTypeChg
     ? `<span class="badge-actype badge-actype-changed">${acTypeChg.from} → ${acTypeChg.to}</span>`
     : (acType ? `<span class="badge-actype">${acType}</span>` : '');
@@ -832,7 +872,7 @@ function renderCard(f, mode, showDirBadge) {
 
   return `<div class="${cardCls}">
     <div class="card-meta">
-      <span class="badge-airline">${airline}</span>
+      ${airlineBadges}
       ${dirBadge}
       <span class="badge-status st-${status.cls}">${status.label}</span>
       ${acTypeBadge}
@@ -971,20 +1011,23 @@ function runSearch() {
   });
 
   const results = allSorted.filter(f => {
-    const flt     = (f.FlightNumber || '').toUpperCase();
-    const fullFlt = ((f.AirlineID || '') + (f.FlightNumber || '')).toUpperCase();
-    const al      = (f.AirlineID || '').toUpperCase();
     const ap      = (f.DepartureAirportID || f.ArrivalAirportID || '').toUpperCase();
     const gate    = (f.Gate || '').toUpperCase();
     const counter = (f.CheckCounter || f.CheckInCounter || f.CheckInArea || '').toUpperCase();
     const baggage = (f.BaggageClaim || '').toUpperCase();
-    /* 動態 metadata 搜尋：中文航空公司名 + 中文城市名 */
-    const alZh    = (_airlineMap[f.AirlineID] || {}).zh || '';
-    const apZh    = (_airportMap[ap]          || {}).zh || '';
-    return fullFlt.includes(q) || flt.includes(q)
-        || al.startsWith(q) || ap.startsWith(q)
-        || gate.includes(q) || counter.includes(q) || baggage.includes(q)
-        || alZh.includes(q) || apZh.includes(q);
+    const apZh    = (_airportMap[ap] || {}).zh || '';
+    /* codeshare：任一班號或航司匹配即算命中 */
+    const flightMatches = (f._codeshares || [{ AirlineID: f.AirlineID, FlightNumber: f.FlightNumber }])
+      .some(c => {
+        const flt     = (c.FlightNumber || '').toUpperCase();
+        const fullFlt = ((c.AirlineID || '') + (c.FlightNumber || '')).toUpperCase();
+        const al      = (c.AirlineID || '').toUpperCase();
+        const alZh    = (_airlineMap[c.AirlineID] || {}).zh || '';
+        return fullFlt.includes(q) || flt.includes(q) || al.startsWith(q) || alZh.includes(q);
+      });
+    return flightMatches
+        || ap.startsWith(q) || apZh.includes(q)
+        || gate.includes(q) || counter.includes(q) || baggage.includes(q);
   });
 
   countEl.textContent = results.length ? `共 ${results.length} 筆` : '';
@@ -1120,15 +1163,16 @@ async function load() {
 
     renderAirlineHint();
 
-    _allArr  = data.all_arrivals   || [];
-    _allDep  = data.all_departures || [];
+    _allArr  = mergeCodeshares(data.all_arrivals   || [], 'arr');
+    _allDep  = mergeCodeshares(data.all_departures || [], 'dep');
     applyWatchFilter();
 
     /* 登機門變更追蹤 */
     const newGates = {};
     [..._allArr, ..._allDep].forEach(f => {
       const g = f.Gate || f.ArrivalGate || f.DepartureGate || '';
-      if (f.FlightNumber && g) newGates[f.FlightNumber] = g;
+      const nums = f._codeshares ? f._codeshares.map(c => c.FlightNumber) : [f.FlightNumber];
+      nums.forEach(n => { if (n && g) newGates[n] = g; });
     });
     if (Object.keys(_prevGates).length) {
       _gateChanges = {};
@@ -1143,7 +1187,8 @@ async function load() {
     /* 機型變更追蹤 */
     const newAcTypes = {};
     [..._allArr, ..._allDep].forEach(f => {
-      if (f.FlightNumber && f.AcType) newAcTypes[f.FlightNumber] = f.AcType;
+      const nums = f._codeshares ? f._codeshares.map(c => c.FlightNumber) : [f.FlightNumber];
+      nums.forEach(n => { if (n && f.AcType) newAcTypes[n] = f.AcType; });
     });
     if (Object.keys(_prevAcTypes).length) {
       _acTypeChanges = {};
