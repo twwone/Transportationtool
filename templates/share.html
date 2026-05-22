@@ -23,6 +23,7 @@ html,body{overscroll-behavior:none;overflow-x:hidden;height:100%}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 
 :root{
   --bg:#f0f4ff;
@@ -61,7 +62,6 @@ body{
   animation:pageIn .35s cubic-bezier(.22,1,.36,1) both;
 }
 
-/* mesh gradient bg */
 body::before{
   content:'';
   position:fixed;inset:0;
@@ -94,7 +94,6 @@ body::before{
 }
 .topbar-title{font-size:1.05rem;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* room pill */
 .room-pill{
   display:none;align-items:center;gap:5px;
   padding:5px 10px;border-radius:100px;
@@ -111,7 +110,6 @@ body::before{
 }
 .sync-dot.syncing{background:#f59e0b;animation:pulse .8s ease-in-out infinite}
 
-
 /* ── Content ── */
 .content{
   flex:1;display:flex;flex-direction:column;
@@ -125,7 +123,6 @@ body::before{
 #stateB{display:none;flex-direction:column;flex:1;gap:13px}
 #stateB.show{display:flex}
 
-/* glass card */
 .glass-card{
   border-radius:var(--radius-l);
   backdrop-filter:blur(40px) saturate(200%);
@@ -136,7 +133,6 @@ body::before{
   padding:20px;
 }
 
-/* create btn */
 .create-btn{
   width:100%;display:flex;align-items:center;gap:16px;
   padding:22px 20px;border-radius:var(--radius-l);
@@ -150,12 +146,10 @@ body::before{
 .c-title{font-size:1rem;font-weight:700;color:#fff;margin-bottom:2px}
 .c-sub{font-size:.75rem;color:rgba(255,255,255,.7)}
 
-/* divider */
 .divider{display:flex;align-items:center;gap:12px;color:var(--sub);font-size:.72rem;font-weight:500}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(0,0,0,.08)}
 @media(prefers-color-scheme:dark){.divider::before,.divider::after{background:rgba(255,255,255,.08)}}
 
-/* join */
 .join-label{font-size:.78rem;font-weight:600;color:var(--sub);margin-bottom:10px}
 .join-row{display:flex;gap:10px}
 .join-input{
@@ -184,7 +178,6 @@ body::before{
 
 /* ── State B ── */
 
-/* url card */
 .url-card{
   display:none;border-radius:var(--radius-m);
   backdrop-filter:blur(40px) saturate(200%);
@@ -204,7 +197,6 @@ body::before{
   -webkit-tap-highlight-color:transparent;
 }
 
-/* image preview */
 .img-wrap{
   display:none;border-radius:var(--radius-m);overflow:hidden;
   background:rgba(0,0,0,.06);position:relative;
@@ -225,11 +217,9 @@ body::before{
   border:none;cursor:pointer;font-family:inherit;
 }
 
-/* upload status */
 .up-status{display:none;font-size:.74rem;color:var(--sub);text-align:center}
 .up-status.show{display:block}
 
-/* textarea */
 .sync-ta{
   flex:1;width:100%;border-radius:var(--radius-m);
   backdrop-filter:blur(20px) saturate(180%);
@@ -246,7 +236,53 @@ body::before{
 .sync-ta:focus{border-color:rgba(59,130,246,.4);box-shadow:0 0 0 3px rgba(59,130,246,.08)}
 @media(prefers-color-scheme:dark){.sync-ta{background:rgba(28,28,30,.75);border-color:rgba(255,255,255,.1)}}
 
-/* action row */
+/* ── File Card ── */
+.file-card{
+  display:none;
+  border-radius:20px;
+  backdrop-filter:blur(40px) saturate(200%);
+  -webkit-backdrop-filter:blur(40px) saturate(200%);
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  box-shadow:var(--glass-shadow);
+  padding:14px 16px;
+  align-items:center;
+  gap:14px;
+  animation:cardIn .3s cubic-bezier(.22,1,.36,1) both;
+}
+.file-card.show{display:flex}
+.file-icon-wrap{
+  width:48px;height:48px;
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.55rem;
+  flex-shrink:0;
+  transition:filter .2s;
+}
+@media(prefers-color-scheme:dark){.file-icon-wrap{filter:brightness(.72) saturate(1.3)}}
+.file-info{flex:1;min-width:0}
+.file-name-text{
+  font-size:.9rem;font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:var(--text);margin-bottom:3px;
+}
+.file-type-text{font-size:.72rem;color:var(--sub);font-weight:500}
+.file-dl-btn{
+  flex-shrink:0;
+  padding:11px 18px;
+  border-radius:100px;
+  background:var(--accent);
+  color:#fff;
+  font-size:.82rem;font-weight:700;
+  border:none;cursor:pointer;
+  font-family:inherit;
+  white-space:nowrap;
+  box-shadow:0 3px 12px rgba(59,130,246,.32);
+  -webkit-tap-highlight-color:transparent;
+}
+@media(prefers-color-scheme:dark){.file-dl-btn{box-shadow:0 3px 12px rgba(96,165,250,.22)}}
+
+/* ── Action row ── */
 .act-row{display:flex;gap:10px}
 .act-btn{
   flex:1;padding:14px 8px;border-radius:18px;
@@ -256,7 +292,7 @@ body::before{
   white-space:nowrap;
 }
 .btn-copy{background:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(59,130,246,.28)}
-.btn-img{
+.btn-file{
   background:var(--glass-bg);
   border:1px solid var(--glass-border);
   backdrop-filter:blur(10px);
@@ -264,6 +300,33 @@ body::before{
 }
 .btn-clear{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.18);color:var(--danger)}
 @media(prefers-color-scheme:dark){.btn-clear{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.28)}}
+
+/* ── Drop overlay ── */
+.drop-overlay{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(59,130,246,.1);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  z-index:150;
+  align-items:center;justify-content:center;
+  pointer-events:none;
+  animation:fadeIn .18s ease;
+}
+.drop-overlay.show{display:flex}
+.drop-overlay::before{
+  content:'';
+  position:absolute;inset:16px;
+  border:2.5px dashed var(--accent);
+  border-radius:28px;
+  opacity:.7;
+}
+.drop-msg{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  color:var(--accent);font-weight:700;font-size:1.05rem;
+  text-align:center;z-index:1;
+}
+.drop-msg-icon{font-size:3rem;line-height:1}
 
 /* ── Expired overlay ── */
 .expire-overlay{
@@ -290,7 +353,6 @@ body::before{
   box-shadow:0 4px 16px rgba(59,130,246,.32);
 }
 
-/* spinner */
 .sp{
   display:inline-block;width:14px;height:14px;
   border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
@@ -360,18 +422,42 @@ body::before{
 
     <!-- Textarea -->
     <textarea class="sync-ta" id="ta"
-      placeholder="在這裡輸入文字或網址，對方裝置即時同步…"></textarea>
+      placeholder="在這裡輸入文字或網址，拖曳或點擊「📎 檔案」上傳…"></textarea>
+
+    <!-- File card（textarea 正下方） -->
+    <div class="file-card" id="fileCard">
+      <div class="file-icon-wrap" id="fileIconWrap">
+        <span id="fileIconEmoji">📄</span>
+      </div>
+      <div class="file-info">
+        <div class="file-name-text" id="fileNameText">filename.pdf</div>
+        <div class="file-type-text" id="fileTypeText">PDF 檔案</div>
+      </div>
+      <button class="file-dl-btn" onclick="downloadFile()">📥 點擊下載</button>
+    </div>
 
     <!-- Actions -->
     <div class="act-row">
-      <button class="act-btn btn-copy" id="copyBtn" onclick="doCopy()">📋 複製</button>
-      <button class="act-btn btn-img"  id="imgBtn"  onclick="pickImg()">🖼 圖片</button>
-      <button class="act-btn btn-clear"              onclick="doClear()">🗑️ 清空</button>
+      <button class="act-btn btn-copy"  id="copyBtn"  onclick="doCopy()">📋 複製</button>
+      <button class="act-btn btn-file"  id="fileBtn"  onclick="pickFile()">📎 檔案</button>
+      <button class="act-btn btn-clear"               onclick="doClear()">🗑️ 清空</button>
     </div>
 
-    <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="onImgFile(this.files[0])">
+    <!-- Hidden file input: images + common formats, max 5 MB enforced in JS -->
+    <input type="file" id="fileIn"
+      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.mp3,.mp4"
+      style="display:none"
+      onchange="onFileInput(this.files[0])">
   </div>
 
+</div>
+
+<!-- Drop overlay -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-msg">
+    <span class="drop-msg-icon">📎</span>
+    <span>放開以上傳（≤ 5MB）</span>
+  </div>
 </div>
 
 <!-- Debug bar（診斷用，確認正常後移除）-->
@@ -391,19 +477,45 @@ body::before{
 const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
   auth: { persistSession: true, autoRefreshToken: true }
 });
-const IK_PUBLIC_KEY    = 'public_TdqV/g8SxhEZMC6bl23MoGM3nwY=';  // ImageKit Public Key
+const IK_PUBLIC_KEY = 'public_TdqV/g8SxhEZMC6bl23MoGM3nwY=';
+
+// 檔案標記：使用 STX 控制字元作前綴，不可能由使用者輸入
+const FILE_MARKER = 'IKFILE';
+
+// 允許的副檔名
+const IMG_EXTS  = new Set(['jpg','jpeg','png','gif','webp','heic','bmp']);
+const FILE_EXTS = new Set(['pdf','doc','docx','xls','xlsx','txt','zip','rar','mp3','mp4']);
+const ALLOWED_EXTS = new Set([...IMG_EXTS, ...FILE_EXTS]);
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+// 檔案圖示與色彩對照
+function getFileIcon(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const map = {
+    pdf:  { icon:'📄', bg:'#fee2e2' },
+    doc:  { icon:'📝', bg:'#dbeafe' },
+    docx: { icon:'📝', bg:'#dbeafe' },
+    xls:  { icon:'📊', bg:'#dcfce7' },
+    xlsx: { icon:'📊', bg:'#dcfce7' },
+    txt:  { icon:'📋', bg:'#f3f4f6' },
+    zip:  { icon:'🗜️', bg:'#fef3c7' },
+    rar:  { icon:'🗜️', bg:'#fef3c7' },
+    mp3:  { icon:'🎵', bg:'#f3e8ff' },
+    mp4:  { icon:'🎬', bg:'#fff7ed' },
+  };
+  return map[ext] || { icon:'📁', bg:'#f3f4f6' };
+}
 
 function dbg(msg) {
   const el = document.getElementById('dbg');
   if (!el) return;
   const line = new Date().toLocaleTimeString() + ' ' + msg;
   el.textContent = el.textContent ? el.textContent + '\n' + line : line;
-  // 只保留最後 5 行
   const lines = el.textContent.split('\n');
   if (lines.length > 5) el.textContent = lines.slice(-5).join('\n');
 }
 
-// sb_publishable_ 格式的 key 需要 anonymous session 才能讀寫 Supabase
+// ── Supabase 匿名登入 ────────────────────────────────────
 (async () => {
   dbg('auth: 取得 session 中…');
   const { data: { session }, error: se } = await supa.auth.getSession();
@@ -420,9 +532,10 @@ let pollTid = null, debTid = null;
 let pushing = false;
 let knownText = '';
 let detectedUrl = null;
-let lastTyped = 0;  // 自己最後一次打字的時間戳
+let lastTyped = 0;
+let currentFileUrl = null;
 
-// ── Spring buttons ──────────────────────────────────────
+// ── Spring buttons ────────────────────────────────────────
 document.querySelectorAll('button').forEach(el => {
   el.addEventListener('pointerdown', () => {
     el.style.transition = 'transform .1s cubic-bezier(.34,1.56,.64,1)';
@@ -437,7 +550,28 @@ document.querySelectorAll('button').forEach(el => {
   );
 });
 
-// ── 建立房間 ────────────────────────────────────────────
+// ── Drag & Drop ───────────────────────────────────────────
+let _dragCount = 0;
+document.addEventListener('dragenter', e => {
+  if (!room) return;
+  _dragCount++;
+  document.getElementById('dropOverlay').classList.add('show');
+});
+document.addEventListener('dragleave', e => {
+  _dragCount = Math.max(0, _dragCount - 1);
+  if (_dragCount === 0) document.getElementById('dropOverlay').classList.remove('show');
+});
+document.addEventListener('dragover', e => { e.preventDefault(); });
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  _dragCount = 0;
+  document.getElementById('dropOverlay').classList.remove('show');
+  if (!room) return;
+  const file = e.dataTransfer?.files?.[0];
+  if (file) onFileInput(file);
+});
+
+// ── 建立房間 ─────────────────────────────────────────────
 async function doCreate() {
   const btn = document.getElementById('createBtn');
   btn.disabled = true;
@@ -460,7 +594,7 @@ async function doCreate() {
   }
 }
 
-// ── 加入房間 ────────────────────────────────────────────
+// ── 加入房間 ─────────────────────────────────────────────
 async function doJoin() {
   const inp = document.getElementById('joinInput');
   const code = inp.value.trim();
@@ -477,15 +611,29 @@ async function doJoin() {
       setTimeout(() => inp.classList.remove('error'), 600);
       return;
     }
-    room = code; knownText = data.text || '';
-    document.getElementById('ta').value = knownText;
-    detectUrl(knownText);
-    enterSync(code);
+    room = code;
+    const joinText = data.text || '';
+    knownText = joinText;
+    if (joinText.startsWith(FILE_MARKER)) {
+      // 房間已有檔案，進入後顯示檔案卡片
+      document.getElementById('ta').value = '';
+      enterSync(code);
+      setTimeout(() => {
+        try {
+          const meta = JSON.parse(joinText.slice(FILE_MARKER.length));
+          if (meta.url && meta.name) showFileCard(meta.url, meta.name, meta.ext || '');
+        } catch {}
+      }, 150);
+    } else {
+      document.getElementById('ta').value = joinText;
+      detectUrl(joinText);
+      enterSync(code);
+    }
   } catch { alert('連線失敗，請重試'); }
   finally { btn.innerHTML = '加入'; btn.disabled = false; }
 }
 
-// ── 進入同步畫面 ────────────────────────────────────────
+// ── 進入同步畫面 ─────────────────────────────────────────
 function enterSync(code) {
   document.getElementById('stateA').style.display = 'none';
   document.getElementById('stateB').classList.add('show');
@@ -496,7 +644,7 @@ function enterSync(code) {
   setTimeout(() => document.getElementById('ta').focus(), 120);
 }
 
-// ── Polling（1.5s）─────────────────────────────────────
+// ── Polling（1.5s）───────────────────────────────────────
 function startPoll() {
   clearInterval(pollTid);
   pollTid = setInterval(doPoll, 1500);
@@ -511,20 +659,35 @@ async function doPoll() {
       if (error.code === 'PGRST116') { clearInterval(pollTid); showExpired(); }
       return;
     }
-    dbg('poll OK text=' + (data.text || '').slice(0, 20));
+    const rawText = data.text || '';
+    dbg('poll OK text=' + rawText.slice(0, 20));
     const ta = document.getElementById('ta');
     const isSelfTyping = Date.now() - lastTyped < 2000;
-    if (data.text !== knownText && !isSelfTyping) {
-      ta.value = data.text || '';
-      detectUrl(data.text || '');
-      knownText = data.text || '';
+    if (rawText !== knownText && !isSelfTyping) {
+      knownText = rawText;
+      if (rawText.startsWith(FILE_MARKER)) {
+        // 收到檔案標記：解析並顯示檔案卡片
+        try {
+          const meta = JSON.parse(rawText.slice(FILE_MARKER.length));
+          if (meta.url && meta.name) showFileCard(meta.url, meta.name, meta.ext || '');
+        } catch(e) { dbg('file marker parse err: ' + e.message); }
+      } else {
+        // 普通文字：隱藏檔案卡片，更新 textarea
+        hideFileCard();
+        ta.value = rawText;
+        detectUrl(rawText);
+      }
     }
   } catch(e) { dbg('poll catch: ' + e.message); }
 }
 
-// ── Push text（debounce 300ms）─────────────────────────
+// ── Push text（debounce 300ms）────────────────────────────
 document.getElementById('ta').addEventListener('input', () => {
   lastTyped = Date.now();
+  // 使用者打字時隱藏檔案卡片（代表要覆寫傳輸內容）
+  if (document.getElementById('fileCard').classList.contains('show')) {
+    hideFileCard();
+  }
   detectUrl(document.getElementById('ta').value);
   clearTimeout(debTid); debTid = setTimeout(pushText, 300);
 });
@@ -541,7 +704,6 @@ async function pushText() {
       .eq('room_code', room);
     if (error) dbg('push ERROR code=' + error.code + ' ' + error.message);
     else dbg('push OK len=' + text.length);
-    // 清除超過 1 小時閒置的舊房間
     await supa.from('share_rooms')
       .delete()
       .lt('updated_at', new Date(Date.now() - 3600000).toISOString());
@@ -553,7 +715,7 @@ function setSyncing(v) {
   document.getElementById('syncDot').classList.toggle('syncing', v);
 }
 
-// ── URL 偵測 ─────────────────────────────────────────────
+// ── URL 偵測 ──────────────────────────────────────────────
 const URL_RE = /https?:\/\/[^\s"'<>\]]+/i;
 function detectUrl(text) {
   const m = text.match(URL_RE);
@@ -566,9 +728,33 @@ function detectUrl(text) {
 }
 function openUrl() { if (detectedUrl) window.open(detectedUrl, '_blank', 'noopener,noreferrer'); }
 
-// ── 圖片上傳（ImageKit）────────────────────────────────
-function pickImg() { document.getElementById('fileIn').click(); }
+// ── 檔案輸入入口 ──────────────────────────────────────────
+function pickFile() { document.getElementById('fileIn').click(); }
 
+function onFileInput(file) {
+  if (!file) return;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+
+  if (!ALLOWED_EXTS.has(ext)) {
+    alert('不支援此格式，請選擇：\n圖片、PDF、Word、Excel、TXT、ZIP、RAR、MP3 或 MP4');
+    document.getElementById('fileIn').value = '';
+    return;
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    alert(`檔案大小 ${mb}MB 超過 5MB 上限，請選擇較小的檔案`);
+    document.getElementById('fileIn').value = '';
+    return;
+  }
+
+  if (IMG_EXTS.has(ext)) {
+    onImgFile(file);
+  } else {
+    uploadFile(file, ext);
+  }
+}
+
+// ── 圖片上傳（壓縮 → ImageKit）──────────────────────────
 async function onImgFile(file) {
   if (!file) return;
   if (!IK_PUBLIC_KEY) {
@@ -576,7 +762,7 @@ async function onImgFile(file) {
     return;
   }
   const st = document.getElementById('upStatus');
-  const btn = document.getElementById('imgBtn');
+  const btn = document.getElementById('fileBtn');
   st.textContent = '壓縮中…'; st.classList.add('show'); btn.disabled = true;
   try {
     const blob = await compress(file, 1200, .82);
@@ -592,8 +778,7 @@ async function onImgFile(file) {
     fd.append('token', auth.token);
     fd.append('expire', String(auth.expire));
     const r = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-      method: 'POST',
-      body: fd
+      method: 'POST', body: fd
     });
     const res = await r.json();
     if (!res.url) throw new Error(res.message || '上傳失敗');
@@ -636,7 +821,96 @@ function showImg(url) { document.getElementById('imgEl').src = url; document.get
 function hideImg() { document.getElementById('imgWrap').classList.remove('show'); document.getElementById('imgEl').src = ''; }
 function clearImg() { hideImg(); }
 
-// ── 複製房間碼 ──────────────────────────────────────────
+// ── 一般檔案上傳（直傳 ImageKit，不壓縮）────────────────
+async function uploadFile(file, ext) {
+  if (!IK_PUBLIC_KEY) {
+    alert('檔案上傳功能需要 ImageKit Public Key');
+    return;
+  }
+  const st = document.getElementById('upStatus');
+  const btn = document.getElementById('fileBtn');
+  st.textContent = '上傳中…'; st.classList.add('show'); btn.disabled = true;
+  try {
+    const auth = await fetch('/api/share/imagekit-auth').then(r => r.json());
+    if (!auth.signature) throw new Error('取得上傳授權失敗：' + (auth.error || ''));
+
+    // 安全化檔案名稱（保留副檔名），加時間戳避免衝突
+    const safeName = 'share-' + Date.now() + '-' + file.name.replace(/[^\w.\-]/g, '_');
+    const fd = new FormData();
+    fd.append('file', file, safeName);
+    fd.append('fileName', safeName);
+    fd.append('useUniqueFileName', 'true');
+    fd.append('publicKey', IK_PUBLIC_KEY);
+    fd.append('signature', auth.signature);
+    fd.append('token', auth.token);
+    fd.append('expire', String(auth.expire));
+
+    const r = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+      method: 'POST', body: fd
+    });
+    const res = await r.json();
+    if (!res.url) throw new Error(res.message || '上傳失敗');
+
+    const fileUrl = res.url;
+    showFileCard(fileUrl, file.name, ext);
+
+    // 將檔案 metadata 寫入 Supabase text 欄位（以 marker 為前綴）
+    const marker = FILE_MARKER + JSON.stringify({ url: fileUrl, name: file.name, ext });
+    knownText = marker;
+    setSyncing(true);
+    try {
+      await supa.from('share_rooms')
+        .update({ text: marker, updated_at: new Date().toISOString() })
+        .eq('room_code', room);
+      await supa.from('share_rooms')
+        .delete()
+        .lt('updated_at', new Date(Date.now() - 3600000).toISOString());
+      dbg('file push OK url=' + fileUrl.slice(0, 32));
+    } catch(e) { dbg('file push err: ' + e.message); }
+    finally { setSyncing(false); }
+
+    // 同步記錄到 Flask backend（in-memory，零伺服器負擔）
+    fetch('/api/share/room/' + room, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'file', file_url: fileUrl, file_name: file.name, file_type: ext })
+    }).catch(() => {});
+
+    st.classList.remove('show');
+  } catch(e) {
+    alert('檔案上傳失敗：' + e.message);
+    st.classList.remove('show');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('fileIn').value = '';
+  }
+}
+
+// ── 檔案卡片操作 ──────────────────────────────────────────
+function showFileCard(url, name, ext) {
+  currentFileUrl = url;
+  const info = getFileIcon(name);
+  const wrap = document.getElementById('fileIconWrap');
+  wrap.style.background = info.bg;
+  document.getElementById('fileIconEmoji').textContent = info.icon;
+  document.getElementById('fileNameText').textContent = name;
+  const label = (ext || (name.split('.').pop() || 'FILE')).toUpperCase();
+  document.getElementById('fileTypeText').textContent = label + ' 檔案';
+  document.getElementById('fileCard').classList.add('show');
+  // 清空 textarea 顯示，避免顯示 raw marker JSON
+  document.getElementById('ta').value = '';
+}
+
+function hideFileCard() {
+  document.getElementById('fileCard').classList.remove('show');
+  currentFileUrl = null;
+}
+
+function downloadFile() {
+  if (currentFileUrl) window.open(currentFileUrl, '_blank', 'noopener,noreferrer');
+}
+
+// ── 複製房間碼 ─────────────────────────────────────────────
 async function copyCode() {
   if (!room) return;
   try {
@@ -647,12 +921,13 @@ async function copyCode() {
   } catch {}
 }
 
-// ── 複製內容 ────────────────────────────────────────────
+// ── 複製內容 ───────────────────────────────────────────────
 async function doCopy() {
   const text = document.getElementById('ta').value;
-  if (!text) return;
+  if (!text && !currentFileUrl) return;
+  const target = currentFileUrl || text;
   try {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(target);
     const btn = document.getElementById('copyBtn');
     const orig = btn.textContent;
     btn.textContent = '✅ 已複製';
@@ -660,10 +935,17 @@ async function doCopy() {
   } catch {}
 }
 
-// ── 清空 ────────────────────────────────────────────────
-function doClear() { document.getElementById('ta').value = ''; detectUrl(''); pushText(); }
+// ── 清空 ───────────────────────────────────────────────────
+function doClear() {
+  hideFileCard();
+  hideImg();
+  document.getElementById('ta').value = '';
+  detectUrl('');
+  knownText = '';
+  pushText();
+}
 
-// ── 過期/離開 ───────────────────────────────────────────
+// ── 過期/離開 ──────────────────────────────────────────────
 function showExpired() {
   document.getElementById('expireOverlay').classList.add('show');
   room = null;
@@ -677,8 +959,9 @@ function backToA() {
   document.getElementById('roomPill').classList.remove('show');
   document.getElementById('ta').value = '';
   document.getElementById('joinInput').value = '';
-  hideImg(); detectUrl('');
-  knownText = '';
+  hideImg(); hideFileCard(); detectUrl('');
+  knownText = ''; room = null;
+  clearInterval(pollTid);
 }
 </script>
 </body>

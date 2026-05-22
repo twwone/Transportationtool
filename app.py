@@ -857,7 +857,7 @@ def share_create():
         c = str(random.randint(1000, 9999))
         with _SHARE_LOCK:
             if c not in _SHARE:
-                _SHARE[c] = {"text": "", "image_url": "", "updated_at": now}
+                _SHARE[c] = {"text": "", "image_url": "", "file_url": "", "file_name": "", "file_type": "", "updated_at": now}
                 code = c
                 break
     if not code:
@@ -876,7 +876,7 @@ def share_room(code):
             with _SHARE_LOCK:
                 _SHARE.pop(code, None)
             return _sc(jsonify({"error": "not found"})), 404
-        return _sc(jsonify({"text": room["text"], "image_url": room["image_url"]}))
+        return _sc(jsonify({"text": room["text"], "image_url": room["image_url"], "file_url": room.get("file_url", ""), "file_name": room.get("file_name", ""), "file_type": room.get("file_type", "")}))
     elif request.method == "PUT":
         with _SHARE_LOCK:
             room = _SHARE.get(code)
@@ -886,6 +886,9 @@ def share_room(code):
             body = request.get_json(silent=True) or {}
             if "text"      in body: room["text"]      = body["text"]
             if "image_url" in body: room["image_url"] = body["image_url"]
+            if "file_url"  in body: room["file_url"]  = body["file_url"]
+            if "file_name" in body: room["file_name"] = body["file_name"]
+            if "file_type" in body: room["file_type"] = body["file_type"]
             room["updated_at"] = time.time()
         return _sc(jsonify({"ok": True}))
     elif request.method == "DELETE":
