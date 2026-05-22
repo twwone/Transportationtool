@@ -1049,7 +1049,7 @@ def _ev_get(slot, *keys):
     return ""
 
 def _slot_start(slot):
-    return slot.get("StartTime") or slot.get("startTime") or slot.get("dataTime") or ""
+    return slot.get("StartTime") or slot.get("startTime") or slot.get("DataTime") or slot.get("dataTime") or ""
 
 def _fetch_cwa(township_info):
     """回傳解析好的天氣 dict；任何錯誤都不拋出。"""
@@ -1065,7 +1065,7 @@ def _fetch_cwa(township_info):
     result   = {
         "location": api_name, "display": display, "county": county,
         "lat": lat, "lon": lon,
-        "current": {}, "forecast": [], "alerts": [], "has_alert": False,
+        "current": {}, "forecast": [], "hourly": [], "alerts": [], "has_alert": False,
         "error": None,
     }
 
@@ -1155,7 +1155,7 @@ def _fetch_cwa(township_info):
                     "pop": "", "hi": "—", "lo": "—",
                 }
                 days_seen.append(day)
-                if len(days_seen) >= 3:
+                if len(days_seen) >= 7:
                     break
 
             for sl in pop_slots:
@@ -1195,6 +1195,55 @@ def _fetch_cwa(township_info):
 
     except Exception as e:
         result["error"] = f"預報取得失敗：{str(e)[:120]}"
+
+    # ── 逐時預報（odd endpoint，3 小時間距）──
+    try:
+        ep_num = int(endpoint[-3:]) - 2
+        odd_ep = f"F-D0047-{ep_num:03d}"
+        ro = _requests.get(
+            f"{_CWA_BASE}/{odd_ep}",
+            params={"Authorization": api_key},
+            timeout=12,
+        )
+        if ro.ok:
+            raw_o = ro.json()
+            rec_o = raw_o.get("records", {})
+            ll_o  = (rec_o.get("locations") or rec_o.get("Locations") or
+                     rec_o.get("Location") or [])
+            if isinstance(ll_o, dict):
+                ll_o = [ll_o]
+            loc_o = None
+            for lc in ll_o:
+                inner = lc.get("location") or lc.get("Location") or []
+                for lci in inner:
+                    if (lci.get("locationName") or lci.get("LocationName") or "") == api_name:
+                        loc_o = lci
+                        break
+                if loc_o:
+                    break
+            if loc_o:
+                els_o  = loc_o.get("WeatherElement") or loc_o.get("weatherElement") or []
+                h_wx   = _get_el(els_o, "天氣現象")
+                h_t    = _get_el(els_o, "溫度")
+                h_pop  = _get_el(els_o, "3小時降雨機率")
+                t_map   = {_slot_start(s): _ev_get(s, "Temperature") for s in h_t}
+                pop_map = {_slot_start(s): _ev_get(s, "ProbabilityOfPrecipitation") for s in h_pop}
+                hourly = []
+                for sl in h_wx[:24]:
+                    ts = _slot_start(sl)
+                    if not ts:
+                        continue
+                    wc = _ev_get(sl, "WeatherCode")
+                    hourly.append({
+                        "time":    ts[:16],
+                        "emoji":   _wx_emoji(wc),
+                        "wx_code": int(wc) if wc else 0,
+                        "temp":    t_map.get(ts, "—") or "—",
+                        "pop":     pop_map.get(ts, "") or "",
+                    })
+                result["hourly"] = hourly
+    except Exception:
+        pass
 
     # ── 取得特報 ──
     try:
