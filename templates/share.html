@@ -12,8 +12,6 @@
 <meta name="apple-mobile-web-app-title" content="交通助理">
 <meta name="theme-color" content="#f0f4ff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<script src="/static/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overscroll-behavior:none;overflow-x:hidden;height:100%}
@@ -24,10 +22,11 @@ html,body{overscroll-behavior:none;overflow-x:hidden;height:100%}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
 @keyframes cardIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes alertIn{from{opacity:0;transform:scale(.88) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
 
 :root{
   --bg:#f0f4ff;
-  --surface:rgba(255,255,255,.72);
+  --surface:rgba(255,255,255,.82);
   --text:#0f0f1a;
   --sub:#6b7280;
   --accent:#3b82f6;
@@ -41,7 +40,7 @@ html,body{overscroll-behavior:none;overflow-x:hidden;height:100%}
 @media(prefers-color-scheme:dark){
   :root{
     --bg:#000;
-    --surface:rgba(28,28,30,.92);
+    --surface:rgba(28,28,30,.95);
     --text:#f2f2f7;
     --sub:#8e8e93;
     --accent:#60a5fa;
@@ -200,10 +199,10 @@ body::before{
 .img-wrap{
   display:none;border-radius:var(--radius-m);overflow:hidden;
   background:rgba(0,0,0,.06);position:relative;
-  max-height:220px;animation:fadeIn .3s ease;
+  max-height:240px;animation:fadeIn .3s ease;
 }
 .img-wrap.show{display:block}
-.img-wrap img{width:100%;height:100%;object-fit:cover;display:block;max-height:220px}
+.img-wrap img{width:100%;height:100%;object-fit:cover;display:block;max-height:240px}
 .img-overlay{
   position:absolute;bottom:0;right:0;
   padding:10px;
@@ -257,32 +256,21 @@ body::before{
   display:flex;align-items:center;justify-content:center;
   font-size:1.55rem;
   flex-shrink:0;
-  transition:filter .2s;
 }
 @media(prefers-color-scheme:dark){.file-icon-wrap{filter:brightness(.72) saturate(1.3)}}
 .file-info{flex:1;min-width:0}
-.file-name-text{
-  font-size:.9rem;font-weight:700;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  color:var(--text);margin-bottom:3px;
-}
+.file-name-text{font-size:.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);margin-bottom:3px}
 .file-type-text{font-size:.72rem;color:var(--sub);font-weight:500}
 .file-dl-btn{
-  flex-shrink:0;
-  padding:11px 18px;
-  border-radius:100px;
-  background:var(--accent);
-  color:#fff;
-  font-size:.82rem;font-weight:700;
-  border:none;cursor:pointer;
-  font-family:inherit;
-  white-space:nowrap;
+  flex-shrink:0;padding:11px 18px;border-radius:100px;
+  background:var(--accent);color:#fff;font-size:.82rem;font-weight:700;
+  border:none;cursor:pointer;font-family:inherit;white-space:nowrap;
   box-shadow:0 3px 12px rgba(59,130,246,.32);
   -webkit-tap-highlight-color:transparent;
 }
 @media(prefers-color-scheme:dark){.file-dl-btn{box-shadow:0 3px 12px rgba(96,165,250,.22)}}
 
-/* ── Action row ── */
+/* ── Action rows ── */
 .act-row{display:flex;gap:10px}
 .act-btn{
   flex:1;padding:14px 8px;border-radius:18px;
@@ -301,25 +289,30 @@ body::before{
 .btn-clear{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.18);color:var(--danger)}
 @media(prefers-color-scheme:dark){.btn-clear{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.28)}}
 
+.destroy-btn{
+  width:100%;padding:14px;border-radius:18px;
+  background:transparent;
+  border:1px solid rgba(239,68,68,.3);
+  color:var(--danger);font-size:.82rem;font-weight:600;
+  cursor:pointer;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .2s;
+}
+.destroy-btn:hover{background:rgba(239,68,68,.06)}
+@media(prefers-color-scheme:dark){.destroy-btn{border-color:rgba(255,69,58,.3)}}
+
 /* ── Drop overlay ── */
 .drop-overlay{
-  display:none;
-  position:fixed;inset:0;
-  background:rgba(59,130,246,.1);
-  backdrop-filter:blur(6px);
-  -webkit-backdrop-filter:blur(6px);
-  z-index:150;
-  align-items:center;justify-content:center;
-  pointer-events:none;
-  animation:fadeIn .18s ease;
+  display:none;position:fixed;inset:0;
+  background:rgba(59,130,246,.08);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  z-index:150;align-items:center;justify-content:center;
+  pointer-events:none;animation:fadeIn .18s ease;
 }
 .drop-overlay.show{display:flex}
 .drop-overlay::before{
-  content:'';
-  position:absolute;inset:16px;
-  border:2.5px dashed var(--accent);
-  border-radius:28px;
-  opacity:.7;
+  content:'';position:absolute;inset:16px;
+  border:2.5px dashed var(--accent);border-radius:28px;opacity:.7;
 }
 .drop-msg{
   display:flex;flex-direction:column;align-items:center;gap:10px;
@@ -328,12 +321,42 @@ body::before{
 }
 .drop-msg-icon{font-size:3rem;line-height:1}
 
-/* ── Expired overlay ── */
+/* ── iOS Alert ── */
+.ios-alert{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  z-index:300;align-items:center;justify-content:center;padding:24px;
+}
+.ios-alert.show{display:flex}
+.ios-alert-card{
+  background:var(--surface);border-radius:20px;
+  padding:28px 22px 20px;text-align:center;
+  width:100%;max-width:300px;
+  box-shadow:0 24px 80px rgba(0,0,0,.25);
+  animation:alertIn .28s cubic-bezier(.22,1,.36,1) both;
+}
+.ios-alert-title{font-size:1.05rem;font-weight:700;margin-bottom:8px}
+.ios-alert-msg{font-size:.875rem;color:var(--sub);margin-bottom:22px;line-height:1.5}
+.ios-alert-btns{display:flex;flex-direction:column;gap:8px}
+.alert-btn{
+  width:100%;padding:13px;border-radius:14px;
+  background:rgba(0,0,0,.05);
+  border:none;cursor:pointer;font-family:inherit;
+  font-size:.9rem;font-weight:600;color:var(--text);
+  -webkit-tap-highlight-color:transparent;
+}
+@media(prefers-color-scheme:dark){.alert-btn{background:rgba(255,255,255,.1)}}
+.alert-btn-primary{background:var(--accent);color:#fff}
+.alert-btn-danger{background:rgba(239,68,68,.12);color:var(--danger)}
+@media(prefers-color-scheme:dark){.alert-btn-danger{background:rgba(255,69,58,.18)}}
+
+/* ── Expired/Destroy overlay ── */
 .expire-overlay{
   display:none;position:fixed;inset:0;
   background:rgba(0,0,0,.55);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  z-index:200;align-items:center;justify-content:center;padding:24px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  z-index:250;align-items:center;justify-content:center;padding:24px;
 }
 .expire-overlay.show{display:flex;animation:fadeIn .3s ease}
 .expire-card{
@@ -348,9 +371,8 @@ body::before{
 .new-btn{
   width:100%;padding:16px;border-radius:18px;
   background:var(--accent);color:#fff;
-  font-size:1rem;font-weight:700;
-  border:none;cursor:pointer;font-family:inherit;
-  box-shadow:0 4px 16px rgba(59,130,246,.32);
+  font-size:1rem;font-weight:700;border:none;cursor:pointer;
+  font-family:inherit;box-shadow:0 4px 16px rgba(59,130,246,.32);
 }
 
 .sp{
@@ -363,7 +385,6 @@ body::before{
 </head>
 <body>
 
-<!-- Topbar -->
 <div class="topbar">
   <a href="/" class="back-btn">‹ 返回</a>
   <div class="topbar-title" id="topTitle">跨裝置剪貼簿</div>
@@ -406,7 +427,7 @@ body::before{
     <div class="url-card" id="urlCard">
       <span class="url-icon">🔗</span>
       <span class="url-text" id="urlText"></span>
-      <button class="url-open" onclick="openUrl()">安全開啟</button>
+      <button class="url-open" onclick="openUrl()">🌐 點擊前往</button>
     </div>
 
     <!-- Image -->
@@ -418,13 +439,13 @@ body::before{
     </div>
 
     <!-- Upload status -->
-    <div class="up-status" id="upStatus">上傳中…</div>
+    <div class="up-status" id="upStatus"></div>
 
     <!-- Textarea -->
     <textarea class="sync-ta" id="ta"
-      placeholder="在這裡輸入文字或網址，拖曳或點擊「📎 檔案」上傳…"></textarea>
+      placeholder="輸入文字或網址，Ctrl+V 貼上圖片，拖曳或點「📎 檔案」上傳…"></textarea>
 
-    <!-- File card（textarea 正下方） -->
+    <!-- File card -->
     <div class="file-card" id="fileCard">
       <div class="file-icon-wrap" id="fileIconWrap">
         <span id="fileIconEmoji">📄</span>
@@ -433,21 +454,22 @@ body::before{
         <div class="file-name-text" id="fileNameText">filename.pdf</div>
         <div class="file-type-text" id="fileTypeText">PDF 檔案</div>
       </div>
-      <button class="file-dl-btn" onclick="downloadFile()">📥 點擊下載</button>
+      <button class="file-dl-btn" id="fileDlBtn" onclick="downloadFile()">📥 點擊下載</button>
     </div>
 
-    <!-- Actions -->
+    <!-- Main actions -->
     <div class="act-row">
-      <button class="act-btn btn-copy"  id="copyBtn"  onclick="doCopy()">📋 複製</button>
-      <button class="act-btn btn-file"  id="fileBtn"  onclick="pickFile()">📎 檔案</button>
-      <button class="act-btn btn-clear"               onclick="doClear()">🗑️ 清空</button>
+      <button class="act-btn btn-copy" id="copyBtn" onclick="doCopy()">📋 複製</button>
+      <button class="act-btn btn-file" id="fileBtn" onclick="pickFile()">📎 檔案</button>
+      <button class="act-btn btn-clear" onclick="doClear()">🗑️ 清空</button>
     </div>
 
-    <!-- Hidden file input: images + common formats, max 5 MB enforced in JS -->
+    <!-- Destroy room -->
+    <button class="destroy-btn" onclick="doDestroy()">💣 銷毀房間（雙方同步清除）</button>
+
     <input type="file" id="fileIn"
       accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.mp3,.mp4"
-      style="display:none"
-      onchange="onFileInput(this.files[0])">
+      style="display:none">
   </div>
 
 </div>
@@ -456,512 +478,501 @@ body::before{
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-msg">
     <span class="drop-msg-icon">📎</span>
-    <span>放開以上傳（≤ 5MB）</span>
+    <span>放開以上傳（≤ 8MB）</span>
   </div>
 </div>
 
-<!-- Debug bar（診斷用，確認正常後移除）-->
-<div id="dbg" style="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.75);color:#0f0;font:11px/1.6 monospace;padding:4px 8px;z-index:9999;white-space:pre-wrap;max-height:100px;overflow:auto"></div>
+<!-- iOS Alert -->
+<div class="ios-alert" id="iosAlert">
+  <div class="ios-alert-card">
+    <div class="ios-alert-title" id="alertTitle"></div>
+    <div class="ios-alert-msg" id="alertMsg"></div>
+    <div class="ios-alert-btns" id="alertBtns"></div>
+  </div>
+</div>
 
-<!-- Expired overlay -->
+<!-- Expired / Destroy overlay -->
 <div class="expire-overlay" id="expireOverlay">
   <div class="expire-card">
     <div class="expire-icon">💨</div>
     <div class="expire-title">房間已銷毀</div>
-    <div class="expire-sub">房間閒置過久或已不存在</div>
+    <div class="expire-sub" id="expireSub">房間閒置過久或已不存在</div>
     <button class="new-btn" onclick="backToA()">建立新房間</button>
   </div>
 </div>
 
 <script>
-const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true }
-});
-const IK_PUBLIC_KEY = 'public_TdqV/g8SxhEZMC6bl23MoGM3nwY=';
+const IK_PUBLIC_KEY     = 'public_TdqV/g8SxhEZMC6bl23MoGM3nwY=';
+const MAX_DIRECT        = 8 * 1024 * 1024;
+const MAX_COMPRESS_TGT  = 5 * 1024 * 1024;
+const POLL_INTERVAL     = 1500;
 
-// 檔案標記：使用 STX 控制字元作前綴，不可能由使用者輸入
-const FILE_MARKER = 'IKFILE';
-
-// 允許的副檔名
-const IMG_EXTS  = new Set(['jpg','jpeg','png','gif','webp','heic','bmp']);
+const IMG_EXTS  = new Set(['jpg','jpeg','png','gif','webp','heic','heif','bmp']);
 const FILE_EXTS = new Set(['pdf','doc','docx','xls','xlsx','txt','zip','rar','mp3','mp4']);
-const ALLOWED_EXTS = new Set([...IMG_EXTS, ...FILE_EXTS]);
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-// 檔案圖示與色彩對照
-function getFileIcon(name) {
-  const ext = (name.split('.').pop() || '').toLowerCase();
-  const map = {
-    pdf:  { icon:'📄', bg:'#fee2e2' },
-    doc:  { icon:'📝', bg:'#dbeafe' },
-    docx: { icon:'📝', bg:'#dbeafe' },
-    xls:  { icon:'📊', bg:'#dcfce7' },
-    xlsx: { icon:'📊', bg:'#dcfce7' },
-    txt:  { icon:'📋', bg:'#f3f4f6' },
-    zip:  { icon:'🗜️', bg:'#fef3c7' },
-    rar:  { icon:'🗜️', bg:'#fef3c7' },
-    mp3:  { icon:'🎵', bg:'#f3e8ff' },
-    mp4:  { icon:'🎬', bg:'#fff7ed' },
-  };
-  return map[ext] || { icon:'📁', bg:'#f3f4f6' };
-}
+let room              = null;
+let pollTid           = null;
+let debTid            = null;
+let pushing           = false;
+let lastPushAt        = 0;
+let lastKnownServerTs = 0;
+let detectedUrl       = null;
+let currentFileUrl    = null;
 
-function dbg(msg) {
-  const el = document.getElementById('dbg');
-  if (!el) return;
-  const line = new Date().toLocaleTimeString() + ' ' + msg;
-  el.textContent = el.textContent ? el.textContent + '\n' + line : line;
-  const lines = el.textContent.split('\n');
-  if (lines.length > 5) el.textContent = lines.slice(-5).join('\n');
-}
+const $id = id => document.getElementById(id);
 
-// ── Supabase 匿名登入 ────────────────────────────────────
-(async () => {
-  dbg('auth: 取得 session 中…');
-  const { data: { session }, error: se } = await supa.auth.getSession();
-  if (se) { dbg('auth: getSession 失敗 ' + JSON.stringify(se)); return; }
-  if (session) { dbg('auth: 已有 session uid=' + session.user.id.slice(0,8)); return; }
-  dbg('auth: 無 session，signInAnonymously…');
-  const { error: ae } = await supa.auth.signInAnonymously();
-  if (ae) dbg('auth: signInAnonymously 失敗 ' + JSON.stringify(ae));
-  else dbg('auth: anonymous session 建立成功');
-})();
-
-let room = null;
-let pollTid = null, debTid = null;
-let pushing = false;
-let knownText = '';
-let detectedUrl = null;
-let lastTyped = 0;
-let currentFileUrl = null;
-
-// ── Spring buttons ────────────────────────────────────────
-document.querySelectorAll('button').forEach(el => {
+// ── Spring buttons ─────────────────────────────────────────────
+function applySpring(el) {
   el.addEventListener('pointerdown', () => {
     el.style.transition = 'transform .1s cubic-bezier(.34,1.56,.64,1)';
-    el.style.transform = 'scale(.965)';
+    el.style.transform  = 'scale(.965)';
     navigator.vibrate?.([8]);
   });
   ['pointerup','pointerleave','pointercancel'].forEach(ev =>
     el.addEventListener(ev, () => {
       el.style.transition = 'transform .55s cubic-bezier(.34,1.56,.64,1)';
-      el.style.transform = 'scale(1)';
+      el.style.transform  = 'scale(1)';
     })
   );
-});
+}
+document.querySelectorAll('button').forEach(applySpring);
 
-// ── Drag & Drop ───────────────────────────────────────────
-let _dragCount = 0;
-document.addEventListener('dragenter', e => {
-  if (!room) return;
-  _dragCount++;
-  document.getElementById('dropOverlay').classList.add('show');
-});
-document.addEventListener('dragleave', e => {
-  _dragCount = Math.max(0, _dragCount - 1);
-  if (_dragCount === 0) document.getElementById('dropOverlay').classList.remove('show');
-});
-document.addEventListener('dragover', e => { e.preventDefault(); });
+// ── iOS Alert ──────────────────────────────────────────────────
+function showAlert(title, msg, buttons) {
+  $id('alertTitle').textContent = title;
+  $id('alertMsg').textContent   = msg;
+  const btns = $id('alertBtns');
+  btns.innerHTML = '';
+  buttons.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'alert-btn'
+      + (b.style === 'primary' ? ' alert-btn-primary' : '')
+      + (b.style === 'danger'  ? ' alert-btn-danger'  : '');
+    btn.textContent = b.label;
+    btn.onclick = () => { $id('iosAlert').classList.remove('show'); if (b.action) b.action(); };
+    applySpring(btn);
+    btns.appendChild(btn);
+  });
+  $id('iosAlert').classList.add('show');
+}
+
+// ── Drag & Drop ────────────────────────────────────────────────
+let _dc = 0;
+document.addEventListener('dragenter', () => { if (!room) return; _dc++; $id('dropOverlay').classList.add('show'); });
+document.addEventListener('dragleave', () => { _dc = Math.max(0, _dc - 1); if (_dc === 0) $id('dropOverlay').classList.remove('show'); });
+document.addEventListener('dragover',  e => e.preventDefault());
 document.addEventListener('drop', e => {
-  e.preventDefault();
-  _dragCount = 0;
-  document.getElementById('dropOverlay').classList.remove('show');
+  e.preventDefault(); _dc = 0; $id('dropOverlay').classList.remove('show');
   if (!room) return;
-  const file = e.dataTransfer?.files?.[0];
-  if (file) onFileInput(file);
+  const f = e.dataTransfer?.files?.[0];
+  if (f) onFileInput(f);
 });
 
-// ── 建立房間 ─────────────────────────────────────────────
+// ── Ctrl+V paste ───────────────────────────────────────────────
+document.addEventListener('paste', async e => {
+  if (!room) return;
+  const items = Array.from(e.clipboardData?.items || []);
+  const imgItem = items.find(i => i.type.startsWith('image/'));
+  if (imgItem) {
+    e.preventDefault();
+    const blob = imgItem.getAsFile();
+    if (blob) {
+      try { await uploadImage(blob, 'paste-' + Date.now() + '.jpg'); }
+      catch(err) { showAlert('上傳失敗', err.message, [{label:'確認',style:'primary',action:null}]); }
+    }
+  }
+});
+
+// ── Room create ────────────────────────────────────────────────
 async function doCreate() {
-  const btn = document.getElementById('createBtn');
+  const btn = $id('createBtn');
   btn.disabled = true;
   btn.querySelector('.c-title').innerHTML = '<span class="sp"></span>建立中…';
   try {
-    let code = null;
-    for (let i = 0; i < 10; i++) {
-      const c = String(Math.floor(1000 + Math.random() * 9000));
-      const { error } = await supa.from('share_rooms').insert({ room_code: c, text: '' });
-      if (!error) { code = c; break; }
-    }
-    if (!code) throw new Error();
-    room = code;
-    enterSync(code);
-  } catch {
-    alert('建立失敗，請重試');
+    const resp = await fetch('/api/share/room', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const data = await resp.json();
+    if (!data.code) throw new Error('伺服器未回傳房間碼');
+    room = data.code;
+    lastKnownServerTs = 0;
+    enterSync(data.code);
+  } catch (err) {
+    showAlert('建立失敗', err.message || '請稍後再試', [{label:'確認',style:'primary',action:null}]);
   } finally {
     btn.disabled = false;
     btn.querySelector('.c-title').textContent = '建立新房間';
   }
 }
 
-// ── 加入房間 ─────────────────────────────────────────────
+// ── Room join ──────────────────────────────────────────────────
 async function doJoin() {
-  const inp = document.getElementById('joinInput');
+  const inp  = $id('joinInput');
   const code = inp.value.trim();
-  const err = document.getElementById('joinErr');
-  const btn = document.getElementById('joinBtn');
-  err.classList.remove('show'); inp.classList.remove('error');
-  if (code.length !== 4) { inp.classList.add('error'); setTimeout(() => inp.classList.remove('error'), 600); return; }
+  const err  = $id('joinErr');
+  const btn  = $id('joinBtn');
+  err.classList.remove('show');
+  inp.classList.remove('error');
+  if (code.length !== 4) {
+    inp.classList.add('error');
+    setTimeout(() => inp.classList.remove('error'), 600);
+    return;
+  }
   btn.innerHTML = '<span class="sp"></span>';
   btn.disabled = true;
   try {
-    const { data } = await supa.from('share_rooms').select('text').eq('room_code', code).single();
-    if (!data) {
-      inp.classList.add('error'); err.classList.add('show');
+    const resp = await fetch('/api/share/room/' + code);
+    if (resp.status === 404) {
+      inp.classList.add('error');
+      err.classList.add('show');
       setTimeout(() => inp.classList.remove('error'), 600);
       return;
     }
+    const data = await resp.json();
     room = code;
-    const joinText = data.text || '';
-    knownText = joinText;
-    if (joinText.startsWith(FILE_MARKER)) {
-      // 房間已有檔案，進入後顯示檔案卡片
-      document.getElementById('ta').value = '';
-      enterSync(code);
-      setTimeout(() => {
-        try {
-          const meta = JSON.parse(joinText.slice(FILE_MARKER.length));
-          if (meta.url && meta.name) showFileCard(meta.url, meta.name, meta.ext || '');
-        } catch {}
-      }, 150);
-    } else {
-      document.getElementById('ta').value = joinText;
-      detectUrl(joinText);
-      enterSync(code);
-    }
-  } catch { alert('連線失敗，請重試'); }
-  finally { btn.innerHTML = '加入'; btn.disabled = false; }
+    lastKnownServerTs = data.updated_at || 0;
+    renderRoom(data, true);
+    enterSync(code);
+  } catch {
+    showAlert('連線失敗', '請稍後再試', [{label:'確認',style:'primary',action:null}]);
+  } finally {
+    btn.innerHTML = '加入';
+    btn.disabled = false;
+  }
 }
 
-// ── 進入同步畫面 ─────────────────────────────────────────
+// ── Enter sync mode ────────────────────────────────────────────
 function enterSync(code) {
-  document.getElementById('stateA').style.display = 'none';
-  document.getElementById('stateB').classList.add('show');
-  document.getElementById('topTitle').textContent = '剪貼簿';
-  document.getElementById('pillCode').textContent = code;
-  document.getElementById('roomPill').classList.add('show');
+  $id('stateA').style.display = 'none';
+  $id('stateB').classList.add('show');
+  $id('topTitle').textContent = '剪貼簿';
+  $id('pillCode').textContent = code;
+  $id('roomPill').classList.add('show');
   startPoll();
-  setTimeout(() => document.getElementById('ta').focus(), 120);
+  setTimeout(() => $id('ta').focus(), 120);
 }
 
-// ── Polling（1.5s）───────────────────────────────────────
+// ── Polling ────────────────────────────────────────────────────
 function startPoll() {
   clearInterval(pollTid);
-  pollTid = setInterval(doPoll, 1500);
+  pollTid = setInterval(doPoll, POLL_INTERVAL);
 }
 
 async function doPoll() {
   if (!room || pushing) return;
   try {
-    const { data, error } = await supa.from('share_rooms').select('text').eq('room_code', room).single();
-    if (error) {
-      dbg('poll error code=' + error.code + ' msg=' + error.message);
-      if (error.code === 'PGRST116') { clearInterval(pollTid); showExpired(); }
+    const resp = await fetch('/api/share/room/' + room);
+    if (resp.status === 404) {
+      clearInterval(pollTid);
+      showExpired(false);
       return;
     }
-    const rawText = data.text || '';
-    dbg('poll OK text=' + rawText.slice(0, 20));
-    const ta = document.getElementById('ta');
-    const isSelfTyping = Date.now() - lastTyped < 2000;
-    if (rawText !== knownText && !isSelfTyping) {
-      knownText = rawText;
-      if (rawText.startsWith(FILE_MARKER)) {
-        // 收到檔案標記：解析並顯示檔案卡片
-        try {
-          const meta = JSON.parse(rawText.slice(FILE_MARKER.length));
-          if (meta.url && meta.name) showFileCard(meta.url, meta.name, meta.ext || '');
-        } catch(e) { dbg('file marker parse err: ' + e.message); }
-      } else {
-        // 普通文字：隱藏檔案卡片，更新 textarea
-        hideFileCard();
-        ta.value = rawText;
-        detectUrl(rawText);
-      }
+    const data = await resp.json();
+    if (data.updated_at !== lastKnownServerTs) {
+      lastKnownServerTs = data.updated_at;
+      if (Date.now() - lastPushAt >= 2000) renderRoom(data);
     }
-  } catch(e) { dbg('poll catch: ' + e.message); }
+  } catch {}
 }
 
-// ── Push text（debounce 300ms）────────────────────────────
-document.getElementById('ta').addEventListener('input', () => {
-  lastTyped = Date.now();
-  // 使用者打字時隱藏檔案卡片（代表要覆寫傳輸內容）
-  if (document.getElementById('fileCard').classList.contains('show')) {
+// ── Render room state ──────────────────────────────────────────
+function renderRoom(data, force) {
+  const type     = data.type     || 'text';
+  const content  = data.content  || '';
+  const fileName = data.file_name || '';
+  if (type === 'image') {
+    showImg(content);
+    $id('ta').value = '';
     hideFileCard();
+    detectUrl('');
+  } else if (type === 'file') {
+    showFileCard(content, fileName);
+    $id('ta').value = '';
+    hideImg();
+    detectUrl('');
+  } else {
+    hideImg();
+    hideFileCard();
+    if (force || document.activeElement !== $id('ta')) {
+      $id('ta').value = content;
+      detectUrl(content);
+    }
   }
-  detectUrl(document.getElementById('ta').value);
-  clearTimeout(debTid); debTid = setTimeout(pushText, 300);
-});
+}
 
-async function pushText() {
+// ── Push ───────────────────────────────────────────────────────
+async function pushRoom(type, content, fileName) {
   if (!room) return;
   pushing = true;
-  const text = document.getElementById('ta').value;
-  knownText = text;
+  lastPushAt = Date.now();
   setSyncing(true);
   try {
-    const { error } = await supa.from('share_rooms')
-      .update({ text, updated_at: new Date().toISOString() })
-      .eq('room_code', room);
-    if (error) dbg('push ERROR code=' + error.code + ' ' + error.message);
-    else dbg('push OK len=' + text.length);
-    await supa.from('share_rooms')
-      .delete()
-      .lt('updated_at', new Date(Date.now() - 3600000).toISOString());
-  } catch(e) { dbg('push catch: ' + e.message); }
+    await fetch('/api/share/room/' + room, {
+      method:  'PUT',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({type, content, file_name: fileName || ''}),
+    });
+  } catch {}
   finally { pushing = false; setSyncing(false); }
 }
 
-function setSyncing(v) {
-  document.getElementById('syncDot').classList.toggle('syncing', v);
-}
+function setSyncing(v) { $id('syncDot').classList.toggle('syncing', v); }
 
-// ── URL 偵測 ──────────────────────────────────────────────
+// ── Textarea ───────────────────────────────────────────────────
+$id('ta').addEventListener('input', () => {
+  const text = $id('ta').value;
+  detectUrl(text);
+  if ($id('fileCard').classList.contains('show')) hideFileCard();
+  clearTimeout(debTid);
+  debTid = setTimeout(() => pushRoom('text', text), 300);
+});
+
+// ── URL detection ──────────────────────────────────────────────
 const URL_RE = /https?:\/\/[^\s"'<>\]]+/i;
 function detectUrl(text) {
   const m = text.match(URL_RE);
-  const card = document.getElementById('urlCard');
   if (m) {
     detectedUrl = m[0];
-    document.getElementById('urlText').textContent = detectedUrl;
-    card.classList.add('show');
-  } else { detectedUrl = null; card.classList.remove('show'); }
+    $id('urlText').textContent = detectedUrl;
+    $id('urlCard').classList.add('show');
+  } else {
+    detectedUrl = null;
+    $id('urlCard').classList.remove('show');
+  }
 }
-function openUrl() { if (detectedUrl) window.open(detectedUrl, '_blank', 'noopener,noreferrer'); }
+function openUrl() {
+  if (detectedUrl) window.open(detectedUrl, '_blank', 'noopener,noreferrer');
+}
 
-// ── 檔案輸入入口 ──────────────────────────────────────────
-function pickFile() { document.getElementById('fileIn').click(); }
+// ── Copy ───────────────────────────────────────────────────────
+async function doCopy() {
+  const target = currentFileUrl || $id('ta').value;
+  if (!target) return;
+  await navigator.clipboard.writeText(target).catch(() => {});
+  const btn = $id('copyBtn');
+  const orig = btn.textContent;
+  btn.textContent = '✅ 已複製';
+  setTimeout(() => btn.textContent = orig, 1800);
+}
+
+async function copyCode() {
+  if (!room) return;
+  await navigator.clipboard.writeText(room).catch(() => {});
+  const el = $id('pillCode');
+  const orig = el.textContent;
+  el.textContent = '✅';
+  setTimeout(() => el.textContent = orig, 1500);
+}
+
+// ── Clear ──────────────────────────────────────────────────────
+function doClear() {
+  hideFileCard();
+  hideImg();
+  $id('ta').value = '';
+  detectUrl('');
+  pushRoom('text', '');
+}
+
+// ── Destroy room ───────────────────────────────────────────────
+function doDestroy() {
+  showAlert('銷毀房間', '雙方裝置將同步清除，此操作無法復原', [
+    {label: '取消',   style: '',       action: null},
+    {label: '確認銷毀', style: 'danger', action: async () => {
+      clearInterval(pollTid);
+      await fetch('/api/share/room/' + room, {method:'DELETE'}).catch(() => {});
+      showExpired(true);
+    }},
+  ]);
+}
+
+// ── Expired overlay ────────────────────────────────────────────
+function showExpired(destroyed) {
+  $id('expireSub').textContent = destroyed ? '雙方已同步清除' : '房間閒置過久或已不存在';
+  $id('expireOverlay').classList.add('show');
+  room = null;
+}
+
+function backToA() {
+  $id('expireOverlay').classList.remove('show');
+  $id('stateB').classList.remove('show');
+  $id('stateA').style.display = '';
+  $id('topTitle').textContent  = '跨裝置剪貼簿';
+  $id('roomPill').classList.remove('show');
+  $id('ta').value = '';
+  $id('joinInput').value = '';
+  hideImg(); hideFileCard(); detectUrl('');
+  currentFileUrl = null; room = null;
+  clearInterval(pollTid);
+}
+
+// ── File input ─────────────────────────────────────────────────
+function pickFile() { $id('fileIn').click(); }
+
+$id('fileIn').addEventListener('change', e => {
+  const f = e.target.files?.[0];
+  e.target.value = '';
+  if (f) onFileInput(f);
+});
 
 function onFileInput(file) {
   if (!file) return;
-  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const ext   = (file.name.split('.').pop() || '').toLowerCase();
+  const isImg = IMG_EXTS.has(ext) || file.type.startsWith('image/');
 
-  if (!ALLOWED_EXTS.has(ext)) {
-    alert('不支援此格式，請選擇：\n圖片、PDF、Word、Excel、TXT、ZIP、RAR、MP3 或 MP4');
-    document.getElementById('fileIn').value = '';
+  if (!isImg && !FILE_EXTS.has(ext)) {
+    showAlert('不支援此格式', '請選擇：圖片、PDF、Word、Excel、TXT、ZIP、RAR、MP3 或 MP4', [{label:'確認',style:'primary',action:null}]);
     return;
   }
-  if (file.size > MAX_FILE_SIZE) {
-    const mb = (file.size / 1024 / 1024).toFixed(1);
-    alert(`檔案大小 ${mb}MB 超過 5MB 上限，請選擇較小的檔案`);
-    document.getElementById('fileIn').value = '';
+  if (!isImg && file.size > MAX_DIRECT) {
+    showAlert('檔案過大', `${(file.size / 1024 / 1024).toFixed(1)} MB 超過 8 MB 上限`, [{label:'確認',style:'primary',action:null}]);
     return;
   }
-
-  if (IMG_EXTS.has(ext)) {
-    onImgFile(file);
+  if (isImg) {
+    uploadImage(file, file.name || 'image.jpg').catch(err =>
+      showAlert('上傳失敗', err.message, [{label:'確認',style:'primary',action:null}])
+    );
   } else {
-    uploadFile(file, ext);
+    uploadRawFile(file, ext).catch(err =>
+      showAlert('上傳失敗', err.message, [{label:'確認',style:'primary',action:null}])
+    );
   }
 }
 
-// ── 圖片上傳（壓縮 → ImageKit）──────────────────────────
-async function onImgFile(file) {
-  if (!file) return;
-  if (!IK_PUBLIC_KEY) {
-    alert('圖片同步功能需要 ImageKit Public Key，填入 share.html 的 IK_PUBLIC_KEY 後即可使用');
-    return;
-  }
-  const st = document.getElementById('upStatus');
-  const btn = document.getElementById('fileBtn');
-  st.textContent = '壓縮中…'; st.classList.add('show'); btn.disabled = true;
+// ── Image upload (smart dual-track) ───────────────────────────
+async function uploadImage(file, origName) {
+  const ext    = ((file.name || origName || '').split('.').pop() || '').toLowerCase();
+  const isHeic = ext === 'heic' || ext === 'heif'
+               || file.type === 'image/heic' || file.type === 'image/heif';
+  const needsProcess = isHeic || file.size > MAX_DIRECT;
+
+  setUpStatus(needsProcess ? '壓縮中…' : '上傳中…');
+  $id('fileBtn').disabled = true;
   try {
-    const blob = await compress(file, 1200, .82);
-    st.textContent = '上傳中…';
-    const auth = await fetch('/api/share/imagekit-auth').then(r => r.json());
-    if (!auth.signature) throw new Error('取得上傳授權失敗');
-    const fd = new FormData();
-    fd.append('file', blob, 'share.jpg');
-    fd.append('fileName', 'share-' + Date.now() + '.jpg');
-    fd.append('useUniqueFileName', 'true');
-    fd.append('publicKey', IK_PUBLIC_KEY);
-    fd.append('signature', auth.signature);
-    fd.append('token', auth.token);
-    fd.append('expire', String(auth.expire));
-    const r = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-      method: 'POST', body: fd
-    });
-    const res = await r.json();
-    if (!res.url) throw new Error(res.message || '上傳失敗');
-    const url = res.url + '?tr=q-60,w-600';
+    const blob = needsProcess
+      ? await compressToTarget(file, isHeic ? MAX_COMPRESS_TGT : Math.min(file.size, MAX_COMPRESS_TGT), 0.95)
+      : file;
+    setUpStatus('上傳中…');
+    const url = await ikUpload(blob, 'share-' + Date.now() + '.jpg');
     showImg(url);
-    const ta = document.getElementById('ta');
-    ta.value = (ta.value ? ta.value + '\n' : '') + url;
-    knownText = ta.value;
-    pushText();
-    st.classList.remove('show');
-  } catch(e) {
-    alert('圖片上傳失敗：' + e.message);
-    st.classList.remove('show');
+    hideFileCard();
+    $id('ta').value = '';
+    detectUrl('');
+    await pushRoom('image', url);
   } finally {
-    btn.disabled = false;
-    document.getElementById('fileIn').value = '';
+    $id('fileBtn').disabled = false;
+    setUpStatus('');
   }
 }
 
-function compress(file, maxDim, q) {
-  return new Promise((res, rej) => {
-    const img = new Image(), url = URL.createObjectURL(file);
+// ── Raw file upload ────────────────────────────────────────────
+async function uploadRawFile(file, ext) {
+  setUpStatus('上傳中…');
+  $id('fileBtn').disabled = true;
+  try {
+    const safeName = 'share-' + Date.now() + '-' + file.name.replace(/[^\w.\-]/g, '_');
+    const url = await ikUpload(file, safeName);
+    showFileCard(url, file.name);
+    hideImg();
+    $id('ta').value = '';
+    detectUrl('');
+    await pushRoom('file', url, file.name);
+  } finally {
+    $id('fileBtn').disabled = false;
+    setUpStatus('');
+  }
+}
+
+// ── ImageKit upload helper ─────────────────────────────────────
+async function ikUpload(blob, fileName) {
+  const auth = await fetch('/api/share/imagekit-auth').then(r => r.json());
+  if (!auth.signature) throw new Error('取得上傳授權失敗：' + (auth.error || ''));
+  const fd = new FormData();
+  fd.append('file',            blob, fileName);
+  fd.append('fileName',        fileName);
+  fd.append('useUniqueFileName','true');
+  fd.append('publicKey',       IK_PUBLIC_KEY);
+  fd.append('signature',       auth.signature);
+  fd.append('token',           auth.token);
+  fd.append('expire',          String(auth.expire));
+  const r   = await fetch('https://upload.imagekit.io/api/v1/files/upload', {method:'POST', body:fd});
+  const res = await r.json();
+  if (!res.url) throw new Error(res.message || '上傳失敗');
+  return res.url;
+}
+
+// ── Image compress to target size ─────────────────────────────
+function compressToTarget(file, targetBytes, initQ) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const canvas = document.createElement('canvas');
+      const MAX_DIM = 2400;
       let w = img.naturalWidth, h = img.naturalHeight;
-      if (w > maxDim || h > maxDim) {
-        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-        else       { w = Math.round(w * maxDim / h); h = maxDim; }
+      if (w > MAX_DIM || h > MAX_DIM) {
+        if (w >= h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+        else        { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
       }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      canvas.toBlob(b => b ? res(b) : rej(new Error('壓縮失敗')), 'image/jpeg', q);
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      let q = initQ;
+      const tryQ = () => {
+        cv.toBlob(blob => {
+          if (!blob) { reject(new Error('壓縮失敗')); return; }
+          if (blob.size <= targetBytes || q <= 0.35) { resolve(blob); }
+          else { q = Math.max(0.35, q - 0.08); tryQ(); }
+        }, 'image/jpeg', q);
+      };
+      tryQ();
     };
-    img.onerror = rej; img.src = url;
+    img.onerror = reject;
+    img.src = url;
   });
 }
 
-function showImg(url) { document.getElementById('imgEl').src = url; document.getElementById('imgWrap').classList.add('show'); }
-function hideImg() { document.getElementById('imgWrap').classList.remove('show'); document.getElementById('imgEl').src = ''; }
-function clearImg() { hideImg(); }
-
-// ── 一般檔案上傳（直傳 ImageKit，不壓縮）────────────────
-async function uploadFile(file, ext) {
-  if (!IK_PUBLIC_KEY) {
-    alert('檔案上傳功能需要 ImageKit Public Key');
-    return;
-  }
-  const st = document.getElementById('upStatus');
-  const btn = document.getElementById('fileBtn');
-  st.textContent = '上傳中…'; st.classList.add('show'); btn.disabled = true;
-  try {
-    const auth = await fetch('/api/share/imagekit-auth').then(r => r.json());
-    if (!auth.signature) throw new Error('取得上傳授權失敗：' + (auth.error || ''));
-
-    // 安全化檔案名稱（保留副檔名），加時間戳避免衝突
-    const safeName = 'share-' + Date.now() + '-' + file.name.replace(/[^\w.\-]/g, '_');
-    const fd = new FormData();
-    fd.append('file', file, safeName);
-    fd.append('fileName', safeName);
-    fd.append('useUniqueFileName', 'true');
-    fd.append('publicKey', IK_PUBLIC_KEY);
-    fd.append('signature', auth.signature);
-    fd.append('token', auth.token);
-    fd.append('expire', String(auth.expire));
-
-    const r = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-      method: 'POST', body: fd
-    });
-    const res = await r.json();
-    if (!res.url) throw new Error(res.message || '上傳失敗');
-
-    const fileUrl = res.url;
-    showFileCard(fileUrl, file.name, ext);
-
-    // 將檔案 metadata 寫入 Supabase text 欄位（以 marker 為前綴）
-    const marker = FILE_MARKER + JSON.stringify({ url: fileUrl, name: file.name, ext });
-    knownText = marker;
-    setSyncing(true);
-    try {
-      await supa.from('share_rooms')
-        .update({ text: marker, updated_at: new Date().toISOString() })
-        .eq('room_code', room);
-      await supa.from('share_rooms')
-        .delete()
-        .lt('updated_at', new Date(Date.now() - 3600000).toISOString());
-      dbg('file push OK url=' + fileUrl.slice(0, 32));
-    } catch(e) { dbg('file push err: ' + e.message); }
-    finally { setSyncing(false); }
-
-    // 同步記錄到 Flask backend（in-memory，零伺服器負擔）
-    fetch('/api/share/room/' + room, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'file', file_url: fileUrl, file_name: file.name, file_type: ext })
-    }).catch(() => {});
-
-    st.classList.remove('show');
-  } catch(e) {
-    alert('檔案上傳失敗：' + e.message);
-    st.classList.remove('show');
-  } finally {
-    btn.disabled = false;
-    document.getElementById('fileIn').value = '';
-  }
+// ── Upload status ──────────────────────────────────────────────
+function setUpStatus(msg) {
+  const el = $id('upStatus');
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
 }
 
-// ── 檔案卡片操作 ──────────────────────────────────────────
-function showFileCard(url, name, ext) {
+// ── Image display ──────────────────────────────────────────────
+function showImg(url) { $id('imgEl').src = url; $id('imgWrap').classList.add('show'); }
+function hideImg()    { $id('imgWrap').classList.remove('show'); $id('imgEl').src = ''; }
+function clearImg()   { hideImg(); pushRoom('text', ''); }
+
+// ── File card ──────────────────────────────────────────────────
+function getFileIcon(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const m = {
+    pdf:  {icon:'📄', bg:'#fee2e2'},
+    doc:  {icon:'📝', bg:'#dbeafe'}, docx: {icon:'📝', bg:'#dbeafe'},
+    xls:  {icon:'📊', bg:'#dcfce7'}, xlsx: {icon:'📊', bg:'#dcfce7'},
+    txt:  {icon:'📋', bg:'#f3f4f6'},
+    zip:  {icon:'🗜️', bg:'#fef3c7'}, rar: {icon:'🗜️', bg:'#fef3c7'},
+    mp3:  {icon:'🎵', bg:'#f3e8ff'},
+    mp4:  {icon:'🎬', bg:'#fff7ed'},
+  };
+  return m[ext] || {icon:'📁', bg:'#f3f4f6'};
+}
+
+function showFileCard(url, name) {
   currentFileUrl = url;
   const info = getFileIcon(name);
-  const wrap = document.getElementById('fileIconWrap');
-  wrap.style.background = info.bg;
-  document.getElementById('fileIconEmoji').textContent = info.icon;
-  document.getElementById('fileNameText').textContent = name;
-  const label = (ext || (name.split('.').pop() || 'FILE')).toUpperCase();
-  document.getElementById('fileTypeText').textContent = label + ' 檔案';
-  document.getElementById('fileCard').classList.add('show');
-  // 清空 textarea 顯示，避免顯示 raw marker JSON
-  document.getElementById('ta').value = '';
+  $id('fileIconWrap').style.background = info.bg;
+  $id('fileIconEmoji').textContent      = info.icon;
+  $id('fileNameText').textContent       = name;
+  $id('fileTypeText').textContent       = (name.split('.').pop() || 'FILE').toUpperCase() + ' 檔案';
+  $id('fileCard').classList.add('show');
 }
 
 function hideFileCard() {
-  document.getElementById('fileCard').classList.remove('show');
+  $id('fileCard').classList.remove('show');
   currentFileUrl = null;
 }
 
 function downloadFile() {
   if (currentFileUrl) window.open(currentFileUrl, '_blank', 'noopener,noreferrer');
-}
-
-// ── 複製房間碼 ─────────────────────────────────────────────
-async function copyCode() {
-  if (!room) return;
-  try {
-    await navigator.clipboard.writeText(room);
-    const el = document.getElementById('pillCode');
-    const orig = el.textContent;
-    el.textContent = '✅'; setTimeout(() => el.textContent = orig, 1500);
-  } catch {}
-}
-
-// ── 複製內容 ───────────────────────────────────────────────
-async function doCopy() {
-  const text = document.getElementById('ta').value;
-  if (!text && !currentFileUrl) return;
-  const target = currentFileUrl || text;
-  try {
-    await navigator.clipboard.writeText(target);
-    const btn = document.getElementById('copyBtn');
-    const orig = btn.textContent;
-    btn.textContent = '✅ 已複製';
-    setTimeout(() => btn.textContent = orig, 1800);
-  } catch {}
-}
-
-// ── 清空 ───────────────────────────────────────────────────
-function doClear() {
-  hideFileCard();
-  hideImg();
-  document.getElementById('ta').value = '';
-  detectUrl('');
-  knownText = '';
-  pushText();
-}
-
-// ── 過期/離開 ──────────────────────────────────────────────
-function showExpired() {
-  document.getElementById('expireOverlay').classList.add('show');
-  room = null;
-}
-
-function backToA() {
-  document.getElementById('expireOverlay').classList.remove('show');
-  document.getElementById('stateB').classList.remove('show');
-  document.getElementById('stateA').style.display = '';
-  document.getElementById('topTitle').textContent = '跨裝置剪貼簿';
-  document.getElementById('roomPill').classList.remove('show');
-  document.getElementById('ta').value = '';
-  document.getElementById('joinInput').value = '';
-  hideImg(); hideFileCard(); detectUrl('');
-  knownText = ''; room = null;
-  clearInterval(pollTid);
 }
 </script>
 </body>

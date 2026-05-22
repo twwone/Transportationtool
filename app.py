@@ -806,18 +806,18 @@ def amenities_api():
 
 
 # ──────────────────────────────────────────────
-#  Share 剪貼簿後端（in-memory，需 Zeabur 常駐行程）
+#  Share 剪貼簿後端（in-memory，需常駐行程）
 # ──────────────────────────────────────────────
 _SHARE: dict = {}
 _SHARE_LOCK  = threading.Lock()
-_SHARE_TTL   = 3600  # 1 小時閒置刪除
+_SHARE_TTL   = 86400  # 24 小時閒置刪除
 
 def _share_cleanup():
     while True:
-        time.sleep(300)
+        time.sleep(3600)
         cutoff = time.time() - _SHARE_TTL
         with _SHARE_LOCK:
-            expired = [k for k, v in _SHARE.items() if v["updated_at"] < cutoff]
+            expired = [k for k, v in _SHARE.items() if v.get("updated_at", 0) < cutoff]
             for k in expired:
                 del _SHARE[k]
 
@@ -839,7 +839,7 @@ def imagekit_auth():
     if not private_key:
         return _sc(jsonify({"error": "IMAGEKIT_PRIVATE_KEY not set"})), 503
     token  = secrets.token_hex(16)
-    expire = int(time.time()) + 1800  # ImageKit 要求 < 1 小時，用 30 分鐘留安全邊際
+    expire = int(time.time()) + 1800
     signature = hmac.new(
         private_key.encode(),
         (token + str(expire)).encode(),
@@ -857,7 +857,7 @@ def share_create():
         c = str(random.randint(1000, 9999))
         with _SHARE_LOCK:
             if c not in _SHARE:
-                _SHARE[c] = {"text": "", "image_url": "", "file_url": "", "file_name": "", "file_type": "", "updated_at": now}
+                _SHARE[c] = {"type": "text", "content": "", "file_name": "", "updated_at": now}
                 code = c
                 break
     if not code:
@@ -868,27 +868,26 @@ def share_create():
 def share_room(code):
     if request.method == "OPTIONS":
         return _sc(jsonify({}))
-    now = time.time()
     if request.method == "GET":
         with _SHARE_LOCK:
             room = dict(_SHARE.get(code) or {})
-        if not room or time.time() - room["updated_at"] > _SHARE_TTL:
-            with _SHARE_LOCK:
-                _SHARE.pop(code, None)
+        if not room:
             return _sc(jsonify({"error": "not found"})), 404
-        return _sc(jsonify({"text": room["text"], "image_url": room["image_url"], "file_url": room.get("file_url", ""), "file_name": room.get("file_name", ""), "file_type": room.get("file_type", "")}))
+        return _sc(jsonify({
+            "type":       room.get("type", "text"),
+            "content":    room.get("content", ""),
+            "file_name":  room.get("file_name", ""),
+            "updated_at": room.get("updated_at", 0),
+        }))
     elif request.method == "PUT":
         with _SHARE_LOCK:
             room = _SHARE.get(code)
-            if not room or time.time() - room["updated_at"] > _SHARE_TTL:
-                _SHARE.pop(code, None)
+            if not room:
                 return _sc(jsonify({"error": "not found"})), 404
             body = request.get_json(silent=True) or {}
-            if "text"      in body: room["text"]      = body["text"]
-            if "image_url" in body: room["image_url"] = body["image_url"]
-            if "file_url"  in body: room["file_url"]  = body["file_url"]
+            if "type"      in body: room["type"]      = body["type"]
+            if "content"   in body: room["content"]   = body["content"]
             if "file_name" in body: room["file_name"] = body["file_name"]
-            if "file_type" in body: room["file_type"] = body["file_type"]
             room["updated_at"] = time.time()
         return _sc(jsonify({"ok": True}))
     elif request.method == "DELETE":
