@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import secrets
 import math
+import json as _json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
@@ -807,11 +808,13 @@ def amenities_api():
 
 
 # ──────────────────────────────────────────────
-#  Share 剪貼簿後端（in-memory，需常駐行程）
+#  Share 剪貼簿後端（Upstash Redis 優先，本機 fallback in-memory）
 # ──────────────────────────────────────────────
-_SHARE: dict = {}
-_SHARE_LOCK  = threading.Lock()
-_SHARE_TTL   = 43200  # 12 小時閒置刪除
+_SHARE_TTL  = 43200  # 12 小時
+
+# ── in-memory fallback（本機開發用）────────────
+_SHARE: dict      = {}
+_SHARE_LOCK       = threading.Lock()
 
 def _share_cleanup():
     while True:
@@ -823,6 +826,56 @@ def _share_cleanup():
                 del _SHARE[k]
 
 threading.Thread(target=_share_cleanup, daemon=True).start()
+
+# ── Upstash Redis REST helpers ──────────────────
+def _redis(method: str, *args):
+    """執行單一 Upstash Redis REST 命令；失敗回傳 None。"""
+    url   = os.environ.get("UPSTASH_REDIS_REST_URL", "")
+    token = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+    if not url or not token:
+        return None
+    try:
+        r = _requests.post(
+            url,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=[method, *[str(a) for a in args]],
+            timeout=5,
+        )
+        return r.json().get("result")
+    except Exception:
+        return None
+
+def _share_get(code: str) -> dict | None:
+    raw = _redis("GET", f"share:{code}")
+    if raw is None:
+        # fallback
+        with _SHARE_LOCK:
+            v = _SHARE.get(code)
+            return dict(v) if v else None
+    try:
+        return _json.loads(raw)
+    except Exception:
+        return None
+
+def _share_set(code: str, room: dict):
+    serialized = _json.dumps(room)
+    result = _redis("SET", f"share:{code}", serialized, "EX", _SHARE_TTL)
+    if result is None:
+        with _SHARE_LOCK:
+            _SHARE[code] = room
+
+def _share_del(code: str):
+    result = _redis("DEL", f"share:{code}")
+    if result is None:
+        with _SHARE_LOCK:
+            _SHARE.pop(code, None)
+
+def _share_exists(code: str) -> bool:
+    result = _redis("EXISTS", f"share:{code}")
+    if result is not None:
+        return bool(int(result))
+    with _SHARE_LOCK:
+        return code in _SHARE
 
 def _sc(resp):
     resp.headers["Access-Control-Allow-Origin"]  = "*"
@@ -852,15 +905,14 @@ def imagekit_auth():
 def share_create():
     if request.method == "OPTIONS":
         return _sc(jsonify({}))
-    now = time.time()
+    now  = time.time()
     code = None
     for _ in range(10):
         c = str(random.randint(1000, 9999))
-        with _SHARE_LOCK:
-            if c not in _SHARE:
-                _SHARE[c] = {"type": "text", "content": "", "file_name": "", "updated_at": now}
-                code = c
-                break
+        if not _share_exists(c):
+            _share_set(c, {"type": "text", "content": "", "file_name": "", "updated_at": now})
+            code = c
+            break
     if not code:
         return _sc(jsonify({"error": "retry later"})), 503
     return _sc(jsonify({"code": code}))
@@ -870,8 +922,7 @@ def share_room(code):
     if request.method == "OPTIONS":
         return _sc(jsonify({}))
     if request.method == "GET":
-        with _SHARE_LOCK:
-            room = dict(_SHARE.get(code) or {})
+        room = _share_get(code)
         if not room:
             return _sc(jsonify({"error": "not found"})), 404
         return _sc(jsonify({
@@ -881,19 +932,18 @@ def share_room(code):
             "updated_at": room.get("updated_at", 0),
         }))
     elif request.method == "PUT":
-        with _SHARE_LOCK:
-            room = _SHARE.get(code)
-            if not room:
-                return _sc(jsonify({"error": "not found"})), 404
-            body = request.get_json(silent=True) or {}
-            if "type"      in body: room["type"]      = body["type"]
-            if "content"   in body: room["content"]   = body["content"]
-            if "file_name" in body: room["file_name"] = body["file_name"]
-            room["updated_at"] = time.time()
+        room = _share_get(code)
+        if not room:
+            return _sc(jsonify({"error": "not found"})), 404
+        body = request.get_json(silent=True) or {}
+        if "type"      in body: room["type"]      = body["type"]
+        if "content"   in body: room["content"]   = body["content"]
+        if "file_name" in body: room["file_name"] = body["file_name"]
+        room["updated_at"] = time.time()
+        _share_set(code, room)
         return _sc(jsonify({"ok": True}))
     elif request.method == "DELETE":
-        with _SHARE_LOCK:
-            _SHARE.pop(code, None)
+        _share_del(code)
         return _sc(jsonify({"ok": True}))
 
 
