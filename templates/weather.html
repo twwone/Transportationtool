@@ -130,7 +130,8 @@ body::before{
 .metar-icao{font-size:.82rem;font-weight:800;letter-spacing:.08em;color:#93c5fd}
 .metar-station{font-size:.78rem;color:rgba(226,232,240,.65);margin-left:6px}
 .metar-time{font-size:.7rem;color:rgba(226,232,240,.5)}
-.metar-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.metar-chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:7px;margin-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.metar-chips::-webkit-scrollbar{display:none}
 .metar-chip{
   display:inline-flex;align-items:center;gap:4px;
   padding:4px 10px;border-radius:8px;
@@ -407,6 +408,33 @@ body::before{
 .update-row{
   text-align:center;font-size:.72rem;color:var(--sub);
   padding-bottom:4px;
+}
+
+/* ── Mobile overrides ── */
+@media(max-width:480px){
+  .content{
+    padding:16px 14px max(60px,env(safe-area-inset-bottom)+48px);
+    gap:18px;
+  }
+  #weatherArea{gap:16px}
+  #metarBanner{padding:8px 14px}
+  .metar-card{padding:12px 14px 10px}
+  .metar-chip{font-size:.7rem;padding:3px 8px}
+  .main-card{padding:20px 16px 18px}
+  .main-top{margin-bottom:16px}
+  .main-temps{margin-bottom:16px}
+  .main-temp{font-size:2.6rem}
+  .main-emoji{font-size:2.8rem}
+  .stat{padding:11px 6px}
+  .stat-val{font-size:.82rem}
+  .hourly-scroll{padding:14px 14px 16px;gap:10px}
+  .hour-chip{padding:12px 10px;min-width:62px}
+  .day-row{padding:14px 16px}
+  .section-group{gap:8px}
+  .section-title{padding:2px 2px 0}
+  .alert-banner{padding:10px 12px}
+  .fav-chips{gap:6px}
+  .fav-chip{padding:6px 10px;font-size:.76rem}
 }
 </style>
 </head>
