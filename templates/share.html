@@ -515,6 +515,7 @@ let pollTid           = null;
 let debTid            = null;
 let pushing           = false;
 let lastPushAt        = 0;
+let lastTyped         = 0;
 let lastKnownServerTs = 0;
 let detectedUrl       = null;
 let currentFileUrl    = null;
@@ -691,7 +692,7 @@ function renderRoom(data, force) {
   } else {
     hideImg();
     hideFileCard();
-    if (force || document.activeElement !== $id('ta')) {
+    if (force || Date.now() - lastTyped > 2000) {
       $id('ta').value = content;
       detectUrl(content);
     }
@@ -718,6 +719,7 @@ function setSyncing(v) { $id('syncDot').classList.toggle('syncing', v); }
 
 // ── Textarea ───────────────────────────────────────────────────
 $id('ta').addEventListener('input', () => {
+  lastTyped = Date.now();
   const text = $id('ta').value;
   detectUrl(text);
   if ($id('fileCard').classList.contains('show')) hideFileCard();
