@@ -300,6 +300,10 @@ body {
 .card-share::before   { background: linear-gradient(90deg,#3b82f6,#2563eb); }
 .card-share:hover .sm-arrow { color: #2563eb; }
 
+.card-weather .sm-title { color: #0e7490; }
+.card-weather::before   { background: linear-gradient(90deg,#0ea5e9,#0284c7); }
+.card-weather:hover .sm-arrow { color: #0284c7; }
+
 /* ── 底部 ── */
 .footer {
   margin-top: 28px;
@@ -413,6 +417,7 @@ body {
   .card-visa  .sm-title { color: #ffd60a; }
   .card-codes  .sm-title { color: #bf5af2; }
   .card-share  .sm-title { color: #60a5fa; }
+  .card-weather .sm-title { color: #38bdf8; }
   .footer   { color: #3a3a3c; }
   .profile-chip { background: #2c2c2e; border-color: rgba(255,255,255,0.08); color: #f2f2f7; }
   .pc-chevron   { color: #48484a; }
@@ -504,6 +509,12 @@ body {
   <a href="/share" class="card card-sm card-share">
     <span class="sm-icon">📋</span>
     <div class="sm-title">Clipboard</div>
+  </a>
+
+  <!-- Weather -->
+  <a href="/weather" class="card card-sm card-weather">
+    <span class="sm-icon">☁️</span>
+    <div class="sm-title">天氣防禦</div>
   </a>
 
 </div>

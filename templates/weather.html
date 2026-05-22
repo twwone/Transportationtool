@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>天氣防禦面板</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0c1220" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef2ff" media="(prefers-color-scheme: light)">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overscroll-behavior:none;overflow-x:hidden}
+
+@keyframes pageIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes breatheRed{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0),0 8px 32px rgba(239,68,68,.22)}
+  50%{box-shadow:0 0 0 8px rgba(239,68,68,.18),0 8px 32px rgba(239,68,68,.55)}
+}
+@keyframes breatheRedDark{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,69,58,0),0 8px 32px rgba(255,69,58,.3)}
+  50%{box-shadow:0 0 0 10px rgba(255,69,58,.22),0 8px 32px rgba(255,69,58,.65)}
+}
+@keyframes shimmer{
+  0%{background-position:-400px 0}100%{background-position:400px 0}
+}
+
+:root{
+  --bg:#eef2ff;
+  --surface:rgba(255,255,255,.82);
+  --text:#0f0f1a;
+  --sub:#6b7280;
+  --accent:#3b82f6;
+  --danger:#ef4444;
+  --radius-l:24px;
+  --radius-m:18px;
+  --glass-bg:rgba(255,255,255,.22);
+  --glass-border:rgba(255,255,255,.45);
+  --glass-shadow:0 8px 32px rgba(0,0,0,.08);
+  --alert-border:rgba(239,68,68,.7);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#0c1220;
+    --surface:rgba(20,24,38,.96);
+    --text:#f2f2f7;
+    --sub:#8e8e93;
+    --accent:#60a5fa;
+    --danger:#ff453a;
+    --glass-bg:rgba(255,255,255,.07);
+    --glass-border:rgba(255,255,255,.12);
+    --glass-shadow:0 8px 32px rgba(0,0,0,.4);
+    --alert-border:rgba(255,69,58,.75);
+  }
+}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;min-height:100%;
+  animation:pageIn .35s cubic-bezier(.22,1,.36,1) both;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 30%,rgba(99,102,241,.14) 0%,transparent 65%),
+    radial-gradient(ellipse 55% 45% at 85% 65%,rgba(14,165,233,.1) 0%,transparent 65%);
+}
+
+/* ── Topbar ── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(238,242,255,.88);
+  backdrop-filter:blur(32px) saturate(180%);
+  -webkit-backdrop-filter:blur(32px) saturate(180%);
+  border-bottom:.5px solid rgba(0,0,0,.06);
+  padding:12px 16px 14px;
+  padding-top:max(14px,env(safe-area-inset-top) + 10px);
+  display:flex;align-items:center;gap:8px;
+}
+@media(prefers-color-scheme:dark){.topbar{background:rgba(12,18,32,.88);border-color:rgba(255,255,255,.06)}}
+.back-btn{
+  color:var(--accent);font-size:.95rem;font-weight:600;
+  text-decoration:none;min-width:44px;height:44px;
+  display:flex;align-items:center;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+}
+.topbar-title{font-size:1.05rem;font-weight:700;flex:1}
+.refresh-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:transparent;border:none;cursor:pointer;
+  font-size:1rem;display:flex;align-items:center;justify-content:center;
+  color:var(--accent);-webkit-tap-highlight-color:transparent;
+  transition:background .2s;
+}
+.refresh-btn:hover{background:rgba(59,130,246,.1)}
+.refresh-btn.spinning{animation:spin .7s linear infinite}
+
+/* ── Content ── */
+.content{
+  flex:1;padding:20px 16px max(52px,env(safe-area-inset-bottom)+32px);
+  max-width:480px;width:100%;margin:0 auto;
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;gap:14px;
+}
+
+/* ── Location bar ── */
+.loc-bar{
+  display:flex;align-items:center;gap:8px;
+}
+.loc-select{
+  flex:1;padding:10px 14px;border-radius:14px;
+  background:var(--glass-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-border);
+  color:var(--text);font-family:inherit;font-size:.88rem;font-weight:600;
+  outline:none;-webkit-appearance:none;
+  box-shadow:var(--glass-shadow);
+  cursor:pointer;
+}
+.loc-gps-btn{
+  flex-shrink:0;width:42px;height:42px;border-radius:13px;
+  background:var(--accent);color:#fff;
+  border:none;cursor:pointer;font-size:1rem;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 12px rgba(59,130,246,.32);
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ── Loading skeleton ── */
+.skeleton{
+  border-radius:var(--radius-l);height:200px;
+  background:linear-gradient(90deg,var(--glass-bg) 25%,rgba(255,255,255,.08) 50%,var(--glass-bg) 75%);
+  background-size:800px 100%;
+  animation:shimmer 1.4s infinite;
+}
+@media(prefers-color-scheme:dark){
+  .skeleton{background:linear-gradient(90deg,rgba(255,255,255,.05) 25%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.05) 75%);background-size:800px 100%}
+}
+
+/* ── Error card ── */
+.err-card{
+  border-radius:var(--radius-l);padding:28px 20px;text-align:center;
+  background:var(--glass-bg);backdrop-filter:blur(40px);border:1px solid var(--glass-border);
+  animation:cardIn .3s ease both;
+}
+.err-icon{font-size:2.2rem;margin-bottom:10px}
+.err-text{font-size:.9rem;color:var(--sub);line-height:1.5}
+
+/* ── Alert banner ── */
+.alert-banner{
+  border-radius:var(--radius-m);padding:11px 14px;
+  display:none;align-items:flex-start;gap:10px;
+  background:rgba(239,68,68,.1);
+  border:1px solid rgba(239,68,68,.35);
+  animation:cardIn .3s ease both;
+}
+.alert-banner.show{display:flex}
+@media(prefers-color-scheme:dark){.alert-banner{background:rgba(255,69,58,.14);border-color:rgba(255,69,58,.4)}}
+.alert-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.alert-content{flex:1;min-width:0}
+.alert-title{font-size:.8rem;font-weight:700;color:var(--danger);margin-bottom:3px}
+.alert-list{font-size:.77rem;color:var(--danger);line-height:1.6;list-style:none;padding:0}
+
+/* ── Main weather card ── */
+.main-card{
+  border-radius:var(--radius-l);padding:24px 20px 20px;
+  backdrop-filter:blur(40px) saturate(200%);
+  -webkit-backdrop-filter:blur(40px) saturate(200%);
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  box-shadow:var(--glass-shadow);
+  animation:cardIn .3s cubic-bezier(.22,1,.36,1) both;
+  transition:border-color .4s,box-shadow .6s;
+}
+.main-card.alert-active{
+  border-color:var(--alert-border);
+  animation:cardIn .3s cubic-bezier(.22,1,.36,1) both,
+            breatheRed 2.4s cubic-bezier(.45,.05,.55,.95) infinite 0.3s;
+}
+@media(prefers-color-scheme:dark){
+  .main-card.alert-active{
+    animation:cardIn .3s cubic-bezier(.22,1,.36,1) both,
+              breatheRedDark 2.4s cubic-bezier(.45,.05,.55,.95) infinite 0.3s;
+  }
+}
+
+.main-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.main-loc{font-size:.78rem;font-weight:600;color:var(--sub);margin-bottom:4px}
+.main-wx{font-size:1.05rem;font-weight:700;color:var(--text)}
+.main-emoji{font-size:3.4rem;line-height:1;flex-shrink:0}
+
+.main-temps{display:flex;align-items:baseline;gap:8px;margin-bottom:14px}
+.main-temp{font-size:3rem;font-weight:800;letter-spacing:-1px;line-height:1}
+.main-feels{font-size:.82rem;color:var(--sub);padding-top:4px}
+
+.stats-row{display:flex;gap:0;border-radius:16px;overflow:hidden;border:1px solid var(--glass-border)}
+.stat{
+  flex:1;padding:11px 8px;text-align:center;
+  background:rgba(255,255,255,.12);
+  border-right:1px solid var(--glass-border);
+}
+.stat:last-child{border-right:none}
+@media(prefers-color-scheme:dark){.stat{background:rgba(255,255,255,.05)}}
+.stat-icon{font-size:.95rem;margin-bottom:3px}
+.stat-val{font-size:.88rem;font-weight:700;color:var(--text)}
+.stat-lbl{font-size:.65rem;color:var(--sub);margin-top:2px}
+
+.main-desc{
+  margin-top:14px;padding:10px 12px;border-radius:14px;
+  background:rgba(255,255,255,.12);font-size:.77rem;color:var(--sub);
+  line-height:1.6;display:none;
+}
+.main-desc.show{display:block}
+@media(prefers-color-scheme:dark){.main-desc{background:rgba(255,255,255,.05)}}
+
+/* ── Forecast cards ── */
+.forecast-row{display:flex;gap:10px}
+.fc-card{
+  flex:1;border-radius:var(--radius-m);padding:14px 8px 12px;text-align:center;
+  backdrop-filter:blur(40px) saturate(200%);
+  -webkit-backdrop-filter:blur(40px) saturate(200%);
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  box-shadow:var(--glass-shadow);
+  animation:cardIn .3s cubic-bezier(.22,1,.36,1) both;
+}
+.fc-date{font-size:.7rem;font-weight:600;color:var(--sub);margin-bottom:8px}
+.fc-emoji{font-size:1.7rem;line-height:1;margin-bottom:8px}
+.fc-wx{font-size:.68rem;color:var(--sub);margin-bottom:8px;min-height:2.2em}
+.fc-temps{font-size:.78rem;font-weight:700}
+.fc-hi{color:var(--text)}
+.fc-lo{color:var(--sub)}
+.fc-pop{font-size:.68rem;color:#38bdf8;margin-top:5px;font-weight:600}
+
+/* ── Update time ── */
+.update-row{text-align:center;font-size:.72rem;color:var(--sub)}
+
+/* ── Geo status ── */
+.geo-pill{
+  display:none;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:100px;
+  background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);
+  font-size:.7rem;font-weight:600;color:#16a34a;
+  margin:0 auto;width:fit-content;
+}
+.geo-pill.show{display:flex}
+@media(prefers-color-scheme:dark){.geo-pill{color:#4ade80;background:rgba(34,197,94,.12);border-color:rgba(74,222,128,.25)}}
+.geo-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="back-btn">‹ 返回</a>
+  <div class="topbar-title">☁️ 天氣防禦面板</div>
+  <button class="refresh-btn" id="refreshBtn" onclick="loadWeather()" title="重新整理">↻</button>
+</div>
+
+<div class="content">
+
+  <!-- Location bar -->
+  <div class="loc-bar">
+    <select class="loc-select" id="locSelect" onchange="onSelectChange()">
+      <option value="" disabled selected>📍 選擇站點…</option>
+      {% for p in presets %}
+      <option value="{{ p.lat }},{{ p.lon }},{{ p.name }},{{ p.county }}">{{ p.label }}</option>
+      {% endfor %}
+    </select>
+    <button class="loc-gps-btn" id="gpsBtn" onclick="requestGPS()" title="GPS 定位">📡</button>
+  </div>
+
+  <!-- GPS pill -->
+  <div class="geo-pill" id="geoPill">
+    <span class="geo-dot"></span>
+    <span id="geoText">GPS 已定位</span>
+  </div>
+
+  <!-- Dynamic area -->
+  <div id="weatherArea">
+    <div class="skeleton" id="skeleton" style="display:none"></div>
+  </div>
+
+</div>
+
+<script>
+const PRESETS = {{ presets | tojson }};
+
+let currentLat = null, currentLon = null;
+let currentName = null, currentCounty = null;
+let isGPS = false;
+
+// 日期標籤
+function dayLabel(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const d   = new Date(dateStr + 'T12:00:00+08:00');
+    const now = new Date();
+    const diff = Math.round((d - new Date(now.getFullYear(),now.getMonth(),now.getDate())) / 86400000);
+    if (diff === 0) return '今天';
+    if (diff === 1) return '明天';
+    if (diff === 2) return '後天';
+    return ['日','一','二','三','四','五','六'][d.getDay()];
+  } catch { return dateStr.slice(5) || '—'; }
+}
+
+// 彈簧按鈕
+document.querySelectorAll('button').forEach(el => {
+  el.addEventListener('pointerdown', () => {
+    el.style.transition = 'transform .1s cubic-bezier(.34,1.56,.64,1)';
+    el.style.transform  = 'scale(.96)';
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev =>
+    el.addEventListener(ev, () => {
+      el.style.transition = 'transform .5s cubic-bezier(.34,1.56,.64,1)';
+      el.style.transform  = 'scale(1)';
+    })
+  );
+});
+
+// GPS 請求
+function requestGPS() {
+  const btn = document.getElementById('gpsBtn');
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  if (!navigator.geolocation) {
+    btn.textContent = '📡';
+    btn.disabled = false;
+    fallbackToDefault();
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      btn.textContent = '📡'; btn.disabled = false;
+      isGPS = true;
+      currentLat    = pos.coords.latitude;
+      currentLon    = pos.coords.longitude;
+      currentName   = null;
+      currentCounty = null;
+      document.getElementById('locSelect').value = '';
+      showGeoPill(`GPS 定位中 ${currentLat.toFixed(3)},${currentLon.toFixed(3)}`);
+      loadWeather();
+    },
+    err => {
+      btn.textContent = '📡'; btn.disabled = false;
+      isGPS = false;
+      fallbackToDefault();
+    },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+
+function showGeoPill(msg) {
+  const p = document.getElementById('geoPill');
+  document.getElementById('geoText').textContent = msg;
+  p.classList.add('show');
+}
+
+function fallbackToDefault() {
+  // 預設桃園機場（大園區）
+  currentLat    = 25.0780;
+  currentLon    = 121.2320;
+  currentName   = '大園區';
+  currentCounty = '桃園市';
+  isGPS = false;
+  showGeoPill('預設：桃園機場');
+  loadWeather();
+}
+
+function onSelectChange() {
+  const sel = document.getElementById('locSelect');
+  const val = sel.value;
+  if (!val) return;
+  const [lat, lon, name, county] = val.split(',');
+  currentLat    = parseFloat(lat);
+  currentLon    = parseFloat(lon);
+  currentName   = name;
+  currentCounty = county;
+  isGPS = false;
+  document.getElementById('geoPill').classList.remove('show');
+  loadWeather();
+}
+
+async function loadWeather() {
+  if (currentLat === null) return;
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  showSkeleton();
+  try {
+    let url = `/api/weather?lat=${currentLat}&lon=${currentLon}`;
+    if (currentName && currentCounty) {
+      url += `&name=${encodeURIComponent(currentName)}&county=${encodeURIComponent(currentCounty)}`;
+    }
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error && !data.current?.wx) {
+      showError('⚠️', data.error || '資料取得失敗');
+    } else {
+      renderWeather(data);
+    }
+  } catch(e) {
+    showError('🔌', '網路連線失敗，請稍後再試');
+  } finally {
+    btn.classList.remove('spinning');
+  }
+}
+
+function showSkeleton() {
+  const area = document.getElementById('weatherArea');
+  area.innerHTML = '<div class="skeleton"></div>';
+}
+
+function showError(icon, msg) {
+  const area = document.getElementById('weatherArea');
+  area.innerHTML = `
+    <div class="err-card">
+      <div class="err-icon">${icon}</div>
+      <div class="err-text">${msg}</div>
+    </div>`;
+}
+
+function renderWeather(d) {
+  const c   = d.current  || {};
+  const fc  = d.forecast || [];
+  const alts= d.alerts   || [];
+  const hasAlert = d.has_alert || c.alert || false;
+
+  // 特報 banner
+  let bannerHtml = '';
+  if (hasAlert) {
+    const items = alts.length
+      ? alts.map(a => `<li>⚡ ${a}</li>`).join('')
+      : '<li>⚡ 極端天氣特報生效中</li>';
+    bannerHtml = `
+      <div class="alert-banner show">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-content">
+          <div class="alert-title">極端天氣警報</div>
+          <ul class="alert-list">${items}</ul>
+        </div>
+      </div>`;
+  }
+
+  // 主卡片
+  const alertClass = hasAlert ? ' alert-active' : '';
+  const descHtml   = c.desc
+    ? `<div class="main-desc show">${c.desc}</div>` : '';
+
+  const mainCard = `
+    <div class="main-card${alertClass}">
+      <div class="main-top">
+        <div>
+          <div class="main-loc">📍 ${d.display || d.location || ''}</div>
+          <div class="main-wx">${c.wx || '—'}</div>
+        </div>
+        <div class="main-emoji">${c.emoji || '🌡️'}</div>
+      </div>
+      <div class="main-temps">
+        <div class="main-temp">${c.temp !== undefined ? c.temp : '—'}°</div>
+        <div class="main-feels">體感 ${c.feels !== undefined ? c.feels : '—'}°</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-icon">🌧️</div>
+          <div class="stat-val">${c.pop12h !== undefined ? c.pop12h : '—'}%</div>
+          <div class="stat-lbl">降雨機率</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon">💨</div>
+          <div class="stat-val">${c.wind || '—'}</div>
+          <div class="stat-lbl">風速(m/s)</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon">📡</div>
+          <div class="stat-val">${d.county || '—'}</div>
+          <div class="stat-lbl">縣市</div>
+        </div>
+      </div>
+      ${descHtml}
+    </div>`;
+
+  // 3 天預報
+  let fcCards = '';
+  if (fc.length) {
+    const fcHtml = fc.map(f => `
+      <div class="fc-card">
+        <div class="fc-date">${dayLabel(f.date)}</div>
+        <div class="fc-emoji">${f.emoji || '🌡️'}</div>
+        <div class="fc-wx">${f.wx || '—'}</div>
+        <div class="fc-temps">
+          <span class="fc-hi">${f.hi || '—'}°</span>
+          <span class="fc-lo"> / ${f.lo || '—'}°</span>
+        </div>
+        ${f.pop ? `<div class="fc-pop">🌧 ${f.pop}%</div>` : ''}
+      </div>`).join('');
+    fcCards = `<div class="forecast-row">${fcHtml}</div>`;
+  }
+
+  // 更新時間
+  const updRow = c.updated
+    ? `<div class="update-row">資料更新：${c.updated}</div>` : '';
+
+  document.getElementById('weatherArea').innerHTML =
+    bannerHtml + mainCard + fcCards + updRow;
+}
+
+// ── 頁面載入：自動 GPS ──
+window.addEventListener('load', () => {
+  if (navigator.geolocation) {
+    requestGPS();
+  } else {
+    fallbackToDefault();
+  }
+});
+</script>
+</body>
+</html>

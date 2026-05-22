@@ -6,6 +6,7 @@ import random
 import hashlib
 import hmac
 import secrets
+import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
@@ -894,6 +895,369 @@ def share_room(code):
         with _SHARE_LOCK:
             _SHARE.pop(code, None)
         return _sc(jsonify({"ok": True}))
+
+
+# ══════════════════════════════════════════════
+#  Weather 飛安天氣防禦面板（CWA API）
+# ══════════════════════════════════════════════
+_CWA_BASE = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
+
+# 30 分鐘快取
+_WEATHER_CACHE: dict = {}
+_WEATHER_CACHE_LOCK = threading.Lock()
+_WEATHER_CACHE_TTL  = 1800
+
+# 縣市 → CWA 鄉鎮預報端點 ID
+_COUNTY_ENDPOINT = {
+    "宜蘭縣": "F-D0047-001", "桃園市": "F-D0047-003", "新竹縣": "F-D0047-005",
+    "苗栗縣": "F-D0047-007", "彰化縣": "F-D0047-009", "南投縣": "F-D0047-011",
+    "雲林縣": "F-D0047-013", "嘉義縣": "F-D0047-015", "屏東縣": "F-D0047-017",
+    "臺東縣": "F-D0047-019", "花蓮縣": "F-D0047-021", "澎湖縣": "F-D0047-023",
+    "基隆市": "F-D0047-025", "新竹市": "F-D0047-027", "嘉義市": "F-D0047-029",
+    "臺北市": "F-D0047-031", "高雄市": "F-D0047-033", "新北市": "F-D0047-035",
+    "臺中市": "F-D0047-037", "臺南市": "F-D0047-039", "連江縣": "F-D0047-041",
+    "金門縣": "F-D0047-043",
+}
+
+# Wx 代碼 → emoji（CWA 1-42）
+_WX_EMOJI = {
+    1:"☀️",2:"🌤️",3:"⛅",4:"⛅",5:"🌥️",6:"☁️",7:"☁️",
+    8:"🌦️",9:"🌧️",10:"⛈️",11:"🌧️",12:"⛈️",13:"🌦️",
+    14:"⛈️",15:"🌦️",16:"🌦️",17:"⛈️",18:"🌦️",19:"⛈️",
+    20:"🌦️",21:"⛈️",22:"⛈️",23:"🌦️",24:"🌫️",25:"🌧️",
+    26:"🌧️",27:"⛈️",28:"⛈️",29:"🌧️",30:"🌫️",31:"🌫️",
+    32:"🌧️",33:"🌧️",34:"⛈️",35:"🌫️",36:"🌫️",37:"🌦️",
+    38:"⛈️",39:"🌦️",40:"⛈️",41:"🌦️",42:"⛈️",
+}
+_ALERT_WX_CODES = {10,12,14,17,19,21,22,25,26,27,28,34,38,40,42}
+
+# 主要鄉鎮資料庫：(顯示名, CWA 地名, 縣市, 緯度, 經度)
+_TOWNSHIPS = [
+    # ── 台北市 ──
+    ("台北市中正區","中正區","臺北市",25.0439,121.5198),
+    ("台北市大安區","大安區","臺北市",25.0262,121.5433),
+    ("台北市松山區","松山區","臺北市",25.0497,121.5653),
+    ("台北市信義區","信義區","臺北市",25.0336,121.5644),
+    ("台北市中山區","中山區","臺北市",25.0636,121.5244),
+    ("台北市士林區","士林區","臺北市",25.0930,121.5252),
+    ("台北市北投區","北投區","臺北市",25.1322,121.4990),
+    ("台北市內湖區","內湖區","臺北市",25.0632,121.5878),
+    ("台北市南港區","南港區","臺北市",25.0539,121.6068),
+    ("台北市文山區","文山區","臺北市",24.9993,121.5697),
+    ("台北市萬華區","萬華區","臺北市",25.0352,121.5003),
+    # ── 新北市 ──
+    ("新北市板橋區","板橋區","新北市",25.0118,121.4648),
+    ("新北市三重區","三重區","新北市",25.0627,121.4875),
+    ("新北市新莊區","新莊區","新北市",25.0401,121.4429),
+    ("新北市中和區","中和區","新北市",24.9963,121.4999),
+    ("新北市淡水區","淡水區","新北市",25.1679,121.4473),
+    # ── 桃園市 ──
+    ("桃園市桃園區","桃園區","桃園市",24.9936,121.3010),
+    ("桃園市中壢區","中壢區","桃園市",24.9700,121.3108),
+    ("桃園市大園區","大園區","桃園市",25.0780,121.2320),
+    ("桃園市蘆竹區","蘆竹區","桃園市",25.0570,121.2960),
+    # ── 新竹 ──
+    ("新竹市東區","東區","新竹市",24.8020,120.9710),
+    ("新竹縣竹北市","竹北市","新竹縣",24.8232,121.0043),
+    # ── 苗栗縣 ──
+    ("苗栗縣後龍鎮","後龍鎮","苗栗縣",24.5962,120.8014),
+    ("苗栗縣苗栗市","苗栗市","苗栗縣",24.5634,120.8195),
+    # ── 台中市 ──
+    ("台中市烏日區","烏日區","臺中市",24.1272,120.6847),
+    ("台中市中區","中區","臺中市",24.1458,120.6780),
+    ("台中市西屯區","西屯區","臺中市",24.1643,120.6328),
+    # ── 彰化縣 ──
+    ("彰化縣彰化市","彰化市","彰化縣",23.9922,120.5717),
+    # ── 雲林縣 ──
+    ("雲林縣虎尾鎮","虎尾鎮","雲林縣",23.7085,120.4408),
+    ("雲林縣斗六市","斗六市","雲林縣",23.7074,120.5427),
+    # ── 嘉義 ──
+    ("嘉義縣太保市","太保市","嘉義縣",23.4922,120.3236),
+    ("嘉義市東區","東區","嘉義市",23.4798,120.4491),
+    # ── 台南市 ──
+    ("台南市歸仁區","歸仁區","臺南市",22.9524,120.2456),
+    ("台南市中西區","中西區","臺南市",22.9947,120.1997),
+    ("台南市仁德區","仁德區","臺南市",22.9368,120.2418),
+    # ── 高雄市 ──
+    ("高雄市左營區","左營區","高雄市",22.6848,120.2956),
+    ("高雄市三民區","三民區","高雄市",22.6430,120.3100),
+    ("高雄市小港區","小港區","高雄市",22.5701,120.3497),
+    ("高雄市鳳山區","鳳山區","高雄市",22.6263,120.3577),
+    # ── 宜蘭縣 ──
+    ("宜蘭縣宜蘭市","宜蘭市","宜蘭縣",24.7567,121.7544),
+    # ── 花蓮縣 ──
+    ("花蓮縣花蓮市","花蓮市","花蓮縣",23.9919,121.6013),
+    # ── 台東縣 ──
+    ("台東縣台東市","臺東市","臺東縣",22.7583,121.1444),
+    # ── 基隆市 ──
+    ("基隆市仁愛區","仁愛區","基隆市",25.1288,121.7417),
+    # ── 澎湖縣 ──
+    ("澎湖縣馬公市","馬公市","澎湖縣",23.5708,119.5691),
+]
+
+# 前端可選的預設站點
+_PRESET_LOCATIONS = [
+    {"label":"桃園國際機場",  "name":"大園區",  "county":"桃園市","lat":25.0780,"lon":121.2320},
+    {"label":"台北松山機場",  "name":"松山區",  "county":"臺北市","lat":25.0632,"lon":121.5504},
+    {"label":"高雄國際機場",  "name":"小港區",  "county":"高雄市","lat":22.5701,"lon":120.3497},
+    {"label":"高鐵南港站",    "name":"南港區",  "county":"臺北市","lat":25.0539,"lon":121.6068},
+    {"label":"高鐵台北站",    "name":"中正區",  "county":"臺北市","lat":25.0478,"lon":121.5171},
+    {"label":"高鐵板橋站",    "name":"板橋區",  "county":"新北市","lat":25.0118,"lon":121.4648},
+    {"label":"高鐵桃園站",    "name":"中壢區",  "county":"桃園市","lat":24.9700,"lon":121.3108},
+    {"label":"高鐵新竹站",    "name":"竹北市",  "county":"新竹縣","lat":24.8232,"lon":121.0043},
+    {"label":"高鐵苗栗站",    "name":"後龍鎮",  "county":"苗栗縣","lat":24.5962,"lon":120.8014},
+    {"label":"高鐵台中站",    "name":"烏日區",  "county":"臺中市","lat":24.1272,"lon":120.6847},
+    {"label":"高鐵彰化站",    "name":"彰化市",  "county":"彰化縣","lat":23.9922,"lon":120.5717},
+    {"label":"高鐵雲林站",    "name":"虎尾鎮",  "county":"雲林縣","lat":23.7085,"lon":120.4408},
+    {"label":"高鐵嘉義站",    "name":"太保市",  "county":"嘉義縣","lat":23.4922,"lon":120.3236},
+    {"label":"高鐵台南站",    "name":"歸仁區",  "county":"臺南市","lat":22.9524,"lon":120.2456},
+    {"label":"高鐵左營站",    "name":"左營區",  "county":"高雄市","lat":22.6848,"lon":120.2956},
+]
+
+def _haversine(la1, lo1, la2, lo2):
+    R = 6371.0
+    d = lambda a, b: math.radians(b - a)
+    dlat, dlon = d(la1, la2), d(lo1, lo2)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(la1))*math.cos(math.radians(la2))*math.sin(dlon/2)**2
+    return R * 2 * math.asin(math.sqrt(a))
+
+def _nearest_township(lat, lon):
+    return min(_TOWNSHIPS, key=lambda t: _haversine(lat, lon, t[3], t[4]))
+
+def _wx_emoji(code):
+    try:
+        return _WX_EMOJI.get(int(code), "🌡️")
+    except Exception:
+        return "🌡️"
+
+def _parse_elements(elements):
+    """把 weatherElement 列表解析成 {name: [slot, ...]} 字典。"""
+    out = {}
+    for el in elements:
+        name = el.get("elementName") or el.get("ElementName", "")
+        slots = el.get("time") or el.get("Time") or []
+        out[name] = slots
+    return out
+
+def _slot_val(slot, idx=0):
+    ev = slot.get("elementValue") or slot.get("ElementValue") or []
+    if idx < len(ev):
+        return (ev[idx].get("value") or ev[idx].get("Value") or "").strip()
+    return ""
+
+def _slot_time(slot):
+    return slot.get("dataTime") or slot.get("startTime") or slot.get("StartTime") or ""
+
+def _fetch_cwa(township_info):
+    """回傳解析好的天氣 dict；任何錯誤都不拋出。"""
+    display, api_name, county, lat, lon = township_info
+    key = api_name
+    with _WEATHER_CACHE_LOCK:
+        entry = _WEATHER_CACHE.get(key)
+        if entry and time.time() - entry[0] < _WEATHER_CACHE_TTL:
+            return entry[1]
+
+    api_key  = os.environ.get("CWA_API_KEY", "")
+    endpoint = _COUNTY_ENDPOINT.get(county, "F-D0047-089")
+    result   = {
+        "location": api_name, "display": display, "county": county,
+        "lat": lat, "lon": lon,
+        "current": {}, "forecast": [], "alerts": [], "has_alert": False,
+        "error": None,
+    }
+
+    if not api_key:
+        result["error"] = "尚未設定 CWA_API_KEY，請至 CWA 開放資料平臺申請後填入環境變數"
+        with _WEATHER_CACHE_LOCK:
+            _WEATHER_CACHE[key] = (time.time(), result)
+        return result
+
+    # ── 取得鄉鎮預報 ──
+    try:
+        r = _requests.get(
+            f"{_CWA_BASE}/{endpoint}",
+            params={
+                "Authorization": api_key,
+                "locationName":  api_name,
+                "elementName":   "Wx,PoP12h,T,AT,WS,CI,WeatherDescription",
+            },
+            timeout=12,
+        )
+        if not r.ok:
+            raise ValueError(f"CWA 回傳 HTTP {r.status_code}：{r.text[:80]}")
+        raw = r.json()
+        records = raw.get("records", {})
+        # 找出 location 列表（兩種可能的 key）
+        locs_list = (
+            records.get("locations") or records.get("Locations") or
+            records.get("Location")  or []
+        )
+        if isinstance(locs_list, dict):
+            locs_list = [locs_list]
+        location_item = None
+        for locs in locs_list:
+            inner = locs.get("location") or locs.get("Location") or []
+            for loc in inner:
+                if (loc.get("locationName") or loc.get("LocationName") or "") == api_name:
+                    location_item = loc
+                    break
+            if location_item:
+                break
+
+        if location_item:
+            els = _parse_elements(
+                location_item.get("weatherElement") or
+                location_item.get("WeatherElement") or []
+            )
+            wx_slots  = els.get("Wx", [])
+            t_slots   = els.get("T", [])
+            at_slots  = els.get("AT", [])
+            pop_slots = els.get("PoP12h", [])
+            ws_slots  = els.get("WS", [])
+            desc_slots= els.get("WeatherDescription", [])
+
+            wx_code  = int(_slot_val(wx_slots[0], 1)) if wx_slots else 0
+            wx_text  = _slot_val(wx_slots[0], 0)      if wx_slots else "—"
+            temp     = _slot_val(t_slots[0],   0)     if t_slots  else "—"
+            feels    = _slot_val(at_slots[0],  0)     if at_slots else "—"
+            pop      = _slot_val(pop_slots[0], 0)     if pop_slots else "—"
+            wind     = _slot_val(ws_slots[0],  0)     if ws_slots else "—"
+            desc     = _slot_val(desc_slots[0],0)     if desc_slots else ""
+            updated  = _slot_time(wx_slots[0]) if wx_slots else ""
+
+            result["current"] = {
+                "wx":       wx_text,
+                "wx_code":  wx_code,
+                "emoji":    _wx_emoji(wx_code),
+                "temp":     temp,
+                "feels":    feels,
+                "pop12h":   pop,
+                "wind":     wind,
+                "desc":     desc[:120] if desc else "",
+                "updated":  updated[:16].replace("T", " ") if updated else "",
+                "alert":    wx_code in _ALERT_WX_CODES,
+            }
+
+            # 3 天預報（每天取一個白天 slot）
+            days_seen: list[str] = []
+            forecast_map: dict = {}
+            for sl in wx_slots:
+                st = _slot_time(sl)
+                day = st[:10] if st else ""
+                if not day or day in forecast_map:
+                    continue
+                forecast_map[day] = {
+                    "date":    day,
+                    "wx":      _slot_val(sl, 0),
+                    "wx_code": int(_slot_val(sl, 1) or "0"),
+                    "emoji":   _wx_emoji(_slot_val(sl, 1)),
+                    "pop":     "",
+                }
+                days_seen.append(day)
+                if len(days_seen) >= 3:
+                    break
+            # 補填 PoP12h
+            for sl in pop_slots:
+                day = _slot_time(sl)[:10]
+                if day in forecast_map and not forecast_map[day]["pop"]:
+                    forecast_map[day]["pop"] = _slot_val(sl, 0)
+            # 補填溫度範圍
+            t_map: dict = {}
+            for sl in t_slots:
+                day = _slot_time(sl)[:10]
+                v   = _slot_val(sl, 0)
+                if not v:
+                    continue
+                if day not in t_map:
+                    t_map[day] = {"lo": v, "hi": v}
+                else:
+                    try:
+                        fv = float(v)
+                        if fv < float(t_map[day]["lo"]): t_map[day]["lo"] = v
+                        if fv > float(t_map[day]["hi"]): t_map[day]["hi"] = v
+                    except Exception:
+                        pass
+            for day in days_seen:
+                fd = forecast_map[day]
+                tr = t_map.get(day, {})
+                fd["lo"] = tr.get("lo", "—")
+                fd["hi"] = tr.get("hi", "—")
+            result["forecast"] = [forecast_map[d] for d in days_seen]
+
+    except Exception as e:
+        result["error"] = f"預報取得失敗：{str(e)[:120]}"
+
+    # ── 取得特報 ──
+    try:
+        r2 = _requests.get(
+            f"{_CWA_BASE}/W-C0033-001",
+            params={"Authorization": api_key, "locationName": county},
+            timeout=10,
+        )
+        if not r2.ok:
+            raise ValueError(f"HTTP {r2.status_code}")
+        raw2  = r2.json()
+        recs2 = raw2.get("records", {})
+        alts  = (
+            recs2.get("location") or recs2.get("Location") or
+            recs2.get("hazardConditions", {}).get("hazards") or []
+        )
+        alerts = []
+        if isinstance(alts, list):
+            for item in alts:
+                hazards = item.get("hazardConditions", {}).get("hazards") or []
+                if isinstance(hazards, dict):
+                    hazards = hazards.get("hazard", [])
+                    if isinstance(hazards, dict):
+                        hazards = [hazards]
+                for h in hazards:
+                    info = h.get("info", {})
+                    phen = info.get("phenomena", "") or info.get("語言", "")
+                    sig  = info.get("significance", "") or ""
+                    if phen:
+                        alerts.append(f"{phen}{sig}".strip())
+        result["alerts"]    = alerts
+        result["has_alert"] = len(alerts) > 0
+    except Exception:
+        pass  # 特報取得失敗不影響主要資料
+
+    with _WEATHER_CACHE_LOCK:
+        _WEATHER_CACHE[key] = (time.time(), result)
+    return result
+
+
+@app.route("/weather")
+def weather_page():
+    return render_template(
+        "weather.html",
+        presets=_PRESET_LOCATIONS,
+    )
+
+@app.route("/api/weather")
+def api_weather():
+    try:
+        lat = float(request.args.get("lat", ""))
+        lon = float(request.args.get("lon", ""))
+    except (TypeError, ValueError):
+        return jsonify({"error": "需要 lat 與 lon 參數"}), 400
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return jsonify({"error": "座標超出範圍"}), 400
+
+    # 允許直接以 name+county 精確查詢（前端手動選站點時使用）
+    name   = request.args.get("name", "").strip()
+    county = request.args.get("county", "").strip()
+    if name and county:
+        township = next(
+            (t for t in _TOWNSHIPS if t[1] == name and t[2] == county),
+            None
+        )
+        if not township:
+            township = (name, name, county, lat, lon)
+    else:
+        township = _nearest_township(lat, lon)
+
+    data = _fetch_cwa(township)
+    return jsonify(data)
 
 
 if __name__ == "__main__":
