@@ -237,8 +237,8 @@ body {
   color: #1c1c1e;
 }
 .hero-city {
-  font-size: 0.68rem; color: #8e8e93;
-  margin-top: 3px; text-align: right;
+  font-size: 0.78rem; font-weight: 600; color: #636366;
+  margin-top: 4px; text-align: right;
 }
 
 /* ── 3. Time row ── */
@@ -505,6 +505,34 @@ document.body.addEventListener('animationend', function() {
   this.style.opacity   = '1';
 }, { once: true });
 
+/* ── 機場中文靜態對照（TDX 沒資料時兜底） ── */
+const AP_ZH = {
+  'TPE':'桃園','TSA':'松山','KHH':'高雄','TNN':'台南','RMQ':'台中','TTT':'台東','HUN':'花蓮',
+  'HKG':'香港','MFM':'澳門',
+  'NRT':'東京成田','HND':'東京羽田','KIX':'大阪關西','ITM':'大阪伊丹',
+  'NGO':'名古屋','FUK':'福岡','CTS':'札幌','OKA':'沖繩','SDJ':'仙台','HIJ':'廣島',
+  'ICN':'首爾仁川','GMP':'首爾金浦','PUS':'釜山',
+  'PEK':'北京首都','PKX':'北京大興','PVG':'上海浦東','SHA':'上海虹橋',
+  'CAN':'廣州','SZX':'深圳','XMN':'廈門','CTU':'成都','CSX':'長沙',
+  'KUL':'吉隆坡','SZB':'吉隆坡莎阿南','PEN':'檳城','LGK':'蘭卡威',
+  'JHB':'新山','KCH':'古晉','BKI':'亞庇','MYY':'美里','SDK':'仙德坎',
+  'IPH':'怡保','AOR':'亞羅士打','TGG':'瓜拉丁加奴','KBR':'哥打峇魯',
+  'BKK':'曼谷素萬那普','DMK':'曼谷廊曼','HKT':'普吉','CNX':'清邁',
+  'HKT':'普吉','CEI':'清萊','USM':'蘇梅島','URT':'蘇叻他尼',
+  'SIN':'新加坡',
+  'MNL':'馬尼拉','CEB':'宿霧','CRK':'克拉克','DVO':'達沃','ILO':'依洛伊洛',
+  'CGK':'雅加達','DPS':'峇里島','SUB':'泗水','JOG':'日惹','BPN':'巴厘巴板',
+  'MDC':'萬鴉老','UPG':'望加錫','SRG':'三寶瓏','PLM':'巨港',
+  'HAN':'河內','SGN':'胡志明市','DAD':'峴港','CXR':'芽莊','PQC':'富國島',
+  'PNH':'金邊','REP':'暹粒',
+  'RGN':'仰光',
+  'SYD':'雪梨','MEL':'墨爾本','BNE':'布里斯本','PER':'柏斯',
+  'DXB':'杜拜','DOH':'多哈','AUH':'阿布達比',
+  'LHR':'倫敦希斯羅','CDG':'巴黎','FRA':'法蘭克福','AMS':'阿姆斯特丹',
+  'LAX':'洛杉磯','SFO':'舊金山','JFK':'紐約','ORD':'芝加哥',
+  'YVR':'溫哥華','YYZ':'多倫多',
+};
+
 /* ── 狀態對照 ── */
 const ST_MAP = [
   [/(準時|On.?Time|正常)/i,          'ontime',   '準時'],
@@ -749,7 +777,7 @@ function renderCard(f, mode, showDirBadge) {
   const airline   = f.AirlineID    || '??';
   const fltNum    = f.FlightNumber || '—';
   const counterAp = isArr ? (f.DepartureAirportID || '') : (f.ArrivalAirportID || '');
-  const cityName  = (_airportMap[counterAp] || {}).zh || counterAp || '—';
+  const cityName  = (_airportMap[counterAp] || {}).zh || AP_ZH[counterAp] || counterAp || '—';
 
   const sch = isArr ? f.ScheduleArrivalTime    : f.ScheduleDepartureTime;
   const est = isArr ? (f.EstimatedArrivalTime  || f.EstimateArrivalTime)
