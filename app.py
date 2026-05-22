@@ -830,8 +830,8 @@ threading.Thread(target=_share_cleanup, daemon=True).start()
 # ── Upstash Redis REST helpers ──────────────────
 def _redis(method: str, *args):
     """執行單一 Upstash Redis REST 命令；失敗回傳 None。"""
-    url   = os.environ.get("UPSTASH_REDIS_REST_URL", "")
-    token = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+    url   = os.environ.get("KV_REST_API_URL", "")
+    token = os.environ.get("KV_REST_API_TOKEN", "")
     if not url or not token:
         return None
     try:
