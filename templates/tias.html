@@ -109,6 +109,8 @@ body {
 
 /* ── Search ── */
 .search-wrap { padding: 10px 12px 0; }
+.topbar-search { padding: 0 12px 10px; display: none; }
+.topbar-search.show { display: block; }
 .search-input {
   width: 100%; padding: 12px 14px;
   border: 1.5px solid #e5e5ea; border-radius: 12px;
@@ -449,6 +451,16 @@ body {
     <div class="tab"        id="tab-all" onclick="switchTab('all')">🔍 全航班</div>
     <div class="tab-indicator" id="tabIndicator"></div>
   </div>
+  <div class="topbar-search" id="topbarSearch">
+    <input
+      id="searchInput"
+      class="search-input"
+      type="search"
+      autocomplete="off" autocorrect="off" spellcheck="false"
+      placeholder="航班號、航司、機場、登機門（B7）、報到櫃檯（D01）"
+      oninput="onSearchInput()"
+    >
+  </div>
 </div>
 
 <div class="meta-bar">
@@ -473,16 +485,6 @@ body {
 <div class="list" id="listDep" style="display:none"><div class="loading">載入中…</div></div>
 
 <div id="panelAll" style="display:none">
-  <div class="search-wrap">
-    <input
-      id="searchInput"
-      class="search-input"
-      type="search"
-      autocomplete="off" autocorrect="off" spellcheck="false"
-      placeholder="航班號、航司、機場、登機門（B7）、報到櫃檯（D01）"
-      oninput="onSearchInput()"
-    >
-  </div>
   <div id="searchCount" class="search-count"></div>
   <div id="searchHint" class="search-hint">
     <span class="hint-icon">🔍</span>
@@ -888,6 +890,7 @@ function switchTab(tab) {
     }));
 
     _tab = tab;
+    document.getElementById('topbarSearch').classList.toggle('show', tab === 'all');
     const hint = document.getElementById('airlineHint');
     if (tab === 'all') {
       hint.textContent = 'TPE 全部即時航班';
