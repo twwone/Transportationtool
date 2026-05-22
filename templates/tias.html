@@ -616,18 +616,58 @@ function applyWatchFilter() {
   _depData = _allDep.filter(watched);
 }
 
+function _buildListWithNow(flights, dir, emptyIcon, emptyMsg) {
+  if (!flights.length)
+    return `<div class="empty"><span class="empty-icon">${emptyIcon}</span>${emptyMsg}</div>`;
+
+  const now    = new Date();
+  const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const nowDivHtml = `<div class="now-divider" id="nowDivider-${dir}">
+    <span class="now-line"></span>
+    <span class="now-label">▶ 現在 ${nowStr}</span>
+    <span class="now-line"></span>
+  </div>`;
+
+  /* 依表訂時間排序 */
+  const sorted = [...flights].sort((a, b) => {
+    const ta = (dir === 'arr' ? a.ScheduleArrivalTime : a.ScheduleDepartureTime) || '';
+    const tb = (dir === 'arr' ? b.ScheduleArrivalTime : b.ScheduleDepartureTime) || '';
+    return ta.localeCompare(tb);
+  });
+
+  let html = '';
+  let inserted = false;
+  for (const f of sorted) {
+    const iso = (dir === 'arr' ? f.ScheduleArrivalTime : f.ScheduleDepartureTime) || '';
+    if (!inserted && iso && new Date(iso) > now) {
+      html += nowDivHtml;
+      inserted = true;
+    }
+    html += renderCard(f, dir);
+  }
+  if (!inserted) html += nowDivHtml;
+  return html;
+}
+
 function renderWatchTabs() {
   const arrEl = document.getElementById('listArr');
-  arrEl.innerHTML = _arrData.length
-    ? _arrData.map(f => renderCard(f, 'arr')).join('')
-    : `<div class="empty"><span class="empty-icon">🛬</span>目前監控的航空公司無入港班機</div>`;
+  arrEl.innerHTML = _buildListWithNow(_arrData, 'arr', '🛬', '目前監控的航空公司無入港班機');
   if (_arrData.length && _initialLoad) staggerCards(arrEl);
 
   const depEl = document.getElementById('listDep');
-  depEl.innerHTML = _depData.length
-    ? _depData.map(f => renderCard(f, 'dep')).join('')
-    : `<div class="empty"><span class="empty-icon">🛫</span>目前監控的航空公司無出港班機</div>`;
+  depEl.innerHTML = _buildListWithNow(_depData, 'dep', '🛫', '目前監控的航空公司無出港班機');
   if (_depData.length && _initialLoad) staggerCards(depEl);
+
+  /* 自動捲動到目前 tab 的 now 分隔線 */
+  setTimeout(() => {
+    const divId = _tab === 'dep' ? 'nowDivider-dep' : 'nowDivider-arr';
+    const el = document.getElementById(divId);
+    if (!el) return;
+    try {
+      const top = el.getBoundingClientRect().top + window.pageYOffset - 60;
+      window.scrollTo({ top: Math.max(0, top) });
+    } catch (_) { el.scrollIntoView(); }
+  }, 200);
 }
 
 /* ── 選擇器 ── */
@@ -965,6 +1005,15 @@ function switchTab(tab) {
       setTimeout(runSearch, 320);
     } else {
       renderAirlineHint();
+      /* 切換到入港/出港後捲到「現在」分隔線 */
+      setTimeout(() => {
+        const el = document.getElementById(`nowDivider-${tab}`);
+        if (!el) return;
+        try {
+          const top = el.getBoundingClientRect().top + window.pageYOffset - 60;
+          window.scrollTo({ top: Math.max(0, top) });
+        } catch (_) { el.scrollIntoView(); }
+      }, 400);
     }
   }, 170);
 }
