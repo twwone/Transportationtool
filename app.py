@@ -1165,6 +1165,7 @@ def _fetch_cwa(township_info):
             at_slots   = _get_el(els, "最高體感溫度")
             pop_slots  = _get_el(els, "12小時降雨機率")
             ws_slots   = _get_el(els, "風速")
+            rh_slots   = _get_el(els, "平均相對濕度")
             desc_slots = _get_el(els, "天氣預報綜合描述")
 
             wx_code_s = _ev_get(wx_slots[0],  "WeatherCode")    if wx_slots   else ""
@@ -1174,29 +1175,32 @@ def _fetch_cwa(township_info):
                         (_ev_get(t_hi_slots[0], "MaxTemperature") if t_hi_slots else "") or "—"
             feels     = _ev_get(at_slots[0],  "MaxApparentTemperature") if at_slots  else "—"
             pop       = _ev_get(pop_slots[0], "ProbabilityOfPrecipitation") if pop_slots else "—"
-            wind      = _ev_get(ws_slots[0],  "WindSpeed")      if ws_slots   else "—"
-            desc      = _ev_get(desc_slots[0],"WeatherDescription") if desc_slots else ""
+            wind      = _ev_get(ws_slots[0],  "WindSpeed")                         if ws_slots   else "—"
+            rh        = _ev_get(rh_slots[0],  "RelativeHumidity", "RH", "Value") if rh_slots   else "—"
+            desc      = _ev_get(desc_slots[0],"WeatherDescription")               if desc_slots else ""
             updated   = _slot_start(wx_slots[0]) if wx_slots else ""
 
             result["current"] = {
-                "wx":      wx_text,
-                "wx_code": wx_code,
-                "emoji":   _wx_emoji(wx_code),
-                "temp":    temp,
-                "feels":   feels,
-                "pop12h":  pop,
-                "wind":    wind,
-                "desc":    desc[:130] if desc else "",
-                "updated": updated[:19].replace("T", " ") if updated else "",
-                "alert":   wx_code in _ALERT_WX_CODES,
+                "wx":       wx_text,
+                "wx_code":  wx_code,
+                "emoji":    _wx_emoji(wx_code),
+                "temp":     temp,
+                "feels":    feels,
+                "pop12h":   pop,
+                "wind":     wind,
+                "humidity": rh,
+                "desc":     desc[:130] if desc else "",
+                "updated":  updated[:19].replace("T", " ") if updated else "",
+                "alert":    wx_code in _ALERT_WX_CODES,
             }
 
-            # ── 3 天預報 ──
+            # ── 7 天預報（只取今天起往後） ──
+            today_str = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
             days_seen: list[str] = []
             forecast_map: dict   = {}
             for sl in wx_slots:
                 day = _slot_start(sl)[:10]
-                if not day or day in forecast_map:
+                if not day or day in forecast_map or day < today_str:
                     continue
                 wc = _ev_get(sl, "WeatherCode")
                 forecast_map[day] = {
@@ -1280,10 +1284,11 @@ def _fetch_cwa(township_info):
                 h_pop  = _get_el(els_o, "3小時降雨機率")
                 t_map   = {_slot_start(s): _ev_get(s, "Temperature") for s in h_t}
                 pop_map = {_slot_start(s): _ev_get(s, "ProbabilityOfPrecipitation") for s in h_pop}
+                now_ts = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%dT%H")
                 hourly = []
-                for sl in h_wx[:24]:
+                for sl in h_wx:
                     ts = _slot_start(sl)
-                    if not ts:
+                    if not ts or ts[:13] < now_ts:
                         continue
                     wc = _ev_get(sl, "WeatherCode")
                     hourly.append({
@@ -1293,6 +1298,8 @@ def _fetch_cwa(township_info):
                         "temp":    t_map.get(ts, "—") or "—",
                         "pop":     pop_map.get(ts, "") or "",
                     })
+                    if len(hourly) >= 16:
+                        break
                 result["hourly"] = hourly
     except Exception:
         pass
