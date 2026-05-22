@@ -442,13 +442,13 @@ body {
   <div class="topbar-row">
     <a href="/" class="back-btn">‹ 返回</a>
     <span class="topbar-title">✈️ 航空資訊看板</span>
-    <button class="refresh-btn" onclick="openAirlinePicker()">航司 ▾</button>
-    <button class="refresh-btn" id="refreshBtn" onclick="load(true)">↻ 重整</button>
+    <button class="refresh-btn" onclick="openAirlinePicker()">航空公司 ▾</button>
+    <button class="refresh-btn" id="refreshBtn" onclick="load(true)">↻ 重新整理</button>
   </div>
   <div class="tabs">
-    <div class="tab active" id="tab-arr" onclick="switchTab('arr')">🛬 入港</div>
-    <div class="tab"        id="tab-dep" onclick="switchTab('dep')">🛫 出港</div>
-    <div class="tab"        id="tab-all" onclick="switchTab('all')">🔍 全航班</div>
+    <div class="tab active" id="tab-arr" onclick="switchTab('arr')">🛬 抵達</div>
+    <div class="tab"        id="tab-dep" onclick="switchTab('dep')">🛫 出發</div>
+    <div class="tab"        id="tab-all" onclick="switchTab('all')">🔍 全部航班</div>
     <div class="tab-indicator" id="tabIndicator"></div>
   </div>
   <div class="topbar-search" id="topbarSearch">
@@ -457,7 +457,7 @@ body {
       class="search-input"
       type="search"
       autocomplete="off" autocorrect="off" spellcheck="false"
-      placeholder="航班號、航司、機場、登機門（B7）、報到櫃檯（D01）"
+      placeholder="航班號、航空公司、機場、登機門（B7）、報到櫃檯（D01）"
       oninput="onSearchInput()"
     >
   </div>
@@ -489,7 +489,7 @@ body {
   <div id="searchHint" class="search-hint">
     <span class="hint-icon">🔍</span>
     輸入 2 個字元以上開始檢索<br>
-    <span style="font-size:0.75rem">航班號 · 航司代碼 · 機場 · 登機門 · 報到櫃檯</span>
+    <span style="font-size:0.75rem">航班號 · 航空公司代碼 · 機場 · 登機門 · 報到櫃檯</span>
   </div>
   <div class="list" id="allResults"></div>
 </div>
@@ -535,21 +535,21 @@ const AP_ZH = {
 
 /* ── 狀態對照 ── */
 const ST_MAP = [
-  [/(準時|On.?Time|正常)/i,          'ontime',   '準時'],
-  [/(延誤|Delay)/i,                   'delay',    '延誤'],
-  [/(落地|Arrived?|抵達|已到)/i,       'landed',   '落地'],
-  [/(起飛|Depart|出發|已出發)/i,       'depart',   '已起飛'],
+  [/(準時|On.?Time|正常)/i,          'ontime',   '準點'],
+  [/(延誤|Delay)/i,                   'delay',    '誤點'],
+  [/(落地|Arrived?|抵達|已到)/i,       'landed',   '已抵達'],
+  [/(起飛|Depart|出發|已出發)/i,       'depart',   '已出發'],
   [/(登機|Board)/i,                   'board',    '登機中'],
   [/(取消|Cancel)/i,                  'cancel',   '取消'],
-  [/(轉降|Divert)/i,                  'diverted', '轉降'],
+  [/(轉降|Divert)/i,                  'diverted', '備降'],
 ];
 
 /* ── 出港 TAT 里程碑 ── */
 const MILESTONES = [
-  { key:'open',  label:'開始報到', offset:-180 },
-  { key:'close', label:'截止報到', offset:-45  },
-  { key:'board', label:'開始登機', offset:-40  },
-  { key:'gate',  label:'關艙門',   offset:-15  },
+  { key:'open',  label:'報到開始', offset:-180 },
+  { key:'close', label:'報到截止', offset:-45  },
+  { key:'board', label:'登機開始', offset:-40  },
+  { key:'gate',  label:'關閉艙門', offset:-15  },
   { key:'std',   label:'起飛',     offset:0    },
 ];
 
@@ -651,11 +651,11 @@ function _buildListWithNow(flights, dir, emptyIcon, emptyMsg) {
 
 function renderWatchTabs() {
   const arrEl = document.getElementById('listArr');
-  arrEl.innerHTML = _buildListWithNow(_arrData, 'arr', '🛬', '目前監控的航空公司無入港班機');
+  arrEl.innerHTML = _buildListWithNow(_arrData, 'arr', '🛬', '目前監控的航空公司無抵達班機');
   if (_arrData.length && _initialLoad) staggerCards(arrEl);
 
   const depEl = document.getElementById('listDep');
-  depEl.innerHTML = _buildListWithNow(_depData, 'dep', '🛫', '目前監控的航空公司無出港班機');
+  depEl.innerHTML = _buildListWithNow(_depData, 'dep', '🛫', '目前監控的航空公司無出發班機');
   if (_depData.length && _initialLoad) staggerCards(depEl);
 
   /* 自動捲動到目前 tab 的 now 分隔線 */
@@ -808,7 +808,7 @@ function buildTAT(stdIso, etdIso) {
 
   let headTxt = '', headCls = '';
   if (!nextMs) {
-    headTxt = `✅ 已起飛 ${Math.round(nowMins)} 分鐘前`;
+    headTxt = `✅ 已出發 ${Math.round(nowMins)} 分鐘前`;
   } else {
     const remain = Math.round(nextMs.offset - nowMins);
     if (remain <= 5)       { headTxt = `🚨 ${nextMs.label} 即將到達！剩 ${remain} 分`; headCls = 'phase-urgent'; }
@@ -886,7 +886,7 @@ function renderCard(f, mode, showDirBadge) {
     ? shares.map(c => `<span class="badge-airline">${c.AirlineID}</span>`).join('')
     : `<span class="badge-airline">${f.AirlineID || '??'}</span>`;
   const dirBadge  = showDirBadge
-    ? (isArr ? '<span class="badge-dir-arr">入港</span>' : '<span class="badge-dir-dep">出港</span>')
+    ? (isArr ? '<span class="badge-dir-arr">抵達</span>' : '<span class="badge-dir-dep">出發</span>')
     : '';
 
   const _fltKey   = shares ? shares[0].FlightNumber : fltNum;
@@ -1001,7 +1001,7 @@ function switchTab(tab) {
     document.getElementById('topbarSearch').classList.toggle('show', tab === 'all');
     const hint = document.getElementById('airlineHint');
     if (tab === 'all') {
-      hint.textContent = 'TPE 全部即時航班';
+      hint.textContent = '桃園機場 即時航班';
       setTimeout(runSearch, 320);
     } else {
       renderAirlineHint();
@@ -1026,7 +1026,7 @@ function renderAirlineHint() {
           const m = _airlineMap[code];
           return m?.zh ? `${m.zh} (${code})` : code;
         }).join(' · ')
-      : '未選擇航空公司';
+      : '未選擇監控航空公司';
   }
 }
 
@@ -1079,7 +1079,7 @@ function runSearch() {
         || gate.includes(q) || counter.includes(q) || baggage.includes(q);
   });
 
-  countEl.textContent = results.length ? `共 ${results.length} 筆` : '';
+  countEl.textContent = results.length ? `共 ${results.length} 班次` : '';
   resEl.innerHTML = results.length
     ? results.map(f => renderCard(f, f._dir, true)).join('')
     : `<div class="empty"><span class="empty-icon">🔍</span>查無「${q}」相關航班</div>`;
@@ -1113,7 +1113,7 @@ function renderAllByTime() {
     return ta.localeCompare(tb);
   });
 
-  countEl.textContent = `全天 ${allSorted.length} 筆`;
+  countEl.textContent = `全天 ${allSorted.length} 班次`;
 
   const nowDividerHtml = `<div class="now-divider" id="nowDivider">
     <span class="now-line"></span>
@@ -1242,7 +1242,7 @@ async function load() {
     document.getElementById('errWrap').innerHTML =
       `<div class="error-banner">⚠️ 連線失敗，請稍後再試。</div>`;
   } finally {
-    btn.innerHTML = '↻ 重整';
+    btn.innerHTML = '↻ 重新整理';
     btn.disabled  = false;
   }
 }
