@@ -1103,7 +1103,8 @@ function renderAllByTime() {
   const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const total  = _allArr.length + _allDep.length;
 
-  const allBase = [
+  /* 照桃園機場官網做法：全部班機按 STD 升冪，無時間窗口限制 */
+  const allSorted = [
     ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
     ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
   ].sort((a, b) => {
@@ -1112,33 +1113,7 @@ function renderAllByTime() {
     return ta.localeCompare(tb);
   });
 
-  /* 先嘗試時間窗口（前 4h ～ 後 12h） */
-  const winStart = new Date(now.getTime() - 4 * 60 * 60 * 1000);
-  const winEnd   = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-
-  let allSorted = allBase.filter(f => {
-    const iso = f._dir === 'arr' ? f.ScheduleArrivalTime : f.ScheduleDepartureTime;
-    if (!iso) return true;
-    const t = new Date(iso);
-    return isNaN(t) || (t >= winStart && t <= winEnd);
-  });
-
-  /* 接下來 2h 內無班機（凌晨/清晨 FIDS 資料尚未載入）→ 展開全天 */
-  const near2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-  const hasNearFlight = allSorted.some(f => {
-    const iso = f._dir === 'arr' ? f.ScheduleArrivalTime : f.ScheduleDepartureTime;
-    if (!iso) return false;
-    const t = new Date(iso);
-    return !isNaN(t) && t > now && t <= near2h;
-  });
-
-  /* 窗口內無班機 或 近 2h 無班機 → 顯示全天 */
-  const windowed = allSorted.length > 0 && hasNearFlight;
-  if (!windowed) allSorted = allBase;
-
-  countEl.textContent = windowed
-    ? `顯示 ${allSorted.length} / ${total} 筆（前4h ～ 後12h）`
-    : `全天 ${allSorted.length} 筆（附近無班機，顯示完整班表）`;
+  countEl.textContent = `全天 ${allSorted.length} 筆`;
 
   const nowDividerHtml = `<div class="now-divider" id="nowDivider">
     <span class="now-line"></span>
