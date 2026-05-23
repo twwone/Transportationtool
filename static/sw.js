@@ -1,5 +1,5 @@
 const CACHE = 'transport-v4';
-const PRECACHE = ['/', '/thsr', '/mrt', '/static/icon.svg', '/static/manifest.json', '/static/config.js'];
+const PRECACHE = ['/', '/mrt', '/static/icon.svg', '/static/manifest.json', '/static/config.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

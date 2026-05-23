@@ -24,7 +24,8 @@ app = Flask(__name__)
 #  TDX API（桃園機場捷運即時資料）
 # ──────────────────────────────────────────────
 _tdx_cache: dict = {"token": None, "expires_at": 0.0}
-_tdx_lock = threading.Lock()
+_tdx_lock         = threading.Lock()
+_tdx_refresh_lock = threading.Lock()  # 確保同時只有一個執行緒去刷新 token
 
 _MRT_STATIONS = [
     {"id": "A1",   "name": "台北車站"},
@@ -59,27 +60,31 @@ def _get_tdx_token() -> str | None:
     with _tdx_lock:
         if _tdx_cache["token"] and now < _tdx_cache["expires_at"] - 60:
             return _tdx_cache["token"]
-    # 鎖釋放後再發 HTTP，避免 token 刷新期間阻塞所有 API 呼叫
-    try:
-        resp = _requests.post(
-            "https://tdx.transportdata.tw/auth/realms/TDXConnect"
-            "/protocol/openid-connect/token",
-            data={
-                "grant_type":    "client_credentials",
-                "client_id":     client_id,
-                "client_secret": client_secret,
-            },
-            timeout=10,
-        )
-        data = resp.json()
-        token = data.get("access_token")
+    # 同時只允許一個執行緒去刷新；其他執行緒等待後直接讀快取
+    with _tdx_refresh_lock:
         with _tdx_lock:
-            _tdx_cache["token"]      = token
-            _tdx_cache["expires_at"] = now + data.get("expires_in", 300)
-        return token
-    except Exception:
-        with _tdx_lock:
-            return _tdx_cache.get("token")
+            if _tdx_cache["token"] and time.time() < _tdx_cache["expires_at"] - 60:
+                return _tdx_cache["token"]
+        try:
+            resp = _requests.post(
+                "https://tdx.transportdata.tw/auth/realms/TDXConnect"
+                "/protocol/openid-connect/token",
+                data={
+                    "grant_type":    "client_credentials",
+                    "client_id":     client_id,
+                    "client_secret": client_secret,
+                },
+                timeout=10,
+            )
+            data  = resp.json()
+            token = data.get("access_token")
+            with _tdx_lock:
+                _tdx_cache["token"]      = token
+                _tdx_cache["expires_at"] = time.time() + data.get("expires_in", 300)
+            return token
+        except Exception:
+            with _tdx_lock:
+                return _tdx_cache.get("token")
 
 # ──────────────────────────────────────────────
 #  首頁（交通工具選單）
@@ -339,7 +344,9 @@ def _fetch_metadata() -> tuple[dict, dict]:
             _meta_cache["airlines"] = airline_map
         if airport_map:
             _meta_cache["airports"] = airport_map
-        _meta_cache["expires_at"] = time.time() + _META_TTL
+        # 兩者都成功才快取完整 24h；任一失敗 5 分鐘後重試
+        both_ok = bool(airline_map) and bool(airport_map)
+        _meta_cache["expires_at"] = time.time() + (_META_TTL if both_ok else 300)
         return _meta_cache["airlines"], _meta_cache["airports"]
 
 def _fetch_tias():
