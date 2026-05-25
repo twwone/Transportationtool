@@ -624,9 +624,9 @@ body::before{
       <div class="form-hint">其他裝置輸入相同代碼即可同步資料。<br>⚠ 更改代碼後會切換到該代碼的資料。</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Gemini API 金鑰（選填）</label>
-      <input class="form-input" type="password" id="setGeminiKey" placeholder="AIza…（留空使用伺服器預設）">
-      <div class="form-hint">填入您自己的 Gemini API 金鑰可使用個人配額。<br>前往 <strong>aistudio.google.com</strong> 免費取得。</div>
+      <label class="form-label">AI API 金鑰</label>
+      <input class="form-input" type="password" id="setGeminiKey" placeholder="sk-or-…">
+      <div class="form-hint">前往 <strong>openrouter.ai</strong> 免費註冊取得金鑰（不需信用卡）。<br>使用免費的 Gemini 2.0 Flash 模型辨識食物。</div>
     </div>
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeSettings()">取消</button>
@@ -895,7 +895,7 @@ async function doAnalyze() {
     const fd = new FormData();
     fd.append('image', _compressedBlob, 'food.jpg');
     const geminiKey = getGeminiKey();
-    if (geminiKey) fd.append('gemini_key', geminiKey);
+    if (geminiKey) fd.append('ai_key', geminiKey);
     const resp = await fetch('/api/analyze-food', { method: 'POST', body: fd });
     const data = await resp.json();
 
