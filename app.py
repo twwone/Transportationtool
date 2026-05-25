@@ -1791,48 +1791,58 @@ def api_weather():
 # ══════════════════════════════════════════════
 #  AI 飲食熱量追蹤（Gemini Vision + 跨裝置同步）
 # ══════════════════════════════════════════════
-import sqlite3 as _sqlite3
-from pathlib import Path as _Path
-from datetime import date as _date_cls, timedelta as _td2
+from datetime import date as _date_cls
 
-_DIET_DB = _Path(__file__).parent / "diet.db"
+# ── KV storage layer (Vercel KV / Upstash Redis REST API) ──
+# Vercel KV 會自動注入 KV_REST_API_URL / KV_REST_API_TOKEN
+# 若未設定則使用 in-memory fallback（重啟後資料消失，但不會 crash）
+_KV_URL   = (os.environ.get("KV_REST_API_URL") or "").rstrip("/")
+_KV_TOKEN = os.environ.get("KV_REST_API_TOKEN") or ""
+_diet_mem: dict = {}  # in-memory fallback
 
-def _diet_db():
-    conn = _sqlite3.connect(_DIET_DB)
-    conn.row_factory = _sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
 
-def _init_diet_db():
-    with _diet_db() as conn:
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS diet_records (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                sync_id     TEXT    NOT NULL,
-                date        TEXT    NOT NULL,
-                food_name   TEXT    NOT NULL,
-                calories    INTEGER NOT NULL DEFAULT 0,
-                carbs       INTEGER NOT NULL DEFAULT 0,
-                protein     INTEGER NOT NULL DEFAULT 0,
-                fat         INTEGER NOT NULL DEFAULT 0,
-                ts          INTEGER NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_diet_sync_date
-                ON diet_records(sync_id, date);
-            CREATE TABLE IF NOT EXISTS diet_day_meta (
-                sync_id      TEXT NOT NULL,
-                date         TEXT NOT NULL,
-                debt         INTEGER DEFAULT 0,
-                cheat_spread TEXT DEFAULT NULL,
-                PRIMARY KEY (sync_id, date)
-            );
-        """)
+def _kv_get(key: str):
+    if not (_KV_URL and _KV_TOKEN):
+        return _diet_mem.get(key)
+    try:
+        r = _requests.get(
+            f"{_KV_URL}/get/{key}",
+            headers={"Authorization": f"Bearer {_KV_TOKEN}"},
+            timeout=5,
+        )
+        val = r.json().get("result")
+        return _json.loads(val) if val else None
+    except Exception:
+        return _diet_mem.get(key)
 
-_init_diet_db()
+
+def _kv_set(key: str, value) -> None:
+    serialized = _json.dumps(value, ensure_ascii=False)
+    if not (_KV_URL and _KV_TOKEN):
+        _diet_mem[key] = value
+        return
+    try:
+        _requests.post(
+            _KV_URL,
+            headers={"Authorization": f"Bearer {_KV_TOKEN}", "Content-Type": "application/json"},
+            json=["SET", key, serialized],
+            timeout=5,
+        )
+    except Exception:
+        _diet_mem[key] = value  # fallback on network error
+
+
+def _diet_load(sync_id: str) -> dict:
+    data = _kv_get(f"diet:bank:{sync_id}")
+    return data if isinstance(data, dict) else {}
+
+
+def _diet_save(sync_id: str, bank: dict) -> None:
+    _kv_set(f"diet:bank:{sync_id}", bank)
 
 
 def _valid_sync_id(sid: str) -> bool:
-    return bool(sid) and len(sid) <= 64 and _re.match(r'^[a-zA-Z0-9_\-]+$', sid)
+    return bool(sid) and len(sid) <= 64 and bool(_re.match(r'^[a-zA-Z0-9_\-]+$', sid))
 
 
 @app.route("/diet")
@@ -1844,43 +1854,13 @@ def diet():
 def diet_bank_get(sync_id):
     if not _valid_sync_id(sync_id):
         return jsonify({"error": "invalid sync_id"}), 400
-    with _diet_db() as conn:
-        rows = conn.execute(
-            "SELECT date, food_name, calories, carbs, protein, fat, ts "
-            "FROM diet_records WHERE sync_id=? ORDER BY date, ts",
-            (sync_id,)
-        ).fetchall()
-        metas = conn.execute(
-            "SELECT date, debt, cheat_spread FROM diet_day_meta WHERE sync_id=?",
-            (sync_id,)
-        ).fetchall()
-
-    bank: dict = {}
-    for r in rows:
-        d = r["date"]
-        if d not in bank:
-            bank[d] = {"records": [], "debt": 0}
-        bank[d]["records"].append({
-            "food_name": r["food_name"],
-            "calories":  r["calories"],
-            "macros": {"carbs": r["carbs"], "protein": r["protein"], "fat": r["fat"]},
-            "ts": r["ts"],
-        })
-    for m in metas:
-        d = m["date"]
-        if d not in bank:
-            bank[d] = {"records": [], "debt": 0}
-        bank[d]["debt"] = m["debt"] or 0
-        if m["cheat_spread"]:
-            bank[d]["_cheat_spread"] = _json.loads(m["cheat_spread"])
-
-    return jsonify(bank)
+    return jsonify(_diet_load(sync_id))
 
 
 @app.route("/api/diet/record", methods=["POST"])
 def diet_record_add():
-    data = request.get_json(force=True) or {}
-    sync_id = str(data.get("sync_id", "")).strip()
+    data        = request.get_json(force=True) or {}
+    sync_id     = str(data.get("sync_id", "")).strip()
     if not _valid_sync_id(sync_id):
         return jsonify({"error": "invalid sync_id"}), 400
 
@@ -1894,59 +1874,34 @@ def diet_record_add():
     ts          = int(data.get("ts", 0))
     daily_limit = max(800, int(data.get("daily_limit", 2500)))
 
-    with _diet_db() as conn:
-        conn.execute(
-            "INSERT INTO diet_records (sync_id,date,food_name,calories,carbs,protein,fat,ts) "
-            "VALUES (?,?,?,?,?,?,?,?)",
-            (sync_id, date_str, food_name, calories, carbs, protein, fat, ts),
-        )
+    bank = _diet_load(sync_id)
+    if date_str not in bank:
+        bank[date_str] = {"records": [], "debt": 0}
+    day = bank[date_str]
 
-        total_row = conn.execute(
-            "SELECT SUM(calories) AS total FROM diet_records WHERE sync_id=? AND date=?",
-            (sync_id, date_str),
-        ).fetchone()
-        total_cal = total_row["total"] or 0
+    day["records"].append({
+        "food_name": food_name,
+        "calories":  calories,
+        "macros":    {"carbs": carbs, "protein": protein, "fat": fat},
+        "ts":        ts,
+    })
 
-        meta_row = conn.execute(
-            "SELECT debt, cheat_spread FROM diet_day_meta WHERE sync_id=? AND date=?",
-            (sync_id, date_str),
-        ).fetchone()
-        debt         = meta_row["debt"] if meta_row else 0
-        cheat_spread = _json.loads(meta_row["cheat_spread"]) if (meta_row and meta_row["cheat_spread"]) else None
+    total_cal = sum(r["calories"] for r in day["records"])
+    debt      = day.get("debt", 0)
+    effective = total_cal + debt
 
-        effective = total_cal + debt
-        if effective > daily_limit and not cheat_spread:
-            overflow = effective - daily_limit
-            per_day  = (overflow + 1) // 2
-            base     = _date_cls.fromisoformat(date_str)
-            for i in range(1, 3):
-                fk = (base + _td2(days=i)).isoformat()
-                exists = conn.execute(
-                    "SELECT 1 FROM diet_day_meta WHERE sync_id=? AND date=?", (sync_id, fk)
-                ).fetchone()
-                if exists:
-                    conn.execute(
-                        "UPDATE diet_day_meta SET debt=debt+? WHERE sync_id=? AND date=?",
-                        (per_day, sync_id, fk),
-                    )
-                else:
-                    conn.execute(
-                        "INSERT INTO diet_day_meta (sync_id,date,debt) VALUES (?,?,?)",
-                        (sync_id, fk, per_day),
-                    )
-            cheat_spread = {"overflow": overflow, "perDay": per_day}
-            cs_json = _json.dumps(cheat_spread)
-            if meta_row:
-                conn.execute(
-                    "UPDATE diet_day_meta SET cheat_spread=? WHERE sync_id=? AND date=?",
-                    (cs_json, sync_id, date_str),
-                )
-            else:
-                conn.execute(
-                    "INSERT INTO diet_day_meta (sync_id,date,debt,cheat_spread) VALUES (?,?,?,?)",
-                    (sync_id, date_str, debt, cs_json),
-                )
+    if effective > daily_limit and not day.get("_cheat_spread"):
+        overflow = effective - daily_limit
+        per_day  = (overflow + 1) // 2
+        base     = _date_cls.fromisoformat(date_str)
+        for i in range(1, 3):
+            fk = (base + _td(days=i)).isoformat()
+            if fk not in bank:
+                bank[fk] = {"records": [], "debt": 0}
+            bank[fk]["debt"] = bank[fk].get("debt", 0) + per_day
+        day["_cheat_spread"] = {"overflow": overflow, "perDay": per_day}
 
+    _diet_save(sync_id, bank)
     return jsonify({"ok": True})
 
 
@@ -1954,14 +1909,11 @@ def diet_record_add():
 def diet_day_clear(sync_id, date_str):
     if not _valid_sync_id(sync_id):
         return jsonify({"error": "invalid sync_id"}), 400
-    with _diet_db() as conn:
-        conn.execute(
-            "DELETE FROM diet_records WHERE sync_id=? AND date=?", (sync_id, date_str)
-        )
-        conn.execute(
-            "UPDATE diet_day_meta SET cheat_spread=NULL WHERE sync_id=? AND date=?",
-            (sync_id, date_str),
-        )
+    bank = _diet_load(sync_id)
+    if date_str in bank:
+        bank[date_str]["records"] = []
+        bank[date_str].pop("_cheat_spread", None)
+    _diet_save(sync_id, bank)
     return jsonify({"ok": True})
 
 
