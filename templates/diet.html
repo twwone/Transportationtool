@@ -291,6 +291,108 @@ body::before{
   border-radius:8px;height:14px;
 }
 
+/* ── Settings button ── */
+.settings-btn{
+  width:38px;height:38px;border-radius:50%;
+  background:var(--glass);border:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.15rem;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .2s,background .2s;flex-shrink:0;
+}
+.settings-btn:active{transform:scale(.88)}
+
+/* ── Tab Bar ── */
+.tab-bar{
+  width:100%;max-width:480px;
+  display:flex;gap:6px;padding:0 16px 8px;
+  position:relative;z-index:1;
+}
+.tab-btn{
+  flex:1;padding:9px;border-radius:var(--radius-s);
+  background:none;border:1px solid transparent;
+  color:var(--sub);font-size:.88rem;font-weight:600;
+  cursor:pointer;font-family:inherit;
+  transition:background .2s,color .2s,border-color .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.tab-btn.active{
+  background:rgba(52,211,153,.18);
+  border-color:rgba(52,211,153,.35);
+  color:var(--green);
+}
+
+/* ── Settings Modal ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  z-index:100;align-items:flex-end;justify-content:center;
+  padding:0 0 max(20px,env(safe-area-inset-bottom));
+}
+.modal-overlay.open{display:flex;animation:fadeSlideUp .35s cubic-bezier(.22,1,.36,1) both}
+.modal-card{
+  width:100%;max-width:480px;
+  background:rgba(10,20,36,.97);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-l) var(--radius-l) var(--radius-m) var(--radius-m);
+  padding:24px 20px max(24px,env(safe-area-inset-bottom));
+}
+.modal-title{font-size:1.1rem;font-weight:800;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.form-label{font-size:.8rem;color:var(--sub);font-weight:600;letter-spacing:.02em}
+.form-input{
+  background:rgba(255,255,255,.08);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-s);
+  color:var(--text);font-size:.95rem;font-family:inherit;
+  padding:12px 14px;outline:none;
+  transition:border-color .2s;width:100%;
+}
+.form-input:focus{border-color:rgba(52,211,153,.5)}
+.form-hint{font-size:.72rem;color:var(--sub);margin-top:3px;line-height:1.5}
+.modal-actions{display:flex;gap:8px;margin-top:8px}
+.modal-btn{
+  flex:1;padding:13px;border-radius:var(--radius-s);
+  font-size:.95rem;font-weight:700;font-family:inherit;
+  cursor:pointer;transition:transform .15s,opacity .2s;
+  -webkit-tap-highlight-color:transparent;border:none;
+}
+.modal-btn:active{transform:scale(.96)}
+.modal-btn.cancel{background:rgba(255,255,255,.1);color:var(--sub)}
+.modal-btn.confirm{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+
+/* ── History Section ── */
+.history-container{
+  display:none;flex-direction:column;gap:12px;
+  width:100%;max-width:480px;padding:0 16px;
+  position:relative;z-index:1;
+}
+.history-container.shown{display:flex}
+.history-empty{text-align:center;padding:48px 20px;font-size:.9rem;color:var(--sub)}
+.history-day-card{
+  background:var(--glass);
+  backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-m);overflow:hidden;
+}
+.history-day-header{
+  display:flex;align-items:center;padding:14px 16px;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;gap:12px;
+}
+.history-day-date{font-size:.88rem;font-weight:700;flex:1}
+.history-day-badge{
+  font-size:.75rem;font-weight:700;padding:3px 10px;
+  border-radius:20px;white-space:nowrap;
+}
+.history-day-badge.ok{background:rgba(52,211,153,.2);color:var(--green)}
+.history-day-badge.over{background:rgba(251,146,60,.2);color:var(--orange)}
+.history-day-chevron{font-size:.7rem;color:var(--sub);transition:transform .25s;margin-left:4px}
+.history-day-card.expanded .history-day-chevron{transform:rotate(180deg)}
+.history-day-bar{margin:0 16px 10px;background:rgba(255,255,255,.06);border-radius:6px;height:5px;overflow:hidden}
+.history-day-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--green),#0ea5e9);width:0%;transition:width .6s cubic-bezier(.22,1,.36,1)}
+.history-records{display:none;padding:0 12px 12px;flex-direction:column;gap:6px}
+.history-day-card.expanded .history-records{display:flex}
+
 /* ── Light mode ── */
 @media(prefers-color-scheme:light){
   :root{
@@ -327,9 +429,16 @@ body::before{
     <span class="budget-num" id="budgetNum">—</span>
     剩餘大卡
   </div>
+  <button class="settings-btn" onclick="openSettings()">⚙</button>
 </div>
 
-<div class="container">
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tabToday" onclick="switchTab('today')">今日</button>
+  <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">歷史紀錄</button>
+</div>
+
+<div class="container" id="mainContainer">
 
   <!-- Camera + Upload Card -->
   <div class="glass-card">
@@ -464,10 +573,128 @@ body::before{
 
 </div><!-- /container -->
 
+<!-- History Container -->
+<div class="history-container" id="historyContainer"></div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal" onclick="handleOverlayClick(event)">
+  <div class="modal-card">
+    <div class="modal-title">⚙ 設定</div>
+    <div class="form-group">
+      <label class="form-label">每日目標熱量（大卡）</label>
+      <input class="form-input" type="number" id="setLimit" min="800" max="9999" placeholder="2500">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Gemini API 金鑰（選填）</label>
+      <input class="form-input" type="password" id="setGeminiKey" placeholder="AIza…（留空使用伺服器預設）">
+      <div class="form-hint">填入您自己的 Gemini API 金鑰可使用個人配額。<br>前往 <strong>aistudio.google.com</strong> 免費取得。</div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeSettings()">取消</button>
+      <button class="modal-btn confirm" onclick="applySettings()">儲存</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ──
 let _currentResult = null;
 let _compressedBlob = null;
+
+// ── Settings ──
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem('dietSettings') || '{}'); }
+  catch { return {}; }
+}
+function saveSettings(s) { localStorage.setItem('dietSettings', JSON.stringify(s)); }
+function getDailyLimit() { return parseInt(getSettings().dailyLimit) || 2500; }
+function getGeminiKey() { return getSettings().geminiKey || ''; }
+
+function openSettings() {
+  const s = getSettings();
+  document.getElementById('setLimit').value = s.dailyLimit || 2500;
+  document.getElementById('setGeminiKey').value = s.geminiKey || '';
+  document.getElementById('settingsModal').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+function handleOverlayClick(e) {
+  if (e.target === e.currentTarget) closeSettings();
+}
+function applySettings() {
+  const limit = parseInt(document.getElementById('setLimit').value) || 2500;
+  const key = document.getElementById('setGeminiKey').value.trim();
+  saveSettings({ dailyLimit: limit, geminiKey: key });
+  closeSettings();
+  renderBank();
+}
+
+// ── Tabs ──
+function switchTab(tab) {
+  const isToday = tab === 'today';
+  document.getElementById('tabToday').classList.toggle('active', isToday);
+  document.getElementById('tabHistory').classList.toggle('active', !isToday);
+  document.getElementById('mainContainer').style.display = isToday ? 'flex' : 'none';
+  const hc = document.getElementById('historyContainer');
+  hc.classList.toggle('shown', !isToday);
+  if (!isToday) renderHistory();
+}
+
+// ── History ──
+function renderHistory() {
+  const bank = getBank();
+  const today = todayKey();
+  const days = Object.keys(bank)
+    .filter(k => k !== today && bank[k].records && bank[k].records.length > 0)
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, 14);
+
+  const hc = document.getElementById('historyContainer');
+  if (days.length === 0) {
+    hc.innerHTML = '<div class="history-empty">尚無歷史紀錄<br>每日記錄後會顯示在這裡</div>';
+    return;
+  }
+
+  const limit = getDailyLimit();
+  hc.innerHTML = days.map(key => {
+    const day = bank[key];
+    const totalCal = day.records.reduce((s, r) => s + r.calories, 0);
+    const debt = day.debt || 0;
+    const effective = totalCal + debt;
+    const pct = Math.min(100, (effective / limit) * 100);
+    const over = effective > limit;
+    const debtNote = debt > 0 ? ` +${debt}分期` : '';
+
+    const recordsHtml = [...day.records].reverse().map(r => {
+      const m = r.macros || {};
+      return `
+        <div class="record-item">
+          <span class="record-icon">🍽</span>
+          <div class="record-info">
+            <div class="record-name">${r.food_name}</div>
+            <div class="record-macros">碳 ${m.carbs||0}g　蛋 ${m.protein||0}g　脂 ${m.fat||0}g</div>
+          </div>
+          <span class="record-cal">${r.calories}</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="history-day-card" id="hday-${key}">
+        <div class="history-day-header" onclick="toggleHistoryDay('${key}')">
+          <span class="history-day-date">${formatDate(key)}</span>
+          <span class="history-day-badge ${over ? 'over' : 'ok'}">${effective} kcal${debtNote}</span>
+          <span class="history-day-chevron">▼</span>
+        </div>
+        <div class="history-day-bar"><div class="history-day-fill" style="width:${pct}%"></div></div>
+        <div class="history-records bank-records">${recordsHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+function toggleHistoryDay(key) {
+  document.getElementById('hday-' + key).classList.toggle('expanded');
+}
 
 // ── Date helpers ──
 function todayKey() {
@@ -481,8 +708,6 @@ function formatDate(key) {
 }
 
 // ── LocalStorage bank ──
-const DAILY_LIMIT = 2500;
-
 function getBank() {
   try { return JSON.parse(localStorage.getItem('dietBank') || '{}'); }
   catch { return {}; }
@@ -567,6 +792,8 @@ async function doAnalyze() {
   try {
     const fd = new FormData();
     fd.append('image', _compressedBlob, 'food.jpg');
+    const geminiKey = getGeminiKey();
+    if (geminiKey) fd.append('gemini_key', geminiKey);
     const resp = await fetch('/api/analyze-food', { method: 'POST', body: fd });
     const data = await resp.json();
 
@@ -650,8 +877,8 @@ function saveRecord() {
 
   // Cheat meal buffer: check overflow
   const totalCal = day.records.reduce((s, r) => s + r.calories, 0) + (day.debt || 0);
-  if (totalCal > DAILY_LIMIT && !day._cheat_spread) {
-    const overflow = totalCal - DAILY_LIMIT;
+  if (totalCal > getDailyLimit() && !day._cheat_spread) {
+    const overflow = totalCal - getDailyLimit();
     const perDay   = Math.ceil(overflow / 2);
     for (let i = 1; i <= 2; i++) {
       const fKey = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
@@ -693,13 +920,13 @@ function renderBank() {
   const totalCal  = day.records.reduce((s, r) => s + r.calories, 0);
   const debt      = day.debt || 0;
   const effective = totalCal + debt;
-  const remaining = Math.max(0, DAILY_LIMIT - effective);
+  const remaining = Math.max(0, getDailyLimit() - effective);
 
   // Header budget
   document.getElementById('budgetNum').textContent = remaining;
 
   // Progress bar (capped at 100%)
-  const pct = Math.min(100, (effective / DAILY_LIMIT) * 100);
+  const pct = Math.min(100, (effective / getDailyLimit()) * 100);
   document.getElementById('todayFill').style.width = pct + '%';
 
   let html = '';
@@ -731,7 +958,7 @@ function renderBank() {
 
   // Total
   if (day.records.length > 0) {
-    const totalColor = effective > DAILY_LIMIT ? '#fb923c' : 'var(--green)';
+    const totalColor = effective > getDailyLimit() ? '#fb923c' : 'var(--green)';
     const debtNote   = debt > 0 ? ` <span style="color:var(--orange);font-size:.7rem">（含 ${debt} 前日分期）</span>` : '';
     html += `
       <div class="bank-total">

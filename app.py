@@ -1804,9 +1804,12 @@ def analyze_food():
     except ImportError:
         return jsonify({"error": "google-generativeai 套件未安裝，請執行 pip install google-generativeai"}), 500
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = (
+        request.form.get("gemini_key", "").strip()
+        or os.environ.get("GEMINI_API_KEY", "")
+    )
     if not api_key:
-        return jsonify({"error": "GEMINI_API_KEY 未設定，請聯絡管理員"}), 503
+        return jsonify({"error": "GEMINI_API_KEY 未設定，請在設定頁輸入您的 Gemini API 金鑰"}), 503
 
     genai.configure(api_key=api_key)
 
