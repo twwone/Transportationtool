@@ -1969,8 +1969,17 @@ def analyze_food():
         "calories 單位大卡，macros 單位公克。"
     )
 
-    try:
-        resp = _requests.post(
+    _FREE_MODELS = [
+        "qwen/qwen2.5-vl-72b-instruct:free",
+        "meta-llama/llama-4-maverick:free",
+        "mistralai/mistral-small-3.1-24b-instruct:free",
+        "google/gemma-3-27b-it:free",
+    ]
+
+    resp = None
+    last_err = "無可用的免費模型"
+    for model_id in _FREE_MODELS:
+        r = _requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {api_key}",
@@ -1978,7 +1987,7 @@ def analyze_food():
                 "HTTP-Referer":  "https://transportationtool.vercel.app",
             },
             json={
-                "model": "meta-llama/llama-4-scout:free",
+                "model": model_id,
                 "messages": [{
                     "role": "user",
                     "content": [
@@ -1992,13 +2001,22 @@ def analyze_food():
             },
             timeout=30,
         )
-        if not resp.ok:
-            err_body = resp.json() if resp.headers.get("content-type","").startswith("application/json") else {}
-            msg = (err_body.get("error") or {}).get("message") or resp.text[:300]
-            if resp.status_code == 429:
-                return jsonify({"error": "quota_exceeded"}), 429
-            return jsonify({"error": f"AI 分析失敗：{msg}"}), 500
+        if r.status_code == 200:
+            resp = r
+            break
+        try:
+            err_body = r.json()
+            msg = (err_body.get("error") or {}).get("message") or r.text[:200]
+        except Exception:
+            msg = r.text[:200]
+        if r.status_code == 429:
+            return jsonify({"error": "quota_exceeded"}), 429
+        last_err = msg
 
+    if resp is None:
+        return jsonify({"error": f"AI 分析失敗：{last_err}"}), 500
+
+    try:
         text = resp.json()["choices"][0]["message"]["content"].strip()
         if text.startswith("```"):
             lines = text.splitlines()
