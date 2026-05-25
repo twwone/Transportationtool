@@ -1926,22 +1926,17 @@ def diet_day_clear(sync_id, date_str):
 @app.route("/api/analyze-food", methods=["POST"])
 def analyze_food():
     import base64 as _b64
-    try:
-        import google.generativeai as genai
-    except ImportError:
-        return jsonify({"error": "google-generativeai 套件未安裝，請執行 pip install google-generativeai"}), 500
 
     api_key = (
-        request.form.get("gemini_key", "").strip()
-        or os.environ.get("GEMINI_API_KEY", "")
+        request.form.get("grok_key", "").strip()
+        or os.environ.get("GROK_API_KEY", "")
+        or os.environ.get("XAI_API_KEY", "")
     )
     if not api_key:
-        return jsonify({"error": "GEMINI_API_KEY 未設定，請在設定頁輸入您的 Gemini API 金鑰"}), 503
-
-    genai.configure(api_key=api_key)
+        return jsonify({"error": "GROK_API_KEY 未設定，請在設定頁輸入您的 Grok API 金鑰"}), 503
 
     image_bytes = None
-    mime_type = "image/jpeg"
+    mime_type   = "image/jpeg"
 
     ct = request.content_type or ""
     if "multipart" in ct:
@@ -1949,23 +1944,23 @@ def analyze_food():
         if not f:
             return jsonify({"error": "缺少 image 欄位"}), 400
         image_bytes = f.read()
-        mime_type = f.mimetype or "image/jpeg"
+        mime_type   = f.mimetype or "image/jpeg"
     else:
         body = request.get_json(silent=True) or {}
-        b64 = body.get("image", "")
+        b64  = body.get("image", "")
         if not b64:
             return jsonify({"error": "缺少 image 欄位"}), 400
         if "," in b64:
             header, b64 = b64.split(",", 1)
-            if "png" in header:
-                mime_type = "image/png"
-            elif "webp" in header:
-                mime_type = "image/webp"
-        mime_type = body.get("mime_type", mime_type)
+            if "png"  in header: mime_type = "image/png"
+            elif "webp" in header: mime_type = "image/webp"
+        mime_type   = body.get("mime_type", mime_type)
         image_bytes = _b64.b64decode(b64)
 
     if not image_bytes:
         return jsonify({"error": "圖片內容為空"}), 400
+
+    b64_str = _b64.b64encode(image_bytes).decode("utf-8")
 
     _FOOD_PROMPT = (
         "你是一位專業的運動營養師 AI。分析使用者傳來的食物照片，"
@@ -1976,20 +1971,39 @@ def analyze_food():
     )
 
     try:
-        model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
-            generation_config={"response_mime_type": "application/json"},
+        resp = _requests.post(
+            "https://api.x.ai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type":  "application/json",
+            },
+            json={
+                "model": "grok-2-vision-latest",
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": _FOOD_PROMPT},
+                        {"type": "image_url", "image_url": {
+                            "url": f"data:{mime_type};base64,{b64_str}",
+                        }},
+                    ],
+                }],
+                "temperature": 0,
+            },
+            timeout=30,
         )
-        response = model.generate_content([
-            _FOOD_PROMPT,
-            {"mime_type": mime_type, "data": image_bytes},
-        ])
-        text = response.text.strip()
+        if not resp.ok:
+            err = resp.json().get("error", {})
+            msg = err.get("message", resp.text[:300]) if isinstance(err, dict) else resp.text[:300]
+            if resp.status_code == 429:
+                return jsonify({"error": "quota_exceeded"}), 429
+            return jsonify({"error": f"AI 分析失敗：{msg}"}), 500
+
+        text = resp.json()["choices"][0]["message"]["content"].strip()
         if text.startswith("```"):
             lines = text.splitlines()
-            text = "\n".join(
-                lines[1:-1] if lines and lines[-1].strip() == "```" else lines[1:]
-            )
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
         result = _json.loads(text)
         macros = result.get("macros", {})
         return jsonify({
@@ -2005,10 +2019,7 @@ def analyze_food():
     except _json.JSONDecodeError:
         return jsonify({"error": "AI 回傳格式異常，請再試一次"}), 500
     except Exception as e:
-        err_str = str(e)
-        if "429" in err_str or "quota" in err_str.lower() or "exceeded" in err_str.lower():
-            return jsonify({"error": "quota_exceeded"}), 429
-        return jsonify({"error": f"AI 分析失敗：{err_str}"}), 500
+        return jsonify({"error": f"AI 分析失敗：{str(e)}"}), 500
 
 
 if __name__ == "__main__":
