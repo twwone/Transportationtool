@@ -616,6 +616,14 @@ body::before{
       <input class="form-input" type="number" id="setLimit" min="800" max="9999" placeholder="2500">
     </div>
     <div class="form-group">
+      <label class="form-label">同步代碼</label>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" type="text" id="setSyncId" placeholder="自動產生" style="flex:1;font-family:monospace;font-size:.82rem">
+        <button onclick="copySyncId()" style="padding:0 14px;border-radius:var(--radius-s);background:rgba(56,189,248,.18);border:1px solid rgba(56,189,248,.35);color:#38bdf8;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit" id="copyBtn">複製</button>
+      </div>
+      <div class="form-hint">其他裝置輸入相同代碼即可同步資料。<br>⚠ 更改代碼後會切換到該代碼的資料。</div>
+    </div>
+    <div class="form-group">
       <label class="form-label">Gemini API 金鑰（選填）</label>
       <input class="form-input" type="password" id="setGeminiKey" placeholder="AIza…（留空使用伺服器預設）">
       <div class="form-hint">填入您自己的 Gemini API 金鑰可使用個人配額。<br>前往 <strong>aistudio.google.com</strong> 免費取得。</div>
@@ -641,10 +649,38 @@ function saveSettings(s) { localStorage.setItem('dietSettings', JSON.stringify(s
 function getDailyLimit() { return parseInt(getSettings().dailyLimit) || 2500; }
 function getGeminiKey() { return getSettings().geminiKey || ''; }
 
+// ── Sync ID ──
+function getSyncId() {
+  let id = localStorage.getItem('dietSyncId');
+  if (!id) {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      id = crypto.randomUUID();
+    } else {
+      id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+    localStorage.setItem('dietSyncId', id);
+  }
+  return id;
+}
+function setSyncId(id) { localStorage.setItem('dietSyncId', id); }
+
+function copySyncId() {
+  const id = document.getElementById('setSyncId').value || getSyncId();
+  navigator.clipboard.writeText(id).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '已複製！';
+    setTimeout(() => { btn.textContent = '複製'; }, 1800);
+  });
+}
+
 function openSettings() {
   const s = getSettings();
   document.getElementById('setLimit').value = s.dailyLimit || 2500;
   document.getElementById('setGeminiKey').value = s.geminiKey || '';
+  document.getElementById('setSyncId').value = getSyncId();
   document.getElementById('settingsModal').classList.add('open');
 }
 function closeSettings() {
@@ -654,9 +690,14 @@ function handleOverlayClick(e) {
   if (e.target === e.currentTarget) closeSettings();
 }
 function applySettings() {
-  const limit = parseInt(document.getElementById('setLimit').value) || 2500;
-  const key = document.getElementById('setGeminiKey').value.trim();
+  const limit   = parseInt(document.getElementById('setLimit').value) || 2500;
+  const key     = document.getElementById('setGeminiKey').value.trim();
+  const newSync = document.getElementById('setSyncId').value.trim();
   saveSettings({ dailyLimit: limit, geminiKey: key });
+  if (newSync && newSync !== getSyncId()) {
+    setSyncId(newSync);
+    _bankCache = {};
+  }
   closeSettings();
   renderBank();
 }
@@ -669,19 +710,22 @@ function switchTab(tab) {
   document.getElementById('mainContainer').style.display = isToday ? 'flex' : 'none';
   const hc = document.getElementById('historyContainer');
   hc.classList.toggle('shown', !isToday);
-  if (!isToday) renderHistory();
+  if (!isToday) renderHistory(true);
 }
 
 // ── History ──
-function renderHistory() {
-  const bank = getBank();
+async function renderHistory(refetch) {
+  const hc = document.getElementById('historyContainer');
+  hc.innerHTML = '<div class="history-empty"><div class="spinner" style="margin:0 auto 8px;width:28px;height:28px"></div></div>';
+  if (refetch) await fetchBank();
+
+  const bank  = _bankCache;
   const today = todayKey();
-  const days = Object.keys(bank)
+  const days  = Object.keys(bank)
     .filter(k => k !== today && bank[k].records && bank[k].records.length > 0)
     .sort((a, b) => b.localeCompare(a))
-    .slice(0, 14);
+    .slice(0, 30);
 
-  const hc = document.getElementById('historyContainer');
   if (days.length === 0) {
     hc.innerHTML = '<div class="history-empty">尚無歷史紀錄<br>每日記錄後會顯示在這裡</div>';
     return;
@@ -738,14 +782,16 @@ function formatDate(key) {
   return `${+m}/${+d}（週${days[dt.getDay()]}）`;
 }
 
-// ── LocalStorage bank ──
-function getBank() {
-  try { return JSON.parse(localStorage.getItem('dietBank') || '{}'); }
-  catch { return {}; }
+// ── Server bank ──
+let _bankCache = {};
+
+async function fetchBank() {
+  try {
+    const resp = await fetch(`/api/diet/bank/${encodeURIComponent(getSyncId())}`);
+    if (resp.ok) _bankCache = await resp.json();
+  } catch (_) { /* keep cache on network error */ }
 }
-function saveBank(bank) {
-  localStorage.setItem('dietBank', JSON.stringify(bank));
-}
+
 function getDayData(bank, key) {
   if (!bank[key]) bank[key] = { records: [], debt: 0 };
   return bank[key];
@@ -916,58 +962,53 @@ function renderResult(data) {
 }
 
 // ── Save record to bank ──
-function saveRecord() {
+async function saveRecord() {
   if (!_currentResult) return;
-  const bank  = getBank();
-  const today = todayKey();
-  const day   = getDayData(bank, today);
-
-  day.records.push({
-    food_name: _currentResult.food_name,
-    calories:  _currentResult.calories,
-    macros:    _currentResult.macros,
-    ts:        Date.now(),
-  });
-
-  // Cheat meal buffer: check overflow
-  const totalCal = day.records.reduce((s, r) => s + r.calories, 0) + (day.debt || 0);
-  if (totalCal > getDailyLimit() && !day._cheat_spread) {
-    const overflow = totalCal - getDailyLimit();
-    const perDay   = Math.ceil(overflow / 2);
-    for (let i = 1; i <= 2; i++) {
-      const fKey = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
-      const fDay = getDayData(bank, fKey);
-      fDay.debt  = (fDay.debt || 0) + perDay;
-    }
-    day._cheat_spread = { overflow, perDay };
-  }
-
-  saveBank(bank);
-
   const saveBtn = document.getElementById('saveBtn');
-  saveBtn.textContent = '✓ 已記錄！';
-  saveBtn.classList.add('saved');
   saveBtn.disabled = true;
+  saveBtn.textContent = '同步中…';
 
-  renderBank();
+  try {
+    const resp = await fetch('/api/diet/record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sync_id:     getSyncId(),
+        date:        todayKey(),
+        food_name:   _currentResult.food_name,
+        calories:    _currentResult.calories,
+        macros:      _currentResult.macros,
+        ts:          Date.now(),
+        daily_limit: getDailyLimit(),
+      }),
+    });
+    if (resp.ok) {
+      saveBtn.textContent = '✓ 已記錄！';
+      saveBtn.classList.add('saved');
+      renderBank();
+    } else {
+      saveBtn.textContent = '儲存失敗，重試';
+      saveBtn.disabled = false;
+    }
+  } catch (_) {
+    saveBtn.textContent = '網路錯誤，重試';
+    saveBtn.disabled = false;
+  }
 }
 
 // ── Clear today ──
-function clearToday() {
+async function clearToday() {
   if (!confirm('確定清除今日所有紀錄？')) return;
-  const bank = getBank();
-  const today = todayKey();
-  if (bank[today]) {
-    bank[today].records = [];
-    delete bank[today]._cheat_spread;
-  }
-  saveBank(bank);
+  await fetch(`/api/diet/day/${encodeURIComponent(getSyncId())}/${todayKey()}`, { method: 'DELETE' });
   renderBank();
 }
 
 // ── Render daily bank ──
-function renderBank() {
-  const bank  = getBank();
+async function renderBank() {
+  document.getElementById('bankBody').innerHTML =
+    '<div class="bank-empty"><div class="spinner" style="margin:0 auto 8px;width:26px;height:26px;border-width:2px"></div></div>';
+  await fetchBank();
+  const bank  = _bankCache;
   const today = todayKey();
   const day   = getDayData(bank, today);
 
@@ -1045,12 +1086,13 @@ function renderBank() {
 }
 
 // ── Init ──
-(function init() {
+(async function init() {
   const days = ['日','一','二','三','四','五','六'];
   const now  = new Date();
   document.getElementById('dateLabel').textContent =
     `${now.getMonth()+1}/${now.getDate()}（週${days[now.getDay()]}）`;
-  renderBank();
+  getSyncId(); // ensure sync_id exists
+  await renderBank();
 })();
 
 // Prevent double-tap zoom

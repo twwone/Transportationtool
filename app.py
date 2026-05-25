@@ -1789,11 +1789,180 @@ def api_weather():
 
 
 # ══════════════════════════════════════════════
-#  AI 飲食熱量追蹤（Gemini Vision）
+#  AI 飲食熱量追蹤（Gemini Vision + 跨裝置同步）
 # ══════════════════════════════════════════════
+import sqlite3 as _sqlite3
+from pathlib import Path as _Path
+from datetime import date as _date_cls, timedelta as _td2
+
+_DIET_DB = _Path(__file__).parent / "diet.db"
+
+def _diet_db():
+    conn = _sqlite3.connect(_DIET_DB)
+    conn.row_factory = _sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+def _init_diet_db():
+    with _diet_db() as conn:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS diet_records (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                sync_id     TEXT    NOT NULL,
+                date        TEXT    NOT NULL,
+                food_name   TEXT    NOT NULL,
+                calories    INTEGER NOT NULL DEFAULT 0,
+                carbs       INTEGER NOT NULL DEFAULT 0,
+                protein     INTEGER NOT NULL DEFAULT 0,
+                fat         INTEGER NOT NULL DEFAULT 0,
+                ts          INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_diet_sync_date
+                ON diet_records(sync_id, date);
+            CREATE TABLE IF NOT EXISTS diet_day_meta (
+                sync_id      TEXT NOT NULL,
+                date         TEXT NOT NULL,
+                debt         INTEGER DEFAULT 0,
+                cheat_spread TEXT DEFAULT NULL,
+                PRIMARY KEY (sync_id, date)
+            );
+        """)
+
+_init_diet_db()
+
+
+def _valid_sync_id(sid: str) -> bool:
+    return bool(sid) and len(sid) <= 64 and _re.match(r'^[a-zA-Z0-9_\-]+$', sid)
+
+
 @app.route("/diet")
 def diet():
     return render_template("diet.html")
+
+
+@app.route("/api/diet/bank/<sync_id>")
+def diet_bank_get(sync_id):
+    if not _valid_sync_id(sync_id):
+        return jsonify({"error": "invalid sync_id"}), 400
+    with _diet_db() as conn:
+        rows = conn.execute(
+            "SELECT date, food_name, calories, carbs, protein, fat, ts "
+            "FROM diet_records WHERE sync_id=? ORDER BY date, ts",
+            (sync_id,)
+        ).fetchall()
+        metas = conn.execute(
+            "SELECT date, debt, cheat_spread FROM diet_day_meta WHERE sync_id=?",
+            (sync_id,)
+        ).fetchall()
+
+    bank: dict = {}
+    for r in rows:
+        d = r["date"]
+        if d not in bank:
+            bank[d] = {"records": [], "debt": 0}
+        bank[d]["records"].append({
+            "food_name": r["food_name"],
+            "calories":  r["calories"],
+            "macros": {"carbs": r["carbs"], "protein": r["protein"], "fat": r["fat"]},
+            "ts": r["ts"],
+        })
+    for m in metas:
+        d = m["date"]
+        if d not in bank:
+            bank[d] = {"records": [], "debt": 0}
+        bank[d]["debt"] = m["debt"] or 0
+        if m["cheat_spread"]:
+            bank[d]["_cheat_spread"] = _json.loads(m["cheat_spread"])
+
+    return jsonify(bank)
+
+
+@app.route("/api/diet/record", methods=["POST"])
+def diet_record_add():
+    data = request.get_json(force=True) or {}
+    sync_id = str(data.get("sync_id", "")).strip()
+    if not _valid_sync_id(sync_id):
+        return jsonify({"error": "invalid sync_id"}), 400
+
+    date_str    = str(data.get("date", ""))
+    food_name   = str(data.get("food_name", ""))[:200]
+    calories    = max(0, int(data.get("calories", 0)))
+    macros      = data.get("macros", {})
+    carbs       = max(0, int(macros.get("carbs",   0)))
+    protein     = max(0, int(macros.get("protein", 0)))
+    fat         = max(0, int(macros.get("fat",     0)))
+    ts          = int(data.get("ts", 0))
+    daily_limit = max(800, int(data.get("daily_limit", 2500)))
+
+    with _diet_db() as conn:
+        conn.execute(
+            "INSERT INTO diet_records (sync_id,date,food_name,calories,carbs,protein,fat,ts) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (sync_id, date_str, food_name, calories, carbs, protein, fat, ts),
+        )
+
+        total_row = conn.execute(
+            "SELECT SUM(calories) AS total FROM diet_records WHERE sync_id=? AND date=?",
+            (sync_id, date_str),
+        ).fetchone()
+        total_cal = total_row["total"] or 0
+
+        meta_row = conn.execute(
+            "SELECT debt, cheat_spread FROM diet_day_meta WHERE sync_id=? AND date=?",
+            (sync_id, date_str),
+        ).fetchone()
+        debt         = meta_row["debt"] if meta_row else 0
+        cheat_spread = _json.loads(meta_row["cheat_spread"]) if (meta_row and meta_row["cheat_spread"]) else None
+
+        effective = total_cal + debt
+        if effective > daily_limit and not cheat_spread:
+            overflow = effective - daily_limit
+            per_day  = (overflow + 1) // 2
+            base     = _date_cls.fromisoformat(date_str)
+            for i in range(1, 3):
+                fk = (base + _td2(days=i)).isoformat()
+                exists = conn.execute(
+                    "SELECT 1 FROM diet_day_meta WHERE sync_id=? AND date=?", (sync_id, fk)
+                ).fetchone()
+                if exists:
+                    conn.execute(
+                        "UPDATE diet_day_meta SET debt=debt+? WHERE sync_id=? AND date=?",
+                        (per_day, sync_id, fk),
+                    )
+                else:
+                    conn.execute(
+                        "INSERT INTO diet_day_meta (sync_id,date,debt) VALUES (?,?,?)",
+                        (sync_id, fk, per_day),
+                    )
+            cheat_spread = {"overflow": overflow, "perDay": per_day}
+            cs_json = _json.dumps(cheat_spread)
+            if meta_row:
+                conn.execute(
+                    "UPDATE diet_day_meta SET cheat_spread=? WHERE sync_id=? AND date=?",
+                    (cs_json, sync_id, date_str),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO diet_day_meta (sync_id,date,debt,cheat_spread) VALUES (?,?,?,?)",
+                    (sync_id, date_str, debt, cs_json),
+                )
+
+    return jsonify({"ok": True})
+
+
+@app.route("/api/diet/day/<sync_id>/<date_str>", methods=["DELETE"])
+def diet_day_clear(sync_id, date_str):
+    if not _valid_sync_id(sync_id):
+        return jsonify({"error": "invalid sync_id"}), 400
+    with _diet_db() as conn:
+        conn.execute(
+            "DELETE FROM diet_records WHERE sync_id=? AND date=?", (sync_id, date_str)
+        )
+        conn.execute(
+            "UPDATE diet_day_meta SET cheat_spread=NULL WHERE sync_id=? AND date=?",
+            (sync_id, date_str),
+        )
+    return jsonify({"ok": True})
 
 
 @app.route("/api/analyze-food", methods=["POST"])
