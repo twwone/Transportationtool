@@ -953,7 +953,17 @@ let _longPressTriggered = false;
 (function() {
   const title = document.getElementById('headerTitle');
   title.style.cursor = 'default';
+  // touchstart 不受防雙擊 preventDefault 攔截；touch 後忽略同次 click 避免重複計數
+  let _lastTouch = 0;
+  title.addEventListener('touchstart', function() {
+    _lastTouch = Date.now();
+    _countTap();
+  }, { passive: true });
   title.addEventListener('click', function() {
+    if (Date.now() - _lastTouch < 600) return; // 同次 touch 產生的 click 忽略
+    _countTap();
+  });
+  function _countTap() {
     const now = Date.now();
     _tapTimes.push(now);
     _tapTimes = _tapTimes.filter(t => now - t <= 2000);
@@ -961,7 +971,7 @@ let _longPressTriggered = false;
       _tapTimes = [];
       if (!localStorage.getItem(_ADMIN_LS_KEY)) _openPinModal();
     }
-  });
+  }
 })();
 
 /* ── PIN Modal ── */
