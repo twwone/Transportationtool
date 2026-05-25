@@ -1929,10 +1929,10 @@ def analyze_food():
 
     api_key = (
         request.form.get("ai_key", "").strip()
-        or os.environ.get("OPENROUTER_API_KEY", "")
+        or os.environ.get("GEMINI_API_KEY", "")
     )
     if not api_key:
-        return jsonify({"error": "請在 ⚙ 設定中輸入 OpenRouter API 金鑰"}), 503
+        return jsonify({"error": "請在 ⚙ 設定中輸入 Gemini API 金鑰"}), 503
 
     image_bytes = None
     mime_type   = "image/jpeg"
@@ -1969,59 +1969,40 @@ def analyze_food():
         "calories 單位大卡，macros 單位公克。"
     )
 
-    _FREE_MODELS = [
-        "qwen/qwen2.5-vl-72b-instruct:free",
-        "meta-llama/llama-4-maverick:free",
-        "mistralai/mistral-small-3.1-24b-instruct:free",
-        "google/gemma-3-27b-it:free",
-    ]
-
-    resp = None
-    last_err = "無可用的免費模型"
-    for model_id in _FREE_MODELS:
-        r = _requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type":  "application/json",
-                "HTTP-Referer":  "https://transportationtool.vercel.app",
-            },
-            json={
-                "model": model_id,
-                "messages": [{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": _FOOD_PROMPT},
-                        {"type": "image_url", "image_url": {
-                            "url": f"data:{mime_type};base64,{b64_str}",
-                        }},
-                    ],
-                }],
-                "temperature": 0,
-            },
-            timeout=30,
-        )
-        if r.status_code == 200:
-            resp = r
-            break
+    # 直接呼叫 Gemini REST API，不依賴 Python SDK
+    for model in ("gemini-2.0-flash", "gemini-1.5-flash-latest"):
         try:
-            err_body = r.json()
-            msg = (err_body.get("error") or {}).get("message") or r.text[:200]
-        except Exception:
-            msg = r.text[:200]
-        if r.status_code == 429:
-            return jsonify({"error": "quota_exceeded"}), 429
-        last_err = msg
-
-    if resp is None:
-        return jsonify({"error": f"AI 分析失敗：{last_err}"}), 500
+            r = _requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                json={
+                    "contents": [{
+                        "parts": [
+                            {"text": _FOOD_PROMPT},
+                            {"inline_data": {"mime_type": mime_type, "data": b64_str}},
+                        ]
+                    }],
+                    "generationConfig": {"response_mime_type": "application/json"},
+                },
+                timeout=30,
+            )
+            if r.status_code == 200:
+                break
+            err_msg = (r.json().get("error") or {}).get("message", r.text[:300])
+            if r.status_code == 429:
+                return jsonify({"error": "quota_exceeded"}), 429
+            if r.status_code not in (404, 400):
+                return jsonify({"error": f"AI 分析失敗：{err_msg}"}), 500
+            # 404/400 → 試下一個模型
+        except Exception as e:
+            return jsonify({"error": f"AI 分析失敗：{str(e)}"}), 500
+    else:
+        return jsonify({"error": "AI 分析失敗：模型不可用，請確認 API 金鑰"}), 500
 
     try:
-        text = resp.json()["choices"][0]["message"]["content"].strip()
+        text = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
         if text.startswith("```"):
             lines = text.splitlines()
             text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-
         result = _json.loads(text)
         macros = result.get("macros", {})
         return jsonify({
