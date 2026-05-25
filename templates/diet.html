@@ -108,6 +108,7 @@ body::before{
   padding:28px 24px 24px;
   gap:20px;
 }
+.camera-btns{display:flex;gap:20px;align-items:center}
 .camera-btn{
   width:96px;height:96px;border-radius:50%;
   background:linear-gradient(135deg,#10b981,#059669);
@@ -118,11 +119,22 @@ body::before{
   animation:pulse 2.4s ease-in-out infinite;
   transition:transform .2s cubic-bezier(.22,1,.36,1);
   -webkit-tap-highlight-color:transparent;
-  position:relative;
 }
 .camera-btn:active{transform:scale(.88)}
-.camera-label{font-size:.9rem;font-weight:600;color:var(--sub);letter-spacing:.02em}
-#fileInput{display:none}
+.gallery-btn{
+  width:72px;height:72px;border-radius:50%;
+  background:rgba(56,189,248,.18);
+  border:1.5px solid rgba(56,189,248,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.9rem;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .2s cubic-bezier(.22,1,.36,1),background .2s;
+}
+.gallery-btn:active{transform:scale(.88)}
+.camera-hints{display:flex;gap:28px}
+.camera-hint-item{display:flex;flex-direction:column;align-items:center;gap:3px}
+.camera-hint-lbl{font-size:.7rem;font-weight:600;color:var(--sub);letter-spacing:.02em}
+#fileInput,#galleryInput{display:none}
 
 /* ── Preview ── */
 .preview-section{display:none;flex-direction:column;align-items:center;gap:16px;padding:20px 20px 8px}
@@ -444,12 +456,21 @@ body::before{
   <div class="glass-card">
     <!-- Camera entry -->
     <div class="camera-section" id="cameraSection">
-      <button class="camera-btn" onclick="document.getElementById('fileInput').click()">📷</button>
-      <span class="camera-label">拍照辨識食物熱量</span>
+      <div class="camera-btns">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <button class="camera-btn" onclick="document.getElementById('fileInput').click()">📷</button>
+          <span class="camera-hint-lbl">拍照</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <button class="gallery-btn" onclick="document.getElementById('galleryInput').click()">🖼</button>
+          <span class="camera-hint-lbl">相簿</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Hidden file input -->
+    <!-- Hidden file inputs -->
     <input type="file" id="fileInput" accept="image/*" capture="environment">
+    <input type="file" id="galleryInput" accept="image/*">
 
     <!-- Preview -->
     <div class="preview-section" id="previewSection">
@@ -756,12 +777,9 @@ async function compressToBlob(file, maxBytes = 2 * 1024 * 1024) {
 }
 
 // ── File input handler ──
-document.getElementById('fileInput').addEventListener('change', async e => {
-  const file = e.target.files[0];
+async function handleFileSelected(file) {
   if (!file) return;
   _currentResult = null;
-
-  // Show preview
   const blob = await compressToBlob(file);
   _compressedBlob = blob;
   const url = URL.createObjectURL(blob);
@@ -770,10 +788,13 @@ document.getElementById('fileInput').addEventListener('change', async e => {
   document.getElementById('previewSection').style.display = 'flex';
   document.getElementById('loadingSection').style.display = 'none';
   document.getElementById('resultPanel').style.display = 'none';
-});
+}
+document.getElementById('fileInput').addEventListener('change', e => handleFileSelected(e.target.files[0]));
+document.getElementById('galleryInput').addEventListener('change', e => handleFileSelected(e.target.files[0]));
 
 function resetCapture() {
   document.getElementById('fileInput').value = '';
+  document.getElementById('galleryInput').value = '';
   _compressedBlob = null;
   _currentResult = null;
   document.getElementById('cameraSection').style.display = 'flex';
