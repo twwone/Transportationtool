@@ -1960,9 +1960,12 @@ def analyze_food():
     if not image_bytes:
         return jsonify({"error": "圖片內容為空"}), 400
 
-    b64_str = _b64.b64encode(image_bytes).decode("utf-8")
+    food_hint = request.form.get("food_hint", "").strip()[:60]
+    b64_str   = _b64.b64encode(image_bytes).decode("utf-8")
 
+    hint_line = f"使用者提示：這道食物是「{food_hint}」，請以此為主要參考依據。\n" if food_hint else ""
     _FOOD_PROMPT = (
+        f"{hint_line}"
         "你是一位專業的運動營養師 AI。分析使用者傳來的食物照片，"
         "嚴格以 JSON 格式回傳，不得輸出任何其他內容。\n"
         '回傳格式：{"food_name":"食物完整名稱","calories":整數,'

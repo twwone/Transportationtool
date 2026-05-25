@@ -212,8 +212,37 @@ body::before{
 .legend-val{font-weight:700;color:var(--text)}
 .legend-lbl{color:var(--sub)}
 
+/* ── Hint input (pre-analysis) ── */
+.hint-input{
+  width:100%;
+  background:rgba(255,255,255,.08);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-s);
+  color:var(--text);font-size:.88rem;font-family:inherit;
+  padding:10px 14px;outline:none;
+  transition:border-color .2s;
+}
+.hint-input:focus{border-color:rgba(52,211,153,.5)}
+.hint-input::placeholder{color:rgba(255,255,255,.28)}
+
+/* ── Edit section (post-analysis) ── */
+.edit-section{padding:0 20px 4px;display:flex;flex-direction:column;gap:6px}
+.edit-label{font-size:.72rem;color:var(--sub);font-weight:600;letter-spacing:.02em}
+.edit-row{display:flex;gap:8px}
+.edit-input{
+  flex:1;min-width:0;
+  background:rgba(255,255,255,.08);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-s);
+  color:var(--text);font-size:.9rem;font-family:inherit;
+  padding:10px 12px;outline:none;
+  transition:border-color .2s;
+}
+.edit-input:focus{border-color:rgba(52,211,153,.5)}
+.edit-cal{flex:0 0 88px;text-align:center;font-weight:700}
+
 /* ── Save button ── */
-.save-section{padding:0 20px 20px}
+.save-section{padding:8px 20px 20px}
 .save-btn{
   width:100%;padding:14px;border-radius:var(--radius-s);
   background:rgba(52,211,153,.18);
@@ -515,6 +544,8 @@ body::before{
     <!-- Preview -->
     <div class="preview-section" id="previewSection">
       <img class="preview-img" id="previewImg" src="" alt="food preview">
+      <input class="hint-input" id="foodHint" type="text" maxlength="60"
+             placeholder="選填：告訴 AI 這是什麼（如「排骨飯」「大杯拿鐵」）">
       <div style="width:100%;padding:0 4px;display:flex;gap:8px">
         <button class="analyze-btn" style="flex:1" id="analyzeBtn" onclick="doAnalyze()">🔍 AI 辨識熱量</button>
         <button class="analyze-btn" style="width:48px;background:rgba(255,255,255,.15)" onclick="resetCapture()">✕</button>
@@ -623,6 +654,15 @@ body::before{
           <span class="legend-val" id="lgFat">—</span>
           <span class="legend-lbl">脂肪</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Edit section -->
+    <div class="edit-section">
+      <div class="edit-label">✏ 辨識有誤？可直接修改</div>
+      <div class="edit-row">
+        <input class="edit-input" id="editFoodName" type="text" maxlength="100" placeholder="食物名稱">
+        <input class="edit-input edit-cal" id="editCalories" type="number" min="0" max="99999" placeholder="大卡">
       </div>
     </div>
 
@@ -901,6 +941,7 @@ document.getElementById('galleryInput').addEventListener('change', e => handleFi
 function resetCapture() {
   document.getElementById('fileInput').value = '';
   document.getElementById('galleryInput').value = '';
+  document.getElementById('foodHint').value = '';
   _compressedBlob = null;
   _currentResult = null;
   document.getElementById('cameraSection').style.display = 'flex';
@@ -953,6 +994,8 @@ async function doAnalyze() {
     fd.append('image', _compressedBlob, 'food.jpg');
     const geminiKey = getGeminiKey();
     if (geminiKey) fd.append('ai_key', geminiKey);
+    const hint = document.getElementById('foodHint').value.trim();
+    if (hint) fd.append('food_hint', hint);
     const resp = await fetch('/api/analyze-food', { method: 'POST', body: fd });
     const data = await resp.json();
 
@@ -975,6 +1018,9 @@ function renderResult(data) {
   document.getElementById('resultFoodName').textContent = data.food_name;
   document.getElementById('resultComment').textContent = data.comment;
   document.getElementById('resultCalNum').textContent = data.calories;
+  // Pre-fill editable fields (方案 B)
+  document.getElementById('editFoodName').value = data.food_name;
+  document.getElementById('editCalories').value = data.calories;
 
   const m = data.macros;
   const totalG = m.carbs + m.protein + m.fat;
@@ -1025,6 +1071,9 @@ async function saveRecord() {
   saveBtn.disabled = true;
   saveBtn.textContent = '同步中…';
 
+  const editedName = document.getElementById('editFoodName').value.trim() || _currentResult.food_name;
+  const editedCal  = Math.max(0, parseInt(document.getElementById('editCalories').value) || 0) || _currentResult.calories;
+
   try {
     const resp = await fetch('/api/diet/record', {
       method: 'POST',
@@ -1032,8 +1081,8 @@ async function saveRecord() {
       body: JSON.stringify({
         sync_id:     getSyncId(),
         date:        todayKey(),
-        food_name:   _currentResult.food_name,
-        calories:    _currentResult.calories,
+        food_name:   editedName,
+        calories:    editedCal,
         macros:      _currentResult.macros,
         ts:          Date.now(),
         daily_limit: getDailyLimit(),
