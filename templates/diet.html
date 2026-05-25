@@ -797,6 +797,15 @@ function getGeminiKey() { return getSettings().geminiKey || ''; }
 
 // ── Sync ID ──
 function getSyncId() {
+  // 優先使用登入帳號的 dietSyncId，確保跨裝置同步
+  try {
+    const sess = JSON.parse(localStorage.getItem('userSession') || 'null');
+    if (sess?.dietSyncId) {
+      localStorage.setItem('dietSyncId', sess.dietSyncId);
+      return sess.dietSyncId;
+    }
+  } catch {}
+  // 未登入：使用裝置本地 UUID
   let id = localStorage.getItem('dietSyncId');
   if (!id) {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {

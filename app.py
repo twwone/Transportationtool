@@ -2075,6 +2075,83 @@ def admin_users():
         return jsonify({"ok": False, "error": str(e)}), 503
 
 
+# ──────────────────────────────────────────────
+#  使用者帳號：註冊 / 登入（4 位數字號碼）
+# ──────────────────────────────────────────────
+@app.route("/api/auth/register", methods=["POST"])
+def auth_register():
+    data = request.get_json(force=True) or {}
+    code = str(data.get("code", "")).strip()
+    name = str(data.get("name", "")).strip()[:32]
+    if not _re.match(r'^\d{4}$', code):
+        return jsonify({"error": "invalid_code", "message": "號碼必須是 4 位數字"}), 400
+    if not name:
+        return jsonify({"error": "no_name", "message": "請輸入名稱"}), 400
+    supa_url = os.environ.get("SUPABASE_URL", _SUPA_BASE)
+    key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY") or _SUPA_ANON
+    try:
+        chk = _requests.get(
+            f"{supa_url}/rest/v1/user_configs?sync_key=eq.{code}&select=sync_key",
+            headers={"apikey": key, "Authorization": f"Bearer {key}"},
+            timeout=8,
+        )
+        if chk.status_code == 200 and chk.json():
+            return jsonify({"error": "code_taken", "message": "此號碼已被使用，請換一個"}), 409
+    except Exception as e:
+        return jsonify({"error": "network_error", "message": str(e)}), 503
+    diet_sync_id = str(data.get("dietSyncId", "")).strip() or None
+    cfg = {
+        "name": name,
+        "code": code,
+        "dietSyncId": diet_sync_id,
+        "createdAt": _dt.now(_tz.utc).isoformat(),
+    }
+    try:
+        r = _requests.post(
+            f"{supa_url}/rest/v1/user_configs",
+            headers={
+                "apikey": key, "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates,return=minimal",
+            },
+            json={"sync_key": code, "config": cfg, "updated_at": _dt.now(_tz.utc).isoformat()},
+            timeout=8,
+        )
+        if r.ok:
+            return jsonify({"ok": True, "code": code, "name": name, "dietSyncId": diet_sync_id})
+        return jsonify({"error": "create_failed", "message": f"建立失敗 ({r.status_code})"}), 500
+    except Exception as e:
+        return jsonify({"error": "network_error", "message": str(e)}), 503
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    data = request.get_json(force=True) or {}
+    code = str(data.get("code", "")).strip()
+    if not _re.match(r'^\d{4}$', code):
+        return jsonify({"error": "invalid_code", "message": "號碼必須是 4 位數字"}), 400
+    supa_url = os.environ.get("SUPABASE_URL", _SUPA_BASE)
+    key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY") or _SUPA_ANON
+    try:
+        r = _requests.get(
+            f"{supa_url}/rest/v1/user_configs?sync_key=eq.{code}&select=sync_key,config,updated_at",
+            headers={"apikey": key, "Authorization": f"Bearer {key}"},
+            timeout=8,
+        )
+        if r.status_code != 200 or not r.json():
+            return jsonify({"error": "not_found", "message": "找不到此號碼，請先註冊"}), 404
+        row = r.json()[0]
+        cfg = row.get("config") or {}
+        return jsonify({
+            "ok": True,
+            "code": code,
+            "name": cfg.get("name", ""),
+            "dietSyncId": cfg.get("dietSyncId"),
+        })
+    except Exception as e:
+        return jsonify({"error": "network_error", "message": str(e)}), 503
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")

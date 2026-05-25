@@ -439,7 +439,91 @@ body {
   .sh-add input, .sh-sync-import input {
     background: rgba(58,58,60,0.9); border-color: rgba(255,255,255,0.1); color: #f2f2f7;
   }
+  /* auth dark */
+  .auth-tab.active { background: rgba(58,58,60,0.95); color: #f2f2f7; box-shadow: none; }
+  .auth-code-input { color: #f2f2f7; }
+  .auth-code-input::placeholder { color: #48484a; }
+  .auth-user-name { color: #f2f2f7; }
+  .auth-name-field {
+    background: rgba(58,58,60,0.9) !important; border-color: rgba(255,255,255,0.1) !important; color: #f2f2f7 !important;
+  }
 }
+
+/* ── Auth Sheet ── */
+.auth-tabs {
+  display: flex; gap: 0;
+  margin: 14px 16px 4px;
+  background: rgba(118,118,128,0.12);
+  border-radius: 12px; padding: 3px;
+}
+.auth-tab {
+  flex: 1; padding: 7px 12px; border-radius: 10px;
+  border: none; font-size: 0.88rem; font-weight: 600;
+  background: transparent; color: #636366;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.18s, color 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.auth-tab.active {
+  background: #fff; color: #1c1c1e;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.auth-code-wrap { padding: 14px 16px 8px; }
+.auth-code-input {
+  width: 100%; padding: 14px 16px;
+  font-size: 2rem; letter-spacing: 0.7rem;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  text-align: center; background: none;
+  border: none; outline: none;
+  color: #1c1c1e; font-weight: 800;
+  -webkit-tap-highlight-color: transparent;
+  display: block;
+}
+.auth-name-field {
+  width: 100%; padding: 12px 16px;
+  font-size: 0.95rem; color: #1c1c1e;
+  background: rgba(255,255,255,0.9);
+  border: 1.5px solid rgba(60,60,67,0.2);
+  border-radius: 12px; outline: none;
+  font-family: inherit; display: block;
+  margin: 8px 16px 0;
+  box-sizing: border-box; width: calc(100% - 32px);
+}
+.auth-name-field:focus { border-color: #007aff; }
+.auth-error {
+  min-height: 20px; margin: 4px 16px 8px;
+  font-size: 0.82rem; color: #ff3b30;
+  font-weight: 500; text-align: center;
+}
+.auth-submit-btn {
+  display: block; width: calc(100% - 32px);
+  margin: 0 16px 16px;
+  padding: 14px; border-radius: 14px;
+  background: #007aff; color: #fff;
+  font-size: 1rem; font-weight: 700;
+  border: none; cursor: pointer; font-family: inherit;
+  transition: transform 0.18s, opacity 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.auth-submit-btn:active { transform: scale(0.97); }
+.auth-submit-btn:disabled { opacity: 0.45; pointer-events: none; }
+.auth-user-hero {
+  display: flex; align-items: center; gap: 16px;
+  padding: 24px 20px 14px;
+}
+.auth-user-avatar { font-size: 2.8rem; }
+.auth-user-info { flex: 1; }
+.auth-user-name { font-size: 1.2rem; font-weight: 800; color: #1c1c1e; }
+.auth-user-code { font-size: 0.82rem; color: #8e8e93; margin-top: 3px; font-family: monospace; letter-spacing: .05em; }
+.auth-logout-row {
+  display: block; width: 100%; padding: 14px 16px;
+  text-align: left; background: none; border: none;
+  font-size: 0.92rem; font-weight: 600; color: #ff3b30;
+  cursor: pointer; font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 16px;
+}
+.auth-logout-row:active { background: rgba(255,59,48,0.06); }
 
 /* ══════════════════════════════════════════
    👑 Ghost Admin — 幽靈管理員模式
@@ -787,24 +871,64 @@ body {
 
 <div class="footer">Transportation Assistant</div>
 
-<!-- Profile Sheet -->
+<!-- Auth Sheet -->
 <div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
-<div class="profile-sheet" id="profileSheet">
+<div class="profile-sheet" id="authSheet">
   <div class="sh-handle"></div>
-  <div class="sh-label">使用者</div>
-  <div class="sh-section" id="profileList"></div>
-  <div class="sh-section">
-    <div class="sh-add">
-      <input id="newName" type="text" placeholder="新用戶名稱" maxlength="16"
-             onkeydown="if(event.key==='Enter')addProfile()">
-      <button onclick="addProfile()">新增</button>
+
+  <!-- 已登入 -->
+  <div id="authLoggedIn" style="display:none">
+    <div class="auth-user-hero">
+      <div class="auth-user-avatar">👤</div>
+      <div class="auth-user-info">
+        <div class="auth-user-name" id="authUserName">—</div>
+        <div class="auth-user-code" id="authUserCode"></div>
+      </div>
+    </div>
+    <div style="margin: 0 16px 20px">
+      <button class="auth-logout-row" onclick="doLogout()">🚪 登出</button>
     </div>
   </div>
-  <div class="sh-label">從其他裝置匯入</div>
-  <div class="sh-section">
-    <div class="sh-sync-import">
-      <input id="syncKeyInput" type="text" placeholder="貼上 8 碼同步碼…" maxlength="8">
-      <button onclick="doImportSync()">匯入</button>
+
+  <!-- 未登入 -->
+  <div id="authNotLoggedIn">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="authTabLogin" onclick="switchAuthTab('login')">登入</button>
+      <button class="auth-tab"        id="authTabReg"   onclick="switchAuthTab('register')">註冊</button>
+    </div>
+
+    <!-- 登入 -->
+    <div id="authLoginPanel">
+      <div class="sh-label" style="padding-top:10px">輸入你的 4 位數號碼</div>
+      <div class="sh-section">
+        <div class="auth-code-wrap">
+          <input type="tel" id="loginCode" class="auth-code-input"
+                 maxlength="4" inputmode="numeric" pattern="[0-9]*"
+                 placeholder="0000" autocomplete="off"
+                 onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+      </div>
+      <div class="auth-error" id="loginError"></div>
+      <button class="auth-submit-btn" id="loginBtn" onclick="doLogin()">登入</button>
+    </div>
+
+    <!-- 註冊 -->
+    <div id="authRegPanel" style="display:none">
+      <div class="sh-label" style="padding-top:10px">你的名稱</div>
+      <input type="text" id="regName" class="auth-name-field"
+             placeholder="輸入你的名字" maxlength="16"
+             onkeydown="if(event.key==='Enter')document.getElementById('regCode').focus()">
+      <div class="sh-label">設定 4 位數密碼</div>
+      <div class="sh-section">
+        <div class="auth-code-wrap">
+          <input type="tel" id="regCode" class="auth-code-input"
+                 maxlength="4" inputmode="numeric" pattern="[0-9]*"
+                 placeholder="0000" autocomplete="off"
+                 onkeydown="if(event.key==='Enter')doRegister()">
+        </div>
+      </div>
+      <div class="auth-error" id="regError"></div>
+      <button class="auth-submit-btn" id="regBtn" onclick="doRegister()">建立帳號</button>
     </div>
   </div>
 </div>
@@ -841,10 +965,10 @@ body {
 <div class="ob-banner" id="obBanner" style="display:none">
   <span class="ob-banner-icon">👤</span>
   <div class="ob-banner-body">
-    <div class="ob-banner-text">設定你的名稱</div>
-    <div class="ob-banner-sub">讓管理員看到你的使用資料</div>
+    <div class="ob-banner-text">建立你的帳號</div>
+    <div class="ob-banner-sub">換裝置也能保留你的所有資料</div>
   </div>
-  <button class="ob-banner-btn" onclick="_obSetup()">設定</button>
+  <button class="ob-banner-btn" onclick="_obSetup()">立即註冊</button>
   <button class="ob-banner-close" onclick="_obDismiss()" aria-label="關閉">×</button>
 </div>
 
@@ -950,96 +1074,118 @@ window.addEventListener('pageshow', e => {
   cards.forEach((c, i) => {
     c.style.animation = `fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) ${80 + i * 60}ms both`;
   });
-  _renderProfiles();
+  _updateChip();
 });
 
-/* ── Profile 管理 ── */
-function _renderProfiles() {
-  const { profiles, active } = Config.getAll();
-  const pArr = Object.values(profiles);
-  document.getElementById('profileLabel').textContent = (profiles[active] || pArr[0]).name;
-  document.getElementById('profileList').innerHTML = pArr.map(p => `
-    <div class="sh-row${p.id === active ? ' active' : ''}" onclick="selectProfile('${p.id}')">
-      <span class="sh-check">${p.id === active ? '✓' : ''}</span>
-      <span class="sh-name">${p.name.replace(/</g,'&lt;')}</span>
-      <button class="sh-sync${p.syncKey ? ' synced' : ''}"
-        onclick="event.stopPropagation();syncProfile('${p.id}')"
-        title="${p.syncKey ? '同步碼: '+p.syncKey : '啟用雲端同步'}">☁️</button>
-      ${pArr.length > 1
-        ? `<button class="sh-del" onclick="event.stopPropagation();delProfile('${p.id}')">刪除</button>`
-        : ''}
-    </div>
-  `).join('');
+/* ══════════════════════════════════════════
+   帳號 / 登入系統
+   ══════════════════════════════════════════ */
+function _getSession() {
+  try { return JSON.parse(localStorage.getItem('userSession') || 'null'); } catch { return null; }
 }
-function openSheet()  {
-  _renderProfiles();
-  document.getElementById('profileSheet').classList.add('open');
+function _setSession(sess) { localStorage.setItem('userSession', JSON.stringify(sess)); }
+function _clearSession()   { localStorage.removeItem('userSession'); }
+
+function _updateChip() {
+  const sess = _getSession();
+  document.getElementById('profileLabel').textContent = sess?.name || '登入';
+}
+
+function openSheet() {
+  const sess = _getSession();
+  document.getElementById('authLoggedIn').style.display   = sess ? '' : 'none';
+  document.getElementById('authNotLoggedIn').style.display = sess ? 'none' : '';
+  if (sess) {
+    document.getElementById('authUserName').textContent = sess.name || '—';
+    document.getElementById('authUserCode').textContent = `號碼：${sess.code}`;
+  }
+  document.getElementById('authSheet').classList.add('open');
   document.getElementById('sheetOverlay').classList.add('open');
 }
 function closeSheet() {
-  document.getElementById('profileSheet').classList.remove('open');
+  document.getElementById('authSheet').classList.remove('open');
   document.getElementById('sheetOverlay').classList.remove('open');
 }
-function selectProfile(id) { Config.setActive(id); _renderProfiles(); closeSheet(); }
-function delProfile(id)     { if (Config.del(id)) _renderProfiles(); }
-function addProfile() {
-  const n = document.getElementById('newName').value.trim();
-  if (!n) { document.getElementById('newName').focus(); return; }
-  Config.create(n);
-  document.getElementById('newName').value = '';
-  _renderProfiles();
+
+function switchAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('authLoginPanel').style.display = isLogin ? '' : 'none';
+  document.getElementById('authRegPanel').style.display   = isLogin ? 'none' : '';
+  document.getElementById('authTabLogin').classList.toggle('active', isLogin);
+  document.getElementById('authTabReg').classList.toggle('active', !isLogin);
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('regError').textContent   = '';
+  setTimeout(() => {
+    const el = isLogin
+      ? document.getElementById('loginCode')
+      : document.getElementById('regName');
+    if (el) el.focus();
+  }, 200);
 }
-async function syncProfile(id) {
-  const { profiles } = Config.getAll();
-  const p = profiles[id];
-  if (!p) return;
-  if (p.syncKey) {
-    const choice = confirm(`同步碼：${p.syncKey}\n\n確定立即推送最新設定到雲端？\n（取消 = 複製同步碼到剪貼簿）`);
-    if (choice) {
-      const r = await Config.push(id);
-      alert(r.ok ? '✅ 已同步到雲端！' : '❌ 同步失敗，請稍後再試');
+
+async function doLogin() {
+  const code = (document.getElementById('loginCode').value || '').trim();
+  const errEl = document.getElementById('loginError');
+  const btn   = document.getElementById('loginBtn');
+  if (!/^\d{4}$/.test(code)) { errEl.textContent = '請輸入 4 位數字'; return; }
+  btn.disabled = true; btn.textContent = '登入中…'; errEl.textContent = '';
+  try {
+    const r    = await fetch('/api/auth/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({code})
+    });
+    const data = await r.json();
+    if (data.ok) {
+      _setSession({code: data.code, name: data.name, dietSyncId: data.dietSyncId});
+      _updateChip(); closeSheet();
+      document.getElementById('loginCode').value = '';
+      if (navigator.vibrate) navigator.vibrate([30,30,60]);
     } else {
-      navigator.clipboard?.writeText(p.syncKey).catch(() => {});
-      alert(`同步碼已複製：${p.syncKey}`);
+      errEl.textContent = data.message || '登入失敗';
+      document.getElementById('loginCode').value = '';
+      document.getElementById('loginCode').focus();
     }
-  } else {
-    if (!confirm(`為「${p.name}」啟用雲端同步？\n系統將自動產生同步碼，讓你在其他裝置匯入相同設定。`)) return;
-    const r = await Config.push(id);
-    if (r.ok) {
-      navigator.clipboard?.writeText(r.syncKey).catch(() => {});
-      _renderProfiles();
-      alert(`✅ 已啟用！\n\n同步碼：${r.syncKey}\n（已複製到剪貼簿，請妥善保存）`);
+  } catch { errEl.textContent = '網路連線失敗，請稍後再試'; }
+  finally { btn.disabled = false; btn.textContent = '登入'; }
+}
+
+async function doRegister() {
+  const name  = (document.getElementById('regName').value || '').trim();
+  const code  = (document.getElementById('regCode').value || '').trim();
+  const errEl = document.getElementById('regError');
+  const btn   = document.getElementById('regBtn');
+  if (!name) { errEl.textContent = '請輸入名稱'; return; }
+  if (!/^\d{4}$/.test(code)) { errEl.textContent = '密碼必須是 4 位數字'; return; }
+  btn.disabled = true; btn.textContent = '建立中…'; errEl.textContent = '';
+  const dietSyncId = localStorage.getItem('dietSyncId') || null;
+  try {
+    const r    = await fetch('/api/auth/register', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({code, name, dietSyncId})
+    });
+    const data = await r.json();
+    if (data.ok) {
+      _setSession({code: data.code, name: data.name, dietSyncId: data.dietSyncId || dietSyncId});
+      _updateChip(); closeSheet();
+      document.getElementById('regName').value = '';
+      document.getElementById('regCode').value = '';
+      if (navigator.vibrate) navigator.vibrate([30,30,60]);
+      setTimeout(() => alert(
+        `✅ 帳號建立成功！\n\n你的號碼是：${data.code}\n請記住此號碼，換裝置時用來登入`
+      ), 350);
     } else {
-      alert('❌ 啟用失敗，請檢查網路連線');
+      errEl.textContent = data.message || '建立失敗';
     }
-  }
+  } catch { errEl.textContent = '網路連線失敗，請稍後再試'; }
+  finally { btn.disabled = false; btn.textContent = '建立帳號'; }
 }
-async function doImportSync() {
-  const key = document.getElementById('syncKeyInput').value.trim().toLowerCase();
-  if (key.length < 6) { alert('請輸入有效的同步碼'); return; }
-  const btn = document.querySelector('.sh-sync-import button');
-  const orig = btn.textContent;
-  btn.textContent = '匯入中…';
-  btn.disabled = true;
-  const r = await Config.pull(key);
-  btn.textContent = orig;
-  btn.disabled = false;
-  if (r.ok) {
-    document.getElementById('syncKeyInput').value = '';
-    _renderProfiles();
-    closeSheet();
-    alert('✅ 設定已從雲端匯入！');
-  } else {
-    alert(r.error || '❌ 匯入失敗，請確認同步碼正確');
-  }
+
+function doLogout() {
+  if (!confirm('確定要登出嗎？')) return;
+  _clearSession(); _updateChip(); closeSheet();
 }
-_renderProfiles();
-(async () => {
-  const p = Config.getActive();
-  if (!p.syncKey) return;
-  const r = await Config.pull(p.syncKey);
-  if (r.ok) _renderProfiles();
-})();
+
+_updateChip();
 
 /* ══════════════════════════════════════════
    👑 Ghost Admin — 幽靈管理員模式
@@ -1363,23 +1509,18 @@ async function _toggleAdminDiet(uid, dietSyncId, userName) {
 /* ── 新用戶引導 ── */
 (function _initOnboarding() {
   if (localStorage.getItem('ob_done')) return;
-  const p = Config.getActive();
-  if (p.syncKey) { localStorage.setItem('ob_done','1'); return; }
-  // 延遲 1.5s 再顯示，避免與頁面載入動畫衝突
+  if (_getSession()) { localStorage.setItem('ob_done','1'); return; }
   setTimeout(() => {
     const banner = document.getElementById('obBanner');
     if (banner) banner.style.display = '';
-  }, 1500);
+  }, 1800);
 })();
 
 function _obSetup() {
   localStorage.setItem('ob_done', '1');
   document.getElementById('obBanner').style.display = 'none';
   openSheet();
-  setTimeout(() => {
-    const nameInput = document.querySelector('#profileSheet input[type="text"]');
-    if (nameInput) nameInput.focus();
-  }, 400);
+  setTimeout(() => switchAuthTab('register'), 300);
 }
 function _obDismiss() {
   localStorage.setItem('ob_done', '1');
