@@ -1978,7 +1978,7 @@ def analyze_food():
                 "HTTP-Referer":  "https://transportationtool.vercel.app",
             },
             json={
-                "model": "google/gemini-2.0-flash-exp:free",
+                "model": "meta-llama/llama-4-scout:free",
                 "messages": [{
                     "role": "user",
                     "content": [
