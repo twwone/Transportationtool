@@ -304,6 +304,10 @@ body {
 .card-weather::before   { background: linear-gradient(90deg,#0ea5e9,#0284c7); }
 .card-weather:hover .sm-arrow { color: #0284c7; }
 
+.card-diet .sm-title { color: #059669; }
+.card-diet::before   { background: linear-gradient(90deg,#34d399,#10b981); }
+.card-diet:hover .sm-arrow { color: #10b981; }
+
 /* ── 底部 ── */
 .footer {
   margin-top: 28px;
@@ -418,6 +422,7 @@ body {
   .card-codes  .sm-title { color: #bf5af2; }
   .card-share  .sm-title { color: #60a5fa; }
   .card-weather .sm-title { color: #38bdf8; }
+  .card-diet  .sm-title { color: #34d399; }
   .footer   { color: #3a3a3c; }
   .profile-chip { background: #2c2c2e; border-color: rgba(255,255,255,0.08); color: #f2f2f7; }
   .pc-chevron   { color: #48484a; }
@@ -515,6 +520,12 @@ body {
   <a href="/weather" class="card card-sm card-weather">
     <span class="sm-icon">☁️</span>
     <div class="sm-title">天氣防禦</div>
+  </a>
+
+  <!-- Diet Tracker -->
+  <a href="/diet" class="card card-sm card-diet">
+    <span class="sm-icon">🥗</span>
+    <div class="sm-title">熱量追蹤</div>
   </a>
 
 </div>

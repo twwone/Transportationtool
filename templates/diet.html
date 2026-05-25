@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>熱量追蹤</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#050d1a">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overscroll-behavior:none;overflow-x:hidden}
+
+@keyframes pageIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes ringGrow{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.35)}50%{box-shadow:0 0 0 14px rgba(52,211,153,0)}}
+@keyframes shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes cheatBounce{0%{transform:scale(.92);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+:root{
+  --bg:#050d1a;
+  --surface:rgba(255,255,255,.07);
+  --glass:rgba(255,255,255,.11);
+  --glass-border:rgba(255,255,255,.18);
+  --text:#f2f2f7;
+  --sub:#8e8e93;
+  --green:#34d399;
+  --blue:#38bdf8;
+  --orange:#fb923c;
+  --radius-l:28px;
+  --radius-m:20px;
+  --radius-s:14px;
+}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding:
+    max(16px, env(safe-area-inset-top)) 0
+    max(48px, env(safe-area-inset-bottom) + 20px);
+  display:flex;flex-direction:column;align-items:center;
+}
+
+/* ── Page aurora background ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(52,211,153,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 5%,  rgba(56,189,248,.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 90%, rgba(251,146,60,.08)  0%, transparent 60%);
+  pointer-events:none;z-index:0;
+}
+
+/* ── Header ── */
+.header{
+  width:100%;max-width:480px;
+  padding:0 20px 16px;
+  display:flex;align-items:center;gap:12px;
+  position:relative;z-index:1;
+  animation:pageIn .5s cubic-bezier(.22,1,.36,1) both;
+}
+.back-btn{
+  width:38px;height:38px;border-radius:50%;
+  background:var(--glass);border:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .2s,background .2s;flex-shrink:0;
+}
+.back-btn:active{transform:scale(.88)}
+.header-info{flex:1}
+.header-title{font-size:1.5rem;font-weight:800;letter-spacing:-.5px}
+.header-sub{font-size:.75rem;color:var(--sub);margin-top:2px}
+.header-budget{
+  text-align:right;font-size:.72rem;color:var(--sub);
+  line-height:1.5;
+}
+.budget-num{font-size:1rem;font-weight:700;color:var(--green);display:block}
+
+/* ── Main container ── */
+.container{
+  width:100%;max-width:480px;
+  padding:0 16px;
+  display:flex;flex-direction:column;gap:16px;
+  position:relative;z-index:1;
+}
+
+/* ── Glass card ── */
+.glass-card{
+  background:var(--glass);
+  backdrop-filter:blur(24px) saturate(1.6);
+  -webkit-backdrop-filter:blur(24px) saturate(1.6);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-l);
+  overflow:hidden;
+}
+
+/* ── Camera Section ── */
+.camera-section{
+  display:flex;flex-direction:column;align-items:center;
+  padding:28px 24px 24px;
+  gap:20px;
+}
+.camera-btn{
+  width:96px;height:96px;border-radius:50%;
+  background:linear-gradient(135deg,#10b981,#059669);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.4rem;cursor:pointer;
+  border:none;
+  box-shadow:0 0 0 0 rgba(52,211,153,.35);
+  animation:pulse 2.4s ease-in-out infinite;
+  transition:transform .2s cubic-bezier(.22,1,.36,1);
+  -webkit-tap-highlight-color:transparent;
+  position:relative;
+}
+.camera-btn:active{transform:scale(.88)}
+.camera-label{font-size:.9rem;font-weight:600;color:var(--sub);letter-spacing:.02em}
+#fileInput{display:none}
+
+/* ── Preview ── */
+.preview-section{display:none;flex-direction:column;align-items:center;gap:16px;padding:20px 20px 8px}
+.preview-img{
+  width:180px;height:180px;object-fit:cover;
+  border-radius:var(--radius-m);
+  border:2px solid var(--glass-border);
+}
+.analyze-btn{
+  width:100%;padding:14px;border-radius:var(--radius-s);
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;font-size:1rem;font-weight:700;
+  border:none;cursor:pointer;
+  font-family:inherit;letter-spacing:.03em;
+  transition:transform .2s,opacity .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.analyze-btn:active{transform:scale(.96)}
+.analyze-btn:disabled{opacity:.55;pointer-events:none}
+
+/* ── Loading spinner ── */
+.loading{
+  display:none;flex-direction:column;align-items:center;gap:12px;
+  padding:24px;
+}
+.spinner{
+  width:36px;height:36px;
+  border:3px solid rgba(255,255,255,.15);
+  border-top-color:var(--green);
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+.loading-text{font-size:.85rem;color:var(--sub)}
+
+/* ── Results Panel ── */
+.result-panel{
+  display:none;
+  animation:fadeSlideUp .55s cubic-bezier(.22,1,.36,1) both;
+}
+.result-hero{
+  padding:22px 24px 16px;
+  display:flex;align-items:center;gap:16px;
+}
+.result-food{flex:1}
+.result-food-name{font-size:1.25rem;font-weight:800;letter-spacing:-.3px}
+.result-comment{font-size:.8rem;color:var(--sub);margin-top:4px;line-height:1.5}
+.result-cal{text-align:right;flex-shrink:0}
+.result-cal-num{
+  font-size:2.4rem;font-weight:900;
+  background:linear-gradient(135deg,var(--green),#0ea5e9);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;letter-spacing:-1px;line-height:1;
+}
+.result-cal-unit{font-size:.7rem;color:var(--sub);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+
+/* ── Activity Rings ── */
+.rings-section{
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 24px 20px;gap:16px;
+}
+.rings-wrap{position:relative;width:260px;height:260px}
+.rings-wrap svg{position:absolute;inset:0}
+.rings-center{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;
+}
+.rings-center-label{font-size:.65rem;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.rings-center-total{font-size:1.6rem;font-weight:900;letter-spacing:-.5px}
+.macro-legend{
+  display:flex;gap:20px;
+}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.8rem}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-val{font-weight:700;color:var(--text)}
+.legend-lbl{color:var(--sub)}
+
+/* ── Save button ── */
+.save-section{padding:0 20px 20px}
+.save-btn{
+  width:100%;padding:14px;border-radius:var(--radius-s);
+  background:rgba(52,211,153,.18);
+  border:1px solid rgba(52,211,153,.35);
+  color:var(--green);font-size:1rem;font-weight:700;
+  cursor:pointer;font-family:inherit;
+  transition:transform .2s,background .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.save-btn:active{transform:scale(.96)}
+.save-btn.saved{background:rgba(52,211,153,.32);color:#fff}
+
+/* ── Daily Bank ── */
+.bank-section{animation:fadeSlideUp .55s cubic-bezier(.22,1,.36,1) .1s both}
+.bank-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px 10px;
+}
+.bank-title{font-size:1rem;font-weight:800}
+.bank-clear{
+  font-size:.72rem;color:#ff453a;background:none;border:none;
+  padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;
+  font-family:inherit;-webkit-tap-highlight-color:transparent;
+}
+.bank-today-bar{
+  margin:0 16px 12px;
+  background:rgba(255,255,255,.06);
+  border-radius:10px;height:8px;overflow:hidden;
+}
+.bank-today-fill{
+  height:100%;border-radius:10px;
+  background:linear-gradient(90deg,var(--green),#0ea5e9);
+  transition:width 1s cubic-bezier(.22,1,.36,1);
+  width:0%;
+}
+.bank-records{display:flex;flex-direction:column;gap:8px;padding:0 16px 16px}
+.record-item{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:var(--radius-s);
+  padding:12px 14px;
+}
+.record-icon{font-size:1.4rem;flex-shrink:0}
+.record-info{flex:1;min-width:0}
+.record-name{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.record-macros{font-size:.7rem;color:var(--sub);margin-top:2px}
+.record-cal{font-size:1rem;font-weight:800;color:var(--green);flex-shrink:0}
+.bank-total{
+  margin:0 16px 12px;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 14px;
+  background:rgba(255,255,255,.05);
+  border-radius:var(--radius-s);
+}
+.bank-total-lbl{font-size:.82rem;color:var(--sub)}
+.bank-total-val{font-size:1rem;font-weight:800}
+.bank-empty{
+  text-align:center;padding:24px;
+  font-size:.85rem;color:var(--sub);
+}
+
+/* ── Cheat Meal Card ── */
+.cheat-card{
+  margin:0 16px 16px;
+  background:linear-gradient(135deg,rgba(251,146,60,.18),rgba(239,68,68,.14));
+  border:1px solid rgba(251,146,60,.4);
+  border-radius:var(--radius-m);
+  padding:16px 18px;
+  animation:cheatBounce .5s cubic-bezier(.22,1,.36,1) both;
+}
+.cheat-header{font-size:1rem;font-weight:800;margin-bottom:8px}
+.cheat-body{font-size:.82rem;color:rgba(255,255,255,.8);line-height:1.6;margin-bottom:12px}
+.cheat-days{display:flex;gap:10px}
+.cheat-day{
+  flex:1;background:rgba(0,0,0,.25);border-radius:10px;
+  padding:8px 10px;text-align:center;
+}
+.cheat-day-lbl{font-size:.68rem;color:var(--sub)}
+.cheat-day-val{font-size:.88rem;font-weight:700;color:var(--orange)}
+
+/* ── Shimmer skeleton ── */
+.skeleton{
+  background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.04) 75%);
+  background-size:600px 100%;
+  animation:shimmer 1.5s infinite;
+  border-radius:8px;height:14px;
+}
+
+/* ── Light mode ── */
+@media(prefers-color-scheme:light){
+  :root{
+    --bg:#f0f7f4;
+    --surface:rgba(255,255,255,.9);
+    --glass:rgba(255,255,255,.72);
+    --glass-border:rgba(0,0,0,.1);
+    --text:#0f0f1a;
+    --sub:#6b7280;
+  }
+  body::before{
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(16,185,129,.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 5%,  rgba(14,165,233,.07) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 60% at 50% 90%, rgba(251,146,60,.05)  0%, transparent 60%);
+  }
+  .record-item{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.07)}
+  .bank-today-bar{background:rgba(0,0,0,.08)}
+  .bank-total{background:rgba(0,0,0,.04)}
+  .cheat-day{background:rgba(0,0,0,.08)}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <div class="header-info">
+    <div class="header-title">熱量追蹤</div>
+    <div class="header-sub" id="dateLabel"></div>
+  </div>
+  <div class="header-budget">
+    <span class="budget-num" id="budgetNum">—</span>
+    剩餘大卡
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Camera + Upload Card -->
+  <div class="glass-card">
+    <!-- Camera entry -->
+    <div class="camera-section" id="cameraSection">
+      <button class="camera-btn" onclick="document.getElementById('fileInput').click()">📷</button>
+      <span class="camera-label">拍照辨識食物熱量</span>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="fileInput" accept="image/*" capture="environment">
+
+    <!-- Preview -->
+    <div class="preview-section" id="previewSection">
+      <img class="preview-img" id="previewImg" src="" alt="food preview">
+      <div style="width:100%;padding:0 4px;display:flex;gap:8px">
+        <button class="analyze-btn" style="flex:1" id="analyzeBtn" onclick="doAnalyze()">🔍 AI 辨識熱量</button>
+        <button class="analyze-btn" style="width:48px;background:rgba(255,255,255,.15)" onclick="resetCapture()">✕</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" id="loadingSection">
+      <div class="spinner"></div>
+      <div class="loading-text">Gemini 正在辨識食物中…</div>
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div class="glass-card result-panel" id="resultPanel">
+    <!-- Hero: food name + calories -->
+    <div class="result-hero">
+      <div class="result-food">
+        <div class="result-food-name" id="resultFoodName"></div>
+        <div class="result-comment" id="resultComment"></div>
+      </div>
+      <div class="result-cal">
+        <div class="result-cal-num" id="resultCalNum">0</div>
+        <div class="result-cal-unit">大卡</div>
+      </div>
+    </div>
+
+    <!-- Activity Rings -->
+    <div class="rings-section">
+      <div class="rings-wrap">
+        <svg viewBox="0 0 260 260" width="260" height="260" style="animation:ringGrow .6s cubic-bezier(.22,1,.36,1) both">
+          <defs>
+            <linearGradient id="gCarbs" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#38bdf8"/>
+              <stop offset="100%" stop-color="#818cf8"/>
+            </linearGradient>
+            <linearGradient id="gProtein" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#34d399"/>
+              <stop offset="100%" stop-color="#10b981"/>
+            </linearGradient>
+            <linearGradient id="gFat" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#fb923c"/>
+              <stop offset="100%" stop-color="#f43f5e"/>
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Track rings -->
+          <circle cx="130" cy="130" r="108" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20"/>
+          <circle cx="130" cy="130" r="80"  fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20"/>
+          <circle cx="130" cy="130" r="52"  fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20"/>
+          <!-- Active rings -->
+          <circle id="ring-carbs"
+            cx="130" cy="130" r="108" fill="none"
+            stroke="url(#gCarbs)" stroke-width="20"
+            stroke-linecap="round"
+            transform="rotate(-90 130 130)"
+            stroke-dasharray="678.58" stroke-dashoffset="678.58"
+            filter="url(#glow)"/>
+          <circle id="ring-protein"
+            cx="130" cy="130" r="80" fill="none"
+            stroke="url(#gProtein)" stroke-width="20"
+            stroke-linecap="round"
+            transform="rotate(-90 130 130)"
+            stroke-dasharray="502.65" stroke-dashoffset="502.65"
+            filter="url(#glow)"/>
+          <circle id="ring-fat"
+            cx="130" cy="130" r="52" fill="none"
+            stroke="url(#gFat)" stroke-width="20"
+            stroke-linecap="round"
+            transform="rotate(-90 130 130)"
+            stroke-dasharray="326.73" stroke-dashoffset="326.73"
+            filter="url(#glow)"/>
+        </svg>
+        <div class="rings-center">
+          <span class="rings-center-label">三大營養素</span>
+          <span class="rings-center-total" id="ringsTotalG">—</span>
+        </div>
+      </div>
+      <!-- Legend -->
+      <div class="macro-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#38bdf8"></div>
+          <span class="legend-val" id="lgCarbs">—</span>
+          <span class="legend-lbl">碳水</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#34d399"></div>
+          <span class="legend-val" id="lgProtein">—</span>
+          <span class="legend-lbl">蛋白</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#fb923c"></div>
+          <span class="legend-val" id="lgFat">—</span>
+          <span class="legend-lbl">脂肪</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save button -->
+    <div class="save-section">
+      <button class="save-btn" id="saveBtn" onclick="saveRecord()">＋ 記錄到今日</button>
+    </div>
+  </div>
+
+  <!-- Daily Bank -->
+  <div class="glass-card bank-section" id="bankSection">
+    <div class="bank-header">
+      <span class="bank-title">今日飲食紀錄</span>
+      <button class="bank-clear" onclick="clearToday()">清除今天</button>
+    </div>
+    <div class="bank-today-bar"><div class="bank-today-fill" id="todayFill"></div></div>
+    <div id="bankBody"></div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ── State ──
+let _currentResult = null;
+let _compressedBlob = null;
+
+// ── Date helpers ──
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+function formatDate(key) {
+  const [y, m, d] = key.split('-');
+  const days = ['日','一','二','三','四','五','六'];
+  const dt = new Date(+y, +m - 1, +d);
+  return `${+m}/${+d}（週${days[dt.getDay()]}）`;
+}
+
+// ── LocalStorage bank ──
+const DAILY_LIMIT = 2500;
+
+function getBank() {
+  try { return JSON.parse(localStorage.getItem('dietBank') || '{}'); }
+  catch { return {}; }
+}
+function saveBank(bank) {
+  localStorage.setItem('dietBank', JSON.stringify(bank));
+}
+function getDayData(bank, key) {
+  if (!bank[key]) bank[key] = { records: [], debt: 0 };
+  return bank[key];
+}
+
+// ── Image compression via Canvas ──
+async function compressToBlob(file, maxBytes = 2 * 1024 * 1024) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX_DIM = 1600;
+      let { naturalWidth: w, naturalHeight: h } = img;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        const r = Math.min(MAX_DIM / w, MAX_DIM / h);
+        w = Math.round(w * r);
+        h = Math.round(h * r);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+      let quality = 0.88;
+      const tryQ = () => {
+        canvas.toBlob(blob => {
+          if (blob.size <= maxBytes || quality <= 0.45) {
+            resolve(blob);
+          } else {
+            quality -= 0.12;
+            tryQ();
+          }
+        }, 'image/jpeg', quality);
+      };
+      tryQ();
+    };
+    img.src = url;
+  });
+}
+
+// ── File input handler ──
+document.getElementById('fileInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  _currentResult = null;
+
+  // Show preview
+  const blob = await compressToBlob(file);
+  _compressedBlob = blob;
+  const url = URL.createObjectURL(blob);
+  document.getElementById('previewImg').src = url;
+  document.getElementById('cameraSection').style.display = 'none';
+  document.getElementById('previewSection').style.display = 'flex';
+  document.getElementById('loadingSection').style.display = 'none';
+  document.getElementById('resultPanel').style.display = 'none';
+});
+
+function resetCapture() {
+  document.getElementById('fileInput').value = '';
+  _compressedBlob = null;
+  _currentResult = null;
+  document.getElementById('cameraSection').style.display = 'flex';
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('loadingSection').style.display = 'none';
+  document.getElementById('resultPanel').style.display = 'none';
+}
+
+// ── Analyze food ──
+async function doAnalyze() {
+  if (!_compressedBlob) return;
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('loadingSection').style.display = 'flex';
+  document.getElementById('analyzeBtn').disabled = true;
+
+  try {
+    const fd = new FormData();
+    fd.append('image', _compressedBlob, 'food.jpg');
+    const resp = await fetch('/api/analyze-food', { method: 'POST', body: fd });
+    const data = await resp.json();
+
+    if (data.error) {
+      alert('辨識失敗：' + data.error);
+      document.getElementById('previewSection').style.display = 'flex';
+    } else {
+      _currentResult = data;
+      renderResult(data);
+    }
+  } catch (err) {
+    alert('網路錯誤，請稍後再試');
+    document.getElementById('previewSection').style.display = 'flex';
+  } finally {
+    document.getElementById('loadingSection').style.display = 'none';
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+
+// ── Render AI result ──
+function renderResult(data) {
+  document.getElementById('resultFoodName').textContent = data.food_name;
+  document.getElementById('resultComment').textContent = data.comment;
+  document.getElementById('resultCalNum').textContent = data.calories;
+
+  const m = data.macros;
+  const totalG = m.carbs + m.protein + m.fat;
+  document.getElementById('ringsTotalG').textContent = totalG + 'g';
+  document.getElementById('lgCarbs').textContent   = m.carbs + 'g';
+  document.getElementById('lgProtein').textContent = m.protein + 'g';
+  document.getElementById('lgFat').textContent     = m.fat + 'g';
+
+  // Reset rings first
+  ['ring-carbs','ring-protein','ring-fat'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.transition = 'none';
+  });
+  document.getElementById('ring-carbs').style.strokeDashoffset   = '678.58';
+  document.getElementById('ring-protein').style.strokeDashoffset = '502.65';
+  document.getElementById('ring-fat').style.strokeDashoffset     = '326.73';
+
+  // Animate after tick
+  const REFS = { carbs: 100, protein: 35, fat: 30 };
+  const Cs   = { carbs: 678.58, protein: 502.65, fat: 326.73 };
+  const keys  = ['carbs', 'protein', 'fat'];
+  const ringIds = ['ring-carbs', 'ring-protein', 'ring-fat'];
+
+  requestAnimationFrame(() => {
+    keys.forEach((key, i) => {
+      setTimeout(() => {
+        const ratio  = Math.min(1, (m[key] || 0) / REFS[key]);
+        const el     = document.getElementById(ringIds[i]);
+        el.style.transition = `stroke-dashoffset ${1.1 + i * 0.2}s cubic-bezier(.22,1,.36,1)`;
+        el.style.strokeDashoffset = Cs[key] * (1 - ratio);
+      }, 250 + i * 120);
+    });
+  });
+
+  // Show save btn
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.textContent = '＋ 記錄到今日';
+  saveBtn.classList.remove('saved');
+  saveBtn.disabled = false;
+
+  document.getElementById('resultPanel').style.display = 'block';
+}
+
+// ── Save record to bank ──
+function saveRecord() {
+  if (!_currentResult) return;
+  const bank  = getBank();
+  const today = todayKey();
+  const day   = getDayData(bank, today);
+
+  day.records.push({
+    food_name: _currentResult.food_name,
+    calories:  _currentResult.calories,
+    macros:    _currentResult.macros,
+    ts:        Date.now(),
+  });
+
+  // Cheat meal buffer: check overflow
+  const totalCal = day.records.reduce((s, r) => s + r.calories, 0) + (day.debt || 0);
+  if (totalCal > DAILY_LIMIT && !day._cheat_spread) {
+    const overflow = totalCal - DAILY_LIMIT;
+    const perDay   = Math.ceil(overflow / 2);
+    for (let i = 1; i <= 2; i++) {
+      const fKey = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
+      const fDay = getDayData(bank, fKey);
+      fDay.debt  = (fDay.debt || 0) + perDay;
+    }
+    day._cheat_spread = { overflow, perDay };
+  }
+
+  saveBank(bank);
+
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.textContent = '✓ 已記錄！';
+  saveBtn.classList.add('saved');
+  saveBtn.disabled = true;
+
+  renderBank();
+}
+
+// ── Clear today ──
+function clearToday() {
+  if (!confirm('確定清除今日所有紀錄？')) return;
+  const bank = getBank();
+  const today = todayKey();
+  if (bank[today]) {
+    bank[today].records = [];
+    delete bank[today]._cheat_spread;
+  }
+  saveBank(bank);
+  renderBank();
+}
+
+// ── Render daily bank ──
+function renderBank() {
+  const bank  = getBank();
+  const today = todayKey();
+  const day   = getDayData(bank, today);
+
+  const totalCal  = day.records.reduce((s, r) => s + r.calories, 0);
+  const debt      = day.debt || 0;
+  const effective = totalCal + debt;
+  const remaining = Math.max(0, DAILY_LIMIT - effective);
+
+  // Header budget
+  document.getElementById('budgetNum').textContent = remaining;
+
+  // Progress bar (capped at 100%)
+  const pct = Math.min(100, (effective / DAILY_LIMIT) * 100);
+  document.getElementById('todayFill').style.width = pct + '%';
+
+  let html = '';
+
+  // Cheat meal card
+  if (day._cheat_spread) {
+    const { overflow, perDay } = day._cheat_spread;
+    const d1 = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const d2 = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+    html += `
+      <div class="cheat-card">
+        <div class="cheat-header">🔥 熱量分期啟動</div>
+        <div class="cheat-body">
+          今日超標 <strong>${overflow}</strong> 大卡<br>
+          已自動平攤至接下來 2 天，每天吸收 <strong>${perDay}</strong> 大卡
+        </div>
+        <div class="cheat-days">
+          <div class="cheat-day">
+            <div class="cheat-day-lbl">${formatDate(d1)}</div>
+            <div class="cheat-day-val">−${perDay} kcal</div>
+          </div>
+          <div class="cheat-day">
+            <div class="cheat-day-lbl">${formatDate(d2)}</div>
+            <div class="cheat-day-val">−${perDay} kcal</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Total
+  if (day.records.length > 0) {
+    const totalColor = effective > DAILY_LIMIT ? '#fb923c' : 'var(--green)';
+    const debtNote   = debt > 0 ? ` <span style="color:var(--orange);font-size:.7rem">（含 ${debt} 前日分期）</span>` : '';
+    html += `
+      <div class="bank-total">
+        <span class="bank-total-lbl">今日累計${debtNote}</span>
+        <span class="bank-total-val" style="color:${totalColor}">${effective} kcal</span>
+      </div>`;
+  }
+
+  // Records list
+  if (day.records.length === 0) {
+    html += `<div class="bank-empty">今日尚無紀錄，拍張食物開始追蹤吧！</div>`;
+  } else {
+    html += '<div class="bank-records">';
+    [...day.records].reverse().forEach(r => {
+      const m = r.macros || {};
+      html += `
+        <div class="record-item">
+          <span class="record-icon">🍽</span>
+          <div class="record-info">
+            <div class="record-name">${r.food_name}</div>
+            <div class="record-macros">碳 ${m.carbs||0}g　蛋 ${m.protein||0}g　脂 ${m.fat||0}g</div>
+          </div>
+          <span class="record-cal">${r.calories}</span>
+        </div>`;
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('bankBody').innerHTML = html;
+}
+
+// ── Init ──
+(function init() {
+  const days = ['日','一','二','三','四','五','六'];
+  const now  = new Date();
+  document.getElementById('dateLabel').textContent =
+    `${now.getMonth()+1}/${now.getDate()}（週${days[now.getDay()]}）`;
+  renderBank();
+})();
+
+// Prevent double-tap zoom
+let _lt = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - _lt < 300) e.preventDefault();
+  _lt = now;
+}, { passive: false });
+</script>
+</body>
+</html>

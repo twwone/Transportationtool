@@ -1788,6 +1788,96 @@ def api_weather():
     return jsonify(data)
 
 
+# ══════════════════════════════════════════════
+#  AI 飲食熱量追蹤（Gemini Vision）
+# ══════════════════════════════════════════════
+@app.route("/diet")
+def diet():
+    return render_template("diet.html")
+
+
+@app.route("/api/analyze-food", methods=["POST"])
+def analyze_food():
+    import base64 as _b64
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return jsonify({"error": "google-generativeai 套件未安裝，請執行 pip install google-generativeai"}), 500
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return jsonify({"error": "GEMINI_API_KEY 未設定，請聯絡管理員"}), 503
+
+    genai.configure(api_key=api_key)
+
+    image_bytes = None
+    mime_type = "image/jpeg"
+
+    ct = request.content_type or ""
+    if "multipart" in ct:
+        f = request.files.get("image")
+        if not f:
+            return jsonify({"error": "缺少 image 欄位"}), 400
+        image_bytes = f.read()
+        mime_type = f.mimetype or "image/jpeg"
+    else:
+        body = request.get_json(silent=True) or {}
+        b64 = body.get("image", "")
+        if not b64:
+            return jsonify({"error": "缺少 image 欄位"}), 400
+        if "," in b64:
+            header, b64 = b64.split(",", 1)
+            if "png" in header:
+                mime_type = "image/png"
+            elif "webp" in header:
+                mime_type = "image/webp"
+        mime_type = body.get("mime_type", mime_type)
+        image_bytes = _b64.b64decode(b64)
+
+    if not image_bytes:
+        return jsonify({"error": "圖片內容為空"}), 400
+
+    _FOOD_PROMPT = (
+        "你是一位專業的運動營養師 AI。分析使用者傳來的食物照片，"
+        "嚴格以 JSON 格式回傳，不得輸出任何其他內容。\n"
+        '回傳格式：{"food_name":"食物完整名稱","calories":整數,'
+        '"macros":{"carbs":整數,"protein":整數,"fat":整數},"comment":"一句30字以內的繁體中文正向評語"}\n'
+        "calories 單位大卡，macros 單位公克。"
+    )
+
+    try:
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            generation_config={"response_mime_type": "application/json"},
+        )
+        response = model.generate_content([
+            _FOOD_PROMPT,
+            {"mime_type": mime_type, "data": image_bytes},
+        ])
+        text = response.text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            text = "\n".join(
+                lines[1:-1] if lines and lines[-1].strip() == "```" else lines[1:]
+            )
+        result = _json.loads(text)
+        macros = result.get("macros", {})
+        return jsonify({
+            "food_name": str(result.get("food_name", "未知食物")),
+            "calories":  max(0, int(result.get("calories", 0))),
+            "macros": {
+                "carbs":   max(0, int(macros.get("carbs",   0))),
+                "protein": max(0, int(macros.get("protein", 0))),
+                "fat":     max(0, int(macros.get("fat",     0))),
+            },
+            "comment": str(result.get("comment", "")),
+        })
+    except _json.JSONDecodeError:
+        return jsonify({"error": "AI 回傳格式異常，請再試一次"}), 500
+    except Exception as e:
+        return jsonify({"error": f"AI 分析失敗：{str(e)}"}), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")
