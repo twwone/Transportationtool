@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>設定</title>
+<script src="/static/config.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overscroll-behavior: none; background: #f2f2f7; }
+:root {
+  --bg:      #f2f2f7;
+  --surface: rgba(255,255,255,0.9);
+  --text:    #1c1c1e;
+  --sub:     #6b7280;
+  --tint:    #007aff;
+  --red:     #ff3b30;
+  --border:  rgba(60,60,67,0.1);
+  --radius:  16px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  color: var(--text);
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+}
+
+/* ── Top Bar ── */
+.top-bar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center;
+  padding: max(14px, env(safe-area-inset-top)) 16px 12px;
+  background: rgba(242,242,247,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.back-btn {
+  display: flex; align-items: center; gap: 4px;
+  color: var(--tint); font-size: 1rem; font-weight: 500;
+  text-decoration: none; padding: 4px 8px 4px 0;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 64px;
+}
+.back-btn:active { opacity: 0.5; }
+.top-title {
+  flex: 1; text-align: center;
+  font-size: 1rem; font-weight: 700; color: var(--text);
+}
+.save-btn {
+  min-width: 64px; text-align: right;
+  background: none; border: none;
+  color: var(--tint); font-size: 1rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; padding: 4px 0 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.save-btn:active { opacity: 0.5; }
+
+/* ── Profile Switcher ── */
+.profile-strip {
+  display: flex; gap: 8px; overflow-x: auto; padding: 14px 16px 6px;
+  scrollbar-width: none;
+}
+.profile-strip::-webkit-scrollbar { display: none; }
+.p-chip {
+  flex-shrink: 0; padding: 7px 14px;
+  background: var(--surface); border-radius: 100px;
+  border: 1.5px solid var(--border);
+  font-size: 0.82rem; font-weight: 600; color: var(--sub);
+  cursor: pointer; font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.p-chip.active { border-color: var(--tint); color: var(--tint); background: rgba(0,122,255,0.08); }
+.p-chip:active { opacity: 0.7; }
+
+/* ── Section ── */
+.wrap { padding: 0 16px; }
+.sec-label {
+  font-size: 0.72rem; font-weight: 600; color: var(--sub);
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: 16px 4px 6px;
+}
+.sec-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* ── Row types ── */
+.s-row {
+  display: flex; align-items: center;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px; min-height: 46px;
+}
+.s-row:last-child { border-bottom: none; }
+.s-label {
+  font-size: 0.9rem; color: var(--text); font-weight: 500;
+  flex-shrink: 0; min-width: 76px;
+}
+.s-val {
+  flex: 1; display: flex; justify-content: flex-end;
+}
+.s-input {
+  flex: 1; text-align: right; max-width: 200px;
+  background: none; border: none; outline: none;
+  font-size: 0.9rem; color: var(--sub); font-family: inherit;
+  padding: 0;
+}
+.s-input:focus { color: var(--text); }
+.s-select {
+  background: none; border: none; outline: none;
+  font-size: 0.9rem; color: var(--sub); font-family: inherit;
+  text-align: right; cursor: pointer;
+}
+.s-select:focus { color: var(--text); }
+.s-info {
+  font-size: 0.88rem; color: var(--sub);
+  flex: 1; text-align: right; word-break: break-all;
+}
+.s-copy-btn {
+  background: none; border: none; color: var(--tint);
+  font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; padding: 2px 0 2px 8px; flex-shrink: 0;
+}
+.s-copy-btn:active { opacity: 0.5; }
+.s-suffix { font-size: 0.82rem; color: var(--sub); margin-left: 4px; flex-shrink: 0; }
+
+/* ── Tags (weather / MRT favorites) ── */
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px 12px; }
+.tag {
+  padding: 5px 12px; background: rgba(0,122,255,0.1);
+  color: var(--tint); border-radius: 100px;
+  font-size: 0.8rem; font-weight: 600;
+}
+.tag.empty { background: none; color: var(--sub); font-size: 0.82rem; font-weight: 400; padding: 10px 0; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: max(32px, env(safe-area-inset-bottom));
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  background: rgba(30,30,30,0.9); color: #fff;
+  padding: 10px 20px; border-radius: 100px;
+  font-size: 0.88rem; font-weight: 600;
+  opacity: 0; transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Dark mode ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:      #000;
+    --surface: rgba(28,28,30,0.95);
+    --text:    #f2f2f7;
+    --sub:     #8e8e93;
+    --border:  rgba(255,255,255,0.08);
+  }
+  html, body { background: #000; }
+  .top-bar { background: rgba(0,0,0,0.88); border-color: rgba(255,255,255,0.08); }
+  .p-chip { background: rgba(28,28,30,0.95); }
+}
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <a href="/" class="back-btn">‹ 返回</a>
+  <div class="top-title">設定</div>
+  <button class="save-btn" onclick="saveAll()">儲存</button>
+</div>
+
+<!-- Profile Switcher -->
+<div class="profile-strip" id="profileStrip"></div>
+
+<div class="wrap">
+
+  <!-- 使用者資訊 -->
+  <div class="sec-label">使用者</div>
+  <div class="sec-card">
+    <div class="s-row">
+      <span class="s-label">名稱</span>
+      <div class="s-val">
+        <input id="profileName" class="s-input" placeholder="輸入名稱" maxlength="16">
+      </div>
+    </div>
+    <div class="s-row">
+      <span class="s-label">同步碼</span>
+      <span class="s-info" id="syncKeyDisplay">—</span>
+      <button class="s-copy-btn" id="syncCopyBtn" onclick="copySyncKey()">複製</button>
+    </div>
+  </div>
+
+  <!-- 高鐵 -->
+  <div class="sec-label">🚄 高鐵設定</div>
+  <div class="sec-card">
+    <div class="s-row">
+      <span class="s-label">起站</span>
+      <div class="s-val">
+        <select id="thsrOrigin" class="s-select">
+          <option>南港</option><option>台北</option><option>板橋</option>
+          <option>桃園</option><option>新竹</option><option>苗栗</option>
+          <option>台中</option><option>彰化</option><option>雲林</option>
+          <option>嘉義</option><option>台南</option><option>左營</option>
+        </select>
+      </div>
+    </div>
+    <div class="s-row">
+      <span class="s-label">終站</span>
+      <div class="s-val">
+        <select id="thsrDest" class="s-select">
+          <option>南港</option><option>台北</option><option>板橋</option>
+          <option>桃園</option><option>新竹</option><option>苗栗</option>
+          <option>台中</option><option>彰化</option><option>雲林</option>
+          <option>嘉義</option><option>台南</option><option>左營</option>
+        </select>
+      </div>
+    </div>
+    <div class="s-row">
+      <span class="s-label">車種</span>
+      <div class="s-val">
+        <select id="thsrSeat" class="s-select">
+          <option value="1">自由座</option>
+          <option value="2">對號座</option>
+        </select>
+      </div>
+    </div>
+    <div class="s-row">
+      <span class="s-label">折扣</span>
+      <div class="s-val">
+        <select id="thsrDiscount" class="s-select">
+          <option>全票</option><option>孩童</option>
+          <option>敬老</option><option>愛心</option><option>學生</option>
+        </select>
+      </div>
+    </div>
+    <div class="s-row">
+      <span class="s-label">查詢間隔</span>
+      <div class="s-val">
+        <input id="thsrInterval" class="s-input" type="number" min="5" max="120" placeholder="30">
+      </div>
+      <span class="s-suffix">分鐘</span>
+    </div>
+  </div>
+
+  <!-- 機場捷運 -->
+  <div class="sec-label">🚇 機場捷運</div>
+  <div class="sec-card">
+    <div class="s-row">
+      <span class="s-label">收藏站點</span>
+      <span class="s-info" id="mrtStarredDisplay">—</span>
+    </div>
+  </div>
+
+  <!-- Telegram -->
+  <div class="sec-label">💬 Telegram Bot</div>
+  <div class="sec-card">
+    <div class="s-row">
+      <span class="s-label">Bot Token</span>
+      <div class="s-val">
+        <input id="tgToken" class="s-input" type="password" placeholder="••••••••" autocomplete="off">
+      </div>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Chat ID</span>
+      <div class="s-val">
+        <input id="tgChatId" class="s-input" placeholder="輸入 Chat ID">
+      </div>
+    </div>
+  </div>
+
+  <!-- 熱量追蹤 -->
+  <div class="sec-label">🥗 熱量追蹤</div>
+  <div class="sec-card">
+    <div class="s-row">
+      <span class="s-label">每日目標</span>
+      <div class="s-val">
+        <input id="dietLimit" class="s-input" type="number" min="500" max="9999" placeholder="2500">
+      </div>
+      <span class="s-suffix">kcal</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Gemini Key</span>
+      <div class="s-val">
+        <input id="geminiKey" class="s-input" type="password" placeholder="••••••••" autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <!-- 天氣 -->
+  <div class="sec-label">☁️ 天氣常用地點</div>
+  <div class="sec-card">
+    <div class="tag-list" id="wxFavList"></div>
+  </div>
+
+</div><!-- /wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MRT_NAMES = {
+  A1:'台北車站',A2:'三重站',A3:'新北產業園區站',A4:'新莊副都心站',
+  A5:'泰山站',A6:'泰山貴和站',A7:'體育大學站',A8:'長庚醫院站',
+  A9:'林口站',A10:'山鼻站',A11:'坑口站',A12:'機場第一航廈站',
+  A13:'機場第二航廈站',A14a:'機場旅館站',A15:'大園站',A16:'橫山站',
+  A17:'領航站',A18:'高鐵桃園站',A19:'桃園體育園區站',A20:'興南站',A21:'環北站'
+};
+
+let _activeId = null;
+
+/* ── 載入目前 Profile 資料 ── */
+function loadProfile(id) {
+  const { profiles } = Config.getAll();
+  const p = profiles[id] || Object.values(profiles)[0];
+  _activeId = p.id;
+
+  // 更新 Chip 選中狀態
+  document.querySelectorAll('.p-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === _activeId);
+  });
+
+  // 使用者
+  document.getElementById('profileName').value = p.name || '';
+  const sk = p.syncKey || '—';
+  document.getElementById('syncKeyDisplay').textContent = sk;
+  document.getElementById('syncCopyBtn').style.display = sk === '—' ? 'none' : '';
+
+  // THSR
+  const t = p.thsr || {};
+  _setSelect('thsrOrigin',   t.origin   || '台北');
+  _setSelect('thsrDest',     t.destination || '左營');
+  _setSelect('thsrSeat',     t.seatType || '1');
+  _setSelect('thsrDiscount', t.discount || '全票');
+  document.getElementById('thsrInterval').value = t.interval || '30';
+
+  // MRT
+  const starred = p.mrt?.starred || '';
+  document.getElementById('mrtStarredDisplay').textContent =
+    starred ? (MRT_NAMES[starred] || starred) : '（未設定）';
+
+  // TG
+  const tg = p.tg || {};
+  document.getElementById('tgToken').value  = tg.token  || '';
+  document.getElementById('tgChatId').value = tg.chatId || '';
+
+  // Diet（全域 key，非 per-profile，顯示目前裝置值）
+  const ds = _safeJson('dietSettings', {});
+  document.getElementById('dietLimit').value  = ds.dailyLimit  || 2500;
+  document.getElementById('geminiKey').value  = ds.geminiKey   || '';
+
+  // Weather favorites
+  const favs = _safeJson('wx_favorites_v2', []);
+  const list  = document.getElementById('wxFavList');
+  list.innerHTML = favs.length
+    ? favs.map(f => `<span class="tag">${(f.name||f).replace(/</g,'&lt;')}</span>`).join('')
+    : '<span class="tag empty">（前往天氣頁新增常用地點）</span>';
+}
+
+/* ── 儲存 ── */
+function saveAll() {
+  const { profiles } = Config.getAll();
+  const p = profiles[_activeId];
+  if (!p) return;
+
+  // 更新名稱
+  const newName = document.getElementById('profileName').value.trim();
+  if (newName) p.name = newName;
+
+  // 儲存到 Config
+  Config.setActive(_activeId);
+  Config.save({
+    thsr: {
+      origin:      document.getElementById('thsrOrigin').value,
+      destination: document.getElementById('thsrDest').value,
+      seatType:    document.getElementById('thsrSeat').value,
+      discount:    document.getElementById('thsrDiscount').value,
+      interval:    document.getElementById('thsrInterval').value || '30',
+    },
+    tg: {
+      token:  document.getElementById('tgToken').value.trim(),
+      chatId: document.getElementById('tgChatId').value.trim(),
+    },
+  });
+
+  // Diet（全域）
+  const ds = _safeJson('dietSettings', {});
+  ds.dailyLimit = parseInt(document.getElementById('dietLimit').value) || 2500;
+  ds.geminiKey  = document.getElementById('geminiKey').value.trim();
+  localStorage.setItem('dietSettings', JSON.stringify(ds));
+
+  _toast('✅ 已儲存');
+}
+
+function copySyncKey() {
+  const sk = document.getElementById('syncKeyDisplay').textContent;
+  if (sk && sk !== '—') {
+    navigator.clipboard?.writeText(sk).then(() => _toast('同步碼已複製'));
+  }
+}
+
+/* ── Profile Strip ── */
+function renderStrip() {
+  const { profiles, active } = Config.getAll();
+  const strip = document.getElementById('profileStrip');
+  strip.innerHTML = Object.values(profiles).map(p =>
+    `<button class="p-chip${p.id === active ? ' active' : ''}" data-id="${p.id}"
+       onclick="loadProfile('${p.id}')">${p.name.replace(/</g,'&lt;')}</button>`
+  ).join('');
+}
+
+/* ── Helpers ── */
+function _setSelect(id, val) {
+  const el = document.getElementById(id);
+  for (const opt of el.options) {
+    if (opt.value === val || opt.text === val) { el.value = opt.value; break; }
+  }
+}
+function _safeJson(key, def) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null') ?? def; }
+  catch { return def; }
+}
+function _toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ── Init ── */
+renderStrip();
+loadProfile(Config.getAll().active);
+</script>
+</body>
+</html>

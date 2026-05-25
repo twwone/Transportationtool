@@ -2038,6 +2038,43 @@ def analyze_food():
         return jsonify({"error": f"AI 分析失敗：{str(e)}"}), 500
 
 
+# ──────────────────────────────────────────────
+#  設定頁
+# ──────────────────────────────────────────────
+@app.route("/settings")
+def settings_page():
+    return render_template("settings.html")
+
+
+# ──────────────────────────────────────────────
+#  管理員：全量查詢 Supabase user_configs
+# ──────────────────────────────────────────────
+_SUPA_BASE = "https://bqapzqdfgnoghtgdakdw.supabase.co"
+_SUPA_ANON = "sb_publishable_5Gw7rYaKnI3_fzcNpLbmwA_h0CgB7Fv"
+
+@app.route("/api/admin/users")
+def admin_users():
+    auth = request.headers.get("Authorization", "")
+    pin  = auth.replace("Bearer ", "").strip()
+    if pin != os.environ.get("ADMIN_PIN", "0000"):
+        return jsonify({"error": "unauthorized"}), 401
+
+    supa_url = os.environ.get("SUPABASE_URL", _SUPA_BASE)
+    key      = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY") or _SUPA_ANON
+    try:
+        r = _requests.get(
+            f"{supa_url}/rest/v1/user_configs"
+            "?select=sync_key,config,updated_at&order=updated_at.desc&limit=200",
+            headers={"apikey": key, "Authorization": f"Bearer {key}"},
+            timeout=8,
+        )
+        if r.status_code == 200:
+            return jsonify({"ok": True, "rows": r.json()})
+        return jsonify({"ok": False, "status": r.status_code, "detail": r.text[:300]}), 502
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 503
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")

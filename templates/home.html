@@ -308,6 +308,10 @@ body {
 .card-diet::before   { background: linear-gradient(90deg,#34d399,#10b981); }
 .card-diet:hover .sm-arrow { color: #10b981; }
 
+.card-settings .sm-title { color: #4b5563; }
+.card-settings::before   { background: linear-gradient(90deg,#9ca3af,#6b7280); }
+.card-settings:hover .sm-arrow { color: #6b7280; }
+
 /* ── 底部 ── */
 .footer {
   margin-top: 28px;
@@ -422,7 +426,8 @@ body {
   .card-codes  .sm-title { color: #bf5af2; }
   .card-share  .sm-title { color: #60a5fa; }
   .card-weather .sm-title { color: #38bdf8; }
-  .card-diet  .sm-title { color: #34d399; }
+  .card-diet     .sm-title { color: #34d399; }
+  .card-settings .sm-title { color: #9ca3af; }
   .footer   { color: #3a3a3c; }
   .profile-chip { background: #2c2c2e; border-color: rgba(255,255,255,0.08); color: #f2f2f7; }
   .pc-chevron   { color: #48484a; }
@@ -693,6 +698,12 @@ body {
     <div class="sm-title">熱量追蹤</div>
   </a>
 
+  <!-- Settings -->
+  <a href="/settings" class="card card-sm card-settings">
+    <span class="sm-icon">⚙️</span>
+    <div class="sm-title">設定</div>
+  </a>
+
 </div>
 
 <div class="footer">Transportation Assistant</div>
@@ -765,6 +776,9 @@ body {
       <a class="admin-link" href="/api/mrt/liveboard" target="_blank">/api/mrt/liveboard ↗</a>
       <a class="admin-link" href="/api/amenities" target="_blank">/api/amenities ↗</a>
     </div>
+
+    <div class="admin-sec-label">所有同步用戶 <span id="adminUserCount" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+    <div class="admin-card" id="adminUsersCard"></div>
 
     <div class="admin-sec-label">LocalStorage</div>
     <div class="admin-card" id="adminLsCard"></div>
@@ -1090,6 +1104,49 @@ function _renderAdminPanel() {
         const el = document.getElementById('as_' + a.label.replace(/\s/g,''));
         if (el) el.textContent = '❌ 無法連線';
       });
+  });
+
+  /* 所有同步用戶 */
+  const usersCard = document.getElementById('adminUsersCard');
+  usersCard.innerHTML = '<div class="admin-row"><span class="admin-row-lbl">載入中…</span></div>';
+  const _adminPin = localStorage.getItem(_ADMIN_LS_KEY) || '';
+  fetch('/api/admin/users', {
+    headers: { 'Authorization': `Bearer ${_adminPin}` },
+    signal: AbortSignal.timeout(8000)
+  }).then(r => r.json()).then(data => {
+    if (!data.ok) {
+      usersCard.innerHTML = `<div class="admin-row"><span class="admin-row-lbl" style="color:#ff3b30">${(data.detail||data.error||'查詢失敗').replace(/</g,'&lt;')}</span></div>`;
+      return;
+    }
+    const rows = data.rows || [];
+    document.getElementById('adminUserCount').textContent = `（${rows.length} 人）`;
+    if (!rows.length) {
+      usersCard.innerHTML = '<div class="admin-row"><span class="admin-row-lbl">尚無同步用戶</span></div>';
+      return;
+    }
+    const MRT_N = {A1:'台北車站',A12:'第一航廈',A13:'第二航廈',A18:'高鐵桃園',A21:'環北'};
+    usersCard.innerHTML = rows.map(r => {
+      const cfg  = r.config || {};
+      const thsr = cfg.thsr || {};
+      const mrt  = cfg.mrt  || {};
+      const tg   = cfg.tg   || {};
+      const upd  = r.updated_at ? r.updated_at.slice(0,16).replace('T',' ') : '—';
+      const star = mrt.starred ? (MRT_N[mrt.starred] || mrt.starred) : '—';
+      return `<div class="admin-row" style="flex-direction:column;align-items:flex-start;gap:4px;padding:12px 16px">
+        <div style="display:flex;justify-content:space-between;width:100%">
+          <span class="admin-row-lbl" style="font-size:0.92rem">${(cfg.name||'匿名').replace(/</g,'&lt;')}</span>
+          <span class="admin-row-val">${upd}</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span style="font-size:0.78rem;color:#636366">🚄 ${(thsr.origin||'—').replace(/</g,'&lt;')}→${(thsr.destination||'—').replace(/</g,'&lt;')}</span>
+          <span style="font-size:0.78rem;color:#636366">🚇 ${star}</span>
+          <span style="font-size:0.78rem;color:#636366">💬 ${tg.token ? '✅' : '—'}</span>
+          <span style="font-size:0.78rem;color:#8e8e93;font-family:monospace">${(r.sync_key||'').replace(/</g,'&lt;')}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }).catch(() => {
+    usersCard.innerHTML = '<div class="admin-row"><span class="admin-row-lbl" style="color:#ff3b30">連線失敗</span></div>';
   });
 
   /* LocalStorage */
