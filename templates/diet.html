@@ -488,6 +488,16 @@ body::before{
     </div>
   </div>
 
+  <!-- Error Card -->
+  <div class="glass-card" id="errorCard" style="display:none;padding:20px 20px 16px">
+    <div id="errorIcon" style="font-size:2rem;margin-bottom:8px">⚠️</div>
+    <div id="errorMsg" style="font-size:.9rem;line-height:1.6;color:var(--text);margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="resetCapture()" style="flex:1;padding:11px;border-radius:var(--radius-s);background:rgba(255,255,255,.1);border:none;color:var(--sub);font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit">重試</button>
+      <button id="errorActionBtn" style="flex:1;padding:11px;border-radius:var(--radius-s);background:rgba(56,189,248,.18);border:1px solid rgba(56,189,248,.35);color:#38bdf8;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;display:none" onclick="openSettings()">前往設定</button>
+    </div>
+  </div>
+
   <!-- Results Panel -->
   <div class="glass-card result-panel" id="resultPanel">
     <!-- Hero: food name + calories -->
@@ -801,6 +811,31 @@ function resetCapture() {
   document.getElementById('previewSection').style.display = 'none';
   document.getElementById('loadingSection').style.display = 'none';
   document.getElementById('resultPanel').style.display = 'none';
+  document.getElementById('errorCard').style.display = 'none';
+}
+
+// ── Error display ──
+function showError(errCode, status) {
+  document.getElementById('previewSection').style.display = 'none';
+  const card = document.getElementById('errorCard');
+  const msg  = document.getElementById('errorMsg');
+  const icon = document.getElementById('errorIcon');
+  const btn  = document.getElementById('errorActionBtn');
+
+  if (errCode === 'quota_exceeded' || status === 429) {
+    icon.textContent = '🔑';
+    msg.innerHTML = '<strong>API 配額已用盡</strong><br>伺服器的 Gemini 免費額度已達上限。<br>請在設定中輸入您自己的免費 API 金鑰（aistudio.google.com）。';
+    btn.style.display = 'block';
+  } else if (errCode === 'network' || status === 0) {
+    icon.textContent = '📡';
+    msg.innerHTML = '<strong>網路連線問題</strong><br>請確認網路後再試一次。';
+    btn.style.display = 'none';
+  } else {
+    icon.textContent = '⚠️';
+    msg.innerHTML = `<strong>辨識失敗</strong><br>${errCode}`;
+    btn.style.display = 'none';
+  }
+  card.style.display = 'block';
 }
 
 // ── Analyze food ──
@@ -819,15 +854,13 @@ async function doAnalyze() {
     const data = await resp.json();
 
     if (data.error) {
-      alert('辨識失敗：' + data.error);
-      document.getElementById('previewSection').style.display = 'flex';
+      showError(data.error, resp.status);
     } else {
       _currentResult = data;
       renderResult(data);
     }
   } catch (err) {
-    alert('網路錯誤，請稍後再試');
-    document.getElementById('previewSection').style.display = 'flex';
+    showError('network', 0);
   } finally {
     document.getElementById('loadingSection').style.display = 'none';
     document.getElementById('analyzeBtn').disabled = false;

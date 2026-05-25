@@ -1878,7 +1878,10 @@ def analyze_food():
     except _json.JSONDecodeError:
         return jsonify({"error": "AI 回傳格式異常，請再試一次"}), 500
     except Exception as e:
-        return jsonify({"error": f"AI 分析失敗：{str(e)}"}), 500
+        err_str = str(e)
+        if "429" in err_str or "quota" in err_str.lower() or "exceeded" in err_str.lower():
+            return jsonify({"error": "quota_exceeded"}), 429
+        return jsonify({"error": f"AI 分析失敗：{err_str}"}), 500
 
 
 if __name__ == "__main__":
