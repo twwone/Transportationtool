@@ -606,11 +606,11 @@ body {
   <div class="header-top">
     <div>
       <div class="greeting" id="greeting">交通助理</div>
-      <div class="header-title">Transport</div>
+      <div class="header-title" id="headerTitle">Transport</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-shrink:0;">
       <button id="crownBtn" class="crown-btn" title="管理員">👑</button>
-      <button class="profile-chip" id="profileChip" style="margin-top:0">
+      <button class="profile-chip" id="profileChip" style="margin-top:0" onclick="openSheet()">
         <span>👤</span>
         <span id="profileLabel">—</span>
         <span class="pc-chevron">▾</span>
@@ -949,21 +949,18 @@ let _pinBuffer         = '';
 let _crownPressTimer   = null;
 let _longPressTriggered = false;
 
-/* ── Profile Chip：5 連擊 + openSheet ── */
+/* ── Transport 標題：5 連擊觸發暗門 ── */
 (function() {
-  const chip = document.getElementById('profileChip');
-  chip.addEventListener('click', function() {
+  const title = document.getElementById('headerTitle');
+  title.style.cursor = 'default';
+  title.addEventListener('click', function() {
     const now = Date.now();
     _tapTimes.push(now);
     _tapTimes = _tapTimes.filter(t => now - t <= 2000);
     if (_tapTimes.length >= 5) {
       _tapTimes = [];
-      if (!localStorage.getItem(_ADMIN_LS_KEY)) { _openPinModal(); return; }
-      // 已是管理員：5 連擊也不做其他事
-      return;
+      if (!localStorage.getItem(_ADMIN_LS_KEY)) _openPinModal();
     }
-    // 非連擊序列中的第 1 次點擊才開 Sheet（避免連擊期間狂開）
-    if (_tapTimes.length === 1) openSheet();
   });
 })();
 
