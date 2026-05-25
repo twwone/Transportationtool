@@ -435,6 +435,168 @@ body {
     background: rgba(58,58,60,0.9); border-color: rgba(255,255,255,0.1); color: #f2f2f7;
   }
 }
+
+/* ══════════════════════════════════════════
+   👑 Ghost Admin — 幽靈管理員模式
+   ══════════════════════════════════════════ */
+
+/* ── Crown 按鈕 ── */
+.crown-btn {
+  background: none; border: none;
+  font-size: 1.15rem; cursor: pointer;
+  padding: 6px; border-radius: 50%;
+  line-height: 1; display: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s ease, filter 0.2s;
+  filter: drop-shadow(0 0 0 transparent);
+}
+.crown-btn.visible { display: inline-flex; align-items: center; justify-content: center; }
+.crown-btn:active { transform: scale(0.85); }
+.crown-btn.glow  { filter: drop-shadow(0 0 6px rgba(255,193,7,0.8)); }
+
+/* ── PIN Modal ── */
+@keyframes pinShake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-6px); }
+  80%     { transform: translateX(4px); }
+}
+.pin-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 300;
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.pin-overlay.open { opacity: 1; pointer-events: auto; }
+.pin-modal {
+  background: rgba(242,242,247,0.97);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-radius: 28px 28px 0 0;
+  padding: 24px 28px max(36px, env(safe-area-inset-bottom));
+  width: 100%; max-width: 480px;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.25,1,0.5,1);
+  box-shadow: 0 -4px 40px rgba(0,0,0,0.18);
+}
+.pin-overlay.open .pin-modal { transform: translateY(0); }
+.pin-modal.shake { animation: pinShake 0.4s ease; }
+.pin-title {
+  text-align: center; font-size: 1rem; font-weight: 700;
+  color: #1c1c1e; margin-bottom: 22px;
+}
+.pin-dots { display: flex; gap: 18px; justify-content: center; margin-bottom: 28px; }
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid #8e8e93; background: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.pin-dot.filled {
+  background: #1c1c1e; border-color: #1c1c1e; transform: scale(1.15);
+}
+.pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pin-key {
+  height: 66px; border-radius: 18px;
+  background: rgba(255,255,255,0.9);
+  border: none; font-size: 1.5rem; font-weight: 500;
+  color: #1c1c1e; cursor: pointer; font-family: inherit;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: transform 0.12s, background 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pin-key:active   { transform: scale(0.91); background: rgba(210,210,220,0.9); }
+.pin-key.del-key  { font-size: 1.2rem; }
+.pin-key.empty    { visibility: hidden; pointer-events: none; }
+.pin-error {
+  text-align: center; font-size: 0.8rem; color: #ff3b30;
+  margin-top: 14px; min-height: 18px; font-weight: 500;
+}
+
+/* ── Admin Panel ── */
+.admin-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 300;
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.admin-overlay.open { opacity: 1; pointer-events: auto; }
+.admin-panel {
+  background: rgba(242,242,247,0.98);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-radius: 28px 28px 0 0;
+  padding: 0 0 max(24px, env(safe-area-inset-bottom));
+  width: 100%; max-width: 480px;
+  max-height: 88vh; overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.25,1,0.5,1);
+  box-shadow: 0 -4px 40px rgba(0,0,0,0.18);
+}
+.admin-overlay.open .admin-panel { transform: translateY(0); }
+.admin-handle { width: 36px; height: 4px; background: rgba(60,60,67,0.25); border-radius: 100px; margin: 12px auto 0; }
+.admin-header { padding: 16px 20px 6px; }
+.admin-title  { font-size: 1.1rem; font-weight: 800; color: #1c1c1e; }
+.admin-sec-label {
+  font-size: 0.72rem; font-weight: 600; color: #8e8e93;
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: 12px 20px 4px;
+}
+.admin-card {
+  background: rgba(255,255,255,0.82); border-radius: 16px;
+  margin: 0 16px 10px; overflow: hidden;
+}
+.admin-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(60,60,67,0.08);
+  font-size: 0.875rem;
+}
+.admin-row:last-child { border-bottom: none; }
+.admin-row-lbl { color: #1c1c1e; font-weight: 500; }
+.admin-row-val { color: #636366; font-family: monospace; font-size: 0.8rem; max-width: 55%; text-align: right; word-break: break-all; }
+.admin-link {
+  display: block; padding: 11px 16px; text-decoration: none;
+  font-size: 0.875rem; color: #007aff; font-weight: 500;
+  border-bottom: 1px solid rgba(60,60,67,0.08);
+  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.admin-link:last-child { border-bottom: none; }
+.admin-link:active { background: rgba(0,0,0,0.04); }
+.admin-exit-btn {
+  display: block; width: calc(100% - 32px); margin: 6px 16px 0;
+  padding: 16px; border-radius: 16px;
+  background: rgba(255,59,48,0.1); border: none;
+  color: #ff3b30; font-size: 0.95rem; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s, transform 0.15s;
+}
+.admin-exit-btn:active { background: rgba(255,59,48,0.2); transform: scale(0.97); }
+
+/* ── Dark mode: Ghost Admin ── */
+@media (prefers-color-scheme: dark) {
+  .pin-modal, .admin-panel { background: rgba(28,28,30,0.98); }
+  .pin-title, .admin-title, .admin-row-lbl { color: #f2f2f7; }
+  .pin-dot { border-color: #636366; }
+  .pin-dot.filled { background: #f2f2f7; border-color: #f2f2f7; }
+  .pin-key { background: rgba(44,44,46,0.9); color: #f2f2f7; box-shadow: none; }
+  .pin-key:active { background: rgba(72,72,74,0.9); }
+  .admin-card { background: rgba(44,44,46,0.85); }
+  .admin-row { border-bottom-color: rgba(255,255,255,0.06); }
+  .admin-row-val { color: #98989d; }
+  .admin-sec-label { color: #636366; }
+  .admin-exit-btn { background: rgba(255,59,48,0.12); }
+  .admin-exit-btn:active { background: rgba(255,59,48,0.22); }
+}
 </style>
 </head>
 <body>
@@ -446,11 +608,14 @@ body {
       <div class="greeting" id="greeting">交通助理</div>
       <div class="header-title">Transport</div>
     </div>
-    <button class="profile-chip" onclick="openSheet()">
-      <span>👤</span>
-      <span id="profileLabel">—</span>
-      <span class="pc-chevron">▾</span>
-    </button>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-shrink:0;">
+      <button id="crownBtn" class="crown-btn" title="管理員">👑</button>
+      <button class="profile-chip" id="profileChip" style="margin-top:0">
+        <span>👤</span>
+        <span id="profileLabel">—</span>
+        <span class="pc-chevron">▾</span>
+      </button>
+    </div>
   </div>
   <div class="header-sub" id="headerSub">選擇你需要的功能</div>
 </div>
@@ -551,6 +716,63 @@ body {
       <input id="syncKeyInput" type="text" placeholder="貼上 8 碼同步碼…" maxlength="8">
       <button onclick="doImportSync()">匯入</button>
     </div>
+  </div>
+</div>
+
+<!-- 👑 PIN Modal -->
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-modal" id="pinModal">
+    <div class="pin-title">🔐 系統驗證</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="_pinInput('1')">1</button>
+      <button class="pin-key" onclick="_pinInput('2')">2</button>
+      <button class="pin-key" onclick="_pinInput('3')">3</button>
+      <button class="pin-key" onclick="_pinInput('4')">4</button>
+      <button class="pin-key" onclick="_pinInput('5')">5</button>
+      <button class="pin-key" onclick="_pinInput('6')">6</button>
+      <button class="pin-key" onclick="_pinInput('7')">7</button>
+      <button class="pin-key" onclick="_pinInput('8')">8</button>
+      <button class="pin-key" onclick="_pinInput('9')">9</button>
+      <button class="pin-key empty"></button>
+      <button class="pin-key" onclick="_pinInput('0')">0</button>
+      <button class="pin-key del-key" onclick="_pinDel()">⌫</button>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+  </div>
+</div>
+
+<!-- 👑 Admin Panel -->
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-panel" id="adminPanel">
+    <div class="admin-handle"></div>
+    <div class="admin-header">
+      <div class="admin-title">👑 上帝視角儀表板</div>
+    </div>
+
+    <div class="admin-sec-label">API 健康狀態</div>
+    <div class="admin-card" id="adminApiCard"></div>
+
+    <div class="admin-sec-label">偵錯端點</div>
+    <div class="admin-card">
+      <a class="admin-link" href="/api/tias/debug" target="_blank">/api/tias/debug ↗</a>
+      <a class="admin-link" href="/api/schedule/debug" target="_blank">/api/schedule/debug ↗</a>
+      <a class="admin-link" href="/api/mrt/liveboard" target="_blank">/api/mrt/liveboard ↗</a>
+      <a class="admin-link" href="/api/amenities" target="_blank">/api/amenities ↗</a>
+    </div>
+
+    <div class="admin-sec-label">LocalStorage</div>
+    <div class="admin-card" id="adminLsCard"></div>
+
+    <div class="admin-sec-label">裝置資訊</div>
+    <div class="admin-card" id="adminDevCard"></div>
+
+    <button class="admin-exit-btn" onclick="_exitAdmin()">🚪 關閉上帝模式</button>
   </div>
 </div>
 
@@ -713,6 +935,196 @@ _renderProfiles();
   if (!p.syncKey) return;
   const r = await Config.pull(p.syncKey);
   if (r.ok) _renderProfiles();
+})();
+
+/* ══════════════════════════════════════════
+   👑 Ghost Admin — 幽靈管理員模式
+   PIN 預設：0000  (可修改 _ADMIN_PIN 常數)
+   ══════════════════════════════════════════ */
+const _ADMIN_PIN    = '0000';
+const _ADMIN_LS_KEY = 'admin_pin';
+
+let _tapTimes          = [];
+let _pinBuffer         = '';
+let _crownPressTimer   = null;
+let _longPressTriggered = false;
+
+/* ── Profile Chip：5 連擊 + openSheet ── */
+(function() {
+  const chip = document.getElementById('profileChip');
+  chip.addEventListener('click', function() {
+    const now = Date.now();
+    _tapTimes.push(now);
+    _tapTimes = _tapTimes.filter(t => now - t <= 2000);
+    if (_tapTimes.length >= 5) {
+      _tapTimes = [];
+      if (!localStorage.getItem(_ADMIN_LS_KEY)) { _openPinModal(); return; }
+      // 已是管理員：5 連擊也不做其他事
+      return;
+    }
+    // 非連擊序列中的第 1 次點擊才開 Sheet（避免連擊期間狂開）
+    if (_tapTimes.length === 1) openSheet();
+  });
+})();
+
+/* ── PIN Modal ── */
+function _openPinModal() {
+  _pinBuffer = '';
+  _updateDots();
+  document.getElementById('pinError').textContent = '';
+  document.getElementById('pinOverlay').classList.add('open');
+}
+function _closePinModal() {
+  document.getElementById('pinOverlay').classList.remove('open');
+  _pinBuffer = '';
+}
+document.getElementById('pinOverlay').addEventListener('click', function(e) {
+  if (e.target === this) _closePinModal();
+});
+function _updateDots() {
+  for (let i = 0; i < 4; i++)
+    document.getElementById('pd' + i).classList.toggle('filled', i < _pinBuffer.length);
+}
+function _pinInput(d) {
+  if (_pinBuffer.length >= 4) return;
+  _pinBuffer += d;
+  _updateDots();
+  if (_pinBuffer.length === 4) setTimeout(_verifyPin, 130);
+}
+function _pinDel() {
+  if (_pinBuffer.length > 0) { _pinBuffer = _pinBuffer.slice(0, -1); _updateDots(); }
+}
+function _verifyPin() {
+  if (_pinBuffer === _ADMIN_PIN) {
+    localStorage.setItem(_ADMIN_LS_KEY, _pinBuffer);
+    _closePinModal();
+    const crown = document.getElementById('crownBtn');
+    crown.classList.add('visible');
+    crown.classList.add('glow');
+    setTimeout(() => crown.classList.remove('glow'), 1200);
+    if (navigator.vibrate) navigator.vibrate([30, 30, 60]);
+  } else {
+    document.getElementById('pinError').textContent = '密碼錯誤，請再試一次';
+    const modal = document.getElementById('pinModal');
+    modal.classList.add('shake');
+    modal.addEventListener('animationend', () => modal.classList.remove('shake'), { once: true });
+    _pinBuffer = '';
+    _updateDots();
+    if (navigator.vibrate) navigator.vibrate([80]);
+  }
+}
+
+/* ── Crown 按鈕（點擊開 Panel，長按 2s 退出）── */
+(function() {
+  const crown = document.getElementById('crownBtn');
+
+  crown.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (_longPressTriggered) { _longPressTriggered = false; return; }
+    _openAdminPanel();
+  });
+
+  function _startPress() {
+    _longPressTriggered = false;
+    _crownPressTimer = setTimeout(() => {
+      _longPressTriggered = true;
+      if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+      _exitAdmin();
+    }, 2000);
+  }
+  function _cancelPress() { clearTimeout(_crownPressTimer); }
+
+  crown.addEventListener('touchstart', _startPress, { passive: true });
+  crown.addEventListener('touchend',   _cancelPress);
+  crown.addEventListener('touchcancel',_cancelPress);
+  crown.addEventListener('mousedown',  _startPress);
+  crown.addEventListener('mouseup',    _cancelPress);
+  crown.addEventListener('mouseleave', _cancelPress);
+})();
+
+/* ── Admin Panel ── */
+function _openAdminPanel() {
+  _renderAdminPanel();
+  document.getElementById('adminOverlay').classList.add('open');
+}
+function _closeAdminPanel() {
+  document.getElementById('adminOverlay').classList.remove('open');
+}
+document.getElementById('adminOverlay').addEventListener('click', function(e) {
+  if (e.target === this) _closeAdminPanel();
+});
+function _exitAdmin() {
+  localStorage.removeItem(_ADMIN_LS_KEY);
+  document.getElementById('crownBtn').classList.remove('visible');
+  _closeAdminPanel();
+  if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+}
+
+function _renderAdminPanel() {
+  /* API 健康狀態 */
+  const apis = [
+    { label: 'TIAS Flights',  path: '/api/tias/flights'  },
+    { label: 'MRT Liveboard', path: '/api/mrt/liveboard' },
+    { label: 'Schedule',      path: '/api/schedule/week' },
+    { label: 'Amenities',     path: '/api/amenities'     },
+  ];
+  document.getElementById('adminApiCard').innerHTML = apis.map(a =>
+    `<div class="admin-row">
+       <span class="admin-row-lbl">${a.label}</span>
+       <span class="admin-row-val" id="as_${a.label.replace(/\s/g,'')}">檢查中…</span>
+     </div>`
+  ).join('');
+  apis.forEach(a => {
+    fetch(a.path, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+      .then(r => {
+        const el = document.getElementById('as_' + a.label.replace(/\s/g,''));
+        if (el) el.textContent = r.ok ? `✅ ${r.status}` : `⚠️ ${r.status}`;
+      }).catch(() => {
+        const el = document.getElementById('as_' + a.label.replace(/\s/g,''));
+        if (el) el.textContent = '❌ 無法連線';
+      });
+  });
+
+  /* LocalStorage */
+  const lsKeys = Object.keys(localStorage).filter(k => k !== _ADMIN_LS_KEY);
+  document.getElementById('adminLsCard').innerHTML = lsKeys.length === 0
+    ? '<div class="admin-row"><span class="admin-row-lbl">（空）</span></div>'
+    : lsKeys.map(k => {
+        const raw = localStorage.getItem(k) || '';
+        const preview = raw.length > 32 ? raw.slice(0, 32) + '…' : raw;
+        return `<div class="admin-row">
+          <span class="admin-row-lbl">${k.replace(/</g,'&lt;')}</span>
+          <span class="admin-row-val">${preview.replace(/</g,'&lt;')}</span>
+        </div>`;
+      }).join('');
+
+  /* 裝置資訊 */
+  const ua = navigator.userAgent;
+  document.getElementById('adminDevCard').innerHTML = `
+    <div class="admin-row">
+      <span class="admin-row-lbl">螢幕</span>
+      <span class="admin-row-val">${screen.width}×${screen.height} @${window.devicePixelRatio}x</span>
+    </div>
+    <div class="admin-row">
+      <span class="admin-row-lbl">平台</span>
+      <span class="admin-row-val">${/iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : 'Web'}</span>
+    </div>
+    <div class="admin-row">
+      <span class="admin-row-lbl">ServiceWorker</span>
+      <span class="admin-row-val">${'serviceWorker' in navigator ? '✅ 已安裝' : '❌'}</span>
+    </div>
+    <div class="admin-row">
+      <span class="admin-row-lbl">LS 鍵數</span>
+      <span class="admin-row-val">${Object.keys(localStorage).length}</span>
+    </div>
+  `;
+}
+
+/* ── 初始化：頁面載入時還原管理員狀態 ── */
+(function _initAdminState() {
+  if (localStorage.getItem(_ADMIN_LS_KEY)) {
+    document.getElementById('crownBtn').classList.add('visible');
+  }
 })();
 </script>
 </body>
