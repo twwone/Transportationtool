@@ -1963,14 +1963,18 @@ def analyze_food():
     food_hint = request.form.get("food_hint", "").strip()[:60]
     b64_str   = _b64.b64encode(image_bytes).decode("utf-8")
 
-    hint_line = f"使用者提示：這道食物是「{food_hint}」，請以此為主要參考依據。\n" if food_hint else ""
+    hint_line = (
+        f"使用者校正提示：圖片中有「{food_hint}」，"
+        "請將外觀符合描述的食物辨識為此名稱，其餘食物照常辨識，全部一起計算。\n"
+    ) if food_hint else ""
     _FOOD_PROMPT = (
         f"{hint_line}"
-        "你是一位專業的運動營養師 AI。分析使用者傳來的食物照片，"
+        "你是一位專業的運動營養師 AI。"
+        "分析使用者傳來的食物照片，辨識圖片中所有可見的食物並加總熱量。"
         "嚴格以 JSON 格式回傳，不得輸出任何其他內容。\n"
-        '回傳格式：{"food_name":"食物完整名稱","calories":整數,'
+        '回傳格式：{"food_name":"所有食物的組合名稱（多樣時用＋連接，如「雞腿飯＋炒青菜＋湯」）","calories":所有食物總熱量整數,'
         '"macros":{"carbs":整數,"protein":整數,"fat":整數},"comment":"一句30字以內的繁體中文正向評語"}\n'
-        "calories 單位大卡，macros 單位公克。"
+        "calories 單位大卡，macros 單位公克，皆為圖片中所有食物的合計。"
     )
 
     # 直接呼叫 Gemini REST API，不依賴 Python SDK
