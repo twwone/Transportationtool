@@ -861,16 +861,21 @@ function resetCapture() {
 }
 
 // ── Error display ──
-function showError(errCode, status) {
+function showError(errCode, status, detail) {
   document.getElementById('previewSection').style.display = 'none';
   const card = document.getElementById('errorCard');
   const msg  = document.getElementById('errorMsg');
   const icon = document.getElementById('errorIcon');
   const btn  = document.getElementById('errorActionBtn');
+  const detailHtml = detail ? `<br><small style="opacity:.6;word-break:break-all">${detail}</small>` : '';
 
   if (errCode === 'quota_exceeded' || status === 429) {
     icon.textContent = '🔑';
-    msg.innerHTML = '<strong>API 配額已用盡</strong><br>伺服器的 Gemini 免費額度已達上限。<br>請在設定中輸入您自己的免費 API 金鑰（aistudio.google.com）。';
+    msg.innerHTML = '<strong>伺服器 API 配額已用盡</strong><br>請在設定中輸入您自己的免費 API 金鑰<br>（aistudio.google.com → Get API key）。' + detailHtml;
+    btn.style.display = 'block';
+  } else if (errCode === 'user_quota_exceeded') {
+    icon.textContent = '🔑';
+    msg.innerHTML = '<strong>您的 API 金鑰配額已用盡</strong><br>請到 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:inherit">aistudio.google.com</a> 建立新專案並取得新金鑰，再到設定更新。' + detailHtml;
     btn.style.display = 'block';
   } else if (errCode === 'network' || status === 0) {
     icon.textContent = '📡';
@@ -878,7 +883,7 @@ function showError(errCode, status) {
     btn.style.display = 'none';
   } else {
     icon.textContent = '⚠️';
-    msg.innerHTML = `<strong>辨識失敗</strong><br>${errCode}`;
+    msg.innerHTML = `<strong>辨識失敗</strong><br>${errCode}` + detailHtml;
     btn.style.display = 'none';
   }
   card.style.display = 'block';
@@ -900,7 +905,7 @@ async function doAnalyze() {
     const data = await resp.json();
 
     if (data.error) {
-      showError(data.error, resp.status);
+      showError(data.error, resp.status, data.detail || '');
     } else {
       _currentResult = data;
       renderResult(data);

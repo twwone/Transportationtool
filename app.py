@@ -1927,10 +1927,11 @@ def diet_day_clear(sync_id, date_str):
 def analyze_food():
     import base64 as _b64
 
-    api_key = (
-        request.form.get("ai_key", "").strip()
-        or os.environ.get("GEMINI_API_KEY", "")
-    )
+    user_key   = request.form.get("ai_key", "").strip()
+    server_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key    = user_key or server_key
+    key_source = "user" if user_key else "server"
+
     if not api_key:
         return jsonify({"error": "請在 ⚙ 設定中輸入 Gemini API 金鑰"}), 503
 
@@ -1970,9 +1971,15 @@ def analyze_food():
     )
 
     # 直接呼叫 Gemini REST API，不依賴 Python SDK
-    for model in ("gemini-2.0-flash", "gemini-1.5-flash-latest"):
+    # 逐一試每個模型，429/404/400 都繼續試下一個，全部失敗才回錯
+    _MODELS = ("gemini-1.5-flash-latest", "gemini-1.5-flash-8b", "gemini-2.0-flash")
+    r = None
+    last_status  = None
+    last_err_msg = ""
+
+    for model in _MODELS:
         try:
-            r = _requests.post(
+            resp = _requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
                 json={
                     "contents": [{
@@ -1985,18 +1992,21 @@ def analyze_food():
                 },
                 timeout=30,
             )
-            if r.status_code == 200:
+            if resp.status_code == 200:
+                r = resp
                 break
-            err_msg = (r.json().get("error") or {}).get("message", r.text[:300])
-            if r.status_code == 429:
-                return jsonify({"error": "quota_exceeded"}), 429
-            if r.status_code not in (404, 400):
-                return jsonify({"error": f"AI 分析失敗：{err_msg}"}), 500
-            # 404/400 → 試下一個模型
+            last_status  = resp.status_code
+            last_err_msg = (resp.json().get("error") or {}).get("message", resp.text[:300])
+            # 不管 429/404/400/其他，都繼續試下一個模型
         except Exception as e:
-            return jsonify({"error": f"AI 分析失敗：{str(e)}"}), 500
-    else:
-        return jsonify({"error": "AI 分析失敗：模型不可用，請確認 API 金鑰"}), 500
+            last_status  = 503
+            last_err_msg = str(e)
+
+    if r is None:
+        if last_status == 429:
+            err_code = "user_quota_exceeded" if key_source == "user" else "quota_exceeded"
+            return jsonify({"error": err_code, "detail": last_err_msg}), 429
+        return jsonify({"error": f"AI 分析失敗：{last_err_msg}"}), 500
 
     try:
         text = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
