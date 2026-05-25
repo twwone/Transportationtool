@@ -1793,11 +1793,17 @@ def api_weather():
 # ══════════════════════════════════════════════
 from datetime import date as _date_cls
 
-# ── KV storage layer (Vercel KV / Upstash Redis REST API) ──
-# Vercel KV 會自動注入 KV_REST_API_URL / KV_REST_API_TOKEN
+# ── KV storage layer (Upstash Redis REST API) ──
+# 支援 Vercel KV (KV_REST_API_*) 與 Upstash 直連 (UPSTASH_REDIS_REST_*) 兩種格式
 # 若未設定則使用 in-memory fallback（重啟後資料消失，但不會 crash）
-_KV_URL   = (os.environ.get("KV_REST_API_URL") or "").rstrip("/")
-_KV_TOKEN = os.environ.get("KV_REST_API_TOKEN") or ""
+_KV_URL   = (
+    os.environ.get("KV_REST_API_URL") or
+    os.environ.get("UPSTASH_REDIS_REST_URL") or ""
+).rstrip("/")
+_KV_TOKEN = (
+    os.environ.get("KV_REST_API_TOKEN") or
+    os.environ.get("UPSTASH_REDIS_REST_TOKEN") or ""
+)
 _diet_mem: dict = {}  # in-memory fallback
 
 
