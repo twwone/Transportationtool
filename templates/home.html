@@ -687,9 +687,7 @@ body {
   .admin-exit-btn:active { background: rgba(255,59,48,0.22); }
   .admin-diet-btn { color: #34d399 !important; border-color: rgba(52,211,153,.35) !important; }
   .admin-diet-panel { background: rgba(52,211,153,.07) !important; border-color: rgba(52,211,153,.18) !important; }
-  .ob-banner { background: rgba(28,28,30,.96) !important; border-color: rgba(255,255,255,.1) !important; }
-  .ob-banner-text { color: #f2f2f7 !important; }
-  .ob-banner-sub  { color: #8e8e93 !important; }
+
 }
 
 /* ── Admin Diet 查看按鈕 ── */
@@ -730,41 +728,7 @@ body {
   .admin-diet-food-cal  { color: #34d399; }
 }
 
-/* ── 新用戶引導 Banner ── */
-.ob-banner {
-  position: fixed; bottom: max(20px, env(safe-area-inset-bottom));
-  left: 50%; transform: translateX(-50%);
-  width: calc(100% - 32px); max-width: 448px;
-  background: rgba(255,255,255,.96);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(60,60,67,.1);
-  border-radius: 18px; padding: 14px 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,.12);
-  display: flex; align-items: center; gap: 12px;
-  z-index: 50;
-  animation: obSlideUp .4s cubic-bezier(.22,1,.36,1) both;
-}
-@keyframes obSlideUp {
-  from { opacity:0; transform: translateX(-50%) translateY(20px); }
-  to   { opacity:1; transform: translateX(-50%) translateY(0); }
-}
-.ob-banner-icon { font-size: 1.5rem; flex-shrink: 0; }
-.ob-banner-body { flex: 1; min-width: 0; }
-.ob-banner-text { font-size: 0.88rem; font-weight: 700; color: #1c1c1e; line-height: 1.3; }
-.ob-banner-sub  { font-size: 0.75rem; color: #636366; margin-top: 2px; }
-.ob-banner-btn  {
-  padding: 8px 16px; border-radius: 100px;
-  background: #007aff; color: #fff;
-  font-size: 0.85rem; font-weight: 700;
-  border: none; cursor: pointer; font-family: inherit;
-  white-space: nowrap; flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-.ob-banner-close {
-  background: none; border: none; color: #8e8e93;
-  font-size: 1.1rem; cursor: pointer; padding: 2px 4px; flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-}
+
 </style>
 </head>
 <body>
@@ -961,16 +925,6 @@ body {
   </div>
 </div>
 
-<!-- 新用戶引導 Banner -->
-<div class="ob-banner" id="obBanner" style="display:none">
-  <span class="ob-banner-icon">👤</span>
-  <div class="ob-banner-body">
-    <div class="ob-banner-text">建立你的帳號</div>
-    <div class="ob-banner-sub">換裝置也能保留你的所有資料</div>
-  </div>
-  <button class="ob-banner-btn" onclick="_obSetup()">立即註冊</button>
-  <button class="ob-banner-close" onclick="_obDismiss()" aria-label="關閉">×</button>
-</div>
 
 <!-- 👑 Admin Panel -->
 <div class="admin-overlay" id="adminOverlay">
@@ -1506,26 +1460,6 @@ async function _toggleAdminDiet(uid, dietSyncId, userName) {
   }
 }
 
-/* ── 新用戶引導 ── */
-(function _initOnboarding() {
-  if (localStorage.getItem('ob_done')) return;
-  if (_getSession()) { localStorage.setItem('ob_done','1'); return; }
-  setTimeout(() => {
-    const banner = document.getElementById('obBanner');
-    if (banner) banner.style.display = '';
-  }, 1800);
-})();
-
-function _obSetup() {
-  localStorage.setItem('ob_done', '1');
-  document.getElementById('obBanner').style.display = 'none';
-  openSheet();
-  setTimeout(() => switchAuthTab('register'), 300);
-}
-function _obDismiss() {
-  localStorage.setItem('ob_done', '1');
-  document.getElementById('obBanner').style.display = 'none';
-}
 </script>
 </body>
 </html>
