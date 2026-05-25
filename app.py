@@ -1926,14 +1926,19 @@ def diet_day_clear(sync_id, date_str):
 @app.route("/api/analyze-food", methods=["POST"])
 def analyze_food():
     import base64 as _b64
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return jsonify({"error": "google-generativeai 套件未安裝"}), 500
 
     api_key = (
-        request.form.get("grok_key", "").strip()
-        or os.environ.get("GROK_API_KEY", "")
-        or os.environ.get("XAI_API_KEY", "")
+        request.form.get("gemini_key", "").strip()
+        or os.environ.get("GEMINI_API_KEY", "")
     )
     if not api_key:
-        return jsonify({"error": "GROK_API_KEY 未設定，請在設定頁輸入您的 Grok API 金鑰"}), 503
+        return jsonify({"error": "GEMINI_API_KEY 未設定，請在設定頁輸入您的 Gemini API 金鑰"}), 503
+
+    genai.configure(api_key=api_key)
 
     image_bytes = None
     mime_type   = "image/jpeg"
@@ -1960,8 +1965,6 @@ def analyze_food():
     if not image_bytes:
         return jsonify({"error": "圖片內容為空"}), 400
 
-    b64_str = _b64.b64encode(image_bytes).decode("utf-8")
-
     _FOOD_PROMPT = (
         "你是一位專業的運動營養師 AI。分析使用者傳來的食物照片，"
         "嚴格以 JSON 格式回傳，不得輸出任何其他內容。\n"
@@ -1971,39 +1974,18 @@ def analyze_food():
     )
 
     try:
-        resp = _requests.post(
-            "https://api.x.ai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type":  "application/json",
-            },
-            json={
-                "model": "grok-2-vision-latest",
-                "messages": [{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": _FOOD_PROMPT},
-                        {"type": "image_url", "image_url": {
-                            "url": f"data:{mime_type};base64,{b64_str}",
-                        }},
-                    ],
-                }],
-                "temperature": 0,
-            },
-            timeout=30,
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash",
+            generation_config={"response_mime_type": "application/json"},
         )
-        if not resp.ok:
-            err = resp.json().get("error", {})
-            msg = err.get("message", resp.text[:300]) if isinstance(err, dict) else resp.text[:300]
-            if resp.status_code == 429:
-                return jsonify({"error": "quota_exceeded"}), 429
-            return jsonify({"error": f"AI 分析失敗：{msg}"}), 500
-
-        text = resp.json()["choices"][0]["message"]["content"].strip()
+        response = model.generate_content([
+            _FOOD_PROMPT,
+            {"mime_type": mime_type, "data": image_bytes},
+        ])
+        text = response.text.strip()
         if text.startswith("```"):
             lines = text.splitlines()
             text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-
         result = _json.loads(text)
         macros = result.get("macros", {})
         return jsonify({
@@ -2019,7 +2001,10 @@ def analyze_food():
     except _json.JSONDecodeError:
         return jsonify({"error": "AI 回傳格式異常，請再試一次"}), 500
     except Exception as e:
-        return jsonify({"error": f"AI 分析失敗：{str(e)}"}), 500
+        err_str = str(e)
+        if "429" in err_str or "quota" in err_str.lower() or "exceeded" in err_str.lower():
+            return jsonify({"error": "quota_exceeded"}), 429
+        return jsonify({"error": f"AI 分析失敗：{err_str}"}), 500
 
 
 if __name__ == "__main__":
