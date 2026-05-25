@@ -120,6 +120,9 @@ const Config = (() => {
         p.syncKey = Math.random().toString(36).slice(2, 10);
         _write(d);
       }
+      // 綁定 dietSyncId，讓管理員可查詢該用戶的熱量資料
+      const dietSyncId = localStorage.getItem('dietSyncId');
+      if (dietSyncId) { p.dietSyncId = dietSyncId; _write(d); }
       try {
         const r = await fetch(`${SUPA_URL}/rest/v1/user_configs`, {
           method: 'POST',

@@ -494,6 +494,58 @@ body::before{
   .bank-total{background:rgba(0,0,0,.04)}
   .cheat-day{background:rgba(0,0,0,.08)}
 }
+
+/* ── Admin View Bar ── */
+.admin-view-bar{
+  width:100%;max-width:480px;
+  padding:8px 20px 0;
+  position:relative;z-index:2;
+  display:none;
+}
+.admin-view-inner{
+  background:rgba(255,193,7,.13);
+  border:1px solid rgba(255,193,7,.35);
+  border-radius:14px;
+  padding:8px 12px;
+  display:flex;align-items:center;gap:8px;
+}
+.admin-view-label{
+  font-size:.72rem;font-weight:700;
+  color:#b8860b;white-space:nowrap;flex-shrink:0;
+}
+.admin-user-chips{
+  display:flex;gap:6px;overflow-x:auto;
+  scrollbar-width:none;flex:1;
+}
+.admin-user-chips::-webkit-scrollbar{display:none}
+.admin-uChip{
+  flex-shrink:0;padding:4px 12px;
+  border-radius:100px;font-size:.78rem;font-weight:600;
+  border:1.5px solid rgba(255,193,7,.4);
+  background:transparent;color:#b8860b;
+  cursor:pointer;font-family:inherit;
+  transition:background .15s,color .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.admin-uChip.active{
+  background:rgba(255,193,7,.25);color:#7a5c00;
+  border-color:rgba(255,193,7,.7);
+}
+.admin-view-indicator{
+  width:100%;max-width:480px;
+  padding:4px 20px 0;
+  position:relative;z-index:2;
+  display:none;
+}
+.admin-view-indicator span{
+  font-size:.72rem;color:rgba(255,193,7,.85);font-weight:600;
+}
+@media (prefers-color-scheme:dark){
+  .admin-view-inner{background:rgba(255,193,7,.09);border-color:rgba(255,193,7,.25)}
+  .admin-view-label,.admin-uChip{color:rgba(255,193,7,.85)}
+  .admin-uChip.active{background:rgba(255,193,7,.18);color:rgba(255,193,7,.95);border-color:rgba(255,193,7,.5)}
+  .admin-view-indicator span{color:rgba(255,193,7,.7)}
+}
 </style>
 </head>
 <body>
@@ -510,6 +562,17 @@ body::before{
     剩餘大卡
   </div>
   <button class="settings-btn" onclick="openSettings()">⚙</button>
+</div>
+
+<!-- Admin View Bar（管理員切換用戶） -->
+<div class="admin-view-bar" id="adminViewBar">
+  <div class="admin-view-inner">
+    <span class="admin-view-label">👑 查看：</span>
+    <div class="admin-user-chips" id="adminUserChips"></div>
+  </div>
+</div>
+<div class="admin-view-indicator" id="adminViewIndicator">
+  <span id="adminViewIndicatorText"></span>
 </div>
 
 <!-- Tab Bar -->
@@ -874,12 +937,87 @@ function formatDate(key) {
 
 // ── Server bank ──
 let _bankCache = {};
+let _adminViewSyncId = null;   // 管理員切換查看的目標 sync_id
+let _adminViewName   = null;   // 目標用戶名稱
+
+function _activeSyncId() { return _adminViewSyncId || getSyncId(); }
 
 async function fetchBank() {
   try {
-    const resp = await fetch(`/api/diet/bank/${encodeURIComponent(getSyncId())}`);
+    const resp = await fetch(`/api/diet/bank/${encodeURIComponent(_activeSyncId())}`);
     if (resp.ok) _bankCache = await resp.json();
   } catch (_) { /* keep cache on network error */ }
+}
+
+// ── Admin: 初始化用戶切換器 ──
+async function _initAdminView() {
+  const pin = localStorage.getItem('admin_pin');
+  if (!pin) return;
+  try {
+    const r = await fetch('/api/admin/users', {
+      headers: { 'Authorization': `Bearer ${pin}` },
+      signal: AbortSignal.timeout(6000)
+    });
+    const data = await r.json();
+    if (!data.ok) return;
+    const rows = (data.rows || []).filter(row => row.config?.dietSyncId);
+    if (!rows.length) return;
+
+    const ownId = getSyncId();
+    const allUsers = [
+      { label: '我的', syncId: ownId, own: true },
+      ...rows.map(row => ({
+        label:  row.config.name || '匿名',
+        syncId: row.config.dietSyncId,
+        own:    row.config.dietSyncId === ownId
+      }))
+    ];
+    // 去重（若自己也在 Supabase 清單）
+    const seen = new Set();
+    const dedupedUsers = allUsers.filter(u => {
+      if (seen.has(u.syncId)) return false;
+      seen.add(u.syncId);
+      return true;
+    });
+
+    window._adminUserList = dedupedUsers;
+    const bar    = document.getElementById('adminViewBar');
+    const chips  = document.getElementById('adminUserChips');
+    bar.style.display = '';
+    chips.innerHTML = dedupedUsers.map((u, i) =>
+      `<button class="admin-uChip${i === 0 ? ' active' : ''}"
+         onclick="_selectAdminUser(${i})">${u.label.replace(/</g,'&lt;')}</button>`
+    ).join('');
+  } catch (_) {}
+}
+
+function _selectAdminUser(idx) {
+  const list = window._adminUserList || [];
+  const u = list[idx];
+  if (!u) return;
+  document.querySelectorAll('.admin-uChip').forEach((c, i) =>
+    c.classList.toggle('active', i === idx)
+  );
+  _adminViewSyncId = u.own ? null : u.syncId;
+  _adminViewName   = u.own ? null : u.label;
+  _bankCache = {};
+  // 更新指示文字
+  const ind = document.getElementById('adminViewIndicator');
+  const txt = document.getElementById('adminViewIndicatorText');
+  if (_adminViewName) {
+    txt.textContent = `目前查看：${_adminViewName} 的資料（唯讀）`;
+    ind.style.display = '';
+  } else {
+    ind.style.display = 'none';
+  }
+  // 相機區唯讀
+  const camBtn = document.querySelector('.camera-btn');
+  const galBtn = document.querySelector('.gallery-btn');
+  if (camBtn) camBtn.style.opacity = _adminViewSyncId ? '0.35' : '';
+  if (galBtn) galBtn.style.opacity = _adminViewSyncId ? '0.35' : '';
+  if (camBtn) camBtn.style.pointerEvents = _adminViewSyncId ? 'none' : '';
+  if (galBtn) galBtn.style.pointerEvents = _adminViewSyncId ? 'none' : '';
+  renderBank();
 }
 
 function getDayData(bank, key) {
@@ -1326,6 +1464,7 @@ async function renderStats(refetch) {
   document.getElementById('dateLabel').textContent =
     `${now.getMonth()+1}/${now.getDate()}（週${days[now.getDay()]}）`;
   getSyncId(); // ensure sync_id exists
+  await _initAdminView();
   await renderBank();
 })();
 

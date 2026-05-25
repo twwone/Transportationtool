@@ -601,6 +601,85 @@ body {
   .admin-sec-label { color: #636366; }
   .admin-exit-btn { background: rgba(255,59,48,0.12); }
   .admin-exit-btn:active { background: rgba(255,59,48,0.22); }
+  .admin-diet-btn { color: #34d399 !important; border-color: rgba(52,211,153,.35) !important; }
+  .admin-diet-panel { background: rgba(52,211,153,.07) !important; border-color: rgba(52,211,153,.18) !important; }
+  .ob-banner { background: rgba(28,28,30,.96) !important; border-color: rgba(255,255,255,.1) !important; }
+  .ob-banner-text { color: #f2f2f7 !important; }
+  .ob-banner-sub  { color: #8e8e93 !important; }
+}
+
+/* ── Admin Diet 查看按鈕 ── */
+.admin-diet-btn {
+  font-size: 0.78rem; padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(52,211,153,.1);
+  border: 1.5px solid rgba(52,211,153,.3);
+  color: #059669; font-weight: 600; cursor: pointer;
+  font-family: inherit; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+.admin-diet-btn:active { background: rgba(52,211,153,.2); }
+.admin-diet-panel {
+  background: rgba(52,211,153,.06);
+  border: 1px solid rgba(52,211,153,.15);
+  border-radius: 12px; padding: 10px 12px;
+  margin-top: 8px; width: 100%;
+}
+.admin-diet-bars { display: flex; gap: 3px; align-items: flex-end; height: 36px; margin-bottom: 8px; }
+.admin-diet-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
+.admin-diet-bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 2px; }
+.admin-diet-bar.ok   { background: rgba(52,211,153,.65); }
+.admin-diet-bar.over { background: rgba(251,146,60,.65); }
+.admin-diet-bar.zero { background: rgba(142,142,147,.25); }
+.admin-diet-day-lbl { font-size: 0.6rem; color: #8e8e93; }
+.admin-diet-food-list { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.admin-diet-food-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.78rem;
+}
+.admin-diet-food-name { color: #1c1c1e; flex: 1; padding-right: 8px; }
+.admin-diet-food-cal  { color: #059669; font-weight: 700; font-family: monospace; flex-shrink: 0; }
+.admin-diet-empty { font-size: 0.78rem; color: #8e8e93; padding: 4px 0; }
+@media (prefers-color-scheme: dark) {
+  .admin-diet-food-name { color: #e5e5ea; }
+  .admin-diet-food-cal  { color: #34d399; }
+}
+
+/* ── 新用戶引導 Banner ── */
+.ob-banner {
+  position: fixed; bottom: max(20px, env(safe-area-inset-bottom));
+  left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 448px;
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(60,60,67,.1);
+  border-radius: 18px; padding: 14px 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.12);
+  display: flex; align-items: center; gap: 12px;
+  z-index: 50;
+  animation: obSlideUp .4s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes obSlideUp {
+  from { opacity:0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+.ob-banner-icon { font-size: 1.5rem; flex-shrink: 0; }
+.ob-banner-body { flex: 1; min-width: 0; }
+.ob-banner-text { font-size: 0.88rem; font-weight: 700; color: #1c1c1e; line-height: 1.3; }
+.ob-banner-sub  { font-size: 0.75rem; color: #636366; margin-top: 2px; }
+.ob-banner-btn  {
+  padding: 8px 16px; border-radius: 100px;
+  background: #007aff; color: #fff;
+  font-size: 0.85rem; font-weight: 700;
+  border: none; cursor: pointer; font-family: inherit;
+  white-space: nowrap; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.ob-banner-close {
+  background: none; border: none; color: #8e8e93;
+  font-size: 1.1rem; cursor: pointer; padding: 2px 4px; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 </style>
 </head>
@@ -756,6 +835,17 @@ body {
     </div>
     <div class="pin-error" id="pinError"></div>
   </div>
+</div>
+
+<!-- 新用戶引導 Banner -->
+<div class="ob-banner" id="obBanner" style="display:none">
+  <span class="ob-banner-icon">👤</span>
+  <div class="ob-banner-body">
+    <div class="ob-banner-text">設定你的名稱</div>
+    <div class="ob-banner-sub">讓管理員看到你的使用資料</div>
+  </div>
+  <button class="ob-banner-btn" onclick="_obSetup()">設定</button>
+  <button class="ob-banner-close" onclick="_obDismiss()" aria-label="關閉">×</button>
 </div>
 
 <!-- 👑 Admin Panel -->
@@ -1125,17 +1215,23 @@ function _renderAdminPanel() {
       return;
     }
     const MRT_N = {A1:'台北車站',A12:'第一航廈',A13:'第二航廈',A18:'高鐵桃園',A21:'環北'};
-    usersCard.innerHTML = rows.map(r => {
+    usersCard.innerHTML = rows.map((r, idx) => {
       const cfg  = r.config || {};
       const thsr = cfg.thsr || {};
       const mrt  = cfg.mrt  || {};
       const tg   = cfg.tg   || {};
       const upd  = r.updated_at ? r.updated_at.slice(0,16).replace('T',' ') : '—';
       const star = mrt.starred ? (MRT_N[mrt.starred] || mrt.starred) : '—';
+      const hasDiet = !!cfg.dietSyncId;
+      const uid  = `admDiet_${idx}`;
       return `<div class="admin-row" style="flex-direction:column;align-items:flex-start;gap:4px;padding:12px 16px">
-        <div style="display:flex;justify-content:space-between;width:100%">
+        <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
           <span class="admin-row-lbl" style="font-size:0.92rem">${(cfg.name||'匿名').replace(/</g,'&lt;')}</span>
-          <span class="admin-row-val">${upd}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${hasDiet ? `<button class="admin-diet-btn" id="btn_${uid}"
+              onclick="_toggleAdminDiet('${uid}','${cfg.dietSyncId.replace(/'/g,'')}','${(cfg.name||'匿名').replace(/'/g,'').replace(/</g,'')}')">🥗 熱量</button>` : ''}
+            <span class="admin-row-val">${upd}</span>
+          </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <span style="font-size:0.78rem;color:#636366">🚄 ${(thsr.origin||'—').replace(/</g,'&lt;')}→${(thsr.destination||'—').replace(/</g,'&lt;')}</span>
@@ -1143,6 +1239,7 @@ function _renderAdminPanel() {
           <span style="font-size:0.78rem;color:#636366">💬 ${tg.token ? '✅' : '—'}</span>
           <span style="font-size:0.78rem;color:#8e8e93;font-family:monospace">${(r.sync_key||'').replace(/</g,'&lt;')}</span>
         </div>
+        ${hasDiet ? `<div class="admin-diet-panel" id="${uid}" style="display:none"></div>` : ''}
       </div>`;
     }).join('');
   }).catch(() => {
@@ -1190,6 +1287,104 @@ function _renderAdminPanel() {
     document.getElementById('crownBtn').classList.add('visible');
   }
 })();
+
+/* ── Admin：展開 / 收起 某用戶熱量資料 ── */
+async function _toggleAdminDiet(uid, dietSyncId, userName) {
+  const panel = document.getElementById(uid);
+  const btn   = document.getElementById('btn_' + uid);
+  if (!panel || !btn) return;
+
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : '';
+  btn.textContent = isOpen ? '🥗 熱量' : '▲ 收起';
+  if (isOpen) return;
+
+  panel.innerHTML = '<div style="font-size:.78rem;color:#8e8e93;padding:4px 0">載入中…</div>';
+
+  try {
+    const r = await fetch(`/api/diet/bank/${encodeURIComponent(dietSyncId)}`,
+      { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) throw new Error('fetch failed');
+    const bank = await r.json();
+
+    // 取最近 7 天（今天往前）
+    const days = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().slice(0,10);
+      const rec = bank[key] || { records: [] };
+      const total = (rec.records || []).reduce((s, r) => s + (r.calories||0), 0);
+      const weekDay = ['日','一','二','三','四','五','六'][d.getDay()];
+      days.push({ key, total, label: `${d.getMonth()+1}/${d.getDate()}\n週${weekDay}`, records: rec.records || [] });
+    }
+
+    // 取最近 8 筆食物紀錄（跨所有日期）
+    const allRecords = [];
+    Object.keys(bank).sort((a,b) => b.localeCompare(a)).forEach(key => {
+      (bank[key].records || []).slice().reverse().forEach(rec => {
+        if (allRecords.length < 8) allRecords.push({ date: key, ...rec });
+      });
+    });
+
+    const maxCal = Math.max(...days.map(d => d.total), 1);
+    const limit  = 2500; // 預設目標，缺乏個人設定時用此值
+
+    const barsHtml = days.map(d => {
+      const pct  = Math.round((d.total / maxCal) * 100);
+      const cls  = d.total === 0 ? 'zero' : (d.total > limit ? 'over' : 'ok');
+      const lbl  = d.label.replace('\n','<br>');
+      return `<div class="admin-diet-bar-wrap">
+        <div class="admin-diet-bar ${cls}" style="height:${pct}%"></div>
+        <div class="admin-diet-day-lbl">${d.total > 0 ? d.total : ''}</div>
+        <div class="admin-diet-day-lbl" style="font-size:.55rem">${lbl}</div>
+      </div>`;
+    }).join('');
+
+    const foodHtml = allRecords.length === 0
+      ? '<div class="admin-diet-empty">尚無記錄</div>'
+      : allRecords.map(rec => `
+          <div class="admin-diet-food-row">
+            <span class="admin-diet-food-name">${(rec.food_name||'').replace(/</g,'&lt;').slice(0,24)}</span>
+            <span class="admin-diet-food-cal">${rec.calories} kcal</span>
+          </div>`).join('');
+
+    panel.innerHTML = `
+      <div style="font-size:.72rem;color:#8e8e93;font-weight:600;margin-bottom:6px">${userName} — 近 7 天熱量</div>
+      <div class="admin-diet-bars">${barsHtml}</div>
+      <div style="font-size:.72rem;color:#8e8e93;font-weight:600;margin:8px 0 4px">最近飲食</div>
+      <div class="admin-diet-food-list">${foodHtml}</div>`;
+  } catch {
+    panel.innerHTML = '<div class="admin-diet-empty">載入失敗，請稍後再試</div>';
+  }
+}
+
+/* ── 新用戶引導 ── */
+(function _initOnboarding() {
+  if (localStorage.getItem('ob_done')) return;
+  const p = Config.getActive();
+  if (p.syncKey) { localStorage.setItem('ob_done','1'); return; }
+  // 延遲 1.5s 再顯示，避免與頁面載入動畫衝突
+  setTimeout(() => {
+    const banner = document.getElementById('obBanner');
+    if (banner) banner.style.display = '';
+  }, 1500);
+})();
+
+function _obSetup() {
+  localStorage.setItem('ob_done', '1');
+  document.getElementById('obBanner').style.display = 'none';
+  openSheet();
+  setTimeout(() => {
+    const nameInput = document.querySelector('#profileSheet input[type="text"]');
+    if (nameInput) nameInput.focus();
+  }, 400);
+}
+function _obDismiss() {
+  localStorage.setItem('ob_done', '1');
+  document.getElementById('obBanner').style.display = 'none';
+}
 </script>
 </body>
 </html>
