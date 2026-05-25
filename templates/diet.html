@@ -405,6 +405,45 @@ body::before{
 .history-records{display:none;padding:0 12px 12px;flex-direction:column;gap:6px}
 .history-day-card.expanded .history-records{display:flex}
 
+/* ── Stats Container ── */
+.stats-container{
+  display:none;flex-direction:column;gap:12px;
+  width:100%;max-width:480px;padding:0 16px;
+  position:relative;z-index:1;
+}
+.stats-container.shown{display:flex}
+
+.stats-period-toggle{display:flex;gap:6px}
+.period-btn{
+  flex:1;padding:9px;border-radius:var(--radius-s);
+  background:none;border:1px solid transparent;
+  color:var(--sub);font-size:.88rem;font-weight:600;
+  cursor:pointer;font-family:inherit;
+  transition:background .2s,color .2s,border-color .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.period-btn.active{
+  background:rgba(56,189,248,.18);
+  border-color:rgba(56,189,248,.35);
+  color:var(--blue);
+}
+
+.stats-chart-card{padding:16px 14px 10px}
+.stats-chart-wrap{width:100%;overflow:visible}
+
+.stats-summary{display:flex;gap:10px;margin-top:2px}
+.stat-card{
+  flex:1;
+  background:var(--glass);
+  backdrop-filter:blur(24px) saturate(1.6);
+  -webkit-backdrop-filter:blur(24px) saturate(1.6);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-m);
+  padding:14px 10px;text-align:center;
+}
+.stat-val{font-size:1.3rem;font-weight:900;letter-spacing:-.4px;line-height:1.1}
+.stat-lbl{font-size:.68rem;color:var(--sub);margin-top:4px;font-weight:600;letter-spacing:.02em}
+
 /* ── Light mode ── */
 @media(prefers-color-scheme:light){
   :root{
@@ -448,6 +487,7 @@ body::before{
 <div class="tab-bar">
   <button class="tab-btn active" id="tabToday" onclick="switchTab('today')">今日</button>
   <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">歷史紀錄</button>
+  <button class="tab-btn" id="tabStats" onclick="switchTab('stats')">統計</button>
 </div>
 
 <div class="container" id="mainContainer">
@@ -607,6 +647,9 @@ body::before{
 <!-- History Container -->
 <div class="history-container" id="historyContainer"></div>
 
+<!-- Stats Container -->
+<div class="stats-container" id="statsContainer"></div>
+
 <!-- Settings Modal -->
 <div class="modal-overlay" id="settingsModal" onclick="handleOverlayClick(event)">
   <div class="modal-card">
@@ -676,12 +719,15 @@ function copySyncId() {
   });
 }
 
-function openSettings() {
+function openSettings(highlightKey) {
   const s = getSettings();
   document.getElementById('setLimit').value = s.dailyLimit || 2500;
   document.getElementById('setGeminiKey').value = s.geminiKey || '';
   document.getElementById('setSyncId').value = getSyncId();
   document.getElementById('settingsModal').classList.add('open');
+  if (highlightKey || !s.geminiKey) {
+    setTimeout(() => document.getElementById('setGeminiKey').focus(), 350);
+  }
 }
 function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
@@ -704,13 +750,17 @@ function applySettings() {
 
 // ── Tabs ──
 function switchTab(tab) {
-  const isToday = tab === 'today';
+  const isToday   = tab === 'today';
+  const isHistory = tab === 'history';
+  const isStats   = tab === 'stats';
   document.getElementById('tabToday').classList.toggle('active', isToday);
-  document.getElementById('tabHistory').classList.toggle('active', !isToday);
+  document.getElementById('tabHistory').classList.toggle('active', isHistory);
+  document.getElementById('tabStats').classList.toggle('active', isStats);
   document.getElementById('mainContainer').style.display = isToday ? 'flex' : 'none';
-  const hc = document.getElementById('historyContainer');
-  hc.classList.toggle('shown', !isToday);
-  if (!isToday) renderHistory(true);
+  document.getElementById('historyContainer').classList.toggle('shown', isHistory);
+  document.getElementById('statsContainer').classList.toggle('shown', isStats);
+  if (isHistory) renderHistory(true);
+  if (isStats)   renderStats(true);
 }
 
 // ── History ──
@@ -871,8 +921,10 @@ function showError(errCode, status, detail) {
 
   if (errCode === 'quota_exceeded' || status === 429) {
     icon.textContent = '🔑';
-    msg.innerHTML = '<strong>伺服器 API 配額已用盡</strong><br>請在設定中輸入您自己的免費 API 金鑰<br>（aistudio.google.com → Get API key）。' + detailHtml;
+    msg.innerHTML = '<strong>伺服器 API 配額已用盡</strong><br>需要您自己的免費金鑰才能繼續使用。<br><small style="opacity:.7">→ 前往 <strong>aistudio.google.com</strong>，點 Get API key → Create，貼入下方設定。</small>' + detailHtml;
     btn.style.display = 'block';
+    // Auto-open settings so user can immediately enter their own key
+    setTimeout(() => openSettings(), 600);
   } else if (errCode === 'user_quota_exceeded') {
     icon.textContent = '🔑';
     msg.innerHTML = '<strong>您的 API 金鑰配額已用盡</strong><br>請到 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:inherit">aistudio.google.com</a> 建立新專案並取得新金鑰，再到設定更新。' + detailHtml;
@@ -1088,6 +1140,134 @@ async function renderBank() {
   }
 
   document.getElementById('bankBody').innerHTML = html;
+}
+
+// ── Stats ──
+let _statsPeriod = 'week';
+
+function switchStatsPeriod(p) {
+  _statsPeriod = p;
+  document.getElementById('statsWeekBtn').classList.toggle('active', p === 'week');
+  document.getElementById('statsMonthBtn').classList.toggle('active', p === 'month');
+  renderStats(false);
+}
+
+async function renderStats(refetch) {
+  const sc = document.getElementById('statsContainer');
+  sc.innerHTML = '<div class="history-empty"><div class="spinner" style="margin:0 auto 8px;width:28px;height:28px"></div></div>';
+  if (refetch) await fetchBank();
+
+  const bank  = _bankCache;
+  const limit = getDailyLimit();
+  const today = new Date();
+  const todayStr = todayKey();
+  const dayNames = ['日','一','二','三','四','五','六'];
+
+  let days = [], labels = [];
+  if (_statsPeriod === 'week') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push(key);
+      labels.push(i === 0 ? '今天' : `${d.getMonth()+1}/${d.getDate()}`);
+    }
+  } else {
+    const yr = today.getFullYear(), mo = today.getMonth();
+    const dim = new Date(yr, mo + 1, 0).getDate();
+    for (let d = 1; d <= dim; d++) {
+      const dt  = new Date(yr, mo, d);
+      const key = dt.toISOString().slice(0, 10);
+      days.push(key);
+      labels.push(d === 1 || d % 5 === 0 || d === dim ? String(d) : '');
+    }
+  }
+
+  const cals = days.map(key => {
+    const day = bank[key];
+    if (!day || !day.records || day.records.length === 0) return 0;
+    return day.records.reduce((s, r) => s + r.calories, 0) + (day.debt || 0);
+  });
+
+  const activePast = cals.filter((c, i) => c > 0 && days[i] <= todayStr);
+  const avgCal      = activePast.length
+    ? Math.round(activePast.reduce((s, c) => s + c, 0) / activePast.length)
+    : 0;
+  const daysOnTrack = cals.filter((c, i) => c > 0 && c <= limit && days[i] <= todayStr).length;
+  const activeDays  = activePast.length;
+  const totalCal    = cals.reduce((s, c) => s + c, 0);
+
+  // SVG bar chart
+  const W = 320, H = 155, ml = 36, mr = 6, mt = 14, mb = 28;
+  const cw = W - ml - mr, ch = H - mt - mb;
+  const n  = days.length;
+
+  const maxVal = Math.max(limit * 1.25, ...cals, 300);
+  const cap    = Math.ceil(maxVal / 500) * 500;
+  const toY    = v => ch - (v / cap) * ch;
+
+  const barGap = cw / n;
+  const barW   = Math.max(4, barGap * 0.62);
+
+  // Y-axis ticks
+  const ticks   = [0, Math.round(cap * 0.5), cap];
+  const yAxisSvg = ticks.map(v => {
+    const y = mt + toY(v);
+    const lbl = v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v;
+    return `<text x="${ml-4}" y="${(y+3.5).toFixed(1)}" text-anchor="end" fill="rgba(200,200,200,.3)" font-size="9">${lbl}</text>
+            <line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,.05)" stroke-width="1"/>`;
+  }).join('');
+
+  const limitY = mt + toY(limit);
+  const barsSvg = days.map((key, i) => {
+    const v    = cals[i];
+    const x    = ml + i * barGap + (barGap - barW) / 2;
+    const bh   = v > 0 ? Math.max(3, (v / cap) * ch) : 0;
+    const y    = mt + ch - bh;
+    const isF  = key > todayStr;
+    const col  = isF  ? 'rgba(255,255,255,.07)'
+               : v === 0 ? 'rgba(255,255,255,.09)'
+               : v <= limit ? '#34d399' : '#fb923c';
+    const isToday_ = key === todayStr;
+    const lbl  = labels[i];
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="2.5" fill="${col}" opacity="${isF ? 1 : 0.88}"/>
+            ${lbl ? `<text x="${(x+barW/2).toFixed(1)}" y="${(H-mb+13).toFixed(1)}" text-anchor="middle" fill="${isToday_ ? '#f2f2f7' : 'rgba(200,200,200,.38)'}" font-size="8.5" font-weight="${isToday_ ? 700 : 400}">${lbl}</text>` : ''}`;
+  }).join('');
+
+  const chartHtml = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible">
+      ${yAxisSvg}
+      <line x1="${ml}" y1="${limitY.toFixed(1)}" x2="${W-mr}" y2="${limitY.toFixed(1)}"
+            stroke="rgba(251,146,60,.55)" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <text x="${W-mr}" y="${(limitY-4).toFixed(1)}" text-anchor="end" fill="rgba(251,146,60,.65)" font-size="8.5">目標</text>
+      ${barsSvg}
+    </svg>`;
+
+  const mo = today.getMonth() + 1, yr = today.getFullYear();
+  const periodLabel = _statsPeriod === 'week' ? '本週' : `${yr}年${mo}月`;
+
+  sc.innerHTML = `
+    <div class="stats-period-toggle">
+      <button class="period-btn ${_statsPeriod==='week'?'active':''}" id="statsWeekBtn" onclick="switchStatsPeriod('week')">本週</button>
+      <button class="period-btn ${_statsPeriod==='month'?'active':''}" id="statsMonthBtn" onclick="switchStatsPeriod('month')">本月</button>
+    </div>
+    <div class="glass-card stats-chart-card">
+      <div class="stats-chart-wrap">${chartHtml}</div>
+    </div>
+    <div class="stats-summary">
+      <div class="stat-card">
+        <div class="stat-val">${avgCal || '—'}</div>
+        <div class="stat-lbl">平均大卡</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--green)">${daysOnTrack}<span style="font-size:.65em;font-weight:500;color:var(--sub)"> / ${activeDays}</span></div>
+        <div class="stat-lbl">達標天數</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${totalCal > 999 ? (totalCal/1000).toFixed(1)+'k' : totalCal || '—'}</div>
+        <div class="stat-lbl">期間累計</div>
+      </div>
+    </div>`;
 }
 
 // ── Init ──

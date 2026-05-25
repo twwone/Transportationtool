@@ -1972,7 +1972,7 @@ def analyze_food():
 
     # 直接呼叫 Gemini REST API，不依賴 Python SDK
     # 逐一試每個模型，429/404/400 都繼續試下一個，全部失敗才回錯
-    _MODELS = ("gemini-1.5-flash-latest", "gemini-1.5-flash-8b", "gemini-2.0-flash")
+    _MODELS = ("gemini-2.5-flash", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash-8b")
     r = None
     last_status  = None
     last_err_msg = ""
