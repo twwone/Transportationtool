@@ -882,7 +882,7 @@ _STATION_COORDS: dict = {
 
 
 def _fetch_parking_static(city: str) -> list:
-    """TDX 停車場基本資料（CarPark），600 秒快取。"""
+    """TDX 停車場基本資料（CarPark），600 秒快取。不加 $select 以確保 CarParkPosition 完整回傳。"""
     with _parking_lock:
         entry = _parking_static_cache.get(city)
         if entry and time.time() < entry["expires_at"]:
@@ -894,7 +894,7 @@ def _fetch_parking_static(city: str) -> list:
         r = _requests.get(
             f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/CarPark/{city}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-            params={"$format": "JSON", "$select": "CarParkID,CarParkName,CarParkPosition,TotalSpaces"},
+            params={"$format": "JSON", "$top": 500},
             timeout=15,
         )
         r.raise_for_status()
@@ -987,9 +987,10 @@ def parking():
 
 @app.route("/api/parking")
 def parking_api():
-    station = request.args.get("station", "").strip()
-    lat_str = request.args.get("lat", "").strip()
-    lon_str = request.args.get("lon", "").strip()
+    station    = request.args.get("station", "").strip()
+    lat_str    = request.args.get("lat", "").strip()
+    lon_str    = request.args.get("lon", "").strip()
+    radius_str = request.args.get("radius", "").strip()
 
     if station:
         info = _STATION_COORDS.get(station)
@@ -1001,17 +1002,61 @@ def parking_api():
 
     if lat_str and lon_str:
         try:
-            lat = float(lat_str)
-            lon = float(lon_str)
+            lat    = float(lat_str)
+            lon    = float(lon_str)
+            radius = float(radius_str) if radius_str else 1000.0
+            radius = max(100.0, min(radius, 3000.0))   # 夾在 100m–3km
         except ValueError:
             return jsonify({"error": "invalid_coords"}), 400
-        # 依 GPS 粗略判斷城市：台北市 vs 桃園市
-        city = "Taipei" if lat > 25.02 and lon > 121.45 else "Taoyuan"
-        lots = _merge_parking(city, lat, lon, 500)
+        # 依 GPS 粗略判斷城市
+        if lat > 25.02 and lon > 121.45:
+            city = "Taipei"
+        elif lat > 24.85 and lon < 121.45:
+            city = "Taoyuan"
+        else:
+            city = "Taoyuan"
+        lots = _merge_parking(city, lat, lon, radius)
         return jsonify({"mode": "gps", "lots": lots, "updated_at": time.strftime("%H:%M:%S")})
 
     return jsonify({"error": "missing_params",
                     "hint": "use ?station=TPE or ?lat=25.0&lon=121.2"}), 400
+
+
+@app.route("/api/parking/debug")
+def parking_debug():
+    """原始 TDX 資料（不過濾），用於診斷查無資料問題。"""
+    city = request.args.get("city", "Taoyuan").strip()
+    token = _get_tdx_token()
+    if not token:
+        return jsonify({"error": "no_tdx_token"}), 500
+    result: dict = {"city": city, "token_ok": True}
+    try:
+        r = _requests.get(
+            f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/CarPark/{city}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            params={"$format": "JSON", "$top": 5},
+            timeout=15,
+        )
+        result["static_status"] = r.status_code
+        body = r.json()
+        result["static_raw_top5"] = body[:5] if isinstance(body, list) else body
+        result["static_count"] = len(body) if isinstance(body, list) else "N/A"
+    except Exception as e:
+        result["static_error"] = str(e)
+    try:
+        r2 = _requests.get(
+            f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/ParkingAvailability/{city}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            params={"$format": "JSON", "$top": 5},
+            timeout=12,
+        )
+        result["avail_status"] = r2.status_code
+        body2 = r2.json()
+        result["avail_raw_top5"] = body2[:5] if isinstance(body2, list) else body2
+        result["avail_count"] = len(body2) if isinstance(body2, list) else "N/A"
+    except Exception as e:
+        result["avail_error"] = str(e)
+    return jsonify(result)
 
 
 # ──────────────────────────────────────────────
