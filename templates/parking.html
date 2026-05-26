@@ -286,9 +286,9 @@ body {
 
 <!-- Status Bar -->
 <div class="status-bar">
-  <div class="status-text" id="statusText">
-    <div class="spinner" id="spinner"></div>
-    取得定位中…
+  <div class="status-text">
+    <div class="spinner" id="spinner" style="display:none"></div>
+    <span id="statusMsg">準備就緒</span>
   </div>
   <button class="refresh-btn" id="refreshBtn" style="display:none" onclick="reload()">↻ 重新整理</button>
 </div>
@@ -299,7 +299,7 @@ body {
 <script>
 /* ── 地圖初始化 ── */
 const map = L.map('map', { zoomControl: true, attributionControl: true })
-  .setView([25.0330, 121.5654], 12);   // 預設台北中心
+  .setView([25.0478, 121.5170], 13);   // 預設台北車站
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -327,18 +327,17 @@ function colorClass(available, total) {
   return 'red';
 }
 
-/* ── 狀態顯示 ── */
+/* ── 狀態顯示（只更新 #statusMsg 與 #spinner，不動整個 statusText）── */
 function setStatus(html, showSpinner = false) {
   document.getElementById('spinner').style.display = showSpinner ? '' : 'none';
-  document.getElementById('statusText').innerHTML =
-    (showSpinner ? '<div class="spinner"></div>' : '') + html;
+  document.getElementById('statusMsg').innerHTML = html;
   document.getElementById('refreshBtn').style.display = 'none';
 }
 
 function setReady(label, count) {
-  const dot = '<div class="live-dot"></div>';
-  document.getElementById('statusText').innerHTML =
-    `${dot} ${label}・找到 <b>${count}</b> 處停車場`;
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('statusMsg').innerHTML =
+    `<span class="live-dot" style="display:inline-block"></span> ${label}・找到 <b>${count}</b> 處停車場`;
   document.getElementById('refreshBtn').style.display = '';
 }
 
@@ -475,23 +474,38 @@ async function fetchParking(url, label) {
 }
 
 /* ── Mode A：GPS 定位 ── */
+let _gpsTimer = null;
+
 function doGps() {
   if (!navigator.geolocation) {
-    setStatus('⚠️ 此瀏覽器不支援 GPS 定位');
+    setStatus('⚠️ 此瀏覽器不支援 GPS，請用搜尋欄');
     return;
   }
   setStatus('取得定位中…', true);
+
+  // 6 秒後若尚未完成，顯示「跳過」選項讓使用者改用搜尋
+  clearTimeout(_gpsTimer);
+  _gpsTimer = setTimeout(() => {
+    setStatus('定位較慢，可輸入地址搜尋，或繼續等待 📍');
+    document.getElementById('refreshBtn').textContent = '↻ 重試定位';
+    document.getElementById('refreshBtn').style.display = '';
+  }, 6000);
+
   navigator.geolocation.getCurrentPosition(
     pos => {
+      clearTimeout(_gpsTimer);
       const { latitude: lat, longitude: lon } = pos.coords;
       map.flyTo([lat, lon], 15, { duration: 0.8 });
       fetchParking(`/api/parking?lat=${lat}&lon=${lon}&radius=1000`, 'GPS 定位');
     },
     err => {
-      const msgs = { 1:'請允許位置存取後重試', 2:'定位失敗，請稍後再試', 3:'定位逾時' };
-      setStatus(`⚠️ ${msgs[err.code] || '定位失敗'}`);
+      clearTimeout(_gpsTimer);
+      const msgs = { 1:'請允許位置存取權限', 2:'定位失敗，請稍後再試', 3:'定位逾時' };
+      setStatus(`⚠️ ${msgs[err.code] || '定位失敗'}，可改用搜尋欄`);
+      document.getElementById('refreshBtn').textContent = '↻ 重試定位';
+      document.getElementById('refreshBtn').style.display = '';
     },
-    { timeout: 12000, maximumAge: 30000 }
+    { timeout: 15000, maximumAge: 30000 }
   );
 }
 
@@ -524,10 +538,9 @@ async function doSearch() {
 
 /* ── 重新整理 ── */
 function reload() {
-  if (!_lastFetch) { doGps(); return; }
+  document.getElementById('refreshBtn').textContent = '↻ 重新整理';
   document.getElementById('lotsContainer').innerHTML = '';
   markerLayer.clearLayers();
-  // 重新觸發上次的查詢方式
   const input = document.getElementById('searchInput').value.trim();
   if (input) doSearch();
   else       doGps();
