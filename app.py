@@ -995,6 +995,8 @@ def _merge_parking(city: str, lat: float, lon: float, radius_m: float) -> list:
         name     = name_obj.get("Zh_tw", "") if isinstance(name_obj, dict) else str(name_obj)
         av       = avail_map.get(cid, {})
         total    = av.get("total") if av.get("total") is not None else cp.get("TotalSpaces")
+        raw_avail = av.get("available")
+        available = raw_avail if (raw_avail is not None and raw_avail >= 0) else None
         result.append({
             "id":        cid,
             "name":      name or cid,
@@ -1002,7 +1004,7 @@ def _merge_parking(city: str, lat: float, lon: float, radius_m: float) -> list:
             "lon":       p_lon,
             "distance":  round(dist_km * 1000),
             "total":     total,
-            "available": av.get("available"),
+            "available": available,
         })
     result.sort(key=lambda x: x["distance"])
     return result
