@@ -1892,6 +1892,34 @@ def _valid_sync_id(sid: str) -> bool:
     return bool(sid) and len(sid) <= 64 and bool(_re.match(r'^[a-zA-Z0-9_\-]+$', sid))
 
 
+# ──────────────────────────────────────────────
+#  主頁卡片排序
+# ──────────────────────────────────────────────
+_DEFAULT_CARD_ORDER = ["tias", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "diet"]
+_VALID_CARD_IDS     = set(_DEFAULT_CARD_ORDER)
+
+
+@app.route("/api/card-order", methods=["GET"])
+def card_order_get():
+    saved = _kv_get("home:card_order")
+    if isinstance(saved, list):
+        order = [x for x in saved if x in _VALID_CARD_IDS]
+        missing = [x for x in _DEFAULT_CARD_ORDER if x not in order]
+        return jsonify({"order": order + missing})
+    return jsonify({"order": _DEFAULT_CARD_ORDER})
+
+
+@app.route("/api/card-order", methods=["POST"])
+def card_order_set():
+    data  = request.get_json(silent=True) or {}
+    order = data.get("order", [])
+    if not isinstance(order, list):
+        return jsonify({"error": "invalid"}), 400
+    order = [x for x in order if x in _VALID_CARD_IDS]
+    _kv_set("home:card_order", order)
+    return jsonify({"ok": True})
+
+
 @app.route("/diet")
 def diet():
     return render_template("diet.html")

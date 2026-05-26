@@ -313,6 +313,52 @@ body {
 .card-settings::before   { background: linear-gradient(90deg,#9ca3af,#6b7280); }
 .card-settings:hover .sm-arrow { color: #6b7280; }
 
+/* ── 排列按鈕 ── */
+.sort-btn {
+  background: rgba(0,0,0,0.06);
+  border: none; cursor: pointer;
+  padding: 5px 10px; border-radius: 10px;
+  font-size: 0.75rem; font-weight: 600;
+  font-family: inherit; color: #555;
+  letter-spacing: 0.02em;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.sort-btn.active { background: #0d9488; color: #fff; }
+.sort-btn:active { transform: scale(0.88); }
+
+/* ── 拖曳把手 ── */
+.drag-handle {
+  display: none;
+  position: absolute; top: 6px; right: 6px;
+  width: 26px; height: 26px; border-radius: 7px;
+  background: rgba(0,0,0,0.07);
+  align-items: center; justify-content: center;
+  font-size: 0.78rem; color: rgba(0,0,0,0.35);
+  z-index: 2; touch-action: none; user-select: none;
+  line-height: 1;
+}
+.bento.edit-mode .card-sm:not(.card-settings) .drag-handle { display: flex; }
+.bento.edit-mode .card-sm:not(.card-settings) { touch-action: none; user-select: none; cursor: grab; }
+.bento.edit-mode .card-sm:not(.card-settings):active { transform: none !important; }
+
+/* ── 拖曳狀態 ── */
+.card.is-dragging { opacity: 0.25; }
+.drag-ghost {
+  position: fixed; pointer-events: none; z-index: 9999;
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.22);
+  opacity: 0.93;
+  transform: scale(1.05) rotate(1.5deg);
+}
+.drag-placeholder {
+  background: rgba(13,148,136,0.07);
+  border: 2px dashed rgba(13,148,136,0.28);
+  border-radius: 22px;
+  min-height: 148px;
+  pointer-events: none;
+}
+
 /* ── 底部 ── */
 .footer {
   margin-top: 28px;
@@ -430,6 +476,10 @@ body {
   .card-diet     .sm-title { color: #34d399; }
 .card-settings .sm-title { color: #9ca3af; }
   .footer   { color: #3a3a3c; }
+  .sort-btn { background: rgba(255,255,255,0.1); color: #ebebf5; }
+  .sort-btn.active { background: #0d9488; color: #fff; }
+  .drag-handle { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.45); }
+  .drag-placeholder { background: rgba(13,148,136,0.1); border-color: rgba(13,148,136,0.22); }
   .profile-chip { background: #2c2c2e; border-color: rgba(255,255,255,0.08); color: #f2f2f7; }
   .pc-chevron   { color: #48484a; }
   .profile-sheet { background: rgba(28,28,30,0.98); }
@@ -742,6 +792,7 @@ body {
       <div class="header-title" id="headerTitle">Transport</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-shrink:0;">
+      <button id="sortBtn" class="sort-btn" onclick="toggleEditMode()">排列</button>
       <button id="crownBtn" class="crown-btn" title="管理員">👑</button>
       <button class="profile-chip" id="profileChip" style="margin-top:0" onclick="openSheet()">
         <span>👤</span>
@@ -753,86 +804,8 @@ body {
   <div class="header-sub" id="headerSub">選擇你需要的功能</div>
 </div>
 
-<!-- Bento Grid -->
-<div class="bento">
-
-  <!-- 航空資訊看板（Hero） -->
-  <a href="/tias" class="card card-hero">
-    <div class="hero-inner">
-      <div class="hero-top">
-        <span class="hero-icon">✈️</span>
-        <div class="live-badge">
-          <div class="live-dot"></div>
-          LIVE
-        </div>
-      </div>
-      <div class="hero-bottom">
-        <div class="hero-title">Flight Info</div>
-      </div>
-    </div>
-  </a>
-
-  <!-- THSR Ticket -->
-  <a href="https://thsr-ticket-bot-j7qr.onrender.com" class="card card-sm card-thsr" target="_blank" rel="noopener">
-    <span class="sm-icon">🚄</span>
-    <div class="sm-title">THSR Ticket</div>
-  </a>
-
-  <!-- MRT Train -->
-  <a href="/mrt" class="card card-sm card-mrt">
-    <span class="sm-icon">🚇</span>
-    <div class="sm-title">MRT Train</div>
-  </a>
-
-  <!-- Weekly Schedule -->
-  <a href="/schedule" class="card card-sm card-schedule">
-    <span class="sm-icon">🗓</span>
-    <div class="sm-title">Weekly Schedule</div>
-  </a>
-
-  <!-- Airport Map -->
-  <a href="/amenities" class="card card-sm card-amenities">
-    <span class="sm-icon">🗺️</span>
-    <div class="sm-title">Airport Map</div>
-  </a>
-
-  <!-- Visa Guide -->
-  <a href="/visa-guide" class="card card-sm card-visa">
-    <span class="sm-icon">🛂</span>
-    <div class="sm-title">Visa Guide</div>
-  </a>
-
-  <!-- Code Book -->
-  <a href="/code-dictionary" class="card card-sm card-codes">
-    <span class="sm-icon">🗂</span>
-    <div class="sm-title">Code Book</div>
-  </a>
-
-  <!-- Clipboard -->
-  <a href="/share" class="card card-sm card-share">
-    <span class="sm-icon">📋</span>
-    <div class="sm-title">Clipboard</div>
-  </a>
-
-  <!-- Weather -->
-  <a href="/weather" class="card card-sm card-weather">
-    <span class="sm-icon">☁️</span>
-    <div class="sm-title">天氣防禦</div>
-  </a>
-
-  <!-- Diet Tracker -->
-  <a href="/diet" class="card card-sm card-diet">
-    <span class="sm-icon">🥗</span>
-    <div class="sm-title">熱量追蹤</div>
-  </a>
-
-  <!-- Settings -->
-  <a href="/settings" class="card card-sm card-settings">
-    <span class="sm-icon">⚙️</span>
-    <div class="sm-title">設定</div>
-  </a>
-
-</div>
+<!-- Bento Grid（JS 動態渲染） -->
+<div class="bento" id="bento"></div>
 
 <div class="footer">Transportation Assistant</div>
 
@@ -982,41 +955,189 @@ document.addEventListener('touchend', e => {
   document.getElementById('headerSub').textContent = sub;
 })();
 
-/* ── 卡片錯開入場 ── */
-document.querySelectorAll('.bento .card').forEach((card, i) => {
-  card.style.animation =
-    `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${80 + i * 60}ms both`;
-});
+/* ════════════════════════════════════════
+   卡片資料 & 動態渲染
+   ════════════════════════════════════════ */
+const CARDS = {
+  tias:      { icon:'✈️',  title:'Flight Info',     url:'/tias',                                         hero:true },
+  thsr:      { icon:'🚄',  title:'THSR Ticket',     url:'https://thsr-ticket-bot-j7qr.onrender.com',    cls:'card-thsr', ext:true },
+  mrt:       { icon:'🚇',  title:'MRT Train',       url:'/mrt',                                          cls:'card-mrt' },
+  schedule:  { icon:'🗓',  title:'Weekly Schedule', url:'/schedule',                                     cls:'card-schedule' },
+  amenities: { icon:'🗺️', title:'Airport Map',      url:'/amenities',                                    cls:'card-amenities' },
+  visa:      { icon:'🛂',  title:'Visa Guide',      url:'/visa-guide',                                   cls:'card-visa' },
+  codes:     { icon:'🗂',  title:'Code Book',       url:'/code-dictionary',                              cls:'card-codes' },
+  share:     { icon:'📋',  title:'Clipboard',       url:'/share',                                        cls:'card-share' },
+  weather:   { icon:'☁️',  title:'天氣防禦',          url:'/weather',                                      cls:'card-weather' },
+  diet:      { icon:'🥗',  title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
+};
+const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','codes','share','weather','diet'];
+let cardOrder = [...DEFAULT_ORDER];
+let editMode  = false;
 
-/* ── 點擊退場動畫 ── */
-document.querySelectorAll('a.card').forEach(a => {
-  a.addEventListener('click', function(e) {
-    if (this.target === '_blank') return;
-    e.preventDefault();
-    const href = this.href;
-    const bento  = document.querySelector('.bento');
-    const header = document.querySelector('.header');
-    const footer = document.querySelector('.footer');
-    const ease = 'cubic-bezier(0.4,0,1,1)';
-    [bento, header, footer].forEach(el => {
-      el.style.transition = `opacity 0.18s ${ease}, transform 0.18s ${ease}`;
-    });
-    bento.style.opacity   = '0';
-    bento.style.transform = 'scale(0.96) translateY(-8px)';
-    header.style.opacity  = '0';
-    header.style.transform = 'translateY(-6px)';
-    footer.style.opacity  = '0';
-    setTimeout(() => { location.href = href; }, 190);
+function renderBento(order) {
+  cardOrder = order;
+  const bento = document.getElementById('bento');
+  bento.innerHTML = '';
+  order.forEach((id, i) => {
+    const c = CARDS[id];
+    if (!c) return;
+    const el = document.createElement('a');
+    el.href = c.url;
+    el.dataset.id = id;
+    el.className = c.hero ? 'card card-hero' : `card card-sm ${c.cls || ''}`;
+    el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${80 + i * 60}ms both`;
+    if (c.ext) { el.target = '_blank'; el.rel = 'noopener'; }
+    if (c.hero) {
+      el.innerHTML = `<div class="hero-inner"><div class="hero-top"><span class="hero-icon">${c.icon}</span><div class="live-badge"><div class="live-dot"></div>LIVE</div></div><div class="hero-bottom"><div class="hero-title">${c.title}</div></div></div>`;
+    } else {
+      el.innerHTML = `<div class="drag-handle" aria-hidden="true">⠿</div><span class="sm-icon">${c.icon}</span><div class="sm-title">${c.title}</div>`;
+    }
+    bento.appendChild(el);
   });
-});
+  // Settings 永遠最後，不可排序
+  const st = document.createElement('a');
+  st.href = '/settings';
+  st.className = 'card card-sm card-settings';
+  st.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${80 + order.length * 60}ms both`;
+  st.innerHTML = '<span class="sm-icon">⚙️</span><div class="sm-title">設定</div>';
+  bento.appendChild(st);
+  _setupCardClicks();
+  if (editMode) _setupDrag();
+}
+
+function _setupCardClicks() {
+  const bento  = document.getElementById('bento');
+  const header = document.querySelector('.header');
+  const footer = document.querySelector('.footer');
+  bento.querySelectorAll('a.card').forEach(a => {
+    a.addEventListener('click', function(e) {
+      if (editMode) { e.preventDefault(); return; }
+      if (this.target === '_blank') return;
+      e.preventDefault();
+      const href = this.href;
+      const ease = 'cubic-bezier(0.4,0,1,1)';
+      [bento, header, footer].forEach(el => {
+        el.style.transition = `opacity 0.18s ${ease}, transform 0.18s ${ease}`;
+      });
+      bento.style.opacity    = '0';
+      bento.style.transform  = 'scale(0.96) translateY(-8px)';
+      header.style.opacity   = '0';
+      header.style.transform = 'translateY(-6px)';
+      footer.style.opacity   = '0';
+      setTimeout(() => { location.href = href; }, 190);
+    });
+  });
+}
+
+/* ── 排列模式切換 ── */
+function toggleEditMode() {
+  editMode = !editMode;
+  const bento = document.getElementById('bento');
+  const btn   = document.getElementById('sortBtn');
+  bento.classList.toggle('edit-mode', editMode);
+  btn.classList.toggle('active', editMode);
+  btn.textContent = editMode ? '完成' : '排列';
+  if (editMode) _setupDrag();
+}
+
+/* ── 拖曳排序 ── */
+let _dEl = null, _ghost = null, _ph = null, _dragging = false;
+let _ox = 0, _oy = 0, _gox = 0, _goy = 0;
+
+function _setupDrag() {
+  document.getElementById('bento')
+    .querySelectorAll('.card-sm:not(.card-settings)')
+    .forEach(card => card.addEventListener('pointerdown', _dStart, { passive: false }));
+}
+
+function _dStart(e) {
+  if (!editMode) return;
+  _dEl = this;
+  _ox = e.clientX; _oy = e.clientY;
+  const r = _dEl.getBoundingClientRect();
+  _gox = e.clientX - r.left; _goy = e.clientY - r.top;
+  _dragging = false;
+  document.addEventListener('pointermove', _dMove, { passive: false });
+  document.addEventListener('pointerup',     _dEnd);
+  document.addEventListener('pointercancel', _dEnd);
+  e.preventDefault();
+}
+
+function _dMove(e) {
+  if (!_dEl) return;
+  const dx = e.clientX - _ox, dy = e.clientY - _oy;
+  if (!_dragging) {
+    if (Math.sqrt(dx*dx + dy*dy) < 8) return;
+    _dragging = true;
+    _ghost = _dEl.cloneNode(true);
+    _ghost.className += ' drag-ghost';
+    _ghost.style.cssText += `;width:${_dEl.offsetWidth}px;height:${_dEl.offsetHeight}px`;
+    document.body.appendChild(_ghost);
+    _dEl.classList.add('is-dragging');
+    _ph = document.createElement('div');
+    _ph.className = 'drag-placeholder';
+    _ph.style.height = _dEl.offsetHeight + 'px';
+    _dEl.before(_ph);
+  }
+  _ghost.style.left = (e.clientX - _gox) + 'px';
+  _ghost.style.top  = (e.clientY - _goy) + 'px';
+  const cards = [...document.getElementById('bento')
+    .querySelectorAll('.card-sm:not(.card-settings):not(.is-dragging)')];
+  let near = null, nearD = Infinity;
+  for (const c of cards) {
+    const r = c.getBoundingClientRect();
+    const d = Math.abs(e.clientY - (r.top + r.height / 2));
+    if (d < nearD) { nearD = d; near = c; }
+  }
+  if (near) {
+    const r = near.getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) near.before(_ph); else near.after(_ph);
+  }
+  e.preventDefault();
+}
+
+function _dEnd() {
+  document.removeEventListener('pointermove', _dMove);
+  document.removeEventListener('pointerup',     _dEnd);
+  document.removeEventListener('pointercancel', _dEnd);
+  if (_dragging && _ph && _dEl) {
+    _ph.before(_dEl); _ph.remove();
+    _dEl.classList.remove('is-dragging');
+    _saveOrder();
+  }
+  if (_ghost) { _ghost.remove(); _ghost = null; }
+  _dEl = null; _ph = null; _dragging = false;
+}
+
+function _saveOrder() {
+  const order = [...document.getElementById('bento').querySelectorAll('.card[data-id]')]
+    .map(el => el.dataset.id);
+  cardOrder = order;
+  fetch('/api/card-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order }),
+  }).catch(() => {});
+}
+
+/* ── 初始載入 ── */
+(async () => {
+  try {
+    const r = await fetch('/api/card-order');
+    const d = await r.json();
+    renderBento(d.order || DEFAULT_ORDER);
+  } catch {
+    renderBento(DEFAULT_ORDER);
+  }
+})();
 
 /* ── bfcache 恢復 ── */
 window.addEventListener('pageshow', e => {
   if (!e.persisted) return;
-  const bento  = document.querySelector('.bento');
+  const bento  = document.getElementById('bento');
   const header = document.querySelector('.header');
   const footer = document.querySelector('.footer');
-  const cards  = document.querySelectorAll('.bento .card');
+  const cards  = bento.querySelectorAll('.card');
   [bento, header, footer].forEach(el => {
     el.style.opacity = ''; el.style.transform = ''; el.style.transition = '';
   });
