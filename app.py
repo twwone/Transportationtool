@@ -899,7 +899,7 @@ def _fetch_parking_static(city: str) -> list:
         )
         r.raise_for_status()
         body = r.json()
-        data = body if isinstance(body, list) else body.get("data", [])
+        data = body if isinstance(body, list) else body.get("CarParks", body.get("data", []))
         with _parking_lock:
             _parking_static_cache[city] = {"data": data, "expires_at": time.time() + _PARKING_STATIC_TTL}
         return data
@@ -927,15 +927,14 @@ def _fetch_parking_avail(city: str) -> dict:
         )
         r.raise_for_status()
         body  = r.json()
-        items = body if isinstance(body, list) else body.get("data", [])
+        items = body if isinstance(body, list) else body.get("ParkingAvailabilities", body.get("data", []))
         avail_map: dict = {}
         for item in items:
             cid = item.get("CarParkID")
             if cid:
-                cars = item.get("Cars") or {}
                 avail_map[cid] = {
-                    "available": cars.get("AvailableSpaces"),
-                    "total":     cars.get("TotalSpaces"),
+                    "available": item.get("AvailableSpaces"),
+                    "total":     item.get("TotalSpaces"),
                 }
         with _parking_lock:
             _parking_avail_cache[city] = {"data": avail_map, "expires_at": time.time() + _PARKING_AVAIL_TTL}
