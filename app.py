@@ -862,6 +862,159 @@ def amenities_api():
 
 
 # ──────────────────────────────────────────────
+#  停車場即時車位（TDX OffStreet Parking）
+# ──────────────────────────────────────────────
+_PARKING_STATIC_TTL = 600   # 靜態設施快取 10 分鐘
+_PARKING_AVAIL_TTL  = 60    # 即時車位快取 60 秒
+
+_parking_static_cache: dict = {}   # {city: {"data": list, "expires_at": float}}
+_parking_avail_cache:  dict = {}   # {city: {"data": dict, "expires_at": float}}
+_parking_lock = threading.Lock()
+
+# 站點代碼 → GPS 中心點、查詢城市、搜尋半徑（公尺）
+_STATION_COORDS: dict = {
+    "TPE":          {"lat": 25.0777, "lon": 121.2322, "label": "桃園機場",     "city": "Taoyuan", "radius": 1000},
+    "A12":          {"lat": 25.0790, "lon": 121.2300, "label": "機場第一航廈", "city": "Taoyuan", "radius": 1000},
+    "A13":          {"lat": 25.0820, "lon": 121.2310, "label": "機場第二航廈", "city": "Taoyuan", "radius": 1000},
+    "THSR_Taoyuan": {"lat": 24.9776, "lon": 121.2283, "label": "高鐵桃園站",   "city": "Taoyuan", "radius": 1000},
+    "A18":          {"lat": 24.9776, "lon": 121.2283, "label": "高鐵桃園站",   "city": "Taoyuan", "radius": 1000},
+}
+
+
+def _fetch_parking_static(city: str) -> list:
+    """TDX 停車場基本資料（CarPark），600 秒快取。"""
+    with _parking_lock:
+        entry = _parking_static_cache.get(city)
+        if entry and time.time() < entry["expires_at"]:
+            return entry["data"]
+    token = _get_tdx_token()
+    if not token:
+        return []
+    try:
+        r = _requests.get(
+            f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/CarPark/{city}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            params={"$format": "JSON", "$select": "CarParkID,CarParkName,CarParkPosition,TotalSpaces"},
+            timeout=15,
+        )
+        r.raise_for_status()
+        body = r.json()
+        data = body if isinstance(body, list) else body.get("data", [])
+        with _parking_lock:
+            _parking_static_cache[city] = {"data": data, "expires_at": time.time() + _PARKING_STATIC_TTL}
+        return data
+    except Exception:
+        with _parking_lock:
+            entry = _parking_static_cache.get(city)
+            return entry["data"] if entry else []
+
+
+def _fetch_parking_avail(city: str) -> dict:
+    """TDX 即時停車場車位（ParkingAvailability），60 秒快取，回傳以 CarParkID 為 key 的 dict。"""
+    with _parking_lock:
+        entry = _parking_avail_cache.get(city)
+        if entry and time.time() < entry["expires_at"]:
+            return entry["data"]
+    token = _get_tdx_token()
+    if not token:
+        return {}
+    try:
+        r = _requests.get(
+            f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/ParkingAvailability/{city}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            params={"$format": "JSON"},
+            timeout=12,
+        )
+        r.raise_for_status()
+        body  = r.json()
+        items = body if isinstance(body, list) else body.get("data", [])
+        avail_map: dict = {}
+        for item in items:
+            cid = item.get("CarParkID")
+            if cid:
+                cars = item.get("Cars") or {}
+                avail_map[cid] = {
+                    "available": cars.get("AvailableSpaces"),
+                    "total":     cars.get("TotalSpaces"),
+                }
+        with _parking_lock:
+            _parking_avail_cache[city] = {"data": avail_map, "expires_at": time.time() + _PARKING_AVAIL_TTL}
+        return avail_map
+    except Exception:
+        with _parking_lock:
+            entry = _parking_avail_cache.get(city)
+            return entry["data"] if entry else {}
+
+
+def _merge_parking(city: str, lat: float, lon: float, radius_m: float) -> list:
+    """合併靜態 + 動態資料，過濾半徑內停車場，依距離排序。
+    _haversine() 回傳 km，radius_m 單位為公尺，distance 欄位輸出公尺整數。"""
+    static_list = _fetch_parking_static(city)
+    avail_map   = _fetch_parking_avail(city)
+    radius_km   = radius_m / 1000.0
+    result = []
+    for cp in static_list:
+        pos   = cp.get("CarParkPosition") or {}
+        p_lat = pos.get("PositionLat")
+        p_lon = pos.get("PositionLon")
+        if p_lat is None or p_lon is None:
+            continue
+        dist_km = _haversine(lat, lon, p_lat, p_lon)
+        if dist_km > radius_km:
+            continue
+        cid      = cp.get("CarParkID", "")
+        name_obj = cp.get("CarParkName") or {}
+        name     = name_obj.get("Zh_tw", "") if isinstance(name_obj, dict) else str(name_obj)
+        av       = avail_map.get(cid, {})
+        total    = av.get("total") if av.get("total") is not None else cp.get("TotalSpaces")
+        result.append({
+            "id":        cid,
+            "name":      name or cid,
+            "lat":       p_lat,
+            "lon":       p_lon,
+            "distance":  round(dist_km * 1000),
+            "total":     total,
+            "available": av.get("available"),
+        })
+    result.sort(key=lambda x: x["distance"])
+    return result
+
+
+@app.route("/parking")
+def parking():
+    return render_template("parking.html")
+
+
+@app.route("/api/parking")
+def parking_api():
+    station = request.args.get("station", "").strip()
+    lat_str = request.args.get("lat", "").strip()
+    lon_str = request.args.get("lon", "").strip()
+
+    if station:
+        info = _STATION_COORDS.get(station)
+        if not info:
+            return jsonify({"error": "unknown_station", "stations": list(_STATION_COORDS.keys())}), 400
+        lots = _merge_parking(info["city"], info["lat"], info["lon"], info["radius"])
+        return jsonify({"mode": "station", "station": info["label"], "lots": lots,
+                        "updated_at": time.strftime("%H:%M:%S")})
+
+    if lat_str and lon_str:
+        try:
+            lat = float(lat_str)
+            lon = float(lon_str)
+        except ValueError:
+            return jsonify({"error": "invalid_coords"}), 400
+        # 依 GPS 粗略判斷城市：台北市 vs 桃園市
+        city = "Taipei" if lat > 25.02 and lon > 121.45 else "Taoyuan"
+        lots = _merge_parking(city, lat, lon, 500)
+        return jsonify({"mode": "gps", "lots": lots, "updated_at": time.strftime("%H:%M:%S")})
+
+    return jsonify({"error": "missing_params",
+                    "hint": "use ?station=TPE or ?lat=25.0&lon=121.2"}), 400
+
+
+# ──────────────────────────────────────────────
 #  Share 剪貼簿後端（Upstash Redis 優先，本機 fallback in-memory）
 # ──────────────────────────────────────────────
 _SHARE_TTL  = 43200  # 12 小時
