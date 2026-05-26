@@ -51,6 +51,29 @@ _MRT_STATIONS = [
     {"id": "A21",  "name": "環北站"},
 ]
 
+def _redis_get(key: str) -> str | None:
+    url   = os.environ.get("KV_REST_API_URL", "")
+    token = os.environ.get("KV_REST_API_TOKEN", "")
+    if not url or not token:
+        return None
+    try:
+        r = _requests.post(url, headers={"Authorization": f"Bearer {token}"},
+                           json=["GET", key], timeout=3)
+        return r.json().get("result")
+    except Exception:
+        return None
+
+def _redis_set(key: str, value: str, ex: int):
+    url   = os.environ.get("KV_REST_API_URL", "")
+    token = os.environ.get("KV_REST_API_TOKEN", "")
+    if not url or not token:
+        return
+    try:
+        _requests.post(url, headers={"Authorization": f"Bearer {token}"},
+                       json=["SET", key, value, "EX", ex], timeout=3)
+    except Exception:
+        pass
+
 def _get_tdx_token() -> str | None:
     client_id     = os.environ.get("TDX_CLIENT_ID", "")
     client_secret = os.environ.get("TDX_CLIENT_SECRET", "")
@@ -65,6 +88,20 @@ def _get_tdx_token() -> str | None:
         with _tdx_lock:
             if _tdx_cache["token"] and time.time() < _tdx_cache["expires_at"] - 60:
                 return _tdx_cache["token"]
+        # 冷啟動先嘗試從 Redis 讀取跨執行個體快取的 token
+        cached = _redis_get("tdx:token")
+        if cached:
+            parts = cached.split("|", 1)
+            if len(parts) == 2:
+                try:
+                    exp = float(parts[0])
+                    if time.time() < exp - 60:
+                        with _tdx_lock:
+                            _tdx_cache["token"]      = parts[1]
+                            _tdx_cache["expires_at"] = exp
+                        return parts[1]
+                except Exception:
+                    pass
         try:
             resp = _requests.post(
                 "https://tdx.transportdata.tw/auth/realms/TDXConnect"
@@ -78,9 +115,13 @@ def _get_tdx_token() -> str | None:
             )
             data  = resp.json()
             token = data.get("access_token")
+            expires_in = data.get("expires_in", 86400)
+            exp_ts = time.time() + expires_in
             with _tdx_lock:
                 _tdx_cache["token"]      = token
-                _tdx_cache["expires_at"] = time.time() + data.get("expires_in", 300)
+                _tdx_cache["expires_at"] = exp_ts
+            # 寫入 Redis，讓其他冷啟動的執行個體可以直接拿到 token
+            _redis_set("tdx:token", f"{exp_ts}|{token}", int(expires_in) - 120)
             return token
         except Exception:
             with _tdx_lock:
@@ -132,7 +173,7 @@ def _get_mrt_data(token: str):
             "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             params={"$format": "JSON"},
-            timeout=10,
+            timeout=15,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -227,7 +268,7 @@ def mrt_liveboard():
             "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             params={"$format": "JSON"},
-            timeout=10,
+            timeout=15,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -377,7 +418,7 @@ def _fetch_tias():
                 headers=headers,
                 # $top=2000 確保取到今天+昨天的班機（凌晨班機 FlightDate 可能是前一天）
                 params={"$format": "JSON", "$top": 2000, "$orderby": "FlightDate desc"},
-                timeout=10,
+                timeout=25,
             )
             r.raise_for_status()
             body = r.json()

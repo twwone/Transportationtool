@@ -1286,7 +1286,7 @@ function _renderAdminPanel() {
      </div>`
   ).join('');
   apis.forEach(a => {
-    fetch(a.path, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    fetch(a.path, { cache: 'no-store', signal: AbortSignal.timeout(12000) })
       .then(r => {
         const el = document.getElementById('as_' + a.label.replace(/\s/g,''));
         if (el) el.textContent = r.ok ? `✅ ${r.status}` : `⚠️ ${r.status}`;
