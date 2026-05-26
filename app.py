@@ -945,6 +945,35 @@ def _fetch_parking_avail(city: str) -> dict:
             return entry["data"] if entry else {}
 
 
+# TDX 城市代碼 + 中心點（用最近中心點判斷）
+_CITY_CENTROIDS = [
+    ("Taipei",              25.0478, 121.5319),
+    ("NewTaipei",           25.0127, 121.4651),
+    ("Taoyuan",             24.9889, 121.3201),
+    ("Taichung",            24.1477, 120.6736),
+    ("Tainan",              22.9999, 120.2269),
+    ("Kaohsiung",           22.6273, 120.3014),
+    ("Keelung",             25.1325, 121.7424),
+    ("Hsinchu",             24.8066, 120.9686),
+    ("Chiayi",              23.4801, 120.4491),
+    ("HsinchuCounty",       24.6383, 121.0171),
+    ("MiaoliCounty",        24.5602, 120.8214),
+    ("ChanghuaCounty",      24.0517, 120.5161),
+    ("NantouCounty",        23.9610, 120.9718),
+    ("YunlinCounty",        23.7092, 120.4313),
+    ("ChiayiCounty",        23.4519, 120.2554),
+    ("PingtungCounty",      22.5519, 120.5487),
+    ("YilanCounty",         24.7021, 121.7378),
+    ("HualienCounty",       23.9871, 121.6015),
+    ("TaitungCounty",       22.7972, 121.1017),
+]
+
+
+def _detect_city_by_coords(lat: float, lon: float) -> str:
+    best = min(_CITY_CENTROIDS, key=lambda c: (lat - c[1]) ** 2 + (lon - c[2]) ** 2)
+    return best[0]
+
+
 def _merge_parking(city: str, lat: float, lon: float, radius_m: float) -> list:
     """合併靜態 + 動態資料，過濾半徑內停車場，依距離排序。
     _haversine() 回傳 km，radius_m 單位為公尺，distance 欄位輸出公尺整數。"""
@@ -1007,13 +1036,7 @@ def parking_api():
             radius = max(100.0, min(radius, 3000.0))   # 夾在 100m–3km
         except ValueError:
             return jsonify({"error": "invalid_coords"}), 400
-        # 依 GPS 粗略判斷城市
-        if lat > 25.02 and lon > 121.45:
-            city = "Taipei"
-        elif lat > 24.85 and lon < 121.45:
-            city = "Taoyuan"
-        else:
-            city = "Taoyuan"
+        city = _detect_city_by_coords(lat, lon)
         lots = _merge_parking(city, lat, lon, radius)
         return jsonify({"mode": "gps", "lots": lots, "updated_at": time.strftime("%H:%M:%S")})
 
@@ -1023,8 +1046,16 @@ def parking_api():
 
 @app.route("/api/parking/debug")
 def parking_debug():
-    """原始 TDX 資料（不過濾），用於診斷查無資料問題。"""
-    city = request.args.get("city", "Taoyuan").strip()
+    """原始 TDX 資料（不過濾），用於診斷查無資料問題。支援 ?city=Taipei 或 ?lat=25.0&lon=121.5 自動偵測。"""
+    lat_str = request.args.get("lat", "").strip()
+    lon_str = request.args.get("lon", "").strip()
+    if lat_str and lon_str:
+        try:
+            city = _detect_city_by_coords(float(lat_str), float(lon_str))
+        except ValueError:
+            city = "Taoyuan"
+    else:
+        city = request.args.get("city", "Taoyuan").strip()
     token = _get_tdx_token()
     if not token:
         return jsonify({"error": "no_tdx_token"}), 500
