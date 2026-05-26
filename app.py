@@ -892,7 +892,7 @@ def _fetch_parking_static(city: str) -> list:
         return []
     try:
         r = _requests.get(
-            f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/CarPark/{city}",
+            f"https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/CarPark/City/{city}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             params={"$format": "JSON", "$top": 500},
             timeout=15,
@@ -920,7 +920,7 @@ def _fetch_parking_avail(city: str) -> dict:
         return {}
     try:
         r = _requests.get(
-            f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/ParkingAvailability/{city}",
+            f"https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/ParkingAvailability/City/{city}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             params={"$format": "JSON"},
             timeout=12,
@@ -1032,7 +1032,7 @@ def parking_debug():
     result: dict = {"city": city, "token_ok": True}
     try:
         r = _requests.get(
-            f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/CarPark/{city}",
+            f"https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/CarPark/City/{city}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             params={"$format": "JSON", "$top": 5},
             timeout=15,
@@ -1045,7 +1045,7 @@ def parking_debug():
         result["static_error"] = str(e)
     try:
         r2 = _requests.get(
-            f"https://tdx.transportdata.tw/api/basic/v2/Parking/OffStreet/ParkingAvailability/{city}",
+            f"https://tdx.transportdata.tw/api/basic/v1/Parking/OffStreet/ParkingAvailability/City/{city}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             params={"$format": "JSON", "$top": 5},
             timeout=12,
