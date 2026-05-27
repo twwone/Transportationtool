@@ -192,6 +192,19 @@ body {
       <span class="s-info" id="syncKeyDisplay">—</span>
       <button class="s-copy-btn" id="syncCopyBtn" onclick="copySyncKey()">複製</button>
     </div>
+    <div class="s-row" id="enableSyncRow">
+      <span class="s-label"></span>
+      <div class="s-val">
+        <button class="s-copy-btn" onclick="enableSync(this)">啟用同步</button>
+      </div>
+    </div>
+    <div class="s-row">
+      <span class="s-label">加入同步</span>
+      <div class="s-val" style="display:flex;gap:6px;align-items:center">
+        <input id="syncKeyInput" class="s-input" placeholder="輸入他人同步碼" maxlength="8" style="text-align:left">
+        <button class="s-copy-btn" onclick="joinSync(this)">加入</button>
+      </div>
+    </div>
   </div>
 
   <!-- 高鐵 -->
@@ -327,6 +340,7 @@ function loadProfile(id) {
   const sk = p.syncKey || '—';
   document.getElementById('syncKeyDisplay').textContent = sk;
   document.getElementById('syncCopyBtn').style.display = sk === '—' ? 'none' : '';
+  document.getElementById('enableSyncRow').style.display = sk === '—' ? '' : 'none';
 
   // THSR
   const t = p.thsr || {};
@@ -392,6 +406,8 @@ function saveAll() {
   localStorage.setItem('dietSettings', JSON.stringify(ds));
 
   _toast('✅ 已儲存');
+  const sk = Config.getActive().syncKey;
+  if (sk) Config.push().catch(() => {});
 }
 
 function copySyncKey() {
@@ -399,6 +415,44 @@ function copySyncKey() {
   if (sk && sk !== '—') {
     navigator.clipboard?.writeText(sk).then(() => _toast('同步碼已複製'));
   }
+}
+
+async function enableSync(btn) {
+  const orig = btn.textContent;
+  btn.textContent = '同步中…';
+  btn.disabled = true;
+  try {
+    const res = await Config.push();
+    if (res.ok) {
+      document.getElementById('syncKeyDisplay').textContent = res.syncKey;
+      document.getElementById('syncCopyBtn').style.display = '';
+      document.getElementById('enableSyncRow').style.display = 'none';
+      _toast('✅ 同步已啟用，請複製同步碼到其他裝置');
+    } else {
+      _toast('❌ 啟用失敗，請檢查網路');
+    }
+  } catch { _toast('❌ 啟用失敗'); }
+  finally { btn.textContent = orig; btn.disabled = false; }
+}
+
+async function joinSync(btn) {
+  const key = document.getElementById('syncKeyInput').value.trim();
+  if (!key) return;
+  const orig = btn.textContent;
+  btn.textContent = '同步中…';
+  btn.disabled = true;
+  try {
+    const res = await Config.pull(key);
+    if (res.ok) {
+      renderStrip();
+      loadProfile(Config.getAll().active);
+      document.getElementById('syncKeyInput').value = '';
+      _toast('✅ 同步成功');
+    } else {
+      _toast('❌ ' + (res.error || '找不到此同步碼'));
+    }
+  } catch { _toast('❌ 同步失敗'); }
+  finally { btn.textContent = orig; btn.disabled = false; }
 }
 
 /* ── Profile Strip ── */

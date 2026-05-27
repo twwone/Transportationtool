@@ -379,7 +379,14 @@ function startDemoTick() {
   }, 1000);
 }
 
-(function init() {
+(async function init() {
+  const sk = Config.getActive().syncKey;
+  if (sk) {
+    try {
+      await Config.pull(sk);
+      starredId = Config.getActive().mrt.starred || "";
+    } catch {}
+  }
   updateDirPill();
   renderHomeBar();
   if (HAS_TDX) {
@@ -523,6 +530,8 @@ function getTrainsForStation(stationId, dir) {
 function toggleStar(id) {
   starredId = starredId === id ? "" : id;
   Config.save({ mrt: { starred: starredId } });
+  const sk = Config.getActive().syncKey;
+  if (sk) Config.push().catch(() => {});
   renderHomeBar();
   renderStations();
 }
