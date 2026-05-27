@@ -313,6 +313,52 @@ body {
 .card-settings::before   { background: linear-gradient(90deg,#9ca3af,#6b7280); }
 .card-settings:hover .sm-arrow { color: #6b7280; }
 
+/* ── Strip 卡片（機捷 / 天氣，全寬橫條）── */
+.card-strip {
+  grid-column: 1 / -1;
+  height: 92px;
+  position: relative;
+  overflow: hidden;
+}
+.card-mrt-strip {
+  background: linear-gradient(135deg,#3b0764 0%,#6d28d9 55%,#7c3aed 100%);
+  box-shadow: 0 4px 20px rgba(109,40,217,.28);
+}
+.card-weather-strip {
+  background: linear-gradient(135deg,#0c4a6e 0%,#0369a1 55%,#0ea5e9 100%);
+  box-shadow: 0 4px 20px rgba(14,165,233,.22);
+}
+.strip-inner {
+  position: absolute; inset: 0;
+  padding: 0 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.strip-left { display: flex; flex-direction: column; gap: 3px; flex: 0 0 auto; min-width: 0; }
+.strip-tag  { font-size: .6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+.strip-name { font-size: .88rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.strip-trains { display: flex; gap: 8px; margin-left: auto; }
+.tp { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,.16); border-radius: 10px; padding: 6px 11px; }
+.tp-badge { font-size: .58rem; font-weight: 800; color: rgba(255,255,255,.65); }
+.tp-mins { font-size: 1.1rem; font-weight: 800; color: #fff; line-height: 1; }
+.tp-mins small { font-size: .58rem; opacity: .7; margin-left: 1px; }
+.strip-wx { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.wx-emoji-lg { font-size: 2rem; line-height: 1; }
+.wx-info { display: flex; flex-direction: column; }
+.wx-temp-lg { font-size: 1.4rem; font-weight: 800; color: #fff; line-height: 1; }
+.wx-desc-sm { font-size: .62rem; color: rgba(255,255,255,.65); margin-top: 2px; max-width: 72px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-mini { display: flex; flex-direction: column; gap: 5px; margin-left: 10px; }
+.fc-mini-row { display: flex; align-items: center; gap: 5px; }
+.fc-mini-day   { font-size: .58rem; color: rgba(255,255,255,.55); min-width: 16px; }
+.fc-mini-emoji { font-size: .82rem; line-height: 1; }
+.fc-mini-temp  { font-size: .78rem; font-weight: 700; color: #fff; }
+.strip-arr { font-size: 1.1rem; color: rgba(255,255,255,.38); flex-shrink: 0; margin-left: 8px; }
+@keyframes stripPulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
+.strip-skel { border-radius: 7px; background: rgba(255,255,255,.14); animation: stripPulse 1.4s ease-in-out infinite; }
+@media (prefers-color-scheme: dark) {
+  .card-mrt-strip     { background: linear-gradient(135deg,#1e0036 0%,#4c1d95 55%,#6d28d9 100%); }
+  .card-weather-strip { background: linear-gradient(135deg,#051c2e 0%,#0c4a6e 55%,#0369a1 100%); }
+}
+
 /* ── 排列按鈕 ── */
 .sort-btn {
   background: rgba(0,0,0,0.06);
@@ -961,16 +1007,17 @@ document.addEventListener('touchend', e => {
 const CARDS = {
   tias:      { icon:'✈️',  title:'Flight Info',     url:'/tias',                                         hero:true },
   thsr:      { icon:'🚄',  title:'THSR Ticket',     url:'https://thsr-ticket-bot-j7qr.onrender.com',    cls:'card-thsr', ext:true },
-  mrt:       { icon:'🚇',  title:'MRT Train',       url:'/mrt',                                          cls:'card-mrt' },
+  mrt:       { icon:'🚇',  title:'MRT Train',       url:'/mrt',     strip:true, stripCls:'card-mrt-strip',     stripTag:'🚇 機場捷運' },
   schedule:  { icon:'🗓',  title:'Weekly Schedule', url:'/schedule',                                     cls:'card-schedule' },
   amenities: { icon:'🗺️', title:'Airport Map',      url:'/amenities',                                    cls:'card-amenities' },
   visa:      { icon:'🛂',  title:'Visa Guide',      url:'/visa-guide',                                   cls:'card-visa' },
   codes:     { icon:'🗂',  title:'Code Book',       url:'/code-dictionary',                              cls:'card-codes' },
   share:     { icon:'📋',  title:'Clipboard',       url:'/share',                                        cls:'card-share' },
-  weather:   { icon:'☁️',  title:'天氣防禦',          url:'/weather',                                      cls:'card-weather' },
+  weather:   { icon:'☁️',  title:'天氣防禦',          url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'☁️ 天氣防禦' },
   diet:      { icon:'🥗',  title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
 };
 const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','codes','share','weather','diet'];
+const _STRIP_FIXED = ['tias','mrt','weather']; // 這三張固定位置，不參與排序
 let cardOrder = [...DEFAULT_ORDER];
 let editMode  = false;
 
@@ -978,31 +1025,69 @@ function renderBento(order) {
   cardOrder = order;
   const bento = document.getElementById('bento');
   bento.innerHTML = '';
-  order.forEach((id, i) => {
+  let delay = 50;
+
+  // 1. Hero (航班)
+  if (order.includes('tias')) {
+    const c = CARDS.tias;
+    const el = document.createElement('a');
+    el.href = c.url; el.dataset.id = 'tias';
+    el.className = 'card card-hero';
+    el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay}ms both`;
+    el.innerHTML = `<div class="hero-inner"><div class="hero-top"><span class="hero-icon">${c.icon}</span><div class="live-badge"><div class="live-dot"></div>LIVE</div></div><div class="hero-bottom"><div class="hero-title">${c.title}</div></div></div>`;
+    bento.appendChild(el);
+    delay += 60;
+  }
+
+  // 2. 固定 strip（機捷、天氣）
+  for (const id of ['mrt','weather']) {
+    if (!order.includes(id)) continue;
+    const c = CARDS[id];
+    const el = document.createElement('a');
+    el.href = c.url; el.dataset.id = id;
+    el.className = `card card-strip ${c.stripCls}`;
+    el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay}ms both`;
+    el.innerHTML = `<div class="strip-inner" id="strip-${id}">
+      <div class="strip-left">
+        <div class="strip-tag">${c.stripTag}</div>
+        <div class="strip-skel" style="width:90px;height:14px;margin-top:4px"></div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <div class="strip-skel" style="width:54px;height:34px;border-radius:10px"></div>
+        <div class="strip-skel" style="width:54px;height:34px;border-radius:10px"></div>
+      </div>
+    </div>`;
+    bento.appendChild(el);
+    delay += 60;
+  }
+
+  // 3. 可排序小卡（排除固定三張）
+  const smOrder = order.filter(id => !_STRIP_FIXED.includes(id));
+  smOrder.forEach((id, i) => {
     const c = CARDS[id];
     if (!c) return;
     const el = document.createElement('a');
-    el.href = c.url;
-    el.dataset.id = id;
-    el.className = c.hero ? 'card card-hero' : `card card-sm ${c.cls || ''}`;
-    el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${80 + i * 60}ms both`;
+    el.href = c.url; el.dataset.id = id;
+    el.className = `card card-sm ${c.cls || ''}`;
+    el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay + i * 55}ms both`;
     if (c.ext) { el.target = '_blank'; el.rel = 'noopener'; }
-    if (c.hero) {
-      el.innerHTML = `<div class="hero-inner"><div class="hero-top"><span class="hero-icon">${c.icon}</span><div class="live-badge"><div class="live-dot"></div>LIVE</div></div><div class="hero-bottom"><div class="hero-title">${c.title}</div></div></div>`;
-    } else {
-      el.innerHTML = `<div class="drag-handle" aria-hidden="true">⠿</div><span class="sm-icon">${c.icon}</span><div class="sm-title">${c.title}</div>`;
-    }
+    el.innerHTML = `<div class="drag-handle" aria-hidden="true">⠿</div><span class="sm-icon">${c.icon}</span><div class="sm-title">${c.title}</div>`;
     bento.appendChild(el);
   });
-  // Settings 永遠最後，不可排序
+
+  // 4. Settings 永遠最後
   const st = document.createElement('a');
-  st.href = '/settings';
-  st.className = 'card card-sm card-settings';
-  st.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${80 + order.length * 60}ms both`;
+  st.href = '/settings'; st.className = 'card card-sm card-settings';
+  st.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay + smOrder.length * 55}ms both`;
   st.innerHTML = '<span class="sm-icon">⚙️</span><div class="sm-title">設定</div>';
   bento.appendChild(st);
+
   _setupCardClicks();
   if (editMode) _setupDrag();
+
+  // 載入 strip 即時資料
+  loadMrtStrip();
+  loadWeatherStrip();
 }
 
 function _setupCardClicks() {
@@ -1156,6 +1241,123 @@ window.addEventListener('pageshow', e => {
 /* ══════════════════════════════════════════
    帳號 / 登入系統
    ══════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   Strip 即時資料載入
+   ════════════════════════════════════════ */
+const _MRT_NAMES = {
+  A1:'台北車站',A2:'三重站',A3:'新北產業園區站',A4:'新莊副都心站',
+  A5:'泰山站',A6:'泰山貴和站',A7:'體育大學站',A8:'長庚醫院站',
+  A9:'林口站',A10:'山鼻站',A11:'坑口站',A12:'機場第一航廈站',
+  A13:'機場第二航廈站',A14a:'機場旅館站',A15:'大園站',A16:'橫山站',
+  A17:'領航站',A18:'高鐵桃園站',A19:'桃園體育園區站',A20:'興南站',A21:'環北站'
+};
+const _MRT_EXPRESS = new Set(['A1','A12','A13','A17','A18']);
+
+async function loadMrtStrip() {
+  const el = document.getElementById('strip-mrt');
+  if (!el) return;
+  const starredId = Config.getActive().mrt?.starred || '';
+  const sName = starredId ? (_MRT_NAMES[starredId] || starredId) : '';
+
+  if (!starredId) {
+    el.innerHTML = `<div class="strip-left"><div class="strip-tag">🚇 機場捷運</div><div class="strip-name" style="opacity:.6">未設定常用站</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    return;
+  }
+  try {
+    const resp = await fetch('/api/mrt/liveboard');
+    const json = await resp.json();
+    if (!json.configured || !json.data) throw new Error('no data');
+
+    const pill = (t, label) => {
+      if (!t) return '';
+      const mins = t._mins;
+      const col  = mins < 3 ? '#f87171' : mins <= 8 ? '#fb923c' : '#fff';
+      return `<div class="tp"><span class="tp-badge">${label}</span><span class="tp-mins" style="color:${col}">${mins}<small>分</small></span></div>`;
+    };
+
+    // 顯示往台北（DestinationStationID === A1）和往環北兩個方向各最近一班
+    const dirs = [
+      { label:'→台北', filter: t => t.DestinationStationID === 'A1' },
+      { label:'→環北', filter: t => t.DestinationStationID !== 'A1' },
+    ];
+    let pillsHtml = '';
+    for (const d of dirs) {
+      const trains = json.data
+        .filter(t => t.StationID === starredId && d.filter(t))
+        .map(t => ({ _mins: typeof t.EstimateTime === 'number' ? t.EstimateTime : 999,
+                     tt: t.DestinationStationID !== 'A1'
+                       ? (t.DestinationStationID === 'A13' ? 1 : 2)
+                       : (_MRT_EXPRESS.has(starredId) ? 1 : 2) }))
+        .filter(t => t._mins >= 0 && t._mins < 120)
+        .sort((a,b) => a._mins - b._mins);
+      const express = trains.find(t => t.tt === 1);
+      const local   = trains.find(t => t.tt === 2);
+      if (express || local) pillsHtml += pill(express||local, d.label.replace('→',''));
+    }
+
+    el.innerHTML = `
+      <div class="strip-left">
+        <div class="strip-tag">🚇 機場捷運</div>
+        <div class="strip-name">${sName}</div>
+      </div>
+      <div class="strip-trains">${pillsHtml || '<span style="font-size:.72rem;color:rgba(255,255,255,.5)">無班次</span>'}</div>
+      <div class="strip-arr">›</div>`;
+  } catch {
+    el.innerHTML = `<div class="strip-left"><div class="strip-tag">🚇 機場捷運</div><div class="strip-name">${sName}</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+  }
+}
+
+async function loadWeatherStrip() {
+  const el = document.getElementById('strip-weather');
+  if (!el) return;
+  let lat = null, lon = null, locLabel = '';
+  try {
+    const favs = JSON.parse(localStorage.getItem('wx_favorites_v2') || '[]');
+    if (favs.length) { lat = favs[0].lat; lon = favs[0].lon; locLabel = favs[0].l || favs[0].n || ''; }
+  } catch {}
+  if (lat === null && navigator.geolocation) {
+    try {
+      const pos = await new Promise((res,rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, {timeout:4000, maximumAge:60000})
+      );
+      lat = pos.coords.latitude; lon = pos.coords.longitude;
+    } catch {}
+  }
+  if (lat === null) {
+    el.innerHTML = `<div class="strip-left"><div class="strip-tag">☁️ 天氣防禦</div><div class="strip-name" style="opacity:.6">未設定地點</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    return;
+  }
+  try {
+    const resp = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+    const data = await resp.json();
+    const c  = data.current  || {};
+    const fc = data.forecast || [];
+    const loc = locLabel || data.display || data.location || '';
+    const fcHtml = fc.slice(0,2).map((f,i) => `
+      <div class="fc-mini-row">
+        <span class="fc-mini-day">${i===0?'明':'後'}</span>
+        <span class="fc-mini-emoji">${f.emoji||'🌡️'}</span>
+        <span class="fc-mini-temp">${f.hi!==undefined&&f.hi!=='—'?f.hi:'—'}°</span>
+      </div>`).join('');
+    el.innerHTML = `
+      <div class="strip-left">
+        <div class="strip-tag">☁️ 天氣防禦</div>
+        <div class="strip-name">${loc}</div>
+      </div>
+      <div class="strip-wx">
+        <span class="wx-emoji-lg">${c.emoji||'🌡️'}</span>
+        <div class="wx-info">
+          <span class="wx-temp-lg">${c.temp!==undefined?c.temp:'—'}°</span>
+          <span class="wx-desc-sm">${c.wx||'—'}</span>
+        </div>
+        ${fcHtml ? `<div class="fc-mini">${fcHtml}</div>` : ''}
+      </div>
+      <div class="strip-arr">›</div>`;
+  } catch {
+    el.innerHTML = `<div class="strip-left"><div class="strip-tag">☁️ 天氣防禦</div><div class="strip-name" style="opacity:.6">載入失敗</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+  }
+}
+
 function _getSession() {
   try { return JSON.parse(localStorage.getItem('userSession') || 'null'); } catch { return null; }
 }
