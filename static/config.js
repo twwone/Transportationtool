@@ -3,6 +3,13 @@ const CFG_KEY  = 'thsr_cfg_v1';
 const SUPA_URL = 'https://bqapzqdfgnoghtgdakdw.supabase.co';
 const SUPA_KEY = 'sb_publishable_5Gw7rYaKnI3_fzcNpLbmwA_h0CgB7Fv';
 
+const _PROFILE_DEFAULTS = () => ({
+  thsr:     { origin: '台北', destination: '左營', seatType: '1', discount: '全票', interval: '30' },
+  mrt:      { starred: '' },
+  schedule: { airasiaOnly: true },
+  tg:       { token: '', chatId: '' },
+});
+
 const Config = (() => {
   function _read() {
     try { return JSON.parse(localStorage.getItem(CFG_KEY)); }
@@ -20,23 +27,28 @@ const Config = (() => {
     };
   }
 
-  /* 首次使用：遷移舊版散落 key 並建立預設 profile */
   function _bootstrap() {
     const existing = _read();
-    if (existing && existing.profiles) return existing;
+    if (existing && existing.profiles) {
+      // 已登入但 syncKey 還沒綁定時自動補上
+      try {
+        const sess = JSON.parse(localStorage.getItem('userSession') || 'null');
+        if (sess?.code) {
+          const p = existing.profiles[existing.active] || Object.values(existing.profiles)[0];
+          if (p && !p.syncKey) { p.syncKey = sess.code; _write(existing); }
+        }
+      } catch {}
+      return existing;
+    }
     const data = {
       active: 'default',
       profiles: {
         default: {
           id: 'default',
           name: '我',
-          thsr: { origin: '台北', destination: '左營', seatType: '1', discount: '全票', interval: '30' },
-          mrt:  { starred: localStorage.getItem('mrt_starred') || '' },
-          schedule: { airasiaOnly: true },
-          tg: {
-            token:  localStorage.getItem('tg_token')   || '',
-            chatId: localStorage.getItem('tg_chat_id') || ''
-          },
+          ..._PROFILE_DEFAULTS(),
+          mrt: { starred: localStorage.getItem('mrt_starred') || '' },
+          tg:  { token: localStorage.getItem('tg_token') || '', chatId: localStorage.getItem('tg_chat_id') || '' },
           createdAt: new Date().toISOString()
         }
       }
@@ -71,14 +83,7 @@ const Config = (() => {
     create(name) {
       const d  = _bootstrap();
       const id = 'u' + Date.now();
-      d.profiles[id] = {
-        id, name,
-        thsr: { origin: '台北', destination: '左營', seatType: '1', discount: '全票', interval: '30' },
-        mrt:  { starred: '' },
-        schedule: { airasiaOnly: true },
-        tg: { token: '', chatId: '' },
-        createdAt: new Date().toISOString()
-      };
+      d.profiles[id] = { id, name, ..._PROFILE_DEFAULTS(), createdAt: new Date().toISOString() };
       d.active = id;
       _write(d);
       return d.profiles[id];
@@ -110,17 +115,11 @@ const Config = (() => {
 
     /* ── 雲端同步 ── */
 
-    /* 推送指定 profile 到 Supabase；若尚無 syncKey 則自動產生 */
     async push(id) {
       const d   = _bootstrap();
       const pid = id || d.active;
       const p   = d.profiles[pid];
-      if (!p) return { ok: false };
-      if (!p.syncKey) {
-        p.syncKey = Math.random().toString(36).slice(2, 10);
-        _write(d);
-      }
-      // 綁定 dietSyncId，讓管理員可查詢該用戶的熱量資料
+      if (!p || !p.syncKey) return { ok: false };
       const dietSyncId = localStorage.getItem('dietSyncId');
       if (dietSyncId) { p.dietSyncId = dietSyncId; _write(d); }
       try {
@@ -133,7 +132,6 @@ const Config = (() => {
       } catch { return { ok: false }; }
     },
 
-    /* 從 Supabase 拉取並合併到本地（已有同碼的 profile 覆蓋；新的則新增） */
     async pull(syncKey) {
       try {
         const r = await fetch(
@@ -142,16 +140,18 @@ const Config = (() => {
         );
         if (!r.ok) return { ok: false };
         const rows = await r.json();
-        if (!rows.length) return { ok: false, error: '找不到此同步碼' };
+        if (!rows.length) return { ok: false, error: '找不到此號碼' };
         const remote = rows[0].config;
+        // 確保 mrt/thsr 等子物件一定存在（遠端若是新帳號只有 name/code）
+        const merged = { ..._PROFILE_DEFAULTS(), ...remote, syncKey };
         const d = _bootstrap();
         const found = Object.values(d.profiles).find(p => p.syncKey === syncKey);
         if (found) {
-          d.profiles[found.id] = { ...remote, id: found.id };
+          d.profiles[found.id] = { ...merged, id: found.id };
           d.active = found.id;
         } else {
           const nid = 'u' + Date.now();
-          d.profiles[nid] = { ...remote, id: nid };
+          d.profiles[nid] = { ...merged, id: nid };
           d.active = nid;
         }
         _write(d);
@@ -159,7 +159,29 @@ const Config = (() => {
       } catch { return { ok: false }; }
     },
 
-    /* 移除 profile 的 syncKey（停用雲端同步，不刪除雲端資料） */
+    /* 登入後呼叫：把帳號號碼設為 syncKey
+     * isNewAccount=true → 先 push 本地設定（避免 pull 回空資料蓋掉本機設定）
+     * isNewAccount=false → 直接 pull 遠端設定（雲端為主） */
+    async connectAccount(code, isNewAccount = false) {
+      const d = _bootstrap();
+      const p = d.profiles[d.active];
+      if (!p) return;
+      p.syncKey = code;
+      _write(d);
+      if (isNewAccount) {
+        await this.push();
+      } else {
+        await this.pull(code);
+      }
+    },
+
+    /* 登出時解除帳號綁定 */
+    disconnectAccount() {
+      const d = _bootstrap();
+      const p = d.profiles[d.active];
+      if (p) { delete p.syncKey; _write(d); }
+    },
+
     clearSync(id) {
       const d   = _bootstrap();
       const pid = id || d.active;

@@ -1213,6 +1213,7 @@ async function doLogin() {
     const data = await r.json();
     if (data.ok) {
       _setSession({code: data.code, name: data.name, dietSyncId: data.dietSyncId});
+      Config.connectAccount(data.code).catch(() => {});
       _updateChip(); closeSheet();
       document.getElementById('loginCode').value = '';
       if (navigator.vibrate) navigator.vibrate([30,30,60]);
@@ -1242,6 +1243,7 @@ async function doRegister() {
     const data = await r.json();
     if (data.ok) {
       _setSession({code: data.code, name: data.name, dietSyncId: data.dietSyncId || dietSyncId});
+      Config.connectAccount(data.code, true).catch(() => {});
       _updateChip(); closeSheet();
       document.getElementById('regName').value = '';
       document.getElementById('regCode').value = '';
@@ -1258,7 +1260,9 @@ async function doRegister() {
 
 function doLogout() {
   if (!confirm('確定要登出嗎？')) return;
-  _clearSession(); _updateChip(); closeSheet();
+  _clearSession();
+  Config.disconnectAccount();
+  _updateChip(); closeSheet();
 }
 
 _updateChip();
