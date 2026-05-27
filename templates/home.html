@@ -1307,6 +1307,20 @@ async function loadMrtStrip() {
   }
 }
 
+const _GPS_CACHE_KEY = 'wx_gps_last';
+const _GPS_MAX_AGE   = 12 * 3600 * 1000; // 12 小時
+
+function _saveGpsCache(lat, lon) {
+  try { localStorage.setItem(_GPS_CACHE_KEY, JSON.stringify({lat, lon, ts: Date.now()})); } catch {}
+}
+function _loadGpsCache() {
+  try {
+    const v = JSON.parse(localStorage.getItem(_GPS_CACHE_KEY) || 'null');
+    if (v && Date.now() - v.ts < _GPS_MAX_AGE) return v;
+  } catch {}
+  return null;
+}
+
 async function loadWeatherStrip() {
   const el = document.getElementById('strip-weather');
   if (!el) return;
@@ -1318,10 +1332,16 @@ async function loadWeatherStrip() {
   if (lat === null && navigator.geolocation) {
     try {
       const pos = await new Promise((res,rej) =>
-        navigator.geolocation.getCurrentPosition(res, rej, {timeout:4000, maximumAge:60000})
+        navigator.geolocation.getCurrentPosition(res, rej, {timeout:5000, maximumAge:300000})
       );
       lat = pos.coords.latitude; lon = pos.coords.longitude;
+      _saveGpsCache(lat, lon); // 成功就存快取
     } catch {}
+  }
+  // GPS 失敗或被拒絕 → 用上次快取
+  if (lat === null) {
+    const cache = _loadGpsCache();
+    if (cache) { lat = cache.lat; lon = cache.lon; }
   }
   if (lat === null) {
     el.innerHTML = `<div class="strip-left"><div class="strip-tag">☁️ 天氣防禦</div><div class="strip-name" style="opacity:.6">未設定地點</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;

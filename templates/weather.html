@@ -665,6 +665,8 @@ function requestGPS() {
       isGPS = true;
       currentLat = pos.coords.latitude;
       currentLon = pos.coords.longitude;
+      // 存快取，讓主畫面天氣 strip 可共用
+      try { localStorage.setItem('wx_gps_last', JSON.stringify({lat: currentLat, lon: currentLon, ts: Date.now()})); } catch {}
       currentName = null; currentCounty = null;
       document.getElementById('locSearch').value = '';
       hideResults();
