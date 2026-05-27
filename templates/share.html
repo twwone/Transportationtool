@@ -506,6 +506,7 @@ const IK_PUBLIC_KEY     = 'public_TdqV/g8SxhEZMC6bl23MoGM3nwY=';
 const MAX_DIRECT        = 8 * 1024 * 1024;
 const MAX_COMPRESS_TGT  = 5 * 1024 * 1024;
 const POLL_INTERVAL     = 1500;
+const LS_KEY            = 'share_room_code';
 
 const IMG_EXTS  = new Set(['jpg','jpeg','png','gif','webp','heic','heif','bmp']);
 const FILE_EXTS = new Set(['pdf','doc','docx','xls','xlsx','txt','zip','rar','mp3','mp4']);
@@ -647,6 +648,7 @@ function enterSync(code) {
   $id('topTitle').textContent = '剪貼簿';
   $id('pillCode').textContent = code;
   $id('roomPill').classList.add('show');
+  localStorage.setItem(LS_KEY, code);
   startPoll();
   setTimeout(() => $id('ta').focus(), 120);
 }
@@ -789,6 +791,7 @@ function doDestroy() {
 function showExpired(destroyed) {
   $id('expireSub').textContent = destroyed ? '雙方已同步清除' : '房間閒置過久或已不存在';
   $id('expireOverlay').classList.add('show');
+  localStorage.removeItem(LS_KEY);
   room = null;
 }
 
@@ -802,8 +805,27 @@ function backToA() {
   $id('joinInput').value = '';
   hideImg(); hideFileCard(); detectUrl('');
   currentFileUrl = null; room = null;
+  localStorage.removeItem(LS_KEY);
   clearInterval(pollTid);
 }
+
+// ── Restore room from localStorage on page load ────────────────
+(async function initFromStorage() {
+  const saved = localStorage.getItem(LS_KEY);
+  if (!saved) return;
+  try {
+    const resp = await fetch('/api/share/room/' + saved);
+    if (resp.status === 404) {
+      localStorage.removeItem(LS_KEY);
+      return;
+    }
+    const data = await resp.json();
+    room = saved;
+    lastKnownServerTs = data.updated_at || 0;
+    renderRoom(data, true);
+    enterSync(saved);
+  } catch {}
+})();
 
 // ── File input ─────────────────────────────────────────────────
 function pickFile() { $id('fileIn').click(); }
