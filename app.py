@@ -164,7 +164,7 @@ _SIRI_DIRECTION    = 0             # 0 = 往台北/機場方向；1 = 往環北�
 _SIRI_DIR_LABEL    = "往機場"      # 訊息裡顯示的方向文字
 
 def _get_mrt_data(token: str):
-    """命中 30 秒快取就直接回傳，否則重打 TDX 並更新快取。"""
+    """命中 30 秒快取就直接回傳，否則重打 TDX 並更新快取；失敗時回傳舊快取（可能為 None）。"""
     with _mrt_lock:
         if _mrt_cache["data"] and time.time() < _mrt_cache["expires_at"]:
             return _mrt_cache["data"]
@@ -182,7 +182,8 @@ def _get_mrt_data(token: str):
             _mrt_cache["expires_at"] = time.time() + 30
         return data
     except Exception:
-        return None
+        with _mrt_lock:
+            return _mrt_cache.get("data")
 
 @app.route("/api/mrt/siri")
 def mrt_siri():
@@ -259,30 +260,15 @@ def mrt_liveboard():
     token = _get_tdx_token()
     if not token:
         return jsonify({"error": "TDX_CLIENT_ID / TDX_CLIENT_SECRET 未設定", "configured": False}), 503
+    data = _get_mrt_data(token)
+    if data is None:
+        return jsonify({"error": "TDX API 暫時無法連線", "configured": True}), 500
     with _mrt_lock:
-        now = time.time()
-        if _mrt_cache["data"] and now < _mrt_cache["expires_at"]:
-            return jsonify({"configured": True, "data": _mrt_cache["data"]})
-    try:
-        resp = _requests.get(
-            "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-            params={"$format": "JSON"},
-            timeout=15,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        with _mrt_lock:
-            _mrt_cache["data"] = data
-            _mrt_cache["expires_at"] = time.time() + 30
-        return jsonify({"configured": True, "data": data})
-    except Exception as e:
-        # 重打失敗時回傳舊快取，避免短暫網路中斷造成整頁錯誤
-        with _mrt_lock:
-            stale = _mrt_cache.get("data")
-        if stale:
-            return jsonify({"configured": True, "data": stale, "stale": True})
-        return jsonify({"error": str(e), "configured": True}), 500
+        is_stale = time.time() >= _mrt_cache["expires_at"]
+    result = {"configured": True, "data": data}
+    if is_stale:
+        result["stale"] = True
+    return jsonify(result)
 
 
 
@@ -564,10 +550,15 @@ def _fetch_schedule():
         except Exception:
             return []
 
-    dep_intl = _get(_TDX_SCHED_INTL, "DepartureAirportID")
-    arr_intl = _get(_TDX_SCHED_INTL, "ArrivalAirportID")
-    dep_dom  = _get(_TDX_SCHED_DOM,  "DepartureAirportID")
-    arr_dom  = _get(_TDX_SCHED_DOM,  "ArrivalAirportID")
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        fut_dep_intl = pool.submit(_get, _TDX_SCHED_INTL, "DepartureAirportID")
+        fut_arr_intl = pool.submit(_get, _TDX_SCHED_INTL, "ArrivalAirportID")
+        fut_dep_dom  = pool.submit(_get, _TDX_SCHED_DOM,  "DepartureAirportID")
+        fut_arr_dom  = pool.submit(_get, _TDX_SCHED_DOM,  "ArrivalAirportID")
+        dep_intl = fut_dep_intl.result()
+        arr_intl = fut_arr_intl.result()
+        dep_dom  = fut_dep_dom.result()
+        arr_dom  = fut_arr_dom.result()
 
     dep = dep_intl + dep_dom
     arr = arr_intl + arr_dom
@@ -1941,13 +1932,13 @@ def diet_record_add():
 
     date_str    = str(data.get("date", ""))
     food_name   = str(data.get("food_name", ""))[:200]
-    calories    = max(0, int(data.get("calories", 0)))
+    calories    = max(0, int(float(data.get("calories", 0))))
     macros      = data.get("macros", {})
-    carbs       = max(0, int(macros.get("carbs",   0)))
-    protein     = max(0, int(macros.get("protein", 0)))
-    fat         = max(0, int(macros.get("fat",     0)))
-    ts          = int(data.get("ts", 0))
-    daily_limit = max(800, int(data.get("daily_limit", 2500)))
+    carbs       = max(0, int(float(macros.get("carbs",   0))))
+    protein     = max(0, int(float(macros.get("protein", 0))))
+    fat         = max(0, int(float(macros.get("fat",     0))))
+    ts          = int(float(data.get("ts", 0)))
+    daily_limit = max(800, int(float(data.get("daily_limit", 2500))))
 
     bank = _diet_load(sync_id)
     if date_str not in bank:
@@ -1986,6 +1977,14 @@ def diet_day_clear(sync_id, date_str):
         return jsonify({"error": "invalid sync_id"}), 400
     bank = _diet_load(sync_id)
     if date_str in bank:
+        spread = bank[date_str].get("_cheat_spread")
+        if spread:
+            per_day = spread.get("perDay", 0)
+            base = _date_cls.fromisoformat(date_str)
+            for i in range(1, 3):
+                fk = (base + _td(days=i)).isoformat()
+                if fk in bank:
+                    bank[fk]["debt"] = max(0, bank[fk].get("debt", 0) - per_day)
         bank[date_str]["records"] = []
         bank[date_str].pop("_cheat_spread", None)
     _diet_save(sync_id, bank)
@@ -2093,11 +2092,11 @@ def analyze_food():
         macros = result.get("macros", {})
         return jsonify({
             "food_name": str(result.get("food_name", "未知食物")),
-            "calories":  max(0, int(result.get("calories", 0))),
+            "calories":  max(0, int(float(result.get("calories", 0)))),
             "macros": {
-                "carbs":   max(0, int(macros.get("carbs",   0))),
-                "protein": max(0, int(macros.get("protein", 0))),
-                "fat":     max(0, int(macros.get("fat",     0))),
+                "carbs":   max(0, int(float(macros.get("carbs",   0)))),
+                "protein": max(0, int(float(macros.get("protein", 0)))),
+                "fat":     max(0, int(float(macros.get("fat",     0)))),
             },
             "comment": str(result.get("comment", "")),
         })
@@ -2119,7 +2118,7 @@ def settings_page():
 #  管理員：全量查詢 Supabase user_configs
 # ──────────────────────────────────────────────
 _SUPA_BASE = "https://bqapzqdfgnoghtgdakdw.supabase.co"
-_SUPA_ANON = "sb_publishable_5Gw7rYaKnI3_fzcNpLbmwA_h0CgB7Fv"
+_SUPA_ANON = os.environ.get("SUPABASE_ANON_KEY", "")
 
 @app.route("/api/admin/users")
 def admin_users():
