@@ -196,24 +196,42 @@ body::before{
   -webkit-tap-highlight-color:transparent;
 }
 
-.img-wrap{
-  display:none;border-radius:var(--radius-m);overflow:hidden;
-  background:rgba(0,0,0,.06);position:relative;
-  max-height:240px;animation:fadeIn .3s ease;
+.img-gallery{
+  display:flex;gap:8px;
+  overflow-x:auto;padding:2px 0 8px;
+  -ms-overflow-style:none;scrollbar-width:none;
+  min-height:0;
 }
-.img-wrap.show{display:block}
-.img-wrap img{width:100%;height:100%;object-fit:cover;display:block;max-height:240px}
-.img-overlay{
-  position:absolute;bottom:0;right:0;
-  padding:10px;
-  background:linear-gradient(to top,rgba(0,0,0,.35) 0%,transparent 100%);
-  width:100%;display:flex;justify-content:flex-end;
+.img-gallery:empty{display:none}
+.img-gallery::-webkit-scrollbar{display:none}
+.img-thumb{
+  position:relative;flex-shrink:0;
+  width:110px;height:110px;border-radius:14px;
+  overflow:hidden;background:rgba(0,0,0,.06);
+  animation:fadeIn .25s ease;
 }
-.img-del{
-  padding:6px 12px;border-radius:10px;
-  background:rgba(0,0,0,.5);backdrop-filter:blur(8px);
-  color:#fff;font-size:.74rem;font-weight:700;
-  border:none;cursor:pointer;font-family:inherit;
+.img-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.img-thumb-del{
+  position:absolute;top:5px;right:5px;
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  color:#fff;border:none;cursor:pointer;
+  font-size:.72rem;display:flex;align-items:center;justify-content:center;
+  line-height:1;-webkit-tap-highlight-color:transparent;
+}
+.img-add{
+  flex-shrink:0;width:72px;height:110px;border-radius:14px;
+  border:2px dashed rgba(59,130,246,.35);
+  background:rgba(59,130,246,.05);
+  color:var(--accent);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;
+  cursor:pointer;font-size:1.4rem;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+.img-add-label{font-size:.6rem;font-weight:600}
+@media(prefers-color-scheme:dark){
+  .img-thumb{background:rgba(255,255,255,.06)}
+  .img-add{border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.06)}
 }
 
 .up-status{display:none;font-size:.74rem;color:var(--sub);text-align:center}
@@ -430,13 +448,8 @@ body::before{
       <button class="url-open" onclick="openUrl()">🌐 點擊前往</button>
     </div>
 
-    <!-- Image -->
-    <div class="img-wrap" id="imgWrap">
-      <img id="imgEl" src="" alt="">
-      <div class="img-overlay">
-        <button class="img-del" onclick="clearImg()">移除圖片</button>
-      </div>
-    </div>
+    <!-- Image Gallery -->
+    <div class="img-gallery" id="imgGallery"></div>
 
     <!-- Upload status -->
     <div class="up-status" id="upStatus"></div>
@@ -467,9 +480,10 @@ body::before{
     <!-- Destroy room -->
     <button class="destroy-btn" onclick="doDestroy()">💣 銷毀房間（雙方同步清除）</button>
 
-    <input type="file" id="fileIn"
+    <input type="file" id="fileIn" multiple
       accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.mp3,.mp4"
       style="display:none">
+    <input type="file" id="imgIn" accept="image/*" multiple style="display:none">
   </div>
 
 </div>
@@ -478,7 +492,7 @@ body::before{
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-msg">
     <span class="drop-msg-icon">📎</span>
-    <span>放開以上傳（≤ 8MB）</span>
+    <span>放開以上傳（圖片可多張，單檔 ≤ 8MB）</span>
   </div>
 </div>
 
@@ -520,6 +534,7 @@ let lastTyped         = 0;
 let lastKnownServerTs = 0;
 let detectedUrl       = null;
 let currentFileUrl    = null;
+let currentImages     = [];
 
 const $id = id => document.getElementById(id);
 
@@ -566,8 +581,23 @@ document.addEventListener('dragover',  e => e.preventDefault());
 document.addEventListener('drop', e => {
   e.preventDefault(); _dc = 0; $id('dropOverlay').classList.remove('show');
   if (!room) return;
-  const f = e.dataTransfer?.files?.[0];
-  if (f) onFileInput(f);
+  const files = Array.from(e.dataTransfer?.files || []);
+  if (!files.length) return;
+  if (files.length > 1) {
+    const hasNonImg = files.some(f => {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      return !IMG_EXTS.has(ext) && !f.type.startsWith('image/');
+    });
+    if (hasNonImg) {
+      showAlert('不支援此格式', '拖曳多個檔案時，請只選圖片', [{label:'確認',style:'primary',action:null}]);
+      return;
+    }
+    uploadImages(files).catch(err =>
+      showAlert('上傳失敗', err.message, [{label:'確認',style:'primary',action:null}])
+    );
+  } else {
+    onFileInput(files[0]);
+  }
 });
 
 // ── Ctrl+V paste ───────────────────────────────────────────────
@@ -579,7 +609,7 @@ document.addEventListener('paste', async e => {
     e.preventDefault();
     const blob = imgItem.getAsFile();
     if (blob) {
-      try { await uploadImage(blob, 'paste-' + Date.now() + '.jpg'); }
+      try { await uploadImages([blob]); }
       catch(err) { showAlert('上傳失敗', err.message, [{label:'確認',style:'primary',action:null}]); }
     }
   }
@@ -681,18 +711,28 @@ function renderRoom(data, force) {
   const type     = data.type     || 'text';
   const content  = data.content  || '';
   const fileName = data.file_name || '';
-  if (type === 'image') {
-    showImg(content);
+  const images   = data.images   || [];
+  if (type === 'images') {
+    currentImages = images;
+    if (images.length > 0) showImgGallery(images);
+    else hideImgGallery();
+    $id('ta').value = '';
+    hideFileCard();
+    detectUrl('');
+  } else if (type === 'image') {
+    currentImages = content ? [content] : [];
+    if (currentImages.length > 0) showImgGallery(currentImages);
+    else hideImgGallery();
     $id('ta').value = '';
     hideFileCard();
     detectUrl('');
   } else if (type === 'file') {
     showFileCard(content, fileName);
     $id('ta').value = '';
-    hideImg();
+    hideImgGallery();
     detectUrl('');
   } else {
-    hideImg();
+    hideImgGallery();
     hideFileCard();
     if (force || Date.now() - lastTyped > 2000) {
       $id('ta').value = content;
@@ -702,16 +742,18 @@ function renderRoom(data, force) {
 }
 
 // ── Push ───────────────────────────────────────────────────────
-async function pushRoom(type, content, fileName) {
+async function pushRoom(type, content, fileName, images) {
   if (!room) return;
   pushing = true;
   lastPushAt = Date.now();
   setSyncing(true);
+  const body = {type, content: content || '', file_name: fileName || ''};
+  if (images !== undefined) body.images = images;
   try {
     await fetch('/api/share/room/' + room, {
       method:  'PUT',
       headers: {'Content-Type':'application/json'},
-      body:    JSON.stringify({type, content, file_name: fileName || ''}),
+      body:    JSON.stringify(body),
     });
   } catch {}
   finally { pushing = false; setSyncing(false); }
@@ -725,6 +767,7 @@ $id('ta').addEventListener('input', () => {
   const text = $id('ta').value;
   detectUrl(text);
   if ($id('fileCard').classList.contains('show')) hideFileCard();
+  if (currentImages.length > 0) hideImgGallery();
   clearTimeout(debTid);
   debTid = setTimeout(() => pushRoom('text', text), 300);
 });
@@ -748,7 +791,9 @@ function openUrl() {
 
 // ── Copy ───────────────────────────────────────────────────────
 async function doCopy() {
-  const target = currentFileUrl || $id('ta').value;
+  const target = currentImages.length > 0
+    ? currentImages[0]
+    : (currentFileUrl || $id('ta').value);
   if (!target) return;
   await navigator.clipboard.writeText(target).catch(() => {});
   const btn = $id('copyBtn');
@@ -769,7 +814,7 @@ async function copyCode() {
 // ── Clear ──────────────────────────────────────────────────────
 function doClear() {
   hideFileCard();
-  hideImg();
+  hideImgGallery();
   $id('ta').value = '';
   detectUrl('');
   pushRoom('text', '');
@@ -803,8 +848,8 @@ function backToA() {
   $id('roomPill').classList.remove('show');
   $id('ta').value = '';
   $id('joinInput').value = '';
-  hideImg(); hideFileCard(); detectUrl('');
-  currentFileUrl = null; room = null;
+  hideImgGallery(); hideFileCard(); detectUrl('');
+  currentFileUrl = null; currentImages = []; room = null;
   localStorage.removeItem(LS_KEY);
   clearInterval(pollTid);
 }
@@ -831,16 +876,39 @@ function backToA() {
 function pickFile() { $id('fileIn').click(); }
 
 $id('fileIn').addEventListener('change', e => {
-  const f = e.target.files?.[0];
+  const files = Array.from(e.target.files || []);
   e.target.value = '';
-  if (f) onFileInput(f);
+  if (!files.length) return;
+  if (files.length > 1) {
+    const hasNonImg = files.some(f => {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      return !IMG_EXTS.has(ext) && !f.type.startsWith('image/');
+    });
+    if (hasNonImg) {
+      showAlert('不支援此格式', '選取多個檔案時，請只選圖片', [{label:'確認',style:'primary',action:null}]);
+      return;
+    }
+    uploadImages(files).catch(err =>
+      showAlert('上傳失敗', err.message, [{label:'確認',style:'primary',action:null}])
+    );
+  } else {
+    onFileInput(files[0]);
+  }
+});
+
+$id('imgIn').addEventListener('change', e => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (!files.length) return;
+  uploadImages(files).catch(err =>
+    showAlert('上傳失敗', err.message, [{label:'確認',style:'primary',action:null}])
+  );
 });
 
 function onFileInput(file) {
   if (!file) return;
   const ext   = (file.name.split('.').pop() || '').toLowerCase();
   const isImg = IMG_EXTS.has(ext) || file.type.startsWith('image/');
-
   if (!isImg && !FILE_EXTS.has(ext)) {
     showAlert('不支援此格式', '請選擇：圖片、PDF、Word、Excel、PPT、TXT、ZIP、RAR、MP3 或 MP4', [{label:'確認',style:'primary',action:null}]);
     return;
@@ -850,7 +918,7 @@ function onFileInput(file) {
     return;
   }
   if (isImg) {
-    uploadImage(file, file.name || 'image.jpg').catch(err =>
+    uploadImages([file]).catch(err =>
       showAlert('上傳失敗', err.message, [{label:'確認',style:'primary',action:null}])
     );
   } else {
@@ -860,26 +928,33 @@ function onFileInput(file) {
   }
 }
 
-// ── Image upload (smart dual-track) ───────────────────────────
-async function uploadImage(file, origName) {
-  const ext    = ((file.name || origName || '').split('.').pop() || '').toLowerCase();
-  const isHeic = ext === 'heic' || ext === 'heif'
-               || file.type === 'image/heic' || file.type === 'image/heif';
-  const needsProcess = isHeic || file.size > MAX_DIRECT;
-
-  setUpStatus(needsProcess ? '壓縮中…' : '上傳中…');
+// ── Multi-image upload ─────────────────────────────────────────
+async function uploadImages(newFiles) {
   $id('fileBtn').disabled = true;
   try {
-    const blob = needsProcess
-      ? await compressToTarget(file, isHeic ? MAX_COMPRESS_TGT : Math.min(file.size, MAX_COMPRESS_TGT), 0.95)
-      : file;
-    setUpStatus('上傳中…');
-    const url = await ikUpload(blob, 'share-' + Date.now() + '.jpg');
-    showImg(url);
+    const urls = [];
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i];
+      const ext  = ((file.name || '').split('.').pop() || '').toLowerCase();
+      const isHeic = ext === 'heic' || ext === 'heif'
+                   || file.type === 'image/heic' || file.type === 'image/heif';
+      const needsProcess = isHeic || file.size > MAX_DIRECT;
+      setUpStatus(needsProcess
+        ? `壓縮 ${i + 1} / ${newFiles.length}…`
+        : `上傳 ${i + 1} / ${newFiles.length}…`);
+      const blob = needsProcess
+        ? await compressToTarget(file, isHeic ? MAX_COMPRESS_TGT : Math.min(file.size, MAX_COMPRESS_TGT), 0.95)
+        : file;
+      setUpStatus(`上傳 ${i + 1} / ${newFiles.length}…`);
+      const safeName = 'share-' + Date.now() + '-' + (i + 1) + '.jpg';
+      urls.push(await ikUpload(blob, safeName));
+    }
+    currentImages = [...currentImages, ...urls];
+    showImgGallery(currentImages);
     hideFileCard();
     $id('ta').value = '';
     detectUrl('');
-    await pushRoom('image', url);
+    await pushRoom('images', '', '', currentImages);
   } finally {
     $id('fileBtn').disabled = false;
     setUpStatus('');
@@ -894,7 +969,7 @@ async function uploadRawFile(file, ext) {
     const safeName = 'share-' + Date.now() + '-' + file.name.replace(/[^\w.\-]/g, '_');
     const url = await ikUpload(file, safeName);
     showFileCard(url, file.name);
-    hideImg();
+    hideImgGallery();
     $id('ta').value = '';
     detectUrl('');
     await pushRoom('file', url, file.name);
@@ -960,10 +1035,44 @@ function setUpStatus(msg) {
   el.classList.toggle('show', !!msg);
 }
 
-// ── Image display ──────────────────────────────────────────────
-function showImg(url) { $id('imgEl').src = url; $id('imgWrap').classList.add('show'); }
-function hideImg()    { $id('imgWrap').classList.remove('show'); $id('imgEl').src = ''; }
-function clearImg()   { hideImg(); pushRoom('text', ''); }
+// ── Image gallery ──────────────────────────────────────────────
+function showImgGallery(urls) {
+  const gallery = $id('imgGallery');
+  gallery.innerHTML = '';
+  urls.forEach((url, idx) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'img-thumb';
+    const img = document.createElement('img');
+    img.src = url; img.alt = ''; img.loading = 'lazy';
+    const del = document.createElement('button');
+    del.className = 'img-thumb-del';
+    del.textContent = '✕';
+    del.onclick = () => removeImgAt(idx);
+    applySpring(del);
+    thumb.append(img, del);
+    gallery.appendChild(thumb);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'img-add';
+  addBtn.innerHTML = '<span>＋</span><span class="img-add-label">加圖片</span>';
+  addBtn.onclick = () => $id('imgIn').click();
+  applySpring(addBtn);
+  gallery.appendChild(addBtn);
+}
+function hideImgGallery() {
+  $id('imgGallery').innerHTML = '';
+  currentImages = [];
+}
+async function removeImgAt(idx) {
+  currentImages.splice(idx, 1);
+  if (currentImages.length === 0) {
+    hideImgGallery();
+    await pushRoom('text', '');
+  } else {
+    showImgGallery(currentImages);
+    await pushRoom('images', '', '', currentImages);
+  }
+}
 
 // ── File card ──────────────────────────────────────────────────
 function getFileIcon(name) {

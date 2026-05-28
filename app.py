@@ -956,7 +956,7 @@ def share_create():
     for _ in range(10):
         c = str(random.randint(1000, 9999))
         if not _share_exists(c):
-            _share_set(c, {"type": "text", "content": "", "file_name": "", "updated_at": now})
+            _share_set(c, {"type": "text", "content": "", "file_name": "", "images": [], "updated_at": now})
             code = c
             break
     if not code:
@@ -975,6 +975,7 @@ def share_room(code):
             "type":       room.get("type", "text"),
             "content":    room.get("content", ""),
             "file_name":  room.get("file_name", ""),
+            "images":     room.get("images", []),
             "updated_at": room.get("updated_at", 0),
         }))
     elif request.method == "PUT":
@@ -985,6 +986,7 @@ def share_room(code):
         if "type"      in body: room["type"]      = body["type"]
         if "content"   in body: room["content"]   = body["content"]
         if "file_name" in body: room["file_name"] = body["file_name"]
+        if "images"    in body: room["images"]    = body["images"] if isinstance(body["images"], list) else []
         room["updated_at"] = time.time()
         _share_set(code, room)
         return _sc(jsonify({"ok": True}))
