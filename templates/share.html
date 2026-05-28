@@ -468,7 +468,7 @@ body::before{
     <button class="destroy-btn" onclick="doDestroy()">💣 銷毀房間（雙方同步清除）</button>
 
     <input type="file" id="fileIn"
-      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.mp3,.mp4"
+      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.mp3,.mp4"
       style="display:none">
   </div>
 
@@ -509,7 +509,7 @@ const POLL_INTERVAL     = 1500;
 const LS_KEY            = 'share_room_code';
 
 const IMG_EXTS  = new Set(['jpg','jpeg','png','gif','webp','heic','heif','bmp']);
-const FILE_EXTS = new Set(['pdf','doc','docx','xls','xlsx','txt','zip','rar','mp3','mp4']);
+const FILE_EXTS = new Set(['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','zip','rar','mp3','mp4']);
 
 let room              = null;
 let pollTid           = null;
@@ -842,7 +842,7 @@ function onFileInput(file) {
   const isImg = IMG_EXTS.has(ext) || file.type.startsWith('image/');
 
   if (!isImg && !FILE_EXTS.has(ext)) {
-    showAlert('不支援此格式', '請選擇：圖片、PDF、Word、Excel、TXT、ZIP、RAR、MP3 或 MP4', [{label:'確認',style:'primary',action:null}]);
+    showAlert('不支援此格式', '請選擇：圖片、PDF、Word、Excel、PPT、TXT、ZIP、RAR、MP3 或 MP4', [{label:'確認',style:'primary',action:null}]);
     return;
   }
   if (!isImg && file.size > MAX_DIRECT) {
@@ -972,6 +972,7 @@ function getFileIcon(name) {
     pdf:  {icon:'📄', bg:'#fee2e2'},
     doc:  {icon:'📝', bg:'#dbeafe'}, docx: {icon:'📝', bg:'#dbeafe'},
     xls:  {icon:'📊', bg:'#dcfce7'}, xlsx: {icon:'📊', bg:'#dcfce7'},
+    ppt:  {icon:'📽️', bg:'#ffedd5'}, pptx: {icon:'📽️', bg:'#ffedd5'},
     txt:  {icon:'📋', bg:'#f3f4f6'},
     zip:  {icon:'🗜️', bg:'#fef3c7'}, rar: {icon:'🗜️', bg:'#fef3c7'},
     mp3:  {icon:'🎵', bg:'#f3e8ff'},
