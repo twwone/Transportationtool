@@ -1000,25 +1000,8 @@ function backToA() {
   renderHistory();
 }
 
-// ── Restore room from localStorage on page load ────────────────
-(async function initFromStorage() {
-  renderHistory();
-  const saved = localStorage.getItem(LS_KEY);
-  if (!saved) return;
-  try {
-    const resp = await fetch('/api/share/room/' + saved);
-    if (resp.status === 404) {
-      localStorage.removeItem(LS_KEY);
-      removeFromHistory(saved);
-      return;
-    }
-    const data = await resp.json();
-    room = saved;
-    lastKnownServerTs = data.updated_at || 0;
-    renderRoom(data, true);
-    enterSync(saved);
-  } catch {}
-})();
+// ── Init: show history only, no auto-enter ────────────────────
+renderHistory();
 
 // ── File input ─────────────────────────────────────────────────
 function pickFile() { $id('fileIn').click(); }
@@ -1253,8 +1236,22 @@ function hideFileCard() {
   currentFileUrl = null;
 }
 
-function downloadFile() {
-  if (currentFileUrl) window.open(currentFileUrl, '_blank', 'noopener,noreferrer');
+async function downloadFile() {
+  if (!currentFileUrl) return;
+  const fileName = $id('fileNameText').textContent || 'download';
+  try {
+    const resp = await fetch(currentFileUrl);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch {
+    window.open(currentFileUrl, '_blank', 'noopener,noreferrer');
+  }
 }
 </script>
 </body>
