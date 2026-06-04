@@ -845,7 +845,6 @@ function renderRoom(data, force) {
 // ── Push ───────────────────────────────────────────────────────
 async function pushRoom(type, content, fileName, images) {
   if (!room) return;
-  updateHistoryPreview(room, type, content || '', fileName || '', images || []);
   pushing = true;
   lastPushAt = Date.now();
   setSyncing(true);
