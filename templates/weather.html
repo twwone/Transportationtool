@@ -844,6 +844,23 @@ window.addEventListener('load', () => {
   renderFavs();
   loadMetar();
   setInterval(loadMetar, 30 * 60 * 1000);
+
+  // 優先用快取（1小時內），避免每次重新觸發定位授權視窗
+  try {
+    const cached = localStorage.getItem('wx_gps_last');
+    if (cached) {
+      const { lat, lon, ts } = JSON.parse(cached);
+      if (Date.now() - ts < 3600000) {
+        isGPS = true;
+        currentLat = lat; currentLon = lon;
+        showGeoPill(`GPS ${lat.toFixed(3)}, ${lon.toFixed(3)}`);
+        loadWeather();
+        return;
+      }
+    }
+  } catch {}
+
+  // 無快取或已過期，才重新請求 GPS
   if (navigator.geolocation) requestGPS();
   else fallbackToDefault();
 });
