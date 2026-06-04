@@ -564,16 +564,14 @@ const IK_PUBLIC_KEY     = 'public_TdqV/g8SxhEZMC6bl23MoGM3nwY=';
 const MAX_DIRECT        = 8 * 1024 * 1024;
 const MAX_COMPRESS_TGT  = 5 * 1024 * 1024;
 const POLL_INTERVAL     = 1500;
-const LS_KEY            = 'share_room_code';
-const LS_HISTORY_KEY    = 'share_room_history';
-const MAX_HISTORY       = 5;
-const ROOM_TTL_MS       = 43200000; // 12 hours
+const HISTORY_POLL_MS   = 30000;
 
 const IMG_EXTS  = new Set(['jpg','jpeg','png','gif','webp','heic','heif','bmp']);
 const FILE_EXTS = new Set(['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','zip','rar','mp3','mp4']);
 
 let room              = null;
 let pollTid           = null;
+let historyTid        = null;
 let debTid            = null;
 let pushing           = false;
 let lastPushAt        = 0;
@@ -585,77 +583,39 @@ let currentImages     = [];
 
 const $id = id => document.getElementById(id);
 
-// ── Room History ───────────────────────────────────────────────
-function getHistory() {
-  try {
-    const arr = JSON.parse(localStorage.getItem(LS_HISTORY_KEY) || '[]');
-    const cutoff = Date.now() - ROOM_TTL_MS;
-    return arr.filter(e => e.joinedAt > cutoff);
-  } catch { return []; }
-}
-
-function saveHistory(arr) {
-  try { localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(arr)); } catch {}
-}
-
-function saveToHistory(code) {
-  let arr = getHistory().filter(e => e.code !== code);
-  arr.unshift({ code, joinedAt: Date.now(), preview: '', type: 'text' });
-  saveHistory(arr.slice(0, MAX_HISTORY));
-}
-
-function updateHistoryPreview(code, type, content, fileName, images) {
-  try {
-    const raw = JSON.parse(localStorage.getItem(LS_HISTORY_KEY) || '[]');
-    const idx = raw.findIndex(e => e.code === code);
-    if (idx === -1) return;
-    let preview = '';
-    if (type === 'text' && content) preview = content.slice(0, 60);
-    else if (type === 'images' && images && images.length) preview = '🖼️ ' + images.length + ' 張圖片';
-    else if (type === 'file' && fileName) preview = '📎 ' + fileName;
-    raw[idx].type    = type;
-    raw[idx].preview = preview;
-    localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(raw));
-  } catch {}
-}
-
-function removeFromHistory(code) {
-  saveHistory(getHistory().filter(e => e.code !== code));
-  renderHistory();
-}
-
+// ── Global Room History（從 server 拉，跨裝置同步）─────────────
 function relTime(ts) {
-  const d = Date.now() - ts;
+  const d = Date.now() - ts * 1000;
   if (d < 60000)     return '剛剛';
   if (d < 3600000)   return Math.floor(d / 60000) + ' 分鐘前';
   return Math.floor(d / 3600000) + ' 小時前';
 }
 
-function renderHistory() {
-  const arr  = getHistory();
+async function loadGlobalHistory() {
+  try {
+    const resp = await fetch('/api/share/rooms');
+    if (!resp.ok) return;
+    const rooms = await resp.json();
+    renderHistory(rooms);
+  } catch {}
+}
+
+function renderHistory(rooms) {
   const sec  = $id('historySection');
   const list = $id('historyList');
-  if (!arr.length) { sec.style.display = 'none'; return; }
+  if (!rooms || !rooms.length) { sec.style.display = 'none'; return; }
   sec.style.display = 'block';
   list.innerHTML = '';
-  arr.forEach(entry => {
+  rooms.forEach(entry => {
     const card = document.createElement('div');
     card.className = 'history-card';
     card.innerHTML =
       '<div class="history-code-pill">' + entry.code + '</div>' +
       '<div class="history-info">' +
         '<div class="history-preview">' + (entry.preview || '空房間') + '</div>' +
-        '<div class="history-time">' + relTime(entry.joinedAt) + '</div>' +
-      '</div>' +
-      '<button class="history-del" title="移除記錄">✕</button>';
-    card.addEventListener('click', e => {
-      if (e.target.classList.contains('history-del')) return;
-      enterFromHistory(entry.code);
-    });
-    card.querySelector('.history-del').addEventListener('click', e => {
-      e.stopPropagation();
-      removeFromHistory(entry.code);
-    });
+        '<div class="history-time">' + relTime(entry.updated_at) + '</div>' +
+      '</div>';
+    card.addEventListener('click', () => enterFromHistory(entry.code));
     applySpring(card);
     list.appendChild(card);
   });
@@ -819,8 +779,7 @@ function enterSync(code) {
   $id('topTitle').textContent = '剪貼簿';
   $id('pillCode').textContent = code;
   $id('roomPill').classList.add('show');
-  localStorage.setItem(LS_KEY, code);
-  saveToHistory(code);
+  clearInterval(historyTid);
   startPoll();
   setTimeout(() => $id('ta').focus(), 120);
 }
@@ -854,7 +813,6 @@ function renderRoom(data, force) {
   const content  = data.content  || '';
   const fileName = data.file_name || '';
   const images   = data.images   || [];
-  if (room) updateHistoryPreview(room, type, content, fileName, images);
   if (type === 'images') {
     currentImages = images;
     if (images.length > 0) showImgGallery(images);
@@ -980,8 +938,6 @@ function doDestroy() {
 function showExpired(destroyed) {
   $id('expireSub').textContent = destroyed ? '雙方已同步清除' : '房間閒置過久或已不存在';
   $id('expireOverlay').classList.add('show');
-  if (destroyed && room) removeFromHistory(room);
-  localStorage.removeItem(LS_KEY);
   room = null;
 }
 
@@ -995,13 +951,14 @@ function backToA() {
   $id('joinInput').value = '';
   hideImgGallery(); hideFileCard(); detectUrl('');
   currentFileUrl = null; currentImages = []; room = null;
-  localStorage.removeItem(LS_KEY);
   clearInterval(pollTid);
-  renderHistory();
+  loadGlobalHistory();
+  historyTid = setInterval(loadGlobalHistory, HISTORY_POLL_MS);
 }
 
-// ── Init: show history only, no auto-enter ────────────────────
-renderHistory();
+// ── Init: 從 server 拉全域歷史，每 30 秒刷新 ─────────────────
+loadGlobalHistory();
+historyTid = setInterval(loadGlobalHistory, HISTORY_POLL_MS);
 
 // ── File input ─────────────────────────────────────────────────
 function pickFile() { $id('fileIn').click(); }

@@ -858,8 +858,9 @@ def amenities_api():
 _SHARE_TTL  = 43200  # 12 小時
 
 # ── in-memory fallback（本機開發用）────────────
-_SHARE: dict      = {}
-_SHARE_LOCK       = threading.Lock()
+_SHARE: dict       = {}
+_SHARE_ROOMS: dict = {}  # code -> created_at，全域房間清單 fallback
+_SHARE_LOCK        = threading.Lock()
 
 def _share_cleanup():
     while True:
@@ -869,6 +870,9 @@ def _share_cleanup():
             expired = [k for k, v in _SHARE.items() if v.get("updated_at", 0) < cutoff]
             for k in expired:
                 del _SHARE[k]
+            old = [k for k, ts in _SHARE_ROOMS.items() if ts < cutoff]
+            for k in old:
+                del _SHARE_ROOMS[k]
 
 threading.Thread(target=_share_cleanup, daemon=True).start()
 
@@ -909,11 +913,33 @@ def _share_set(code: str, room: dict):
         with _SHARE_LOCK:
             _SHARE[code] = room
 
+def _share_list_add(code: str, ts: float):
+    """將房間加入全域清單（Redis Sorted Set）。"""
+    _redis("ZADD", "share:rooms", str(ts), code)
+    _redis("ZREMRANGEBYSCORE", "share:rooms", "-inf", str(ts - _SHARE_TTL))
+    with _SHARE_LOCK:
+        _SHARE_ROOMS[code] = ts
+
+def _share_list_get() -> list[str]:
+    """回傳最近 12 小時建立的房間碼，最新在前，最多 20 筆。"""
+    cutoff = str(time.time() - _SHARE_TTL)
+    result = _redis("ZREVRANGEBYSCORE", "share:rooms", "+inf", cutoff, "LIMIT", "0", "20")
+    if result is not None:
+        return list(result) if isinstance(result, list) else []
+    with _SHARE_LOCK:
+        now = time.time()
+        active = [(k, ts) for k, ts in _SHARE_ROOMS.items() if ts > now - _SHARE_TTL]
+        active.sort(key=lambda x: x[1], reverse=True)
+        return [k for k, _ in active[:20]]
+
 def _share_del(code: str):
     result = _redis("DEL", f"share:{code}")
+    _redis("ZREM", "share:rooms", code)
     if result is None:
         with _SHARE_LOCK:
             _SHARE.pop(code, None)
+    with _SHARE_LOCK:
+        _SHARE_ROOMS.pop(code, None)
 
 def _share_exists(code: str) -> bool:
     result = _redis("EXISTS", f"share:{code}")
@@ -961,6 +987,7 @@ def share_create():
             break
     if not code:
         return _sc(jsonify({"error": "retry later"})), 503
+    _share_list_add(code, now)
     return _sc(jsonify({"code": code}))
 
 @app.route("/api/share/room/<code>", methods=["GET", "PUT", "DELETE", "OPTIONS"])
@@ -993,6 +1020,32 @@ def share_room(code):
     elif request.method == "DELETE":
         _share_del(code)
         return _sc(jsonify({"ok": True}))
+
+@app.route("/api/share/rooms", methods=["GET", "OPTIONS"])
+def share_rooms_list():
+    if request.method == "OPTIONS":
+        return _sc(jsonify([]))
+    codes = _share_list_get()
+    rooms = []
+    for code in codes:
+        data = _share_get(code)
+        if not data:
+            continue
+        t = data.get("type", "text")
+        if t == "text" and data.get("content"):
+            preview = data["content"][:60]
+        elif t == "images" and data.get("images"):
+            preview = f"🖼️ {len(data['images'])} 張圖片"
+        elif t == "file" and data.get("file_name"):
+            preview = f"📎 {data['file_name']}"
+        else:
+            preview = ""
+        rooms.append({
+            "code":       code,
+            "preview":    preview,
+            "updated_at": data.get("updated_at", 0),
+        })
+    return _sc(jsonify(rooms))
 
 
 # ══════════════════════════════════════════════
