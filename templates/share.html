@@ -1268,10 +1268,12 @@ function _lbRender() {
   $id('lbPrev').classList.toggle('hidden', total <= 1);
   $id('lbNext').classList.toggle('hidden', total <= 1);
 }
-$id('lbClose').onclick = closeLightbox;
-$id('lbPrev').onclick  = () => { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; _lbRender(); };
-$id('lbNext').onclick  = () => { lbIdx = (lbIdx + 1) % currentImages.length; _lbRender(); };
-$id('lightbox').addEventListener('click', e => { if (e.target === lb()) closeLightbox(); });
+document.addEventListener('DOMContentLoaded', () => {
+  $id('lbClose').onclick = closeLightbox;
+  $id('lbPrev').onclick  = () => { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; _lbRender(); };
+  $id('lbNext').onclick  = () => { lbIdx = (lbIdx + 1) % currentImages.length; _lbRender(); };
+  $id('lightbox').addEventListener('click', e => { if (e.target === lb()) closeLightbox(); });
+});
 document.addEventListener('keydown', e => {
   if (!lb().classList.contains('open')) return;
   if (e.key === 'Escape') closeLightbox();
