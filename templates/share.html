@@ -236,6 +236,58 @@ body::before{
 
 .up-status{display:none;font-size:.74rem;color:var(--sub);text-align:center}
 .up-status.show{display:block}
+.img-thumb img{cursor:zoom-in}
+
+/* lightbox */
+.lightbox{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.85);
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  opacity:0;pointer-events:none;
+  transition:opacity .22s ease;
+}
+.lightbox.open{opacity:1;pointer-events:auto}
+.lightbox-img{
+  max-width:min(92vw,960px);max-height:85dvh;
+  border-radius:14px;object-fit:contain;
+  transform:scale(.88);
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+  user-select:none;-webkit-user-drag:none;
+}
+.lightbox.open .lightbox-img{transform:scale(1)}
+.lightbox-close{
+  position:fixed;top:18px;right:18px;
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(255,255,255,.18);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;font-size:1.1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .18s;
+}
+.lightbox-close:hover{background:rgba(255,255,255,.3)}
+.lightbox-nav{
+  position:fixed;top:50%;transform:translateY(-50%);
+  width:44px;height:44px;border-radius:50%;
+  background:rgba(255,255,255,.18);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;font-size:1.2rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .18s, opacity .18s;
+}
+.lightbox-nav:hover{background:rgba(255,255,255,.3)}
+.lightbox-nav.hidden{opacity:0;pointer-events:none}
+.lightbox-prev{left:14px}
+.lightbox-next{right:14px}
+.lightbox-counter{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  color:rgba(255,255,255,.7);font-size:.82rem;letter-spacing:.04em;
+  pointer-events:none;
+}
 
 .sync-ta{
   flex:1;width:100%;border-radius:var(--radius-m);
@@ -1131,6 +1183,7 @@ function showImgGallery(urls) {
     thumb.className = 'img-thumb';
     const img = document.createElement('img');
     img.src = url; img.alt = ''; img.loading = 'lazy';
+    img.onclick = () => openLightbox(idx);
     const del = document.createElement('button');
     del.className = 'img-thumb-del';
     del.textContent = '✕';
@@ -1192,6 +1245,52 @@ function hideFileCard() {
   currentFileUrl = null;
 }
 
+// ── Lightbox ───────────────────────────────────────────────────
+let lbIdx = 0;
+const lb     = () => $id('lightbox');
+const lbImg  = () => $id('lbImg');
+const lbCtr  = () => $id('lbCounter');
+function openLightbox(idx) {
+  if (!currentImages.length) return;
+  lbIdx = idx;
+  _lbRender();
+  lb().classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  lb().classList.remove('open');
+  document.body.style.overflow = '';
+}
+function _lbRender() {
+  lbImg().src = currentImages[lbIdx];
+  const total = currentImages.length;
+  lbCtr().textContent = total > 1 ? `${lbIdx + 1} / ${total}` : '';
+  $id('lbPrev').classList.toggle('hidden', total <= 1);
+  $id('lbNext').classList.toggle('hidden', total <= 1);
+}
+$id('lbClose').onclick = closeLightbox;
+$id('lbPrev').onclick  = () => { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; _lbRender(); };
+$id('lbNext').onclick  = () => { lbIdx = (lbIdx + 1) % currentImages.length; _lbRender(); };
+$id('lightbox').addEventListener('click', e => { if (e.target === lb()) closeLightbox(); });
+document.addEventListener('keydown', e => {
+  if (!lb().classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft')  { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; _lbRender(); }
+  if (e.key === 'ArrowRight') { lbIdx = (lbIdx + 1) % currentImages.length; _lbRender(); }
+});
+// 觸控滑動切換
+(function(){
+  let sx = 0;
+  $id('lightbox').addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, {passive:true});
+  $id('lightbox').addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) < 40) return;
+    if (dx < 0) { lbIdx = (lbIdx + 1) % currentImages.length; }
+    else        { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; }
+    _lbRender();
+  });
+})();
+
 async function downloadFile() {
   if (!currentFileUrl) return;
   const fileName = $id('fileNameText').textContent || 'download';
@@ -1210,5 +1309,13 @@ async function downloadFile() {
   }
 }
 </script>
+<!-- lightbox -->
+<div id="lightbox" class="lightbox" role="dialog" aria-modal="true">
+  <button class="lightbox-close" id="lbClose" aria-label="關閉">✕</button>
+  <button class="lightbox-nav lightbox-prev" id="lbPrev" aria-label="上一張">‹</button>
+  <img id="lbImg" class="lightbox-img" alt="" src="">
+  <button class="lightbox-nav lightbox-next" id="lbNext" aria-label="下一張">›</button>
+  <span class="lightbox-counter" id="lbCounter"></span>
+</div>
 </body>
 </html>
