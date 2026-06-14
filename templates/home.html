@@ -976,7 +976,7 @@ body {
 
     <div class="admin-sec-label">私人</div>
     <div class="admin-card">
-      <a class="admin-link" href="/v" onclick="sessionStorage.setItem('v_admin_ok','1')">🎬 收藏庫 ↗</a>
+      <a class="admin-link" href="/v" onclick="sessionStorage.setItem('v_admin_pin', sessionStorage.getItem('v_admin_pin') || localStorage.getItem('admin_pin') || _ADMIN_PIN)">🎬 收藏庫 ↗</a>
     </div>
 
     <button class="admin-exit-btn" onclick="_exitAdmin()">🚪 關閉上帝模式</button>
