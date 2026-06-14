@@ -2327,6 +2327,7 @@ def v_add():
     url   = str(data.get("url", "")).strip()
     title = str(data.get("title", "")).strip() or url
     img   = str(data.get("img", "")).strip()
+    by    = str(data.get("by", "")).strip()[:20]
     if not url:
         return jsonify({"error": "missing_url"}), 400
     raw   = _redis_get(_V_KEY)
@@ -2338,6 +2339,7 @@ def v_add():
         "url":   url,
         "title": title,
         "img":   img,
+        "by":    by,
         "ts":    int(time.time()),
     })
     _redis_set_perm(_V_KEY, _json.dumps(items, ensure_ascii=False))

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>我的收藏</title>
+<script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overscroll-behavior: none; background: #000; }
@@ -120,6 +121,10 @@ body {
 }
 .card:active { transform: scale(0.96); opacity: 0.8; }
 .card.delmode { border-color: var(--danger); }
+.card-by {
+  font-size: 0.7rem; color: var(--sub);
+  margin-top: 5px; font-weight: 500;
+}
 
 .card-thumb {
   width: 100%; aspect-ratio: 16/9;
@@ -279,6 +284,7 @@ body {
   </div>
 </div>
 
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -324,6 +330,7 @@ async function submitPin() {
       url:   p.get('url')   || '',
       title: p.get('title') || '',
       img:   p.get('img')   || '',
+      by:    getUsername(),
     });
     renderGrid(addRes?.items || res.items);
     showToast(addRes?.dup ? '已收藏過了' : '已收藏！');
@@ -381,6 +388,7 @@ function renderGrid(items) {
       <div class="card-thumb-placeholder" ${item.img ? 'style="display:none"' : ''}>🎬</div>
       <div class="card-body">
         <div class="card-title">${esc(item.title)}</div>
+        ${item.by ? `<div class="card-by">由 ${esc(item.by)} 加入</div>` : ''}
       </div>
       <div class="del-badge" onclick="delItem(event,'${item.id}')">✕</div>`;
     card.addEventListener('click', () => {
@@ -448,7 +456,7 @@ async function submitAdd() {
   const img   = document.getElementById('addImg').value.trim();
   if (!url) { showToast('請輸入網址'); return; }
   document.getElementById('saveBtn').disabled = true;
-  const res = await apiFetch('/api/v/add', { pin: getPin(), url, title, img });
+  const res = await apiFetch('/api/v/add', { pin: getPin(), url, title, img, by: getUsername() });
   document.getElementById('saveBtn').disabled = false;
   if (!res || res.error) { showToast('儲存失敗'); return; }
   closeAddModal();
@@ -468,12 +476,17 @@ function checkBookmarkletParams() {
       url:   p.get('url')   || '',
       title: p.get('title') || '',
       img:   p.get('img')   || '',
+      by:    getUsername(),
     }).then(res => {
       history.replaceState({}, '', '/v');
       if (res && res.ok) showToast(res.dup ? '已收藏過了' : '已收藏！');
     });
   }
   // 未登入則等輸完 PIN 後 submitPin 會觸發 openAddModal
+}
+
+function getUsername() {
+  try { return Config.getProfile().name || '匿名'; } catch { return '匿名'; }
 }
 
 // ── 工具 ─────────────────────────────────────
