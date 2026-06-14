@@ -264,7 +264,7 @@ body {
 <div id="mainScreen">
   <div class="top-bar">
     <button class="lock-btn" onclick="lock()" title="鎖定">🔒</button>
-    <div class="top-title">收藏庫</div>
+    <div class="top-title" onclick="openNameModal()" style="cursor:pointer">收藏庫</div>
     <button class="add-btn-bar" onclick="openAddModal()">＋ 新增</button>
   </div>
   <div id="gridContainer"></div>
@@ -284,6 +284,19 @@ body {
   </div>
 </div>
 
+
+<!-- 名字 Modal -->
+<div class="modal-overlay" id="nameModal">
+  <div class="modal-box">
+    <div class="modal-title">你叫什麼名字？</div>
+    <input class="modal-input" id="nameInput" placeholder="輸入你的名字" maxlength="12" autocomplete="off"
+           onkeydown="if(event.key==='Enter')saveName()">
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeNameModal()">略過</button>
+      <button class="modal-save" onclick="saveName()">確定</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -325,15 +338,18 @@ async function submitPin() {
   const p = new URLSearchParams(location.search);
   if (p.get('url')) {
     history.replaceState({}, '', '/v');
-    const addRes = await apiFetch('/api/v/add', {
-      pin:   _pin,
-      url:   p.get('url')   || '',
-      title: p.get('title') || '',
-      img:   p.get('img')   || '',
-      by:    getUsername(),
+    renderGrid(res.items);
+    ensureUsername(async () => {
+      const addRes = await apiFetch('/api/v/add', {
+        pin:   _pin,
+        url:   p.get('url')   || '',
+        title: p.get('title') || '',
+        img:   p.get('img')   || '',
+        by:    getUsername() || '匿名',
+      });
+      renderGrid(addRes?.items || res.items);
+      showToast(addRes?.dup ? '已收藏過了' : '已收藏！');
     });
-    renderGrid(addRes?.items || res.items);
-    showToast(addRes?.dup ? '已收藏過了' : '已收藏！');
   } else {
     renderGrid(res.items);
   }
@@ -471,27 +487,57 @@ function checkBookmarkletParams() {
   const savedPin = sessionStorage.getItem('vpin');
   if (savedPin) {
     // 已登入，直接存
-    apiFetch('/api/v/add', {
-      pin:   savedPin,
-      url:   p.get('url')   || '',
-      title: p.get('title') || '',
-      img:   p.get('img')   || '',
-      by:    getUsername(),
-    }).then(res => {
+    ensureUsername(async () => {
+      const res2 = await apiFetch('/api/v/add', {
+        pin:   savedPin,
+        url:   p.get('url')   || '',
+        title: p.get('title') || '',
+        img:   p.get('img')   || '',
+        by:    getUsername() || '匿名',
+      });
       history.replaceState({}, '', '/v');
-      if (res && res.ok) showToast(res.dup ? '已收藏過了' : '已收藏！');
+      if (res2 && res2.ok) {
+        renderGrid(res2.items);
+        showToast(res2.dup ? '已收藏過了' : '已收藏！');
+      }
     });
   }
   // 未登入則等輸完 PIN 後 submitPin 會觸發 openAddModal
 }
 
 function getUsername() {
+  const saved = localStorage.getItem('v_username');
+  if (saved) return saved;
   try {
     const profileName = Config.getProfile().name;
-    if (profileName) return profileName;
+    if (profileName) { localStorage.setItem('v_username', profileName); return profileName; }
     const sess = JSON.parse(localStorage.getItem('userSession') || 'null');
-    return sess?.name || '匿名';
-  } catch { return '匿名'; }
+    if (sess?.name) { localStorage.setItem('v_username', sess.name); return sess.name; }
+  } catch {}
+  return '';
+}
+
+function ensureUsername(cb) {
+  if (getUsername()) return cb();
+  document.getElementById('nameModal').classList.add('show');
+  document.getElementById('nameInput').focus();
+  _pendingNameCb = cb;
+}
+let _pendingNameCb = null;
+
+function openNameModal() {
+  document.getElementById('nameInput').value = getUsername();
+  document.getElementById('nameModal').classList.add('show');
+  setTimeout(() => document.getElementById('nameInput').focus(), 200);
+}
+function closeNameModal() { document.getElementById('nameModal').classList.remove('show'); }
+function saveName() {
+  const n = document.getElementById('nameInput').value.trim();
+  if (!n) return;
+  localStorage.setItem('v_username', n);
+  closeNameModal();
+  showToast(`名字已設定：${n}`);
+  if (_pendingNameCb) { _pendingNameCb(); _pendingNameCb = null; }
 }
 
 // ── 工具 ─────────────────────────────────────
