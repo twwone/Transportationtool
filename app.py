@@ -2275,6 +2275,87 @@ def auth_login():
         return jsonify({"error": "network_error", "message": str(e)}), 503
 
 
+# ──────────────────────────────────────────────
+#  私人收藏庫 /v
+# ──────────────────────────────────────────────
+_V_KEY = "vfav:list"
+
+def _redis_set_perm(key: str, value: str):
+    url   = os.environ.get("KV_REST_API_URL", "")
+    token = os.environ.get("KV_REST_API_TOKEN", "")
+    if not url or not token:
+        return
+    try:
+        _requests.post(url, headers={"Authorization": f"Bearer {token}"},
+                       json=["SET", key, value], timeout=3)
+    except Exception:
+        pass
+
+def _redis_del(key: str):
+    url   = os.environ.get("KV_REST_API_URL", "")
+    token = os.environ.get("KV_REST_API_TOKEN", "")
+    if not url or not token:
+        return
+    try:
+        _requests.post(url, headers={"Authorization": f"Bearer {token}"},
+                       json=["DEL", key], timeout=3)
+    except Exception:
+        pass
+
+def _v_check_pin(pin: str) -> bool:
+    correct = os.environ.get("V_PIN", "")
+    return bool(correct) and pin == correct
+
+@app.route("/v")
+def v_page():
+    return render_template("v.html")
+
+@app.route("/api/v/list", methods=["POST"])
+def v_list():
+    data = request.get_json(force=True) or {}
+    if not _v_check_pin(str(data.get("pin", ""))):
+        return jsonify({"error": "wrong_pin"}), 403
+    raw = _redis_get(_V_KEY)
+    items = _json.loads(raw) if raw else []
+    return jsonify({"ok": True, "items": items})
+
+@app.route("/api/v/add", methods=["POST"])
+def v_add():
+    data = request.get_json(force=True) or {}
+    if not _v_check_pin(str(data.get("pin", ""))):
+        return jsonify({"error": "wrong_pin"}), 403
+    url   = str(data.get("url", "")).strip()
+    title = str(data.get("title", "")).strip() or url
+    img   = str(data.get("img", "")).strip()
+    if not url:
+        return jsonify({"error": "missing_url"}), 400
+    raw   = _redis_get(_V_KEY)
+    items = _json.loads(raw) if raw else []
+    if any(i["url"] == url for i in items):
+        return jsonify({"ok": True, "dup": True, "items": items})
+    items.insert(0, {
+        "id":    secrets.token_hex(6),
+        "url":   url,
+        "title": title,
+        "img":   img,
+        "ts":    int(time.time()),
+    })
+    _redis_set_perm(_V_KEY, _json.dumps(items, ensure_ascii=False))
+    return jsonify({"ok": True, "items": items})
+
+@app.route("/api/v/del", methods=["POST"])
+def v_del():
+    data = request.get_json(force=True) or {}
+    if not _v_check_pin(str(data.get("pin", ""))):
+        return jsonify({"error": "wrong_pin"}), 403
+    vid = str(data.get("id", ""))
+    raw = _redis_get(_V_KEY)
+    items = _json.loads(raw) if raw else []
+    items = [i for i in items if i["id"] != vid]
+    _redis_set_perm(_V_KEY, _json.dumps(items, ensure_ascii=False))
+    return jsonify({"ok": True, "items": items})
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")
