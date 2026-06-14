@@ -360,11 +360,12 @@ function renderGrid(items) {
     card.className = 'card';
     card.dataset.id = item.id;
     card.style.animationDelay = (idx * 40) + 'ms';
+    const thumbSrc = item.img ? `/api/v/thumb?url=${encodeURIComponent(item.img)}` : '';
     card.innerHTML = `
-      ${item.img
-        ? `<img class="card-thumb" src="${esc(item.img)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      ${thumbSrc
+        ? `<img class="card-thumb" src="${esc(thumbSrc)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
         : ''}
-      <div class="card-thumb-placeholder" ${item.img ? 'style="display:none"' : ''}>🎬</div>
+      <div class="card-thumb-placeholder" ${thumbSrc ? 'style="display:none"' : ''}>🎬</div>
       <div class="card-body">
         <div class="card-title">${esc(item.title)}</div>
       </div>

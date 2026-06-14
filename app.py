@@ -2343,6 +2343,27 @@ def v_add():
     _redis_set_perm(_V_KEY, _json.dumps(items, ensure_ascii=False))
     return jsonify({"ok": True, "items": items})
 
+@app.route("/api/v/thumb")
+def v_thumb():
+    from flask import Response
+    import urllib.parse as _up
+    raw_url = request.args.get("url", "").strip()
+    if not raw_url:
+        return "", 400
+    parsed = _up.urlparse(raw_url)
+    if parsed.scheme not in ("http", "https"):
+        return "", 400
+    try:
+        r = _requests.get(raw_url, timeout=8, headers={
+            "Referer": "https://missav.com/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        })
+        ct = r.headers.get("Content-Type", "image/jpeg")
+        return Response(r.content, content_type=ct,
+                        headers={"Cache-Control": "public, max-age=86400"})
+    except Exception:
+        return "", 502
+
 @app.route("/api/v/admin-bypass", methods=["POST"])
 def v_admin_bypass():
     data      = request.get_json(force=True) or {}
