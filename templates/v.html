@@ -80,17 +80,34 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .top-title { flex: 1; text-align: center; font-size: 1rem; font-weight: 700; }
+.top-left { display: flex; align-items: center; gap: 2px; min-width: 80px; }
+.top-right { display: flex; align-items: center; gap: 2px; min-width: 80px; justify-content: flex-end; }
+.back-btn {
+  display: flex; align-items: center; gap: 2px;
+  background: none; border: none;
+  color: var(--tint); font-size: 1rem; font-weight: 500;
+  cursor: pointer; font-family: inherit; padding: 4px 6px;
+  -webkit-tap-highlight-color: transparent; text-decoration: none;
+}
+.back-btn:active { opacity: 0.5; }
 .lock-btn {
-  min-width: 44px; background: none; border: none;
-  color: var(--sub); font-size: 1.1rem; cursor: pointer;
-  padding: 4px; -webkit-tap-highlight-color: transparent;
+  background: none; border: none;
+  color: var(--sub); font-size: 1rem; cursor: pointer;
+  padding: 4px 6px; -webkit-tap-highlight-color: transparent;
 }
 .lock-btn:active { opacity: 0.5; }
+.refresh-btn {
+  background: none; border: none;
+  color: var(--sub); font-size: 1rem; cursor: pointer;
+  padding: 4px 6px; -webkit-tap-highlight-color: transparent;
+}
+.refresh-btn:active { opacity: 0.5; }
+.refresh-btn.spin { animation: spinOnce 0.5s ease; }
+@keyframes spinOnce { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .add-btn-bar {
-  min-width: 44px; text-align: right;
   background: none; border: none;
   color: var(--tint); font-size: 0.92rem; font-weight: 600;
-  cursor: pointer; font-family: inherit; padding: 4px 0 4px 8px;
+  cursor: pointer; font-family: inherit; padding: 4px 6px;
   -webkit-tap-highlight-color: transparent;
 }
 .add-btn-bar:active { opacity: 0.5; }
@@ -263,9 +280,15 @@ body {
 <!-- 主畫面 -->
 <div id="mainScreen">
   <div class="top-bar">
-    <button class="lock-btn" onclick="lock()" title="鎖定">🔒</button>
+    <div class="top-left">
+      <a class="back-btn" href="/">‹ 返回</a>
+      <button class="lock-btn" onclick="lock()" title="鎖定">🔒</button>
+    </div>
     <div class="top-title" onclick="openNameModal()" style="cursor:pointer">收藏庫</div>
-    <button class="add-btn-bar" onclick="openAddModal()">＋ 新增</button>
+    <div class="top-right">
+      <button class="refresh-btn" id="refreshBtn" onclick="refreshGrid()" title="重新整理">↺</button>
+      <button class="add-btn-bar" onclick="openAddModal()">＋ 新增</button>
+    </div>
   </div>
   <div id="gridContainer"></div>
 </div>
@@ -377,6 +400,14 @@ async function apiFetch(path, body) {
 
 function getPin() {
   return sessionStorage.getItem('vpin') || _pin;
+}
+
+async function refreshGrid() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spin');
+  const res = await apiFetch('/api/v/list', { pin: getPin() });
+  btn.classList.remove('spin');
+  if (res && res.items) renderGrid(res.items);
 }
 
 // ── Grid ─────────────────────────────────────
