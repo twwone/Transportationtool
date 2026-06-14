@@ -486,7 +486,12 @@ function checkBookmarkletParams() {
 }
 
 function getUsername() {
-  try { return Config.getProfile().name || '匿名'; } catch { return '匿名'; }
+  try {
+    const profileName = Config.getProfile().name;
+    if (profileName) return profileName;
+    const sess = JSON.parse(localStorage.getItem('userSession') || 'null');
+    return sess?.name || '匿名';
+  } catch { return '匿名'; }
 }
 
 // ── 工具 ─────────────────────────────────────
