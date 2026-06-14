@@ -2343,6 +2343,18 @@ def v_add():
     _redis_set_perm(_V_KEY, _json.dumps(items, ensure_ascii=False))
     return jsonify({"ok": True, "items": items})
 
+@app.route("/api/v/admin-bypass", methods=["POST"])
+def v_admin_bypass():
+    data      = request.get_json(force=True) or {}
+    admin_pin = str(data.get("admin_pin", ""))
+    correct   = os.environ.get("ADMIN_PIN", "0000")
+    if admin_pin != correct:
+        return jsonify({"error": "wrong_pin"}), 403
+    v_pin = os.environ.get("V_PIN", "")
+    raw   = _redis_get(_V_KEY)
+    items = _json.loads(raw) if raw else []
+    return jsonify({"ok": True, "pin": v_pin, "items": items})
+
 @app.route("/api/v/del", methods=["POST"])
 def v_del():
     data = request.get_json(force=True) or {}

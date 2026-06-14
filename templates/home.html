@@ -974,6 +974,11 @@ body {
     <div class="admin-sec-label">裝置資訊</div>
     <div class="admin-card" id="adminDevCard"></div>
 
+    <div class="admin-sec-label">私人</div>
+    <div class="admin-card">
+      <a class="admin-link" href="/v" onclick="sessionStorage.setItem('v_admin_ok','1')">🎬 收藏庫 ↗</a>
+    </div>
+
     <button class="admin-exit-btn" onclick="_exitAdmin()">🚪 關閉上帝模式</button>
   </div>
 </div>
@@ -1556,6 +1561,7 @@ function _pinDel() {
 function _verifyPin() {
   if (_pinBuffer === _ADMIN_PIN) {
     localStorage.setItem(_ADMIN_LS_KEY, _pinBuffer);
+    sessionStorage.setItem('v_admin_pin', _pinBuffer);
     _closePinModal();
     const crown = document.getElementById('crownBtn');
     crown.classList.add('visible');

@@ -476,6 +476,20 @@ function esc(s) {
 // ── Init ─────────────────────────────────────
 (function() {
   checkBookmarkletParams();
+  const adminPin = sessionStorage.getItem('v_admin_pin');
+  if (adminPin) {
+    sessionStorage.removeItem('v_admin_pin');
+    apiFetch('/api/v/admin-bypass', { admin_pin: adminPin }).then(res => {
+      if (res && res.pin) {
+        sessionStorage.setItem('vpin', res.pin);
+        _pin = res.pin;
+        document.getElementById('pinScreen').style.display = 'none';
+        document.getElementById('mainScreen').style.display = 'flex';
+        renderGrid(res.items);
+      }
+    });
+    return;
+  }
   const saved = sessionStorage.getItem('vpin');
   if (saved) {
     _pin = saved;
