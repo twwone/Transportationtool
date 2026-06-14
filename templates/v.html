@@ -313,9 +313,23 @@ async function submitPin() {
   }
   sessionStorage.setItem('vpin', _pin);
   document.getElementById('pinScreen').style.display = 'none';
-  const ms = document.getElementById('mainScreen');
-  ms.style.display = 'flex';
-  renderGrid(res.items);
+  document.getElementById('mainScreen').style.display = 'flex';
+
+  // 從 Bookmarklet 帶參數進來，PIN 驗完直接存
+  const p = new URLSearchParams(location.search);
+  if (p.get('url')) {
+    history.replaceState({}, '', '/v');
+    const addRes = await apiFetch('/api/v/add', {
+      pin:   _pin,
+      url:   p.get('url')   || '',
+      title: p.get('title') || '',
+      img:   p.get('img')   || '',
+    });
+    renderGrid(addRes?.items || res.items);
+    showToast(addRes?.dup ? '已收藏過了' : '已收藏！');
+  } else {
+    renderGrid(res.items);
+  }
 }
 
 function lock() {
