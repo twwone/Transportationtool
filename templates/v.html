@@ -287,7 +287,8 @@ body {
     <div class="top-title" onclick="openNameModal()" style="cursor:pointer">收藏庫</div>
     <div class="top-right">
       <button class="refresh-btn" id="refreshBtn" onclick="refreshGrid()" title="重新整理">↺</button>
-      <button class="add-btn-bar" onclick="openAddModal()">＋ 新增</button>
+      <button class="add-btn-bar" id="addBtnBar" onclick="openAddModal()">＋ 新增</button>
+      <button class="add-btn-bar" id="editBtn" onclick="toggleDelMode()">編輯</button>
     </div>
   </div>
   <div id="gridContainer"></div>
@@ -452,19 +453,27 @@ function renderGrid(items) {
   });
 }
 
+function toggleDelMode() {
+  if (_delMode) exitDelMode(); else enterDelMode();
+}
 function enterDelMode() {
   _delMode = true;
   document.querySelectorAll('.card').forEach(c => c.classList.add('delmode'));
+  document.getElementById('editBtn').textContent = '完成';
+  document.getElementById('editBtn').style.color = 'var(--danger)';
+  document.getElementById('addBtnBar').style.display = 'none';
   document.addEventListener('click', exitDelModeOnOutside);
-  showToast('長按 ✕ 刪除，點空白處取消');
 }
 function exitDelMode() {
   _delMode = false;
   document.querySelectorAll('.card').forEach(c => c.classList.remove('delmode'));
+  document.getElementById('editBtn').textContent = '編輯';
+  document.getElementById('editBtn').style.color = '';
+  document.getElementById('addBtnBar').style.display = '';
   document.removeEventListener('click', exitDelModeOnOutside);
 }
 function exitDelModeOnOutside(e) {
-  if (!e.target.closest('.card')) exitDelMode();
+  if (!e.target.closest('.card') && !e.target.closest('#editBtn')) exitDelMode();
 }
 
 async function delItem(e, id) {
