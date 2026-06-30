@@ -268,7 +268,174 @@ body {
 }
 .setup-banner strong { color: #7c3aed; display: block; margin-bottom: 8px; font-size: 0.95rem; }
 
+/* ── Mode Toggle ── */
+.mode-wrap {
+  position: relative;
+  display: flex;
+  background: rgba(118,118,128,0.12);
+  border-radius: 100px;
+  padding: 3px;
+  margin-top: 10px;
+}
+.mode-pill {
+  position: absolute;
+  top: 3px; bottom: 3px;
+  background: #fff;
+  border-radius: 100px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.14);
+  transition: left 0.28s cubic-bezier(0.25,1,0.5,1), width 0.28s cubic-bezier(0.25,1,0.5,1);
+  pointer-events: none;
+}
+.mode-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 100px;
+  border: none;
+  font-size: 0.87rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #8e8e93;
+  background: transparent;
+  position: relative; z-index: 1;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mode-btn.active { color: #7c3aed; }
+
+/* ── Station Picker ── */
+.station-picker {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 10px 14px 0;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  gap: 8px;
+}
+.station-picker::-webkit-scrollbar { display: none; }
+.st-chip {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: rgba(118,118,128,0.1);
+  color: #48484a;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+.st-chip:active { transform: scale(0.94); }
+.st-chip.active { background: #7c3aed; color: #fff; }
+
+/* ── Timetable ── */
+.tt-header {
+  padding: 12px 14px 4px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.tt-station-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1c1c1e;
+}
+.tt-subtitle {
+  font-size: 0.7rem;
+  color: #aeaeb2;
+  margin-top: 2px;
+}
+.tt-list {
+  padding: 4px 14px 8px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.tt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.tt-row:last-child { border-bottom: none; }
+.tt-row.past { opacity: 0.3; }
+.tt-type {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  min-width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.tt-type.express { background: rgba(160,49,142,0.1); color: #a0318e; }
+.tt-type.local   { background: rgba(61,64,165,0.1);  color: #3d40a5; }
+.tt-time {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #1c1c1e;
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+.tt-time.soon { color: #ea580c; }
+.tt-time.now  { color: #dc2626; }
+.tt-countdown {
+  font-size: 0.78rem;
+  color: #aeaeb2;
+  font-weight: 500;
+  min-width: 54px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.tt-countdown.soon { color: #ea580c; }
+.tt-countdown.now  { color: #dc2626; }
+.tt-empty {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 0.85rem;
+  color: #aeaeb2;
+}
+.tt-show-all {
+  display: block;
+  width: calc(100% - 28px);
+  max-width: 572px;
+  margin: 4px auto 16px;
+  padding: 12px;
+  background: rgba(118,118,128,0.1);
+  border: none;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  color: #7c3aed;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ── Dark Mode ── */
+@media (prefers-color-scheme: dark) {
+  .mode-wrap { background: rgba(118,118,128,0.18); }
+  .mode-pill { background: #2c2c2e; box-shadow: 0 1px 5px rgba(0,0,0,0.5); }
+  .mode-btn { color: #48484a; }
+  .mode-btn.active { color: #bf5af2; }
+  .st-chip { background: rgba(118,118,128,0.18); color: #8e8e93; }
+  .st-chip.active { background: #bf5af2; color: #fff; }
+  .tt-station-title { color: #f2f2f7; }
+  .tt-row { border-bottom-color: rgba(255,255,255,0.06); }
+  .tt-time { color: #f2f2f7; }
+  .tt-type.express { background: rgba(192,132,252,0.15); color: #c084fc; }
+  .tt-type.local   { background: rgba(129,140,248,0.15); color: #818cf8; }
+  .tt-time.soon { color: #fb923c; }
+  .tt-time.now  { color: #f87171; }
+  .tt-countdown.soon { color: #fb923c; }
+  .tt-countdown.now  { color: #f87171; }
+  .tt-show-all { background: rgba(118,118,128,0.18); color: #bf5af2; }
+}
+
+/* ── Dark Mode (original) ── */
 @media (prefers-color-scheme: dark) {
   body { background: #000; color: #f2f2f7; }
   .topbar { background: rgba(0,0,0,0.78); box-shadow: 0 1px 0 rgba(255,255,255,0.06); }
@@ -323,12 +490,18 @@ body {
     <button class="dir-btn active" id="btnDir0" onclick="setDir(0)">← 往台北</button>
     <button class="dir-btn"        id="btnDir1" onclick="setDir(1)">往機場 →</button>
   </div>
+  <div class="mode-wrap" id="modeWrap">
+    <div class="mode-pill" id="modePill"></div>
+    <button class="mode-btn active" id="btnMode0" onclick="setMode('live')">即時</button>
+    <button class="mode-btn"        id="btnMode1" onclick="setMode('timetable')">時刻表</button>
+  </div>
   <div class="starred-bar" id="homeBar"></div>
 </div>
 
 <div class="content" id="content">
   <div class="loading">載入中…</div>
 </div>
+<div id="tt-wrap" style="display:none"></div>
 
 <script>
 const STATIONS = {{ stations | tojson }};
@@ -388,6 +561,7 @@ function startDemoTick() {
     } catch {}
   }
   updateDirPill();
+  _updateModePill();
   renderHomeBar();
   if (HAS_TDX) {
     fetchNow();
@@ -413,7 +587,8 @@ function setDir(d) {
   document.getElementById("btnDir0").classList.toggle("active", d === 0);
   document.getElementById("btnDir1").classList.toggle("active", d === 1);
   updateDirPill();
-  renderStations();
+  if (mode === 'live') renderStations();
+  else renderTimetable();
 }
 
 function renderHomeBar() {
@@ -546,6 +721,166 @@ function renderNoTDX() {
 function renderError(msg) {
   document.getElementById("content").innerHTML =
     `<div class="setup-banner"><strong>⚠️ 資料載入失敗</strong>${msg}</div>`;
+}
+
+// ── Timetable ────────────────────────────────
+let mode      = 'live';
+let ttStation = starredId || STATIONS[0].id;
+let ttData    = null;   // null = demo mode
+let ttShowAll = false;
+let ttFetched = false;
+
+const _TT_OFF = {
+  A1:0, A2:5, A3:8, A4:11, A5:14, A6:17, A7:20,
+  A8:23, A9:26, A10:29, A11:32, A12:35, A13:38,
+  "A14a":41, A15:44, A16:47, A17:50, A18:53, A19:56, A20:59, A21:62
+};
+const _TT_MAX = 62;
+const _EXP_OFF     = { A1:0,  A12:35, A13:38, A17:50, A18:53 }; // 往機場 from A1
+const _EXP_OFF_REV = { A18:0, A17:3,  A13:15, A12:18, A1:53  }; // 往台北 from A18
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnMode0').classList.toggle('active', m === 'live');
+  document.getElementById('btnMode1').classList.toggle('active', m === 'timetable');
+  _updateModePill();
+  document.getElementById('content').style.display   = m === 'live' ? '' : 'none';
+  document.getElementById('tt-wrap').style.display   = m === 'timetable' ? '' : 'none';
+  if (m === 'timetable') {
+    if (HAS_TDX && !ttFetched) fetchTimetable();
+    else renderTimetable();
+  }
+}
+
+function _updateModePill() {
+  const idx  = mode === 'live' ? 0 : 1;
+  const btn  = document.getElementById('btnMode' + idx);
+  const pill = document.getElementById('modePill');
+  if (!btn || !pill) return;
+  pill.style.left  = btn.offsetLeft + 'px';
+  pill.style.width = btn.offsetWidth + 'px';
+}
+
+async function fetchTimetable() {
+  ttFetched = true;
+  document.getElementById('tt-wrap').innerHTML = '<div class="loading">載入時刻表…</div>';
+  try {
+    const r = await fetch('/api/mrt/timetable');
+    const j = await r.json();
+    if (j.configured && Array.isArray(j.data) && j.data.length > 0) ttData = j.data;
+  } catch(e) {}
+  renderTimetable();
+}
+
+function _genDemo(stId, dir) {
+  const off = _TT_OFF[stId];
+  if (off === undefined) return [];
+  const list = [];
+  // 普通車：每 12 分鐘，06:00–23:00 從終點站出發
+  for (let t = 360; t <= 1380; t += 12) {
+    const arr = dir === 1 ? t + off : t + (_TT_MAX - off);
+    if (arr >= 360 && arr <= 1440) list.push({ type: 2, mins: arr });
+  }
+  // 直達車：只停 A1/A12/A13/A17/A18，每 18 分鐘，06:10 出發
+  if (_EXP_OFF[stId] !== undefined) {
+    for (let t = 370; t <= 1366; t += 18) {
+      const arr = dir === 1
+        ? t + _EXP_OFF[stId]
+        : t + (_EXP_OFF_REV[stId] || 0);
+      if (arr >= 360 && arr <= 1440) list.push({ type: 1, mins: arr });
+    }
+  }
+  list.sort((a, b) => a.mins - b.mins || a.type - b.type);
+  return list;
+}
+
+function _minsToHHMM(m) {
+  return `${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+}
+
+function renderTimetable() {
+  const st      = STATIONS.find(s => s.id === ttStation) || STATIONS[0];
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+
+  let trains;
+  if (ttData) {
+    trains = ttData
+      .filter(t => t.StationID === ttStation && t.Direction === direction)
+      .map(t => {
+        const ts = (t.DepartureTime || t.ArrivalTime || '').slice(0,5);
+        const [hh, mm] = ts.split(':').map(Number);
+        return { type: t.TrainType === 1 ? 1 : 2, mins: hh*60+(mm||0), ts };
+      })
+      .filter(t => !isNaN(t.mins))
+      .sort((a, b) => a.mins - b.mins);
+  } else {
+    trains = _genDemo(ttStation, direction)
+      .map(t => ({ ...t, ts: _minsToHHMM(t.mins) }));
+  }
+
+  // de-dupe
+  const seen = new Set();
+  trains = trains.filter(t => {
+    const k = `${t.type}-${t.mins}`;
+    return seen.has(k) ? false : (seen.add(k), true);
+  });
+
+  const upIdx = trains.findIndex(t => t.mins >= nowMins - 1);
+  const displayed = (!ttShowAll && upIdx > 1) ? trains.slice(upIdx - 1) : trains;
+
+  // ── Station picker ──
+  const picker = `<div class="station-picker" id="stPicker">${
+    STATIONS.map(s =>
+      `<button class="st-chip${s.id===ttStation?' active':''}" onclick="pickStation('${s.id}')">${s.name}</button>`
+    ).join('')
+  }</div>`;
+
+  // ── Header ──
+  const dirLabel = direction === 0 ? '往台北' : '往機場/環北';
+  const src      = ttData ? 'TDX' : 'Demo';
+  const header   = `<div class="tt-header">
+    <div class="tt-station-title">${st.name}</div>
+    <div class="tt-subtitle">${dirLabel} · ${src} · 今日班次</div>
+  </div>`;
+
+  // ── Rows ──
+  let rows = '<div class="tt-list">';
+  if (displayed.length === 0) {
+    rows += '<div class="tt-empty">此站無班次資料</div>';
+  } else {
+    for (const t of displayed) {
+      const diff    = t.mins - nowMins;
+      const isPast  = diff < -1;
+      const isNow   = !isPast && diff <= 3;
+      const isSoon  = !isPast && !isNow && diff <= 15;
+      const tcls    = isPast ? '' : isNow ? 'now' : isSoon ? 'soon' : '';
+      const cntTxt  = isPast ? '' : diff <= 0 ? '即將到站' : `${diff} 分後`;
+      const cntCls  = isNow ? 'now' : isSoon ? 'soon' : '';
+      const typeLbl = t.type === 1 ? '直達' : '普通';
+      const typeCls = t.type === 1 ? 'express' : 'local';
+      rows += `<div class="tt-row${isPast?' past':''}">
+        <span class="tt-type ${typeCls}">${typeLbl}</span>
+        <span class="tt-time ${tcls}">${t.ts}</span>
+        <span class="tt-countdown ${cntCls}">${cntTxt}</span>
+      </div>`;
+    }
+  }
+  rows += '</div>';
+
+  const showAllBtn = (!ttShowAll && upIdx > 1)
+    ? `<button class="tt-show-all" onclick="ttShowAll=true;renderTimetable()">顯示今日全部班次（共 ${trains.length} 班）</button>`
+    : '';
+
+  document.getElementById('tt-wrap').innerHTML = picker + header + rows + showAllBtn;
+
+  const chip = document.querySelector('#stPicker .active');
+  if (chip) chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+function pickStation(id) {
+  ttStation = id;
+  ttShowAll = false;
+  renderTimetable();
 }
 
 document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });

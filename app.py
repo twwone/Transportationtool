@@ -271,6 +271,38 @@ def mrt_liveboard():
     return jsonify(result)
 
 
+_timetable_cache: dict = {"data": None, "expires_at": 0.0}
+_timetable_lock = threading.Lock()
+
+def _get_mrt_timetable(token: str):
+    with _timetable_lock:
+        if _timetable_cache["data"] is not None and time.time() < _timetable_cache["expires_at"]:
+            return _timetable_cache["data"]
+    try:
+        resp = _requests.get(
+            "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/StationTimeTable/TYMC",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            params={"$format": "JSON"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        raw  = resp.json()
+        data = raw if isinstance(raw, list) else raw.get("data", [])
+        with _timetable_lock:
+            _timetable_cache["data"] = data
+            _timetable_cache["expires_at"] = time.time() + 3600
+        return data
+    except Exception:
+        with _timetable_lock:
+            return _timetable_cache.get("data") or []
+
+@app.route("/api/mrt/timetable")
+def mrt_timetable_api():
+    token = _get_tdx_token()
+    if not token:
+        return jsonify({"configured": False, "data": []})
+    data = _get_mrt_timetable(token)
+    return jsonify({"configured": True, "data": data})
 
 
 # ──────────────────────────────────────────────
