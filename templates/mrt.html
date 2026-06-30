@@ -798,24 +798,44 @@ function _minsToHHMM(m) {
   return `${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
 }
 
+function _parseTDXTrains(stationId, dir) {
+  if (!ttData) return [];
+  return ttData
+    .filter(t => t.StationID === stationId && t.Direction === dir)
+    .map(t => {
+      // TDX 可能用不同欄位名稱
+      const raw = t.DepartureTime || t.ArrivalTime ||
+                  t.ScheduledDepartureTime || t.ScheduledArrivalTime ||
+                  t.ScheduleArrivalTime || t.ScheduleDepartureTime || '';
+      const ts = String(raw).slice(0, 5);
+      if (!ts || !ts.includes(':')) return null;
+      const [hh, mm] = ts.split(':').map(Number);
+      if (isNaN(hh) || isNaN(mm)) return null;
+      const type = (t.TrainType === 1 || t.TrainTypeName?.Zh_tw?.includes('直達')) ? 1 : 2;
+      return { type, mins: hh * 60 + mm, ts };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.mins - b.mins);
+}
+
 function renderTimetable() {
   const st      = STATIONS.find(s => s.id === ttStation) || STATIONS[0];
   const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
 
   let trains;
+  let dataSrc = 'Demo';
+
   if (ttData) {
-    trains = ttData
-      .filter(t => t.StationID === ttStation && t.Direction === direction)
-      .map(t => {
-        const ts = (t.DepartureTime || t.ArrivalTime || '').slice(0,5);
-        const [hh, mm] = ts.split(':').map(Number);
-        return { type: t.TrainType === 1 ? 1 : 2, mins: hh*60+(mm||0), ts };
-      })
-      .filter(t => !isNaN(t.mins))
-      .sort((a, b) => a.mins - b.mins);
+    const tdxTrains = _parseTDXTrains(ttStation, direction)
+      .filter(t => t.mins >= 300); // 排除 00:00–05:00 的異常資料
+    if (tdxTrains.length >= 5) {  // 至少要有 5 班才算可信的完整時刻表
+      trains  = tdxTrains;
+      dataSrc = 'TDX';
+    } else {
+      trains = _genDemo(ttStation, direction).map(t => ({ ...t, ts: _minsToHHMM(t.mins) }));
+    }
   } else {
-    trains = _genDemo(ttStation, direction)
-      .map(t => ({ ...t, ts: _minsToHHMM(t.mins) }));
+    trains = _genDemo(ttStation, direction).map(t => ({ ...t, ts: _minsToHHMM(t.mins) }));
   }
 
   // de-dupe
@@ -837,10 +857,9 @@ function renderTimetable() {
 
   // ── Header ──
   const dirLabel = direction === 0 ? '往台北' : '往機場/環北';
-  const src      = ttData ? 'TDX' : 'Demo';
   const header   = `<div class="tt-header">
     <div class="tt-station-title">${st.name}</div>
-    <div class="tt-subtitle">${dirLabel} · ${src} · 今日班次</div>
+    <div class="tt-subtitle">${dirLabel} · ${dataSrc} · 今日班次</div>
   </div>`;
 
   // ── Rows ──
