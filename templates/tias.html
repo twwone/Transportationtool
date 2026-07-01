@@ -133,10 +133,7 @@ body {
 /* ── List ── */
 .list { padding: 8px 12px 0; }
 
-/* ── 面板過場：JS 操控的 inline style，預設讓 CSS 繼承 ── */
-#listArr, #listDep, #panelAll {
-  will-change: opacity, transform;
-}
+/* 面板過場 will-change 由 JS 動態控制，不在 CSS 靜態宣告 */
 
 /* ── 卡片入場動畫 ── */
 .card-anim {
@@ -158,7 +155,6 @@ body {
     background   0.2s,
     transform    0.25s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow   0.25s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
 }
 @media (hover: hover) {
   .card:not(.card-done):hover {
@@ -1010,16 +1006,25 @@ function switchTab(tab) {
   );
   updateTabIndicator(tab);
 
-  /* 舊面板淡出 + 位移 */
+  /* 舊面板淡出 + 位移（動畫前短暫開啟 will-change） */
+  outPanel.style.willChange = 'opacity, transform';
+  inPanel.style.willChange  = 'opacity, transform';
   outPanel.style.transition = 'opacity 0.16s ease-in, transform 0.16s ease-in';
   outPanel.style.opacity    = '0';
   outPanel.style.transform  = `translateX(${outX})`;
 
   setTimeout(() => {
     outPanel.style.display    = 'none';
+    outPanel.style.willChange = '';
     outPanel.style.transition = '';
     outPanel.style.opacity    = '';
     outPanel.style.transform  = '';
+
+    /* 離開「全部航班」時立刻清空 DOM，釋放 iOS Safari GPU 記憶體 */
+    if (_tab === 'all') {
+      document.getElementById('allResults').innerHTML  = '';
+      document.getElementById('searchCount').textContent = '';
+    }
 
     /* 新面板從對側滑入 */
     inPanel.style.opacity   = '0';
@@ -1034,6 +1039,7 @@ function switchTab(tab) {
         inPanel.style.transition = '';
         inPanel.style.opacity    = '';
         inPanel.style.transform  = '';
+        inPanel.style.willChange = '';
       }, 320);
     }));
 
