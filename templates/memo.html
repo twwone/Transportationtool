@@ -72,17 +72,12 @@ body {
   margin-top: 10px;
   line-height: 1.2;
 }
-.header-rule {
-  height: 1px;
-  background: var(--border);
-  margin-top: 16px;
-}
+.header-rule { height: 1px; background: var(--border); margin-top: 16px; }
 
 /* ── Tabs ── */
 .tabs {
   display: flex;
   padding: 0 24px;
-  gap: 0;
   border-bottom: 1px solid var(--rule);
 }
 .tab {
@@ -120,7 +115,6 @@ body {
   padding: 8px 0 130px;
   -webkit-overflow-scrolling: touch;
 }
-
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -146,13 +140,11 @@ body {
   padding: 14px 24px;
   border-bottom: 1px solid var(--rule);
   animation: itemIn 0.25s ease both;
-  transition: background 0.15s;
 }
 .item:first-child { border-top: 1px solid var(--rule); }
 .item.done { opacity: 0.4; }
 .item.done .item-text { text-decoration: line-through; text-decoration-color: var(--sub); }
 
-/* Checkbox */
 .checkbox {
   width: 18px; height: 18px;
   flex-shrink: 0;
@@ -168,12 +160,16 @@ body {
   margin-top: 2px;
   border-radius: 2px;
 }
-.checkbox.checked {
-  border-color: var(--accent);
-  background: var(--accent-2);
-}
+.checkbox.checked { border-color: var(--accent); background: var(--accent-2); }
 
-.item-body { flex: 1; min-width: 0; }
+/* 點擊整個 item-body 進入詳情 */
+.item-body {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.item-body:active { opacity: 0.6; }
 .item-text {
   font-size: 0.92rem;
   line-height: 1.55;
@@ -188,6 +184,15 @@ body {
   line-height: 1.5;
   word-break: break-word;
   font-style: italic;
+}
+/* 有備註的條目顯示小標記 */
+.item-note-hint {
+  display: inline-block;
+  font-size: 0.66rem;
+  color: var(--accent);
+  margin-top: 3px;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
 }
 
 .del-btn {
@@ -235,7 +240,6 @@ body {
 .add-input:focus { border-bottom-color: var(--accent); }
 .add-input::placeholder { color: var(--sub); font-style: italic; }
 .add-note { font-size: 0.8rem; }
-
 .add-btn {
   padding: 8px 18px;
   border-radius: 2px;
@@ -255,6 +259,118 @@ body {
 }
 .add-btn:active { transform: scale(0.94); }
 .add-btn:disabled { opacity: 0.3; }
+
+/* ── Detail Sheet ── */
+.sheet-overlay {
+  position: fixed; inset: 0;
+  background: transparent;
+  z-index: 100;
+  pointer-events: none;
+  transition: background 0.3s ease;
+}
+.sheet-overlay.open {
+  background: rgba(30, 20, 10, 0.35);
+  pointer-events: auto;
+}
+
+.detail-sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+  z-index: 101;
+  transform: translateY(100%);
+  transition: transform 0.38s cubic-bezier(0.25,1,0.5,1);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.detail-sheet.open { transform: translateY(0); }
+
+.sh-handle {
+  width: 32px; height: 3px;
+  background: var(--border);
+  border-radius: 100px;
+  margin: 12px auto 0;
+}
+.sh-title {
+  font-family: Georgia, "Noto Serif TC", serif;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--sub);
+  padding: 16px 24px 4px;
+  letter-spacing: 0.04em;
+}
+.sh-field {
+  padding: 0 24px 16px;
+}
+.sh-label {
+  font-size: 0.68rem;
+  color: var(--sub);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.sh-textarea {
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-bottom: 1.5px solid var(--border);
+  background: transparent;
+  font-size: 0.95rem;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  resize: none;
+  line-height: 1.6;
+  -webkit-appearance: none;
+  transition: border-color 0.2s;
+  display: block;
+  overflow: hidden;
+}
+.sh-textarea:focus { border-bottom-color: var(--accent); }
+.sh-textarea::placeholder { color: var(--sub); font-style: italic; }
+.sh-note-area { font-size: 0.85rem; min-height: 36px; }
+
+.sh-divider { height: 1px; background: var(--rule); margin: 0 24px 16px; }
+
+.sh-actions {
+  display: flex;
+  gap: 10px;
+  padding: 4px 24px 0;
+}
+.sh-cancel {
+  flex: 1;
+  padding: 11px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  border-radius: 2px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  color: var(--sub);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s;
+}
+.sh-cancel:active { color: var(--text); }
+.sh-save {
+  flex: 2;
+  padding: 11px;
+  background: var(--accent);
+  border: none;
+  border-radius: 2px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-family: inherit;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.sh-save:active { transform: scale(0.97); }
 </style>
 </head>
 <body>
@@ -280,23 +396,56 @@ body {
     <input class="add-input add-note" id="addNote" placeholder="備註" autocomplete="off"
            style="display:none" onkeydown="if(event.key==='Enter')addItem()">
   </div>
-  <button class="add-btn" id="addBtn" onclick="addItem()">記下</button>
+  <button class="add-btn" onclick="addItem()">記下</button>
+</div>
+
+<!-- Detail Sheet -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeDetail()"></div>
+<div class="detail-sheet" id="detailSheet">
+  <div class="sh-handle"></div>
+  <div class="sh-title" id="shTitle">編輯</div>
+
+  <div class="sh-field">
+    <div class="sh-label">內容</div>
+    <textarea class="sh-textarea" id="detailText" rows="2"
+              placeholder="寫下來…"
+              oninput="autoResize(this)"></textarea>
+  </div>
+
+  <div class="sh-divider"></div>
+
+  <div class="sh-field">
+    <div class="sh-label">備註</div>
+    <textarea class="sh-textarea sh-note-area" id="detailNote" rows="2"
+              placeholder="補充說明、細節…"
+              oninput="autoResize(this)"></textarea>
+  </div>
+
+  <div class="sh-actions">
+    <button class="sh-cancel" onclick="closeDetail()">取消</button>
+    <button class="sh-save"   onclick="saveDetail()">儲存</button>
+  </div>
 </div>
 
 <script>
 let _data = { todos: [], likes: [], dates: [] };
 let _tab  = 'todos';
 let _saveTimer = null;
+let _editingId = null;
 
 const _CFG = {
-  todos: { placeholder: '今天要做的事…',     empty: '一切從空白開始' },
-  likes: { placeholder: '她喜歡的東西…',     empty: '慢慢記，慢慢了解她' },
-  dates: { placeholder: '想去的地方或活動…', empty: '還沒有計畫' },
+  todos: { placeholder: '今天要做的事…',     empty: '一切從空白開始',     shTitle: '編輯待辦' },
+  likes: { placeholder: '她喜歡的東西…',     empty: '慢慢記，慢慢了解她', shTitle: '編輯喜好' },
+  dates: { placeholder: '想去的地方或活動…', empty: '還沒有計畫',         shTitle: '編輯計畫' },
 };
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
 }
 
 async function load() {
@@ -345,10 +494,10 @@ function render() {
       : '';
     const noteHtml = item.note
       ? `<div class="item-note">${esc(item.note)}</div>`
-      : '';
+      : `<div class="item-note-hint">點擊新增備註</div>`;
     return `<div class="item ${_tab==='todos'&&item.done?'done':''}" id="item-${item.id}">
       ${cbHtml}
-      <div class="item-body">
+      <div class="item-body" onclick="openDetail('${item.id}')">
         <div class="item-text">${esc(item.text)}</div>
         ${noteHtml}
       </div>
@@ -357,8 +506,48 @@ function render() {
   }).join('');
 }
 
+/* ── Detail Sheet ── */
+function openDetail(id) {
+  const item = (_data[_tab] || []).find(x => x.id === id);
+  if (!item) return;
+  _editingId = id;
+
+  document.getElementById('shTitle').textContent  = _CFG[_tab].shTitle;
+  const textEl = document.getElementById('detailText');
+  const noteEl = document.getElementById('detailNote');
+  textEl.value = item.text || '';
+  noteEl.value = item.note || '';
+  setTimeout(() => { autoResize(textEl); autoResize(noteEl); }, 10);
+
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('detailSheet').classList.add('open');
+  setTimeout(() => textEl.focus(), 350);
+}
+
+function closeDetail() {
+  _editingId = null;
+  document.getElementById('sheetOverlay').classList.remove('open');
+  document.getElementById('detailSheet').classList.remove('open');
+}
+
+function saveDetail() {
+  if (!_editingId) return;
+  const item = (_data[_tab] || []).find(x => x.id === _editingId);
+  if (!item) return;
+  const text = document.getElementById('detailText').value.trim();
+  if (!text) return;
+  item.text = text;
+  const note = document.getElementById('detailNote').value.trim();
+  if (note) item.note = note;
+  else delete item.note;
+  render();
+  scheduleSave();
+  closeDetail();
+}
+
+/* ── 其他操作 ── */
 function toggleDone(id) {
-  const item = _data.todos.find(x => x.id === id);
+  const item = (_data.todos || []).find(x => x.id === id);
   if (!item) return;
   item.done = !item.done;
   render();
