@@ -676,16 +676,18 @@ function renderWatchTabs() {
   depEl.innerHTML = _buildListWithNow(_depData, 'dep', '🛫', '目前監控的航空公司無出發班機');
   if (_depData.length && _initialLoad) staggerCards(depEl);
 
-  /* 自動捲動到目前 tab 的 now 分隔線 */
-  setTimeout(() => {
-    const divId = _tab === 'dep' ? 'nowDivider-dep' : 'nowDivider-arr';
-    const el = document.getElementById(divId);
-    if (!el) return;
-    try {
-      const top = el.getBoundingClientRect().top + window.pageYOffset - 60;
-      window.scrollTo({ top: Math.max(0, top) });
-    } catch (_) { el.scrollIntoView(); }
-  }, 200);
+  /* 只在初次載入時自動捲動到「現在」分隔線，避免 30 秒輪詢把使用者強制捲回 */
+  if (_initialLoad) {
+    setTimeout(() => {
+      const divId = _tab === 'dep' ? 'nowDivider-dep' : 'nowDivider-arr';
+      const el = document.getElementById(divId);
+      if (!el) return;
+      try {
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 60;
+        window.scrollTo({ top: Math.max(0, top) });
+      } catch (_) { el.scrollIntoView(); }
+    }, 200);
+  }
 }
 
 /* ── 選擇器 ── */

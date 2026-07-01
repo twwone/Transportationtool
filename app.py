@@ -408,14 +408,31 @@ def _fetch_metadata() -> tuple[dict, dict]:
         _meta_cache["expires_at"] = time.time() + (_META_TTL if both_ok else 300)
         return _meta_cache["airlines"], _meta_cache["airports"]
 
+_TIAS_REDIS_TTL = 120  # Vercel 冷啟動時從 Redis 撈快取，最多 2 分鐘舊
+
 def _fetch_tias():
-    """命中 30 秒快取就直接回傳，否則重打 TDX FIDS 並更新快取。
-    入港/出港改為平行請求，最差只等 1 次 timeout 而非 2 次。
+    """命中 30 秒 in-memory 快取就直接回傳，否則先試 Redis（跨 Vercel instance），
+    再打 TDX FIDS。入港/出港平行請求，最差只等 1 次 timeout 而非 2 次。
     任一方向 API 失敗時保留舊快取，避免回傳空資料覆蓋正常資料。"""
     with _tias_lock:
         if _tias_cache["arr"] is not None and time.time() < _tias_cache["expires_at"]:
             return _tias_cache["arr"], _tias_cache["dep"], True
         stale = (_tias_cache.get("arr"), _tias_cache.get("dep"))
+
+    # ── Vercel 冷啟動：先試 Redis 快取（其他 instance 2 分鐘內存進去的）──
+    try:
+        r_arr = _redis_get("tias:arr")
+        r_dep = _redis_get("tias:dep")
+        if r_arr and r_dep:
+            arr = _json.loads(r_arr)
+            dep = _json.loads(r_dep)
+            with _tias_lock:
+                _tias_cache["arr"] = arr
+                _tias_cache["dep"] = dep
+                _tias_cache["expires_at"] = time.time() + _TIAS_TTL
+            return arr, dep, True
+    except Exception:
+        pass
 
     token = _get_tdx_token()
     if not token:
@@ -457,7 +474,6 @@ def _fetch_tias():
     # 任一方向失敗：優先用剛拿到的成功資料 + 舊快取補另一邊
     if not arr_ok or not dep_ok:
         if stale[0] is not None:
-            # 哪邊失敗就用舊快取那邊補回
             final_arr = arr if arr_ok else stale[0]
             final_dep = dep if dep_ok else stale[1]
             with _tias_lock:
@@ -465,7 +481,6 @@ def _fetch_tias():
                 _tias_cache["dep"] = final_dep
                 _tias_cache["expires_at"] = time.time() + _TIAS_TTL
             return final_arr, final_dep, True
-        # 完全沒舊資料：回傳已成功那一邊，讓前端至少能顯示部分資料
         if arr_ok or dep_ok:
             return arr, dep, True
         return None, None, False
@@ -474,6 +489,13 @@ def _fetch_tias():
         _tias_cache["arr"] = arr
         _tias_cache["dep"] = dep
         _tias_cache["expires_at"] = time.time() + _TIAS_TTL
+
+    # ── 同步寫 Redis，讓冷啟動的 instance 2 分鐘內不需重打 TDX ──
+    try:
+        _redis_set("tias:arr", _json.dumps(arr, ensure_ascii=False), _TIAS_REDIS_TTL)
+        _redis_set("tias:dep", _json.dumps(dep, ensure_ascii=False), _TIAS_REDIS_TTL)
+    except Exception:
+        pass
 
     return arr, dep, True
 
