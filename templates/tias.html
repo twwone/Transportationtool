@@ -1149,7 +1149,6 @@ function renderAllByTime() {
   const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const total  = _allArr.length + _allDep.length;
 
-  /* 照桃園機場官網做法：全部班機按 STD 升冪，無時間窗口限制 */
   const allSorted = [
     ..._allArr.map(f => ({ ...f, _dir: 'arr' })),
     ..._allDep.map(f => ({ ...f, _dir: 'dep' })),
@@ -1159,7 +1158,18 @@ function renderAllByTime() {
     return ta.localeCompare(tb);
   });
 
-  countEl.textContent = `全天 ${allSorted.length} 班次`;
+  /* iOS Safari 記憶體限制：限制同時渲染的卡片數，只顯示 -3h ～ +12h 時間窗口
+     搜尋功能仍搜全部（_allArr/_allDep），不受此過濾影響 */
+  const winStart = now.getTime() - 3  * 3600 * 1000;
+  const winEnd   = now.getTime() + 12 * 3600 * 1000;
+  const windowed = allSorted.filter(f => {
+    const iso = (f._dir === 'arr' ? f.ScheduleArrivalTime : f.ScheduleDepartureTime) || '';
+    if (!iso) return false;
+    const ms = new Date(iso).getTime();
+    return ms >= winStart && ms <= winEnd;
+  });
+
+  countEl.textContent = `${windowed.length} 班次（前後 12h）`;
 
   const nowDividerHtml = `<div class="now-divider" id="nowDivider">
     <span class="now-line"></span>
@@ -1170,7 +1180,7 @@ function renderAllByTime() {
   let html = '';
   let nowInserted = false;
 
-  for (const f of allSorted) {
+  for (const f of windowed) {
     const schIso = (f._dir === 'arr' ? f.ScheduleArrivalTime : f.ScheduleDepartureTime) || '';
     if (!nowInserted && schIso && new Date(schIso) > now) {
       html += nowDividerHtml;
