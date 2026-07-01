@@ -12,7 +12,6 @@
 <meta name="apple-mobile-web-app-title" content="交通助理">
 <meta name="theme-color" content="#f0f4ff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
@@ -983,6 +982,7 @@ body {
   </div>
 </div>
 
+<script src="/static/config.js"></script>
 <script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
@@ -1212,13 +1212,20 @@ function _saveOrder() {
 
 /* ── 初始載入 ── */
 (async () => {
+  // 先用 localStorage 快取立即渲染，消除空白等待
+  const cached = localStorage.getItem('card_order_cache');
+  try { renderBento(cached ? JSON.parse(cached) : DEFAULT_ORDER); }
+  catch { renderBento(DEFAULT_ORDER); }
+
+  // 背景同步伺服器順序
   try {
     const r = await fetch('/api/card-order');
     const d = await r.json();
-    renderBento(d.order || DEFAULT_ORDER);
-  } catch {
-    renderBento(DEFAULT_ORDER);
-  }
+    const order = d.order || DEFAULT_ORDER;
+    localStorage.setItem('card_order_cache', JSON.stringify(order));
+    if (JSON.stringify(order) !== JSON.stringify(cardOrder))
+      renderBento(order);
+  } catch {}
 })();
 
 /* ── bfcache 恢復 ── */
