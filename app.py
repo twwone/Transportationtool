@@ -1973,7 +1973,7 @@ def _valid_sync_id(sid: str) -> bool:
 # ──────────────────────────────────────────────
 #  主頁卡片排序
 # ──────────────────────────────────────────────
-_DEFAULT_CARD_ORDER = ["tias", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "diet"]
+_DEFAULT_CARD_ORDER = ["tias", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "diet", "memo"]
 _VALID_CARD_IDS     = set(_DEFAULT_CARD_ORDER)
 
 
@@ -1995,6 +1995,37 @@ def card_order_set():
         return jsonify({"error": "invalid"}), 400
     order = [x for x in order if x in _VALID_CARD_IDS]
     _kv_set("home:card_order", order)
+    return jsonify({"ok": True})
+
+
+# ──────────────────────────────────────────────
+#  備忘錄
+# ──────────────────────────────────────────────
+_MEMO_KEY = "memo:main"
+
+@app.route("/memo")
+def memo_page():
+    return render_template("memo.html")
+
+@app.route("/api/memo", methods=["GET"])
+def memo_get():
+    data = _kv_get(_MEMO_KEY)
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("todos", [])
+    data.setdefault("likes", [])
+    data.setdefault("dates", [])
+    return jsonify(data)
+
+@app.route("/api/memo", methods=["POST"])
+def memo_save():
+    body = request.get_json(silent=True) or {}
+    data = {
+        "todos": body.get("todos", []) if isinstance(body.get("todos"), list) else [],
+        "likes": body.get("likes", []) if isinstance(body.get("likes"), list) else [],
+        "dates": body.get("dates", []) if isinstance(body.get("dates"), list) else [],
+    }
+    _kv_set(_MEMO_KEY, data)
     return jsonify({"ok": True})
 
 
