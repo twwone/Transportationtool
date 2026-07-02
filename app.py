@@ -2637,48 +2637,68 @@ def flight_live_api():
                 except Exception as ge:
                     _dbg.append(f"fr24_gf_err:{type(ge).__name__}")
 
-            # Fallback: search() + get_flight_details() for trail position
+            # Fallback: search() — result is a dict with "detail" sub-dict containing lat/lon
             if not data:
                 results = fr.search(callsign)
                 live    = (results.get("live") if isinstance(results, dict) else results) or []
                 _dbg.append(f"fr24_search:{len(live)}")
                 if live:
-                    fl = live[0]
-                    # Try get_flight_details → trail[0] has real position
-                    try:
-                        details = fr.get_flight_details(fl)
-                        trail   = details.get("trail") or []
-                        _dbg.append(f"fr24_trail:{len(trail)}")
-                        if trail:
-                            pt  = trail[0]
-                            lat = pt.get("lat")
-                            lon = pt.get("lng") or pt.get("lon")
-                            _dbg.append(f"fr24_trail_pos:{lat},{lon}")
-                            if lat is not None and lon is not None:
-                                ac      = details.get("aircraft") or {}
-                                status  = details.get("status") or {}
-                                spd_raw = pt.get("spd")
-                                alt_raw = pt.get("alt")
-                                data = {
-                                    "found":         True,
-                                    "source":        "fr24_trail",
-                                    "lat":           lat, "lon": lon,
-                                    "altitude_ft":   alt_raw,
-                                    "heading":       pt.get("hd"),
-                                    "ground_speed":  spd_raw,
-                                    "vertical_speed":None,
-                                    "on_ground":     bool(status.get("live", {}).get("isGlider", False)),
-                                    "registration":  ac.get("registration", ""),
-                                    "aircraft_code": (ac.get("model") or {}).get("code", ""),
-                                    "callsign":      callsign,
-                                }
-                    except Exception as de:
-                        _dbg.append(f"fr24_detail_err:{type(de).__name__}")
-                    # Last resort: direct attributes (usually null)
+                    fl     = live[0]
+                    _is_d  = isinstance(fl, dict)
+                    detail = fl.get("detail", {}) if _is_d else {}
+
+                    # Path A: position is inside detail dict (most common for search results)
+                    lat = detail.get("lat") or detail.get("latitude")
+                    lon = detail.get("lon") or detail.get("lng") or detail.get("longitude")
+                    _dbg.append(f"fr24_det:{lat},{lon}")
+                    if lat is not None and lon is not None:
+                        data = {
+                            "found":         True,
+                            "source":        "fr24_det",
+                            "lat":           lat, "lon": lon,
+                            "altitude_ft":   detail.get("alt") or detail.get("altitude"),
+                            "heading":       detail.get("course") or detail.get("heading"),
+                            "ground_speed":  detail.get("speed") or detail.get("ground_speed"),
+                            "vertical_speed":None,
+                            "on_ground":     bool(detail.get("on_ground", False)),
+                            "registration":  detail.get("reg", ""),
+                            "aircraft_code": detail.get("type", ""),
+                            "callsign":      detail.get("callsign", callsign),
+                        }
+
+                    # Path B: no detail coords → try get_flight_details() via mock id
                     if not data:
-                        d = _fl_to_data(fl, "fr24_s")
-                        _dbg.append(f"fr24_s_pos:{d['lat'] if d else 'null'},{d['lon'] if d else 'null'}")
-                        data = d
+                        fl_id = fl.get("id") if _is_d else getattr(fl, "id", None)
+                        _dbg.append(f"fr24_id:{fl_id}")
+                        if fl_id:
+                            try:
+                                class _FId:
+                                    def __init__(self, fid): self.id = fid
+                                fdet  = fr.get_flight_details(_FId(fl_id))
+                                trail = fdet.get("trail") or []
+                                _dbg.append(f"fr24_trail:{len(trail)}")
+                                if trail:
+                                    pt  = trail[0]
+                                    lat = pt.get("lat")
+                                    lon = pt.get("lng") or pt.get("lon")
+                                    _dbg.append(f"fr24_trail_pos:{lat},{lon}")
+                                    if lat is not None and lon is not None:
+                                        ac = fdet.get("aircraft") or {}
+                                        data = {
+                                            "found":         True,
+                                            "source":        "fr24_trail",
+                                            "lat":           lat, "lon": lon,
+                                            "altitude_ft":   pt.get("alt"),
+                                            "heading":       pt.get("hd"),
+                                            "ground_speed":  pt.get("spd"),
+                                            "vertical_speed":None,
+                                            "on_ground":     False,
+                                            "registration":  ac.get("registration", ""),
+                                            "aircraft_code": (ac.get("model") or {}).get("code", ""),
+                                            "callsign":      callsign,
+                                        }
+                            except Exception as de:
+                                _dbg.append(f"fr24_det_err:{type(de).__name__}")
 
         except Exception as e:
             _dbg.append(f"fr24_err:{type(e).__name__}")
