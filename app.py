@@ -2591,30 +2591,62 @@ def flight_live_api():
         except Exception as e:
             _dbg.append(f"opensky_err:{type(e).__name__}")
 
-    # ── 3. FlightRadarAPI — unofficial, IATA callsign ──
+    # ── 3. FlightRadarAPI — unofficial ──
     if not data:
         try:
             from FlightRadarAPI import FlightRadar24API
-            fr      = FlightRadar24API()
-            results = fr.search(callsign)
-            live    = (results.get("live") if isinstance(results, dict) else results) or []
-            _dbg.append(f"fr24_live:{len(live)}")
-            if live:
-                fl   = live[0]
-                data = {
-                    "found":         True,
-                    "source":        "fr24",
-                    "callsign":      getattr(fl, "callsign",       callsign),
-                    "lat":           getattr(fl, "latitude",       None),
-                    "lon":           getattr(fl, "longitude",      None),
-                    "altitude_ft":   getattr(fl, "altitude",       None),
-                    "heading":       getattr(fl, "heading",        None),
-                    "ground_speed":  getattr(fl, "ground_speed",   None),
-                    "vertical_speed":getattr(fl, "vertical_speed", None),
-                    "on_ground":     bool(getattr(fl, "on_ground", False)),
-                    "registration":  getattr(fl, "registration",  ""),
-                    "aircraft_code": getattr(fl, "aircraft_code", ""),
-                }
+            fr = FlightRadar24API()
+
+            def _fl_to_data(fl, src):
+                _is_d = isinstance(fl, dict)
+                _g    = lambda k, d=None: (fl.get(k, d) if _is_d else getattr(fl, k, d))
+                lat   = _g("latitude")
+                lon   = _g("longitude")
+                return {
+                    "found": True, "source": src,
+                    "lat": lat, "lon": lon,
+                    "callsign":      _g("callsign",      callsign),
+                    "altitude_ft":   _g("altitude"),
+                    "heading":       _g("heading"),
+                    "ground_speed":  _g("ground_speed"),
+                    "vertical_speed":_g("vertical_speed"),
+                    "on_ground":     bool(_g("on_ground", False)),
+                    "registration":  _g("registration",  ""),
+                    "aircraft_code": _g("aircraft_code", ""),
+                } if (lat is not None and lon is not None) else None
+
+            # Primary: get_flights by ICAO airline prefix → real-time positions
+            prefix_m = _re.match(r'^([A-Z]{2,3})\d', icao_cs)
+            if prefix_m:
+                icao_pfx = prefix_m.group(1)
+                try:
+                    flights = fr.get_flights(airline=icao_pfx)
+                    _dbg.append(f"fr24_total:{len(flights)}")
+                    target = icao_cs.upper()
+                    fl = next(
+                        (f for f in flights
+                         if (getattr(f, "callsign", "") or "").strip().upper() == target),
+                        None
+                    )
+                    if fl:
+                        d = _fl_to_data(fl, "fr24_gf")
+                        _dbg.append(f"fr24_pos:{d['lat'] if d else 'null'},{d['lon'] if d else 'null'}")
+                        data = d
+                    else:
+                        _dbg.append("fr24_no_match")
+                except Exception as ge:
+                    _dbg.append(f"fr24_gf_err:{type(ge).__name__}")
+
+            # Fallback: search() — may not include coordinates, but worth trying
+            if not data:
+                results = fr.search(callsign)
+                live    = (results.get("live") if isinstance(results, dict) else results) or []
+                _dbg.append(f"fr24_search:{len(live)}")
+                if live:
+                    d = _fl_to_data(live[0], "fr24_s")
+                    _dbg.append(f"fr24_s_pos:{d['lat'] if d else 'null'},{d['lon'] if d else 'null'}")
+                    data = d
+
         except Exception as e:
             _dbg.append(f"fr24_err:{type(e).__name__}")
 
