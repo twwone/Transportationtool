@@ -478,10 +478,11 @@ body {
   box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
   transform: translateY(100%);
   transition: transform 0.32s cubic-bezier(0.22,1,0.36,1);
-  max-height: 88vh;
-  overflow-y: auto;
+  max-height: 90svh;
+  overflow-y: scroll;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 .flt-sheet.open { transform: translateY(0); }
 
@@ -511,7 +512,7 @@ body {
   background: #f0f4ff;
 }
 
-.flt-info-section { padding: 14px 16px 8px; }
+.flt-info-section { padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
 .flt-info-title {
   font-size: 0.7rem; font-weight: 700; color: #8e8e93;
   letter-spacing: 0.06em; text-transform: uppercase;
@@ -1083,10 +1084,27 @@ function renderCard(f, mode, showDirBadge) {
 }
 
 /* ── 航班詳細資訊：開啟 / 關閉 ── */
+let _sheetScrollY = 0;
+
+function _lockBodyScroll() {
+  _sheetScrollY = window.scrollY;
+  document.body.style.position  = 'fixed';
+  document.body.style.top       = `-${_sheetScrollY}px`;
+  document.body.style.width     = '100%';
+  document.body.style.overflow  = 'hidden';
+}
+function _unlockBodyScroll() {
+  document.body.style.position  = '';
+  document.body.style.top       = '';
+  document.body.style.width     = '';
+  document.body.style.overflow  = '';
+  window.scrollTo(0, _sheetScrollY);
+}
+
 function closeFlightSheet() {
   document.getElementById('fltOverlay').classList.remove('open');
   document.getElementById('fltSheet').classList.remove('open');
-  document.body.style.overflow = '';
+  _unlockBodyScroll();
   if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
 }
 
@@ -1098,7 +1116,10 @@ async function openFlightDetail(key) {
   const isArr  = mode === 'arr';
   const shares = f._codeshares || null;
   const fltNum = shares ? shares.map(c => c.FlightNumber).join(' / ') : (f.FlightNumber || '—');
-  const primaryNum = (shares ? shares[0].FlightNumber : f.FlightNumber || '').replace(/\s/g, '');
+  /* 組合完整 IATA 呼號，如 AK + 1510 → AK1510 */
+  const _primaryAirline = shares ? (shares[0].AirlineID || '') : (f.AirlineID || '');
+  const _primaryFltNum  = shares ? (shares[0].FlightNumber || '') : (f.FlightNumber || '');
+  const primaryNum = (_primaryAirline + _primaryFltNum).replace(/\s/g, '');
   const airline    = shares
     ? shares.map(c => (_airlineMap[c.AirlineID] || {}).zh || c.AirlineID).filter(Boolean).join(' / ')
     : ((_airlineMap[f.AirlineID] || {}).zh || f.AirlineID || '');
@@ -1146,7 +1167,13 @@ async function openFlightDetail(key) {
   /* 開啟 sheet */
   document.getElementById('fltOverlay').classList.add('open');
   document.getElementById('fltSheet').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  _lockBodyScroll();
+
+  /* 已有實際落地/起飛時間 → 不查即時（飛機已停） */
+  if (act) {
+    phEl.innerHTML = `<i class="bi bi-check-circle-fill" style="font-size:2rem;color:#22c55e"></i><div>${isArr ? '已落地' : '已起飛'}</div>`;
+    return;
+  }
 
   /* 取得即時位置 */
   try {
