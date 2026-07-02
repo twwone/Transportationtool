@@ -514,6 +514,7 @@ let liveData     = [];
 let starredId    = Config.getActive().mrt.starred || "";
 let refreshTick  = 30;
 let refreshTimer = null;
+let ttTimer      = null; // 時刻表每分鐘自動重繪 timer
 let _demoStart   = 0;
 
 function generateDemoData() {
@@ -748,6 +749,9 @@ function setMode(m) {
   _updateModePill();
   document.getElementById('content').style.display   = m === 'live' ? '' : 'none';
   document.getElementById('tt-wrap').style.display   = m === 'timetable' ? '' : 'none';
+  if (m === 'live') {
+    if (ttTimer) { clearInterval(ttTimer); ttTimer = null; }
+  }
   if (m === 'timetable') {
     if (HAS_TDX && !ttFetched) fetchTimetable();
     else renderTimetable();
@@ -896,6 +900,10 @@ function renderTimetable() {
 
   const chip = document.querySelector('#stPicker .active');
   if (chip) chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+  // 每分鐘重繪，確保 nowMins 隨真實時間前進
+  if (ttTimer) clearInterval(ttTimer);
+  ttTimer = setInterval(() => { if (mode === 'timetable') renderTimetable(); }, 60000);
 }
 
 function pickStation(id) {
