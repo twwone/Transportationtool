@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <title>熱量追蹤</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -561,13 +562,13 @@ body::before{
     <span class="budget-num" id="budgetNum">—</span>
     剩餘大卡
   </div>
-  <button class="settings-btn" onclick="openSettings()">⚙</button>
+  <button class="settings-btn" onclick="openSettings()"><i class="bi bi-gear-fill"></i></button>
 </div>
 
 <!-- Admin View Bar（管理員切換用戶） -->
 <div class="admin-view-bar" id="adminViewBar">
   <div class="admin-view-inner">
-    <span class="admin-view-label">👑 查看：</span>
+    <span class="admin-view-label"><i class="bi bi-shield-shaded"></i> 查看：</span>
     <div class="admin-user-chips" id="adminUserChips"></div>
   </div>
 </div>
@@ -590,11 +591,11 @@ body::before{
     <div class="camera-section" id="cameraSection">
       <div class="camera-btns">
         <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-          <button class="camera-btn" onclick="document.getElementById('fileInput').click()">📷</button>
+          <button class="camera-btn" onclick="document.getElementById('fileInput').click()"><i class="bi bi-camera-fill"></i></button>
           <span class="camera-hint-lbl">拍照</span>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-          <button class="gallery-btn" onclick="document.getElementById('galleryInput').click()">🖼</button>
+          <button class="gallery-btn" onclick="document.getElementById('galleryInput').click()"><i class="bi bi-images"></i></button>
           <span class="camera-hint-lbl">相簿</span>
         </div>
       </div>
@@ -610,7 +611,7 @@ body::before{
       <input class="hint-input" id="foodHint" type="text" maxlength="60"
              placeholder="選填：校正提示，如「地瓜（長得像杏鮑菇）」「大份」">
       <div style="width:100%;padding:0 4px;display:flex;gap:8px">
-        <button class="analyze-btn" style="flex:1" id="analyzeBtn" onclick="doAnalyze()">🔍 AI 辨識熱量</button>
+        <button class="analyze-btn" style="flex:1" id="analyzeBtn" onclick="doAnalyze()"><i class="bi bi-search"></i> AI 辨識熱量</button>
         <button class="analyze-btn" style="width:48px;background:rgba(255,255,255,.15)" onclick="resetCapture()">✕</button>
       </div>
     </div>
@@ -624,7 +625,7 @@ body::before{
 
   <!-- Error Card -->
   <div class="glass-card" id="errorCard" style="display:none;padding:20px 20px 16px">
-    <div id="errorIcon" style="font-size:2rem;margin-bottom:8px">⚠️</div>
+    <div id="errorIcon" style="font-size:2rem;margin-bottom:8px"><i class="bi bi-exclamation-triangle-fill"></i></div>
     <div id="errorMsg" style="font-size:.9rem;line-height:1.6;color:var(--text);margin-bottom:14px"></div>
     <div style="display:flex;gap:8px">
       <button onclick="resetCapture()" style="flex:1;padding:11px;border-radius:var(--radius-s);background:rgba(255,255,255,.1);border:none;color:var(--sub);font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit">重試</button>
@@ -722,7 +723,7 @@ body::before{
 
     <!-- Edit section -->
     <div class="edit-section">
-      <div class="edit-label">✏ 辨識有誤？可直接修改</div>
+      <div class="edit-label"><i class="bi bi-pencil-fill"></i> 辨識有誤？可直接修改</div>
       <div class="edit-row">
         <input class="edit-input" id="editFoodName" type="text" maxlength="100" placeholder="食物名稱">
         <input class="edit-input edit-cal" id="editCalories" type="number" min="0" max="99999" placeholder="大卡">
@@ -756,7 +757,7 @@ body::before{
 <!-- Settings Modal -->
 <div class="modal-overlay" id="settingsModal" onclick="handleOverlayClick(event)">
   <div class="modal-card">
-    <div class="modal-title">⚙ 設定</div>
+    <div class="modal-title"><i class="bi bi-gear-fill"></i> 設定</div>
     <div class="form-group">
       <label class="form-label">每日目標熱量（大卡）</label>
       <input class="form-input" type="number" id="setLimit" min="800" max="9999" placeholder="2500">
@@ -907,7 +908,7 @@ async function renderHistory(refetch) {
       const m = r.macros || {};
       return `
         <div class="record-item">
-          <span class="record-icon">🍽</span>
+          <span class="record-icon"><i class="bi bi-egg-fried"></i></span>
           <div class="record-info">
             <div class="record-name">${r.food_name}</div>
             <div class="record-macros">碳 ${m.carbs||0}g　蛋 ${m.protein||0}g　脂 ${m.fat||0}g</div>
@@ -1108,21 +1109,21 @@ function showError(errCode, status, detail) {
   const detailHtml = detail ? `<br><small style="opacity:.6;word-break:break-all">${detail}</small>` : '';
 
   if (errCode === 'quota_exceeded' || status === 429) {
-    icon.textContent = '🔑';
+    icon.innerHTML = '<i class="bi bi-key-fill"></i>';
     msg.innerHTML = '<strong>伺服器 API 配額已用盡</strong><br>需要您自己的免費金鑰才能繼續使用。<br><small style="opacity:.7">→ 前往 <strong>aistudio.google.com</strong>，點 Get API key → Create，貼入下方設定。</small>' + detailHtml;
     btn.style.display = 'block';
     // Auto-open settings so user can immediately enter their own key
     setTimeout(() => openSettings(), 600);
   } else if (errCode === 'user_quota_exceeded') {
-    icon.textContent = '🔑';
+    icon.innerHTML = '<i class="bi bi-key-fill"></i>';
     msg.innerHTML = '<strong>您的 API 金鑰配額已用盡</strong><br>請到 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:inherit">aistudio.google.com</a> 建立新專案並取得新金鑰，再到設定更新。' + detailHtml;
     btn.style.display = 'block';
   } else if (errCode === 'network' || status === 0) {
-    icon.textContent = '📡';
+    icon.innerHTML = '<i class="bi bi-broadcast-pin"></i>';
     msg.innerHTML = '<strong>網路連線問題</strong><br>請確認網路後再試一次。';
     btn.style.display = 'none';
   } else {
-    icon.textContent = '⚠️';
+    icon.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
     msg.innerHTML = `<strong>辨識失敗</strong><br>${errCode}` + detailHtml;
     btn.style.display = 'none';
   }
@@ -1236,7 +1237,7 @@ async function saveRecord() {
       }),
     });
     if (resp.ok) {
-      saveBtn.textContent = '✓ 已記錄！';
+      saveBtn.textContent = '已記錄！';
       saveBtn.classList.add('saved');
       renderBank();
     } else {
@@ -1286,7 +1287,7 @@ async function renderBank() {
     const d2 = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
     html += `
       <div class="cheat-card">
-        <div class="cheat-header">🔥 熱量分期啟動</div>
+        <div class="cheat-header"><i class="bi bi-lightning-charge-fill"></i> 熱量分期啟動</div>
         <div class="cheat-body">
           今日超標 <strong>${overflow}</strong> 大卡<br>
           已自動平攤至接下來 2 天，每天吸收 <strong>${perDay}</strong> 大卡
@@ -1324,7 +1325,7 @@ async function renderBank() {
       const m = r.macros || {};
       html += `
         <div class="record-item">
-          <span class="record-icon">🍽</span>
+          <span class="record-icon"><i class="bi bi-egg-fried"></i></span>
           <div class="record-info">
             <div class="record-name">${r.food_name}</div>
             <div class="record-macros">碳 ${m.carbs||0}g　蛋 ${m.protein||0}g　脂 ${m.fat||0}g</div>

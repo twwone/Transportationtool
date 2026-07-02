@@ -7,6 +7,7 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
@@ -513,7 +514,7 @@ body::before{
     </div>
 
     <button class="create-btn" id="createBtn" onclick="doCreate()">
-      <span class="c-icon">➕</span>
+      <span class="c-icon"><i class="bi bi-plus-lg"></i></span>
       <div>
         <div class="c-title">建立新房間</div>
         <div class="c-sub">產生 4 位碼，讓對方輸入加入</div>
@@ -539,9 +540,9 @@ body::before{
   <div id="stateB">
     <!-- URL card -->
     <div class="url-card" id="urlCard">
-      <span class="url-icon">🔗</span>
+      <span class="url-icon"><i class="bi bi-link-45deg"></i></span>
       <span class="url-text" id="urlText"></span>
-      <button class="url-open" onclick="openUrl()">🌐 點擊前往</button>
+      <button class="url-open" onclick="openUrl()"><i class="bi bi-globe2"></i> 點擊前往</button>
     </div>
 
     <!-- Image Gallery -->
@@ -552,29 +553,29 @@ body::before{
 
     <!-- Textarea -->
     <textarea class="sync-ta" id="ta"
-      placeholder="輸入文字或網址，Ctrl+V 貼上圖片，拖曳或點「📎 檔案」上傳…"></textarea>
+      placeholder="輸入文字或網址，Ctrl+V 貼上圖片，拖曳或點「檔案」上傳…"></textarea>
 
     <!-- File card -->
     <div class="file-card" id="fileCard">
       <div class="file-icon-wrap" id="fileIconWrap">
-        <span id="fileIconEmoji">📄</span>
+        <span id="fileIconEmoji"><i class="bi bi-file-earmark-fill"></i></span>
       </div>
       <div class="file-info">
         <div class="file-name-text" id="fileNameText">filename.pdf</div>
         <div class="file-type-text" id="fileTypeText">PDF 檔案</div>
       </div>
-      <button class="file-dl-btn" id="fileDlBtn" onclick="downloadFile()">📥 點擊下載</button>
+      <button class="file-dl-btn" id="fileDlBtn" onclick="downloadFile()"><i class="bi bi-download"></i> 點擊下載</button>
     </div>
 
     <!-- Main actions -->
     <div class="act-row">
-      <button class="act-btn btn-copy" id="copyBtn" onclick="doCopy()">📋 複製</button>
-      <button class="act-btn btn-file" id="fileBtn" onclick="pickFile()">📎 檔案</button>
-      <button class="act-btn btn-clear" onclick="doClear()">🗑️ 清空</button>
+      <button class="act-btn btn-copy" id="copyBtn" onclick="doCopy()"><i class="bi bi-clipboard-fill"></i> 複製</button>
+      <button class="act-btn btn-file" id="fileBtn" onclick="pickFile()"><i class="bi bi-paperclip"></i> 檔案</button>
+      <button class="act-btn btn-clear" onclick="doClear()"><i class="bi bi-trash3-fill"></i> 清空</button>
     </div>
 
     <!-- Destroy room -->
-    <button class="destroy-btn" onclick="doDestroy()">💣 銷毀房間（雙方同步清除）</button>
+    <button class="destroy-btn" onclick="doDestroy()"><i class="bi bi-x-octagon-fill"></i> 銷毀房間（雙方同步清除）</button>
 
     <input type="file" id="fileIn" multiple
       accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.mp3,.mp4"
@@ -587,7 +588,7 @@ body::before{
 <!-- Drop overlay -->
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-msg">
-    <span class="drop-msg-icon">📎</span>
+    <span class="drop-msg-icon"><i class="bi bi-paperclip"></i></span>
     <span>放開以上傳（圖片可多張，單檔 ≤ 8MB）</span>
   </div>
 </div>
@@ -604,7 +605,7 @@ body::before{
 <!-- Expired / Destroy overlay -->
 <div class="expire-overlay" id="expireOverlay">
   <div class="expire-card">
-    <div class="expire-icon">💨</div>
+    <div class="expire-icon"><i class="bi bi-wind"></i></div>
     <div class="expire-title">房間已銷毀</div>
     <div class="expire-sub" id="expireSub">房間閒置過久或已不存在</div>
     <button class="new-btn" onclick="backToA()">建立新房間</button>
@@ -951,7 +952,7 @@ async function doCopy() {
   await navigator.clipboard.writeText(target).catch(() => {});
   const btn = $id('copyBtn');
   const orig = btn.textContent;
-  btn.textContent = '✅ 已複製';
+  btn.innerHTML = '<i class="bi bi-check-lg"></i> 已複製';
   setTimeout(() => btn.textContent = orig, 1800);
 }
 
@@ -960,7 +961,7 @@ async function copyCode() {
   await navigator.clipboard.writeText(room).catch(() => {});
   const el = $id('pillCode');
   const orig = el.textContent;
-  el.textContent = '✅';
+  el.innerHTML = '<i class="bi bi-check-lg"></i>';
   setTimeout(() => el.textContent = orig, 1500);
 }
 
@@ -1186,7 +1187,7 @@ function showImgGallery(urls) {
     img.onclick = () => openLightbox(idx);
     const del = document.createElement('button');
     del.className = 'img-thumb-del';
-    del.textContent = '✕';
+    del.innerHTML = '<i class="bi bi-x-lg"></i>';
     del.onclick = () => removeImgAt(idx);
     applySpring(del);
     thumb.append(img, del);
@@ -1218,17 +1219,17 @@ async function removeImgAt(idx) {
 function getFileIcon(name) {
   const ext = (name.split('.').pop() || '').toLowerCase();
   const m = {
-    pdf:  {icon:'📄', bg:'#fee2e2'},
-    doc:  {icon:'📝', bg:'#dbeafe'}, docx: {icon:'📝', bg:'#dbeafe'},
-    xls:  {icon:'📊', bg:'#dcfce7'}, xlsx: {icon:'📊', bg:'#dcfce7'},
-    ppt:  {icon:'📽️', bg:'#ffedd5'}, pptx: {icon:'📽️', bg:'#ffedd5'},
-    txt:  {icon:'📋', bg:'#f3f4f6'},
-    md:   {icon:'📝', bg:'#e0f2fe'},
-    zip:  {icon:'🗜️', bg:'#fef3c7'}, rar: {icon:'🗜️', bg:'#fef3c7'},
-    mp3:  {icon:'🎵', bg:'#f3e8ff'},
-    mp4:  {icon:'🎬', bg:'#fff7ed'},
+    pdf:  {icon:'<i class="bi bi-file-earmark-pdf-fill"></i>', bg:'#fee2e2'},
+    doc:  {icon:'<i class="bi bi-file-earmark-word-fill"></i>', bg:'#dbeafe'}, docx: {icon:'<i class="bi bi-file-earmark-word-fill"></i>', bg:'#dbeafe'},
+    xls:  {icon:'<i class="bi bi-file-earmark-excel-fill"></i>', bg:'#dcfce7'}, xlsx: {icon:'<i class="bi bi-file-earmark-excel-fill"></i>', bg:'#dcfce7'},
+    ppt:  {icon:'<i class="bi bi-file-earmark-ppt-fill"></i>', bg:'#ffedd5'}, pptx: {icon:'<i class="bi bi-file-earmark-ppt-fill"></i>', bg:'#ffedd5'},
+    txt:  {icon:'<i class="bi bi-file-earmark-text-fill"></i>', bg:'#f3f4f6'},
+    md:   {icon:'<i class="bi bi-file-earmark-code-fill"></i>', bg:'#e0f2fe'},
+    zip:  {icon:'<i class="bi bi-file-earmark-zip-fill"></i>', bg:'#fef3c7'}, rar: {icon:'<i class="bi bi-file-earmark-zip-fill"></i>', bg:'#fef3c7'},
+    mp3:  {icon:'<i class="bi bi-file-earmark-music-fill"></i>', bg:'#f3e8ff'},
+    mp4:  {icon:'<i class="bi bi-file-earmark-play-fill"></i>', bg:'#fff7ed'},
   };
-  return m[ext] || {icon:'📁', bg:'#f3f4f6'};
+  return m[ext] || {icon:'<i class="bi bi-file-earmark-fill"></i>', bg:'#f3f4f6'};
 }
 
 function showFileCard(url, name) {
@@ -1314,7 +1315,7 @@ async function downloadFile() {
 </script>
 <!-- lightbox -->
 <div id="lightbox" class="lightbox" role="dialog" aria-modal="true">
-  <button class="lightbox-close" id="lbClose" aria-label="關閉">✕</button>
+  <button class="lightbox-close" id="lbClose" aria-label="關閉"><i class="bi bi-x-lg"></i></button>
   <button class="lightbox-nav lightbox-prev" id="lbPrev" aria-label="上一張">‹</button>
   <img id="lbImg" class="lightbox-img" alt="" src="">
   <button class="lightbox-nav lightbox-next" id="lbNext" aria-label="下一張">›</button>

@@ -6,6 +6,7 @@
 <title>代碼字典</title>
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
@@ -303,14 +304,14 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 
 <div class="topbar">
   <button class="back-btn" onclick="goBack()">‹ 返回</button>
-  <div class="topbar-title">🗂 代碼快查字典</div>
+  <div class="topbar-title"><i class="bi bi-folder2-open"></i> 代碼快查字典</div>
   <div class="topbar-spacer"></div>
 </div>
 
 <!-- iOS 2026 Search Bar (auto-focus) -->
 <div class="search-wrap">
   <div class="search-box" id="searchBox">
-    <span class="search-icon">🔍</span>
+    <span class="search-icon"><i class="bi bi-search"></i></span>
     <input id="searchInput" type="search"
            placeholder="輸入機場代碼、城市、縮寫…"
            autocomplete="off" autocorrect="off"
@@ -338,10 +339,10 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 <!-- Category filter chips -->
 <div class="chips">
   <div class="chip active" data-cat="all"     onclick="setCat('all',this)">全部</div>
-  <div class="chip"        data-cat="airport" onclick="setCat('airport',this)">✈ 機場</div>
-  <div class="chip"        data-cat="airline" onclick="setCat('airline',this)">🛫 航空公司</div>
-  <div class="chip"        data-cat="pnr"     onclick="setCat('pnr',this)">📋 預訂代碼</div>
-  <div class="chip"        data-cat="ops"     onclick="setCat('ops',this)">🔧 作業縮寫</div>
+  <div class="chip"        data-cat="airport" onclick="setCat('airport',this)"><i class="bi bi-airplane"></i> 機場</div>
+  <div class="chip"        data-cat="airline" onclick="setCat('airline',this)"><i class="bi bi-airplane-fill"></i> 航空公司</div>
+  <div class="chip"        data-cat="pnr"     onclick="setCat('pnr',this)"><i class="bi bi-clipboard-fill"></i> 預訂代碼</div>
+  <div class="chip"        data-cat="ops"     onclick="setCat('ops',this)"><i class="bi bi-tools"></i> 作業縮寫</div>
 </div>
 
 <div class="count-bar" id="countBar"></div>
@@ -375,7 +376,7 @@ async function init() {
     }, 350);
   } catch(e) {
     document.getElementById('cardList').innerHTML =
-      '<div class="empty"><span class="empty-icon">⚠️</span>資料載入失敗，請重新整理。</div>';
+      '<div class="empty"><span class="empty-icon"><i class="bi bi-exclamation-triangle-fill"></i></span>資料載入失敗，請重新整理。</div>';
   }
 }
 
@@ -400,9 +401,9 @@ function matches(e, q) {
 
 /* ── Card builders ── */
 function tzBadge(diff) {
-  if (diff === 0) return '🕗 同台灣';
-  if (diff > 0)   return `🕗 快 ${diff}h`;
-  return `🕗 慢 ${Math.abs(diff)}h`;
+  if (diff === 0) return '同台灣';
+  if (diff > 0)   return `快 ${diff}h`;
+  return `慢 ${Math.abs(diff)}h`;
 }
 function buildAirportCard(e) {
   const tb = e.airasia_terminal && e.airasia_terminal !== '—'
@@ -487,7 +488,7 @@ function render() {
 
   const list = document.getElementById('cardList');
   if (!_filtered.length) {
-    list.innerHTML = '<div class="empty"><span class="empty-icon">🔍</span>找不到符合的代碼</div>';
+    list.innerHTML = '<div class="empty"><span class="empty-icon"><i class="bi bi-search"></i></span>找不到符合的代碼</div>';
     disconnectObserver();
     return;
   }

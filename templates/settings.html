@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>設定</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -195,7 +196,7 @@ body {
   </div>
 
   <!-- 高鐵 -->
-  <div class="sec-label">🚄 高鐵設定</div>
+  <div class="sec-label"><i class="bi bi-train-front-fill"></i> 高鐵設定</div>
   <div class="sec-card">
     <div class="s-row">
       <span class="s-label">起站</span>
@@ -247,7 +248,7 @@ body {
   </div>
 
   <!-- 機場捷運 -->
-  <div class="sec-label">🚇 機場捷運</div>
+  <div class="sec-label"><i class="bi bi-train-front"></i> 機場捷運</div>
   <div class="sec-card">
     <div class="s-row">
       <span class="s-label">收藏站點</span>
@@ -256,7 +257,7 @@ body {
   </div>
 
   <!-- Telegram -->
-  <div class="sec-label">💬 Telegram Bot</div>
+  <div class="sec-label"><i class="bi bi-telegram"></i> Telegram Bot</div>
   <div class="sec-card">
     <div class="s-row">
       <span class="s-label">Bot Token</span>
@@ -273,7 +274,7 @@ body {
   </div>
 
   <!-- 熱量追蹤 -->
-  <div class="sec-label">🥗 熱量追蹤</div>
+  <div class="sec-label"><i class="bi bi-egg-fried"></i> 熱量追蹤</div>
   <div class="sec-card">
     <div class="s-row">
       <span class="s-label">每日目標</span>
@@ -291,7 +292,7 @@ body {
   </div>
 
   <!-- 天氣 -->
-  <div class="sec-label">☁️ 天氣常用地點</div>
+  <div class="sec-label"><i class="bi bi-cloud-fill"></i> 天氣常用地點</div>
   <div class="sec-card">
     <div class="tag-list" id="wxFavList"></div>
   </div>
@@ -393,7 +394,7 @@ function saveAll() {
   ds.geminiKey  = document.getElementById('geminiKey').value.trim();
   localStorage.setItem('dietSettings', JSON.stringify(ds));
 
-  _toast('✅ 已儲存');
+  _toast('已儲存');
   const sk = Config.getActive().syncKey;
   if (sk) Config.push().catch(() => {});
 }

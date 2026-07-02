@@ -6,6 +6,7 @@
 <title>簽證指南</title>
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
@@ -402,7 +403,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 
 <div class="topbar">
   <button class="back-btn" onclick="goBack()">‹ 返回</button>
-  <div class="topbar-title">🛂 簽證口袋指南</div>
+  <div class="topbar-title"><i class="bi bi-person-badge-fill"></i> 簽證口袋指南</div>
   <div class="topbar-spacer"></div>
 </div>
 
@@ -413,7 +414,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 
 <div class="search-wrap">
   <div class="search-box" id="searchBox">
-    <span class="search-icon">🔍</span>
+    <span class="search-icon"><i class="bi bi-search"></i></span>
     <input id="searchInput" type="search" placeholder="搜尋國家、代碼、城市…"
            autocomplete="off" autocorrect="off" spellcheck="false">
     <button class="clear-btn hidden" id="clearBtn" onclick="clearSearch()">✕</button>
@@ -430,7 +431,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 <div class="count-bar" id="countBar"></div>
 
 <div class="disclaimer">
-  <strong>⚠️ 注意：</strong>本指南資料僅供參考，出發前請至<strong>外交部領事事務局</strong>或各國官方移民機關確認最新入境規定。
+  <strong><i class="bi bi-exclamation-triangle-fill"></i> 注意：</strong>本指南資料僅供參考，出發前請至<strong>外交部領事事務局</strong>或各國官方移民機關確認最新入境規定。
 </div>
 
 <div class="list" id="cardList"></div>
@@ -451,7 +452,7 @@ async function init() {
     render();
   } catch(e) {
     document.getElementById('cardList').innerHTML =
-      '<div class="empty"><span class="empty-icon">⚠️</span>資料載入失敗，請重新整理。</div>';
+      '<div class="empty"><span class="empty-icon"><i class="bi bi-exclamation-triangle-fill"></i></span>資料載入失敗，請重新整理。</div>';
   }
 }
 
@@ -521,7 +522,7 @@ function matches(r, q) {
 function buildCardHTML(r) {
   const docs = r.required_docs.map(d => `
     <div class="doc-row">
-      <span class="doc-icon">${d.required ? '✅' : '⬜'}</span>
+      <span class="doc-icon">${d.required ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-square"></i>'}</span>
       <div class="doc-info">
         <span class="doc-label">${d.label}</span>
         <span class="doc-tag ${d.required ? 'must' : 'opt'}">${d.required ? '必要' : '建議'}</span>
@@ -534,7 +535,7 @@ function buildCardHTML(r) {
 
   const warnings = r.warnings && r.warnings.length ? `
     <div class="warn-frame">
-      <span class="frame-badge badge-warn">⚠ 常見錯誤預警</span>
+      <span class="frame-badge badge-warn"><i class="bi bi-exclamation-triangle-fill"></i> 常見錯誤預警</span>
       ${r.warnings.map(w => `<div class="warn-item">${w}</div>`).join('')}
     </div>` : '';
 
@@ -547,21 +548,21 @@ function buildCardHTML(r) {
           <span class="country-name-en">${r.country_en}</span>
         </div>
         <span class="visa-badge ${badgeClass(r.entry_class)}">${r.visa_type}</span>
-        <div class="stay-days">🗓 最長停留 ${r.stay_days} 天</div>
+        <div class="stay-days"><i class="bi bi-calendar3"></i> 最長停留 ${r.stay_days} 天</div>
       </div>
       <span class="chevron">›</span>
     </div>
     <div class="card-body" id="body-${r.id}">
       <div class="card-body-inner">
         <div class="valid-frame">
-          <span class="frame-badge badge-valid">✓ 有效查驗點</span>
+          <span class="frame-badge badge-valid"><i class="bi bi-check-lg"></i> 有效查驗點</span>
           ${docs}
         </div>
         <div class="body-section-title">注意事項</div>
         ${tips}
         ${warnings}
         <a class="official-link" href="${r.official_url}" target="_blank" rel="noopener">
-          🔗 官方入境規定網頁
+          <i class="bi bi-link-45deg"></i> 官方入境規定網頁
         </a>
       </div>
     </div>
@@ -582,7 +583,7 @@ function render() {
 
   if (!filtered.length) {
     document.getElementById('cardList').innerHTML =
-      '<div class="empty"><span class="empty-icon">🔍</span>找不到符合的目的地</div>';
+      '<div class="empty"><span class="empty-icon"><i class="bi bi-search"></i></span>找不到符合的目的地</div>';
     return;
   }
 

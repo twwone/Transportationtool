@@ -7,6 +7,7 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
@@ -455,14 +456,14 @@ body {
 <div class="topbar">
   <div class="topbar-row">
     <a href="/" class="back-btn">‹ 返回</a>
-    <span class="topbar-title">✈️ 航空資訊看板</span>
+    <span class="topbar-title"><i class="bi bi-airplane-fill"></i> 航空資訊看板</span>
     <button class="refresh-btn" onclick="openAirlinePicker()">航空公司 ▾</button>
     <button class="refresh-btn" id="refreshBtn" onclick="load(true)">↻ 重新整理</button>
   </div>
   <div class="tabs">
-    <div class="tab active" id="tab-arr" onclick="switchTab('arr')">🛬 抵達</div>
-    <div class="tab"        id="tab-dep" onclick="switchTab('dep')">🛫 出發</div>
-    <div class="tab"        id="tab-all" onclick="switchTab('all')">🔍 全部航班</div>
+    <div class="tab active" id="tab-arr" onclick="switchTab('arr')"><i class="bi bi-arrow-bar-down"></i> 抵達</div>
+    <div class="tab"        id="tab-dep" onclick="switchTab('dep')"><i class="bi bi-arrow-bar-up"></i> 出發</div>
+    <div class="tab"        id="tab-all" onclick="switchTab('all')"><i class="bi bi-search"></i> 全部航班</div>
     <div class="tab-indicator" id="tabIndicator"></div>
   </div>
   <div class="topbar-search" id="topbarSearch">
@@ -501,7 +502,7 @@ body {
 <div id="panelAll" style="display:none">
   <div id="searchCount" class="search-count"></div>
   <div id="searchHint" class="search-hint">
-    <span class="hint-icon">🔍</span>
+    <span class="hint-icon"><i class="bi bi-search"></i></span>
     輸入 2 個字元以上開始檢索<br>
     <span style="font-size:0.75rem">航班號 · 航空公司代碼 · 機場 · 登機門 · 報到櫃檯</span>
   </div>
@@ -665,11 +666,11 @@ function _buildListWithNow(flights, dir, emptyIcon, emptyMsg) {
 
 function renderWatchTabs() {
   const arrEl = document.getElementById('listArr');
-  arrEl.innerHTML = _buildListWithNow(_arrData, 'arr', '🛬', '目前監控的航空公司無抵達班機');
+  arrEl.innerHTML = _buildListWithNow(_arrData, 'arr', '<i class="bi bi-arrow-bar-down"></i>', '目前監控的航空公司無抵達班機');
   if (_arrData.length && _initialLoad) staggerCards(arrEl);
 
   const depEl = document.getElementById('listDep');
-  depEl.innerHTML = _buildListWithNow(_depData, 'dep', '🛫', '目前監控的航空公司無出發班機');
+  depEl.innerHTML = _buildListWithNow(_depData, 'dep', '<i class="bi bi-arrow-bar-up"></i>', '目前監控的航空公司無出發班機');
   if (_depData.length && _initialLoad) staggerCards(depEl);
 
   /* 只在初次載入時自動捲動到「現在」分隔線，避免 30 秒輪詢把使用者強制捲回 */
@@ -731,7 +732,7 @@ function renderPickerList() {
         onerror="this.style.display='none'">
       <span class="picker-code">${code}</span>
       <span class="picker-name">${name}</span>
-      <span class="picker-check">✓</span>
+      <span class="picker-check"><i class="bi bi-check-lg"></i></span>
     </label>
   `).join('');
 }
@@ -828,15 +829,15 @@ function buildTAT(stdIso, etdIso) {
 
   let headTxt = '', headCls = '';
   if (!nextMs) {
-    headTxt = `✅ 已出發 ${Math.round(nowMins)} 分鐘前`;
+    headTxt = `已出發 ${Math.round(nowMins)} 分鐘前`;
   } else {
     const remain = Math.round(nextMs.offset - nowMins);
-    if (remain <= 5)       { headTxt = `🚨 ${nextMs.label} 即將到達！剩 ${remain} 分`; headCls = 'phase-urgent'; }
-    else if (remain <= 20) { headTxt = `⚠️ 距${nextMs.label} ${remain} 分鐘`; headCls = 'phase-soon'; }
-    else if (remain < 60)  { headTxt = `⏱ 距${nextMs.label} ${remain} 分鐘`; headCls = 'phase-ok'; }
+    if (remain <= 5)       { headTxt = `${nextMs.label} 即將到達！剩 ${remain} 分`; headCls = 'phase-urgent'; }
+    else if (remain <= 20) { headTxt = `距${nextMs.label} ${remain} 分鐘`; headCls = 'phase-soon'; }
+    else if (remain < 60)  { headTxt = `距${nextMs.label} ${remain} 分鐘`; headCls = 'phase-ok'; }
     else {
       const h = Math.floor(remain / 60), m = remain % 60;
-      headTxt = `⏱ 距${nextMs.label} ${h}h${m ? ' ' + m + 'm' : ''}`;
+      headTxt = `距${nextMs.label} ${h}h${m ? ' ' + m + 'm' : ''}`;
       headCls = 'phase-ok';
     }
   }
@@ -1128,7 +1129,7 @@ function runSearch() {
   countEl.textContent = results.length ? `共 ${results.length} 班次` : '';
   resEl.innerHTML = results.length
     ? results.map(f => renderCard(f, f._dir, true)).join('')
-    : `<div class="empty"><span class="empty-icon">🔍</span>查無「${q}」相關航班</div>`;
+    : `<div class="empty"><span class="empty-icon"><i class="bi bi-search"></i></span>查無「${q}」相關航班</div>`;
 }
 
 /* ── 全航班時間軸視圖 ── */
@@ -1140,7 +1141,7 @@ function renderAllByTime() {
   hintEl.style.display = 'none';
 
   if (!_allArr.length && !_allDep.length) {
-    resEl.innerHTML     = '<div class="empty"><span class="empty-icon">✈️</span>暫無航班資料</div>';
+    resEl.innerHTML     = '<div class="empty"><span class="empty-icon"><i class="bi bi-airplane"></i></span>暫無航班資料</div>';
     countEl.textContent = '';
     return;
   }
@@ -1226,12 +1227,12 @@ async function load() {
       const data = await res.json().catch(() => ({}));
       if (!data.configured) {
         document.getElementById('errWrap').innerHTML =
-          `<div class="error-banner">⚠️ TDX API 未設定，請確認環境變數 TDX_CLIENT_ID / TDX_CLIENT_SECRET。</div>`;
+          `<div class="error-banner"><i class="bi bi-exclamation-triangle-fill"></i> TDX API 未設定，請確認環境變數 TDX_CLIENT_ID / TDX_CLIENT_SECRET。</div>`;
         document.getElementById('listArr').innerHTML = '';
         document.getElementById('listDep').innerHTML = '';
       } else {
         document.getElementById('errWrap').innerHTML =
-          `<div class="error-banner">⚠️ 航班資料暫時無法取得，自動重試中…</div>`;
+          `<div class="error-banner"><i class="bi bi-exclamation-triangle-fill"></i> 航班資料暫時無法取得，自動重試中…</div>`;
         setTimeout(() => load(), 5000);
       }
       return;
@@ -1296,7 +1297,7 @@ async function load() {
 
   } catch (e) {
     document.getElementById('errWrap').innerHTML =
-      `<div class="error-banner">⚠️ 連線失敗，請稍後再試。</div>`;
+      `<div class="error-banner"><i class="bi bi-exclamation-triangle-fill"></i> 連線失敗，請稍後再試。</div>`;
   } finally {
     btn.innerHTML = '↻ 重新整理';
     btn.disabled  = false;

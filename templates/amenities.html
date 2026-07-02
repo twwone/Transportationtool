@@ -7,6 +7,7 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
@@ -413,7 +414,7 @@ body {
       <span class="back-arrow">‹</span> 返回
     </a>
     <div class="header-title">
-      <div class="header-title-zh">✈️ 機場設施指南</div>
+      <div class="header-title-zh"><i class="bi bi-airplane-fill"></i> 機場設施指南</div>
       <div class="header-title-en">Airport Facilities · TPE</div>
     </div>
     <div class="header-spacer"></div>
@@ -421,7 +422,7 @@ body {
 
   <div class="search-wrap">
     <div class="search-box">
-      <span class="search-icon">🔍</span>
+      <span class="search-icon"><i class="bi bi-search"></i></span>
       <input class="search-input" id="searchInput"
              type="search" inputmode="search"
              placeholder="搜尋設施 · Search facilities…" autocomplete="off">
@@ -446,7 +447,7 @@ body {
 
   <div class="cats-grid" id="catsGrid">
     <button class="cat-btn active" data-cat="all">
-      <span class="cat-emoji">🗂️</span>
+      <span class="cat-emoji"><i class="bi bi-folder2-open"></i></span>
       <span class="cat-label-zh">全部</span>
       <span class="cat-label-en">All</span>
     </button>
@@ -461,7 +462,7 @@ body {
   <div id="sectionTitle" class="section-title" style="display:none"></div>
   <div id="cardList" class="card-list"></div>
   <div id="empty" class="empty">
-    <div class="empty-icon">🔍</div>
+    <div class="empty-icon"><i class="bi bi-search"></i></div>
     <div class="empty-msg">找不到符合的設施<br><span style="font-size:0.82rem;color:#b0b0b5">No matching facilities found</span></div>
   </div>
   <div class="footer-note" id="footerNote" style="display:none">
@@ -566,7 +567,7 @@ function render() {
   title.textContent = `${catZh}${termZh} / ${catEn}${termEn} (${list.length})`;
 
   cardList.innerHTML = list.map(item => {
-    const catMeta = _categories[item.category] || {emoji:'📌', label:'', label_en:'', color:'#8e8e93'};
+    const catMeta = _categories[item.category] || {icon:'pin-map-fill', label:'', label_en:'', color:'#8e8e93'};
     const color   = catMeta.color || '#8e8e93';
     const bgRgba  = hexToAlpha(color, 0.11);
     const zoneEn  = ZONE_EN[item.zone] || item.zone;
@@ -574,7 +575,7 @@ function render() {
     <div class="amenity-card" style="border-color:${color}22">
       <div class="card-top">
         <div class="card-icon" style="background:${bgRgba}">
-          ${catMeta.emoji}
+          <i class="bi bi-${catMeta.icon || 'pin-map-fill'}"></i>
         </div>
         <div class="card-main">
           <div class="card-name-zh">${item.name}</div>

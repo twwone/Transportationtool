@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>我的收藏</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -273,7 +274,7 @@ body {
     <button class="numpad-btn" onclick="numTap('9')">9</button>
     <button class="numpad-btn empty"></button>
     <button class="numpad-btn" onclick="numTap('0')">0</button>
-    <button class="numpad-btn del" onclick="numDel()">⌫</button>
+    <button class="numpad-btn del" onclick="numDel()"><i class="bi bi-backspace-fill"></i></button>
   </div>
 </div>
 
@@ -282,7 +283,7 @@ body {
   <div class="top-bar">
     <div class="top-left">
       <a class="back-btn" href="/">‹ 返回</a>
-      <button class="lock-btn" onclick="lock()" title="鎖定">🔒</button>
+      <button class="lock-btn" onclick="lock()" title="鎖定"><i class="bi bi-lock-fill"></i></button>
     </div>
     <div class="top-title" onclick="openNameModal()" style="cursor:pointer">收藏庫</div>
     <div class="top-right">
@@ -417,7 +418,7 @@ function renderGrid(items) {
   if (!items || items.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="icon">🎬</div>
+        <div class="icon"><i class="bi bi-film"></i></div>
         <p>尚無收藏<br>用 Bookmarklet 或右上角＋新增</p>
       </div>`;
     return;
@@ -433,12 +434,12 @@ function renderGrid(items) {
       ${item.img
         ? `<img class="card-thumb" src="${esc(item.img)}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
         : ''}
-      <div class="card-thumb-placeholder" ${item.img ? 'style="display:none"' : ''}>🎬</div>
+      <div class="card-thumb-placeholder" ${item.img ? 'style="display:none"' : ''}><i class="bi bi-film"></i></div>
       <div class="card-body">
         <div class="card-title">${esc(item.title)}</div>
         ${item.by ? `<div class="card-by">由 ${esc(item.by)} 加入</div>` : ''}
       </div>
-      <div class="del-badge" onclick="delItem(event,'${item.id}')">✕</div>`;
+      <div class="del-badge" onclick="delItem(event,'${item.id}')"><i class="bi bi-x-lg"></i></div>`;
     card.addEventListener('click', () => {
       if (_delMode) return;
       window.open(item.url, '_blank');

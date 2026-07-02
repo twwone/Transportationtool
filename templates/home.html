@@ -7,6 +7,7 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
@@ -845,9 +846,9 @@ body {
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-shrink:0;">
       <button id="sortBtn" class="sort-btn" onclick="toggleEditMode()">排列</button>
-      <button id="crownBtn" class="crown-btn" title="管理員">👑</button>
+      <button id="crownBtn" class="crown-btn" title="管理員"><i class="bi bi-shield-shaded"></i></button>
       <button class="profile-chip" id="profileChip" style="margin-top:0" onclick="openSheet()">
-        <span>👤</span>
+        <span><i class="bi bi-person-circle"></i></span>
         <span id="profileLabel">—</span>
         <span class="pc-chevron">▾</span>
       </button>
@@ -869,14 +870,14 @@ body {
   <!-- 已登入 -->
   <div id="authLoggedIn" style="display:none">
     <div class="auth-user-hero">
-      <div class="auth-user-avatar">👤</div>
+      <div class="auth-user-avatar"><i class="bi bi-person-circle"></i></div>
       <div class="auth-user-info">
         <div class="auth-user-name" id="authUserName">—</div>
         <div class="auth-user-code" id="authUserCode"></div>
       </div>
     </div>
     <div style="margin: 0 16px 20px">
-      <button class="auth-logout-row" onclick="doLogout()">🚪 登出</button>
+      <button class="auth-logout-row" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i> 登出</button>
     </div>
   </div>
 
@@ -926,7 +927,7 @@ body {
 <!-- 👑 PIN Modal -->
 <div class="pin-overlay" id="pinOverlay">
   <div class="pin-modal" id="pinModal">
-    <div class="pin-title">🔐 系統驗證</div>
+    <div class="pin-title"><i class="bi bi-lock-fill"></i> 系統驗證</div>
     <div class="pin-dots">
       <div class="pin-dot" id="pd0"></div>
       <div class="pin-dot" id="pd1"></div>
@@ -945,7 +946,7 @@ body {
       <button class="pin-key" onclick="_pinInput('9')">9</button>
       <button class="pin-key empty"></button>
       <button class="pin-key" onclick="_pinInput('0')">0</button>
-      <button class="pin-key del-key" onclick="_pinDel()">⌫</button>
+      <button class="pin-key del-key" onclick="_pinDel()"><i class="bi bi-backspace"></i></button>
     </div>
     <div class="pin-error" id="pinError"></div>
   </div>
@@ -957,7 +958,7 @@ body {
   <div class="admin-panel" id="adminPanel">
     <div class="admin-handle"></div>
     <div class="admin-header">
-      <div class="admin-title">👑 上帝視角儀表板</div>
+      <div class="admin-title"><i class="bi bi-shield-shaded"></i> 上帝視角儀表板</div>
     </div>
 
     <div class="admin-sec-label">API 健康狀態</div>
@@ -982,10 +983,10 @@ body {
 
     <div class="admin-sec-label">私人</div>
     <div class="admin-card">
-      <a class="admin-link" href="/v" onclick="sessionStorage.setItem('v_admin_pin', sessionStorage.getItem('v_admin_pin') || localStorage.getItem('admin_pin') || _ADMIN_PIN)">🎬 收藏庫 ↗</a>
+      <a class="admin-link" href="/v" onclick="sessionStorage.setItem('v_admin_pin', sessionStorage.getItem('v_admin_pin') || localStorage.getItem('admin_pin') || _ADMIN_PIN)"><i class="bi bi-film"></i> 收藏庫 ↗</a>
     </div>
 
-    <button class="admin-exit-btn" onclick="_exitAdmin()">🚪 關閉上帝模式</button>
+    <button class="admin-exit-btn" onclick="_exitAdmin()"><i class="bi bi-box-arrow-right"></i> 關閉上帝模式</button>
   </div>
 </div>
 
@@ -1017,17 +1018,17 @@ document.addEventListener('touchend', e => {
    卡片資料 & 動態渲染
    ════════════════════════════════════════ */
 const CARDS = {
-  tias:      { icon:'✈️',  title:'Flight Info',     url:'/tias',                                         hero:true },
-  thsr:      { icon:'🚄',  title:'THSR Ticket',     url:'https://thsr-ticket-bot-j7qr.onrender.com',    cls:'card-thsr', ext:true },
-  mrt:       { icon:'🚇',  title:'MRT Train',       url:'/mrt',     strip:true, stripCls:'card-mrt-strip',     stripTag:'🚇 機場捷運' },
-  schedule:  { icon:'🗓',  title:'Weekly Schedule', url:'/schedule',                                     cls:'card-schedule' },
-  amenities: { icon:'🗺️', title:'Airport Map',      url:'/amenities',                                    cls:'card-amenities' },
-  visa:      { icon:'🛂',  title:'Visa Guide',      url:'/visa-guide',                                   cls:'card-visa' },
-  codes:     { icon:'🗂',  title:'Code Book',       url:'/code-dictionary',                              cls:'card-codes' },
-  share:     { icon:'📋',  title:'Clipboard',       url:'/share',                                        cls:'card-share' },
-  weather:   { icon:'☁️',  title:'天氣防禦',          url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'☁️ 天氣防禦' },
-  diet:      { icon:'🥗',  title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
-  memo:      { icon:'記',   title:'備忘錄',             url:'/memo',                                         cls:'card-memo' },
+  tias:      { icon:'<i class="bi bi-airplane-fill"></i>',      title:'Flight Info',     url:'/tias',                                         hero:true },
+  thsr:      { icon:'<i class="bi bi-train-front-fill"></i>',   title:'THSR Ticket',     url:'https://thsr-ticket-bot-j7qr.onrender.com',    cls:'card-thsr', ext:true },
+  mrt:       { icon:'<i class="bi bi-train-front"></i>',        title:'MRT Train',       url:'/mrt',     strip:true, stripCls:'card-mrt-strip',     stripTag:'<i class="bi bi-train-front"></i> 機場捷運' },
+  schedule:  { icon:'<i class="bi bi-calendar3"></i>',          title:'Weekly Schedule', url:'/schedule',                                     cls:'card-schedule' },
+  amenities: { icon:'<i class="bi bi-map-fill"></i>',           title:'Airport Map',     url:'/amenities',                                    cls:'card-amenities' },
+  visa:      { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'Visa Guide',      url:'/visa-guide',                                   cls:'card-visa' },
+  codes:     { icon:'<i class="bi bi-folder2-open"></i>',       title:'Code Book',       url:'/code-dictionary',                              cls:'card-codes' },
+  share:     { icon:'<i class="bi bi-clipboard-fill"></i>',     title:'Clipboard',       url:'/share',                                        cls:'card-share' },
+  weather:   { icon:'<i class="bi bi-cloud-fill"></i>',         title:'天氣防禦',          url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'<i class="bi bi-cloud-fill"></i> 天氣防禦' },
+  diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
+  memo:      { icon:'記',                                        title:'備忘錄',             url:'/memo',                                         cls:'card-memo' },
 };
 const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','codes','share','weather','diet','memo'];
 const _STRIP_FIXED = ['tias','mrt','weather']; // 這三張固定位置，不參與排序
@@ -1092,7 +1093,7 @@ function renderBento(order) {
   const st = document.createElement('a');
   st.href = '/settings'; st.className = 'card card-sm card-settings';
   st.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay + smOrder.length * 55}ms both`;
-  st.innerHTML = '<span class="sm-icon">⚙️</span><div class="sm-title">設定</div>';
+  st.innerHTML = '<span class="sm-icon"><i class="bi bi-gear-fill"></i></span><div class="sm-title">設定</div>';
   bento.appendChild(st);
 
   _setupCardClicks();
@@ -1280,7 +1281,7 @@ async function loadMrtStrip() {
   const sName = starredId ? (_MRT_NAMES[starredId] || starredId) : '';
 
   if (!starredId) {
-    el.innerHTML = `<div class="strip-left"><div class="strip-tag">🚇 機場捷運</div><div class="strip-name" style="opacity:.6">未設定常用站</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-train-front"></i> 機場捷運</div><div class="strip-name" style="opacity:.6">未設定常用站</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
     return;
   }
   try {
@@ -1317,7 +1318,7 @@ async function loadMrtStrip() {
 
     el.innerHTML = `
       <div class="strip-left">
-        <div class="strip-tag">🚇 機場捷運</div>
+        <div class="strip-tag"><i class="bi bi-train-front"></i> 機場捷運</div>
         <div class="strip-name">${sName}</div>
       </div>
       <div class="strip-trains">${pillsHtml || '<span style="font-size:.72rem;color:rgba(255,255,255,.5)">無班次</span>'}</div>
@@ -1364,7 +1365,7 @@ async function loadWeatherStrip() {
     if (cache) { lat = cache.lat; lon = cache.lon; }
   }
   if (lat === null) {
-    el.innerHTML = `<div class="strip-left"><div class="strip-tag">☁️ 天氣防禦</div><div class="strip-name" style="opacity:.6">未設定地點</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-cloud-fill"></i> 天氣防禦</div><div class="strip-name" style="opacity:.6">未設定地點</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
     return;
   }
   try {
@@ -1376,16 +1377,16 @@ async function loadWeatherStrip() {
     const fcHtml = fc.slice(0,2).map((f,i) => `
       <div class="fc-mini-row">
         <span class="fc-mini-day">${i===0?'明':'後'}</span>
-        <span class="fc-mini-emoji">${f.emoji||'🌡️'}</span>
+        <span class="fc-mini-emoji"><i class="bi bi-${f.icon||'thermometer-half'}"></i></span>
         <span class="fc-mini-temp">${f.hi!==undefined&&f.hi!=='—'?f.hi:'—'}°</span>
       </div>`).join('');
     el.innerHTML = `
       <div class="strip-left">
-        <div class="strip-tag">☁️ 天氣防禦</div>
+        <div class="strip-tag"><i class="bi bi-cloud-fill"></i> 天氣防禦</div>
         <div class="strip-name">${loc}</div>
       </div>
       <div class="strip-wx">
-        <span class="wx-emoji-lg">${c.emoji||'🌡️'}</span>
+        <span class="wx-emoji-lg"><i class="bi bi-${c.icon||'thermometer-half'}"></i></span>
         <div class="wx-info">
           <span class="wx-temp-lg">${c.temp!==undefined?c.temp:'—'}°</span>
           <span class="wx-desc-sm">${c.wx||'—'}</span>
@@ -1394,7 +1395,7 @@ async function loadWeatherStrip() {
       </div>
       <div class="strip-arr">›</div>`;
   } catch {
-    el.innerHTML = `<div class="strip-left"><div class="strip-tag">☁️ 天氣防禦</div><div class="strip-name" style="opacity:.6">載入失敗</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-cloud-fill"></i> 天氣防禦</div><div class="strip-name" style="opacity:.6">載入失敗</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
   }
 }
 
@@ -1491,7 +1492,7 @@ async function doRegister() {
       document.getElementById('regCode').value = '';
       if (navigator.vibrate) navigator.vibrate([30,30,60]);
       setTimeout(() => alert(
-        `✅ 帳號建立成功！\n\n你的號碼是：${data.code}\n請記住此號碼，換裝置時用來登入`
+        `帳號建立成功！\n\n你的號碼是：${data.code}\n請記住此號碼，換裝置時用來登入`
       ), 350);
     } else {
       errEl.textContent = data.message || '建立失敗';
@@ -1658,10 +1659,10 @@ function _renderAdminPanel() {
     fetch(a.path, { cache: 'no-store', signal: AbortSignal.timeout(12000) })
       .then(r => {
         const el = document.getElementById('as_' + a.label.replace(/\s/g,''));
-        if (el) el.textContent = r.ok ? `✅ ${r.status}` : `⚠️ ${r.status}`;
+        if (el) el.textContent = r.ok ? `OK ${r.status}` : `ERR ${r.status}`;
       }).catch(() => {
         const el = document.getElementById('as_' + a.label.replace(/\s/g,''));
-        if (el) el.textContent = '❌ 無法連線';
+        if (el) el.textContent = '× 無法連線';
       });
   });
 
@@ -1698,14 +1699,14 @@ function _renderAdminPanel() {
           <span class="admin-row-lbl" style="font-size:0.92rem">${(cfg.name||'匿名').replace(/</g,'&lt;')}</span>
           <div style="display:flex;align-items:center;gap:8px">
             ${hasDiet ? `<button class="admin-diet-btn" id="btn_${uid}"
-              onclick="_toggleAdminDiet('${uid}','${cfg.dietSyncId.replace(/'/g,'')}','${(cfg.name||'匿名').replace(/'/g,'').replace(/</g,'')}')">🥗 熱量</button>` : ''}
+              onclick="_toggleAdminDiet('${uid}','${cfg.dietSyncId.replace(/'/g,'')}','${(cfg.name||'匿名').replace(/'/g,'').replace(/</g,'')}')"><i class="bi bi-egg-fried"></i> 熱量</button>` : ''}
             <span class="admin-row-val">${upd}</span>
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <span style="font-size:0.78rem;color:#636366">🚄 ${(thsr.origin||'—').replace(/</g,'&lt;')}→${(thsr.destination||'—').replace(/</g,'&lt;')}</span>
-          <span style="font-size:0.78rem;color:#636366">🚇 ${star}</span>
-          <span style="font-size:0.78rem;color:#636366">💬 ${tg.token ? '✅' : '—'}</span>
+          <span style="font-size:0.78rem;color:#636366"><i class="bi bi-train-front-fill"></i> ${(thsr.origin||'—').replace(/</g,'&lt;')}→${(thsr.destination||'—').replace(/</g,'&lt;')}</span>
+          <span style="font-size:0.78rem;color:#636366"><i class="bi bi-train-front"></i> ${star}</span>
+          <span style="font-size:0.78rem;color:#636366"><i class="bi bi-telegram"></i> ${tg.token ? '已設' : '—'}</span>
           <span style="font-size:0.78rem;color:#8e8e93;font-family:monospace">${(r.sync_key||'').replace(/</g,'&lt;')}</span>
         </div>
         ${hasDiet ? `<div class="admin-diet-panel" id="${uid}" style="display:none"></div>` : ''}
@@ -1741,7 +1742,7 @@ function _renderAdminPanel() {
     </div>
     <div class="admin-row">
       <span class="admin-row-lbl">ServiceWorker</span>
-      <span class="admin-row-val">${'serviceWorker' in navigator ? '✅ 已安裝' : '❌'}</span>
+      <span class="admin-row-val">${'serviceWorker' in navigator ? '已安裝' : '—'}</span>
     </div>
     <div class="admin-row">
       <span class="admin-row-lbl">LS 鍵數</span>
@@ -1765,7 +1766,7 @@ async function _toggleAdminDiet(uid, dietSyncId, userName) {
 
   const isOpen = panel.style.display !== 'none';
   panel.style.display = isOpen ? 'none' : '';
-  btn.textContent = isOpen ? '🥗 熱量' : '▲ 收起';
+  btn.innerHTML = isOpen ? '<i class="bi bi-egg-fried"></i> 熱量' : '▲ 收起';
   if (isOpen) return;
 
   panel.innerHTML = '<div style="font-size:.78rem;color:#8e8e93;padding:4px 0">載入中…</div>';

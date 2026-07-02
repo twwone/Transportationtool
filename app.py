@@ -728,18 +728,18 @@ _amenity_cache: dict = {"data": None, "expires_at": 0.0, "source": "static"}
 _amenity_lock  = threading.Lock()
 
 _AMENITY_CATEGORIES = {
-    "nursery":    {"label": "育嬰室",   "label_en": "Nursery",    "emoji": "🍼", "color": "#f43f5e"},
-    "water":      {"label": "飲水機",   "label_en": "Water",      "emoji": "💧", "color": "#0ea5e9"},
-    "exchange":   {"label": "換匯",     "label_en": "Currency",   "emoji": "💱", "color": "#f59e0b"},
-    "taxrefund":  {"label": "退稅",     "label_en": "Tax Refund", "emoji": "🧾", "color": "#10b981"},
-    "banking":    {"label": "銀行/ATM", "label_en": "Bank/ATM",   "emoji": "🏦", "color": "#6366f1"},
-    "luggage":    {"label": "行李",     "label_en": "Luggage",    "emoji": "🧳", "color": "#8b5cf6"},
-    "medical":    {"label": "醫療",     "label_en": "Medical",    "emoji": "🏥", "color": "#ef4444"},
-    "shower":     {"label": "淋浴",     "label_en": "Shower",     "emoji": "🚿", "color": "#06b6d4"},
-    "prayer":     {"label": "祈禱室",   "label_en": "Prayer",     "emoji": "🛐", "color": "#84cc16"},
-    "shop":       {"label": "商店",     "label_en": "Shop",       "emoji": "🏪", "color": "#f97316"},
-    "info":       {"label": "服務台",   "label_en": "Info",       "emoji": "ℹ️",  "color": "#3b82f6"},
-    "accessible": {"label": "無障礙",   "label_en": "Access",     "emoji": "♿",  "color": "#64748b"},
+    "nursery":    {"label": "育嬰室",   "label_en": "Nursery",    "icon": "baby2",             "color": "#f43f5e"},
+    "water":      {"label": "飲水機",   "label_en": "Water",      "icon": "droplet-fill",      "color": "#0ea5e9"},
+    "exchange":   {"label": "換匯",     "label_en": "Currency",   "icon": "currency-exchange", "color": "#f59e0b"},
+    "taxrefund":  {"label": "退稅",     "label_en": "Tax Refund", "icon": "receipt",           "color": "#10b981"},
+    "banking":    {"label": "銀行/ATM", "label_en": "Bank/ATM",   "icon": "bank",              "color": "#6366f1"},
+    "luggage":    {"label": "行李",     "label_en": "Luggage",    "icon": "briefcase-fill",    "color": "#8b5cf6"},
+    "medical":    {"label": "醫療",     "label_en": "Medical",    "icon": "hospital",          "color": "#ef4444"},
+    "shower":     {"label": "淋浴",     "label_en": "Shower",     "icon": "shower",            "color": "#06b6d4"},
+    "prayer":     {"label": "祈禱室",   "label_en": "Prayer",     "icon": "building",          "color": "#84cc16"},
+    "shop":       {"label": "商店",     "label_en": "Shop",       "icon": "shop",              "color": "#f97316"},
+    "info":       {"label": "服務台",   "label_en": "Info",       "icon": "info-circle-fill",  "color": "#3b82f6"},
+    "accessible": {"label": "無障礙",   "label_en": "Access",     "icon": "accessibility",     "color": "#64748b"},
 }
 
 # 桃園國際機場（TPE）精選設施靜態資料（中英雙語）
@@ -1125,15 +1125,22 @@ _COUNTY_ENDPOINT = {
     "金門縣": "F-D0047-087",
 }
 
-# Wx 代碼 → emoji（CWA 1-42）
-_WX_EMOJI = {
-    1:"☀️",2:"🌤️",3:"⛅",4:"⛅",5:"🌥️",6:"☁️",7:"☁️",
-    8:"🌦️",9:"🌧️",10:"⛈️",11:"🌧️",12:"⛈️",13:"🌦️",
-    14:"⛈️",15:"🌦️",16:"🌦️",17:"⛈️",18:"🌦️",19:"⛈️",
-    20:"🌦️",21:"⛈️",22:"⛈️",23:"🌦️",24:"🌫️",25:"🌧️",
-    26:"🌧️",27:"⛈️",28:"⛈️",29:"🌧️",30:"🌫️",31:"🌫️",
-    32:"🌧️",33:"🌧️",34:"⛈️",35:"🌫️",36:"🌫️",37:"🌦️",
-    38:"⛈️",39:"🌦️",40:"⛈️",41:"🌦️",42:"⛈️",
+# Wx 代碼 → Bootstrap Icons class（CWA 1-42）
+_WX_ICON = {
+    1:"sun-fill",          2:"cloud-sun-fill",          3:"cloud-sun-fill",
+    4:"cloud-sun-fill",    5:"clouds-fill",             6:"cloud-fill",
+    7:"cloud-fill",        8:"cloud-drizzle-fill",      9:"cloud-rain-heavy-fill",
+    10:"cloud-lightning-rain-fill", 11:"cloud-rain-heavy-fill", 12:"cloud-lightning-rain-fill",
+    13:"cloud-drizzle-fill", 14:"cloud-lightning-rain-fill", 15:"cloud-drizzle-fill",
+    16:"cloud-drizzle-fill", 17:"cloud-lightning-rain-fill", 18:"cloud-drizzle-fill",
+    19:"cloud-lightning-rain-fill", 20:"cloud-drizzle-fill", 21:"cloud-lightning-rain-fill",
+    22:"cloud-lightning-rain-fill", 23:"cloud-drizzle-fill", 24:"cloud-fog2-fill",
+    25:"cloud-rain-heavy-fill", 26:"cloud-rain-heavy-fill", 27:"cloud-lightning-rain-fill",
+    28:"cloud-lightning-rain-fill", 29:"cloud-rain-heavy-fill", 30:"cloud-fog2-fill",
+    31:"cloud-fog2-fill",  32:"cloud-rain-heavy-fill",  33:"cloud-rain-heavy-fill",
+    34:"cloud-lightning-rain-fill", 35:"cloud-fog2-fill", 36:"cloud-fog2-fill",
+    37:"cloud-drizzle-fill", 38:"cloud-lightning-rain-fill", 39:"cloud-drizzle-fill",
+    40:"cloud-lightning-rain-fill", 41:"cloud-drizzle-fill", 42:"cloud-lightning-rain-fill",
 }
 _ALERT_WX_CODES = {10,12,14,17,19,21,22,25,26,27,28,34,38,40,42}
 
@@ -1560,11 +1567,11 @@ def _haversine(la1, lo1, la2, lo2):
 def _nearest_township(lat, lon):
     return min(_TOWNSHIPS, key=lambda t: _haversine(lat, lon, t[3], t[4]))
 
-def _wx_emoji(code):
+def _wx_icon(code):
     try:
-        return _WX_EMOJI.get(int(code), "🌡️")
+        return _WX_ICON.get(int(code), "thermometer-half")
     except Exception:
-        return "🌡️"
+        return "thermometer-half"
 
 def _get_el(elements, name):
     """從 WeatherElement 列表取出指定名稱的 Time slots。"""
@@ -1666,7 +1673,7 @@ def _fetch_cwa(township_info):
             result["current"] = {
                 "wx":       wx_text,
                 "wx_code":  wx_code,
-                "emoji":    _wx_emoji(wx_code),
+                "icon":    _wx_icon(wx_code),
                 "temp":     temp,
                 "feels":    feels,
                 "pop12h":   pop,
@@ -1690,7 +1697,7 @@ def _fetch_cwa(township_info):
                     "date":    day,
                     "wx":      _ev_get(sl, "Weather"),
                     "wx_code": int(wc) if wc else 0,
-                    "emoji":   _wx_emoji(wc),
+                    "icon":   _wx_icon(wc),
                     "pop": "", "hi": "—", "lo": "—",
                 }
                 days_seen.append(day)
@@ -1776,7 +1783,7 @@ def _fetch_cwa(township_info):
                     wc = _ev_get(sl, "WeatherCode")
                     hourly.append({
                         "time":    ts[:16],
-                        "emoji":   _wx_emoji(wc),
+                        "icon":   _wx_icon(wc),
                         "wx_code": int(wc) if wc else 0,
                         "temp":    t_map.get(ts, "—") or "—",
                         "pop":     pop_map.get(ts, "") or "",
