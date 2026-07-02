@@ -1225,6 +1225,16 @@ async function openFlightDetail(key) {
           maxZoom: 18, subdomains: 'abcd',
         }).addTo(_leafletMap);
 
+        // 飛行軌跡
+        const trail = live.trail || [];
+        if (trail.length > 1) {
+          const coords = trail.map(p => [p.lat, p.lon]);
+          L.polyline(coords, { color: '#3b82f6', weight: 2.5, opacity: 0.65 }).addTo(_leafletMap);
+          // 起點標記
+          L.circleMarker(coords[0], { radius: 5, color: '#3b82f6', fillColor: '#93c5fd', fillOpacity: 1, weight: 2 })
+           .bindTooltip('起飛位置', { permanent: false }).addTo(_leafletMap);
+        }
+
         const heading = live.heading || 0;
         const planeIcon = L.divIcon({
           html: `<div style="transform:rotate(${heading}deg);font-size:30px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">✈</div>`,

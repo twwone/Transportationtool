@@ -2651,54 +2651,49 @@ def flight_live_api():
                     lat = detail.get("lat") or detail.get("latitude")
                     lon = detail.get("lon") or detail.get("lng") or detail.get("longitude")
                     _dbg.append(f"fr24_det:{lat},{lon}")
+
+                    # Always try get_flight_details() via mock id to get trail + richer data
+                    fl_id   = fl.get("id") if _is_d else getattr(fl, "id", None)
+                    fdet    = None
+                    trail_pts = []
+                    if fl_id:
+                        try:
+                            class _FId:
+                                def __init__(self, fid): self.id = fid
+                            fdet = fr.get_flight_details(_FId(fl_id))
+                            raw_trail = fdet.get("trail") or []
+                            _dbg.append(f"fr24_trail:{len(raw_trail)}")
+                            # trail is newest-first; reverse for chronological order
+                            for pt in reversed(raw_trail[:120]):
+                                p_lat = pt.get("lat")
+                                p_lon = pt.get("lng") or pt.get("lon")
+                                if p_lat is not None and p_lon is not None:
+                                    trail_pts.append({"lat": p_lat, "lon": p_lon,
+                                                      "alt": pt.get("alt"), "spd": pt.get("spd"),
+                                                      "hd": pt.get("hd"), "ts": pt.get("ts")})
+                            # Use most-recent trail point as current position if detail had none
+                            if trail_pts and lat is None:
+                                latest = trail_pts[-1]
+                                lat, lon = latest["lat"], latest["lon"]
+                        except Exception as de:
+                            _dbg.append(f"fr24_det_err:{type(de).__name__}")
+
                     if lat is not None and lon is not None:
+                        ac = (fdet.get("aircraft") or {}) if fdet else {}
                         data = {
                             "found":         True,
-                            "source":        "fr24_det",
+                            "source":        "fr24_det" if not trail_pts else "fr24_trail",
                             "lat":           lat, "lon": lon,
-                            "altitude_ft":   detail.get("alt") or detail.get("altitude"),
-                            "heading":       detail.get("course") or detail.get("heading"),
-                            "ground_speed":  detail.get("speed") or detail.get("ground_speed"),
+                            "altitude_ft":   detail.get("alt") or detail.get("altitude") or (trail_pts[-1].get("alt") if trail_pts else None),
+                            "heading":       detail.get("course") or detail.get("heading") or (trail_pts[-1].get("hd") if trail_pts else None),
+                            "ground_speed":  detail.get("speed") or detail.get("ground_speed") or (trail_pts[-1].get("spd") if trail_pts else None),
                             "vertical_speed":None,
                             "on_ground":     bool(detail.get("on_ground", False)),
-                            "registration":  detail.get("reg", ""),
-                            "aircraft_code": detail.get("type", ""),
+                            "registration":  ac.get("registration", "") or detail.get("reg", ""),
+                            "aircraft_code": (ac.get("model") or {}).get("code", "") or detail.get("type", ""),
                             "callsign":      detail.get("callsign", callsign),
+                            "trail":         trail_pts,
                         }
-
-                    # Path B: no detail coords → try get_flight_details() via mock id
-                    if not data:
-                        fl_id = fl.get("id") if _is_d else getattr(fl, "id", None)
-                        _dbg.append(f"fr24_id:{fl_id}")
-                        if fl_id:
-                            try:
-                                class _FId:
-                                    def __init__(self, fid): self.id = fid
-                                fdet  = fr.get_flight_details(_FId(fl_id))
-                                trail = fdet.get("trail") or []
-                                _dbg.append(f"fr24_trail:{len(trail)}")
-                                if trail:
-                                    pt  = trail[0]
-                                    lat = pt.get("lat")
-                                    lon = pt.get("lng") or pt.get("lon")
-                                    _dbg.append(f"fr24_trail_pos:{lat},{lon}")
-                                    if lat is not None and lon is not None:
-                                        ac = fdet.get("aircraft") or {}
-                                        data = {
-                                            "found":         True,
-                                            "source":        "fr24_trail",
-                                            "lat":           lat, "lon": lon,
-                                            "altitude_ft":   pt.get("alt"),
-                                            "heading":       pt.get("hd"),
-                                            "ground_speed":  pt.get("spd"),
-                                            "vertical_speed":None,
-                                            "on_ground":     False,
-                                            "registration":  ac.get("registration", ""),
-                                            "aircraft_code": (ac.get("model") or {}).get("code", ""),
-                                            "callsign":      callsign,
-                                        }
-                            except Exception as de:
-                                _dbg.append(f"fr24_det_err:{type(de).__name__}")
 
         except Exception as e:
             _dbg.append(f"fr24_err:{type(e).__name__}")
