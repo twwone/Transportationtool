@@ -2512,6 +2512,7 @@ def _to_icao_callsign(iata_cs: str) -> str:
 @app.route("/api/flight/live")
 def flight_live_api():
     callsign = request.args.get("cs", "").strip().upper().replace(" ", "")
+    debug    = request.args.get("debug") == "1"
     if not callsign or len(callsign) > 12:
         return jsonify({"found": False, "error": "invalid"}), 400
 
@@ -2519,6 +2520,8 @@ def flight_live_api():
         cached = _fl_cache.get(callsign)
         if cached and time.time() < cached.get("expires_at", 0):
             return jsonify(cached["data"])
+
+    _dbg: list[str] = []  # debug log
 
     icao_cs  = _to_icao_callsign(callsign)
     data: dict | None = None
@@ -2530,8 +2533,10 @@ def flight_live_api():
             f"https://api.adsb.lol/v2/callsign/{icao_cs}",
             timeout=5, headers=_HDR,
         )
+        _dbg.append(f"adsb_lol:{r.status_code}")
         if r.ok:
             ac_list = (r.json() or {}).get("ac") or []
+            _dbg.append(f"adsb_lol_ac:{len(ac_list)}")
             if ac_list:
                 ac       = ac_list[0]
                 alt_baro = ac.get("alt_baro")
@@ -2554,8 +2559,8 @@ def flight_live_api():
                     "registration":  ac.get("r", ""),
                     "aircraft_code": ac.get("t", ""),
                 }
-    except Exception:
-        pass
+    except Exception as e:
+        _dbg.append(f"adsb_lol_err:{type(e).__name__}")
 
     # ── 2. OpenSky Network — ICAO callsign padded to 8 chars ──
     if not data:
@@ -2565,8 +2570,10 @@ def flight_live_api():
                 "https://opensky-network.org/api/states/all",
                 params={"callsign": cs_padded}, timeout=8, headers=_HDR,
             )
+            _dbg.append(f"opensky:{r.status_code}")
             if r.ok:
                 states = (r.json() or {}).get("states") or []
+                _dbg.append(f"opensky_states:{len(states)}")
                 if states:
                     s = states[0]
                     data = {
@@ -2581,8 +2588,8 @@ def flight_live_api():
                         "heading":       s[10],
                         "vertical_speed":s[11],
                     }
-        except Exception:
-            pass
+        except Exception as e:
+            _dbg.append(f"opensky_err:{type(e).__name__}")
 
     # ── 3. FlightRadarAPI — unofficial, IATA callsign ──
     if not data:
@@ -2591,6 +2598,7 @@ def flight_live_api():
             fr      = FlightRadar24API()
             results = fr.search(callsign)
             live    = (results.get("live") if isinstance(results, dict) else results) or []
+            _dbg.append(f"fr24_live:{len(live)}")
             if live:
                 fl   = live[0]
                 data = {
@@ -2607,11 +2615,14 @@ def flight_live_api():
                     "registration":  getattr(fl, "registration",  ""),
                     "aircraft_code": getattr(fl, "aircraft_code", ""),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            _dbg.append(f"fr24_err:{type(e).__name__}")
 
     if not data:
         data = {"found": False}
+
+    if debug:
+        data = {**data, "_debug": {"callsign": callsign, "icao_cs": icao_cs, "log": _dbg}}
 
     with _fl_lock:
         _fl_cache[callsign] = {"data": data, "expires_at": time.time() + _FL_TTL}
