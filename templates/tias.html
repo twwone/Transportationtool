@@ -1219,8 +1219,7 @@ async function openFlightDetail(key) {
       mapEl.style.display = '';
 
       requestAnimationFrame(() => {
-        _leafletMap = L.map('fltMap', { zoomControl: true, attributionControl: false })
-          .setView([live.lat, live.lon], 7);
+        _leafletMap = L.map('fltMap', { zoomControl: true, attributionControl: false });
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           maxZoom: 18, subdomains: 'abcd',
         }).addTo(_leafletMap);
@@ -1229,10 +1228,14 @@ async function openFlightDetail(key) {
         const trail = live.trail || [];
         if (trail.length > 1) {
           const coords = trail.map(p => [p.lat, p.lon]);
-          L.polyline(coords, { color: '#3b82f6', weight: 2.5, opacity: 0.65 }).addTo(_leafletMap);
-          // 起點標記
+          const line = L.polyline(coords, { color: '#3b82f6', weight: 2.5, opacity: 0.65 }).addTo(_leafletMap);
+          // 起點標記（最舊的點）
           L.circleMarker(coords[0], { radius: 5, color: '#3b82f6', fillColor: '#93c5fd', fillOpacity: 1, weight: 2 })
            .bindTooltip('起飛位置', { permanent: false }).addTo(_leafletMap);
+          // 自動縮放到顯示完整軌跡
+          _leafletMap.fitBounds(line.getBounds(), { padding: [30, 30] });
+        } else {
+          _leafletMap.setView([live.lat, live.lon], 8);
         }
 
         const heading = live.heading || 0;
