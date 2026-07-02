@@ -8,6 +8,8 @@
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交通助理">
@@ -449,7 +451,89 @@ body {
   .sheet-overlay.open { background: rgba(0,0,0,0.55); }
   .picker-sheet { background: #1c1c1e; }
   .sh-done { color: #60a5fa; }
+  .flt-sheet { background: #1c1c1e; }
+  .flt-sheet-header { background: #1c1c1e; border-bottom-color: #2c2c2e; }
+  .flt-sheet-title { color: #f2f2f7; }
+  .flt-close-btn { background: #2c2c2e; color: #8e8e93; }
+  .flt-info-title { color: #636366; }
+  .flt-info-label { color: #636366; }
+  .flt-info-val   { color: #f2f2f7; }
+  .flt-map-placeholder { background: #1c1c1e; color: #636366; }
+  .flt-live-badge { background: rgba(22,163,74,0.18); }
 }
+
+/* ── Flight Detail Bottom Sheet ── */
+.flt-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.4);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.flt-overlay.open { opacity: 1; pointer-events: auto; }
+
+.flt-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 201;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.22,1,0.36,1);
+  max-height: 88vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.flt-sheet.open { transform: translateY(0); }
+
+.flt-sheet-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #f0f0f5;
+  position: sticky; top: 0;
+  background: #fff; z-index: 1;
+}
+.flt-sheet-drag { width: 40px; height: 4px; background: #d1d1d6; border-radius: 2px; margin: 0 auto 14px; }
+.flt-sheet-title { flex: 1; font-size: 1.05rem; font-weight: 700; }
+.flt-close-btn {
+  width: 32px; height: 32px;
+  background: #f0f0f5; border: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; cursor: pointer; color: #636366; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.flt-map { width: 100%; height: 240px; }
+.flt-map-placeholder {
+  width: 100%; height: 200px;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  color: #8e8e93; font-size: 0.88rem;
+  background: #f0f4ff;
+}
+
+.flt-info-section { padding: 14px 16px 8px; }
+.flt-info-title {
+  font-size: 0.7rem; font-weight: 700; color: #8e8e93;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.flt-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; }
+.flt-info-cell { display: flex; flex-direction: column; gap: 2px; }
+.flt-info-label { font-size: 0.7rem; color: #8e8e93; }
+.flt-info-val   { font-size: 0.92rem; font-weight: 600; color: #1c1c1e; }
+
+.flt-live-section { padding: 10px 16px 6px; border-top: 1px solid #f0f0f5; }
+.flt-live-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(22,163,74,0.1); color: #16a34a;
+  border-radius: 8px; padding: 3px 10px;
+  font-size: 0.75rem; font-weight: 700; margin-bottom: 10px;
+}
+.flt-live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #16a34a;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.card { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 </style>
 </head>
 <body>
@@ -494,6 +578,27 @@ body {
     </div>
     <div id="pickerList" class="picker-list"></div>
   </div>
+</div>
+
+<!-- ── 航班詳細資訊 Bottom Sheet ── -->
+<div class="flt-overlay" id="fltOverlay" onclick="closeFlightSheet()"></div>
+<div class="flt-sheet" id="fltSheet">
+  <div class="flt-sheet-header">
+    <div class="flt-sheet-title" id="fltSheetTitle">航班詳情</div>
+    <button class="flt-close-btn" onclick="closeFlightSheet()"><i class="bi bi-x"></i></button>
+  </div>
+  <div id="fltMapWrap">
+    <div class="flt-map-placeholder" id="fltMapPh">
+      <div class="spin" style="font-size:1.5rem;color:#60a5fa">↻</div>
+      <div>正在定位飛機…</div>
+    </div>
+    <div id="fltMap" class="flt-map" style="display:none"></div>
+  </div>
+  <div class="flt-live-section" id="fltLiveSec" style="display:none">
+    <div class="flt-live-badge"><span class="flt-live-dot"></span>即時追蹤</div>
+    <div class="flt-info-grid" id="fltLiveGrid"></div>
+  </div>
+  <div class="flt-info-section" id="fltStaticSec"></div>
 </div>
 
 <div id="errWrap"></div>
@@ -574,6 +679,8 @@ const TAB_ORDER  = { arr: 0, dep: 1, all: 2 };
 const TAB_PANELS = { arr: 'listArr', dep: 'listDep', all: 'panelAll' };
 
 let _arrData = [], _depData = [], _allArr = [], _allDep = [];
+let _fltDataMap = {};   // fltKey → flight object, for detail sheet lookup
+let _leafletMap = null; // active Leaflet map instance
 let _tab = 'arr';
 let _searchTimer  = null;
 let _prevGates    = {};
@@ -923,6 +1030,8 @@ function renderCard(f, mode, showDirBadge) {
     : '';
 
   const _fltKey   = shares ? shares[0].FlightNumber : fltNum;
+  const _detailKey = (_fltKey + '_' + mode).replace(/[\s/]/g, '');
+  _fltDataMap[_detailKey] = f;
   const prevGate  = _gateChanges[_fltKey]  ? _gateChanges[_fltKey].from  : undefined;
   const acTypeChg = _acTypeChanges[_fltKey];
   const acTypeBadge = acTypeChg
@@ -943,7 +1052,7 @@ function renderCard(f, mode, showDirBadge) {
   const tatHtml   = !isArr ? buildTAT(sch, est) : '';
   const updatedAt = f.UpdateTime ? fmtHHMM(f.UpdateTime) : '';
 
-  return `<div class="${cardCls}">
+  return `<div class="${cardCls}" data-fltkey="${_detailKey}">
     <div class="card-meta">
       ${airlineBadges}
       ${dirBadge}
@@ -972,6 +1081,131 @@ function renderCard(f, mode, showDirBadge) {
     ${updatedAt ? `<div class="card-updated">資料更新 ${updatedAt}</div>` : ''}
   </div>`;
 }
+
+/* ── 航班詳細資訊：開啟 / 關閉 ── */
+function closeFlightSheet() {
+  document.getElementById('fltOverlay').classList.remove('open');
+  document.getElementById('fltSheet').classList.remove('open');
+  document.body.style.overflow = '';
+  if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
+}
+
+async function openFlightDetail(key) {
+  const f = _fltDataMap[key];
+  if (!f) return;
+
+  const mode   = key.slice(-3) === 'arr' ? 'arr' : 'dep';
+  const isArr  = mode === 'arr';
+  const shares = f._codeshares || null;
+  const fltNum = shares ? shares.map(c => c.FlightNumber).join(' / ') : (f.FlightNumber || '—');
+  const primaryNum = (shares ? shares[0].FlightNumber : f.FlightNumber || '').replace(/\s/g, '');
+  const airline    = shares
+    ? shares.map(c => (_airlineMap[c.AirlineID] || {}).zh || c.AirlineID).filter(Boolean).join(' / ')
+    : ((_airlineMap[f.AirlineID] || {}).zh || f.AirlineID || '');
+  const counterAp = isArr ? (f.DepartureAirportID || '') : (f.ArrivalAirportID || '');
+  const cityName  = (_airportMap[counterAp] || {}).zh || AP_ZH[counterAp] || counterAp || '—';
+  const gate      = f.Gate || (isArr ? f.ArrivalGate : f.DepartureGate) || '—';
+  const baggage   = f.BaggageClaim  || f.BaggageClaimBelt || '—';
+  const counter   = f.CheckCounter  || f.CheckInCounter    || '—';
+  const acType    = f.AcType    || '—';
+  const terminal  = f.Terminal  || '—';
+  const sch = isArr ? f.ScheduleArrivalTime    : f.ScheduleDepartureTime;
+  const est = isArr ? (f.EstimatedArrivalTime  || f.EstimateArrivalTime)
+                    : (f.EstimatedDepartureTime || f.EstimateDepartureTime);
+  const act = isArr ? f.ActualArrivalTime       : f.ActualDepartureTime;
+
+  /* 標題 */
+  document.getElementById('fltSheetTitle').textContent = `${fltNum}  ${isArr ? '抵達' : '出發'}`;
+
+  /* 重設狀態 */
+  if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
+  const phEl  = document.getElementById('fltMapPh');
+  const mapEl = document.getElementById('fltMap');
+  phEl.innerHTML  = '<div class="spin" style="font-size:1.5rem;color:#60a5fa">↻</div><div>正在定位飛機…</div>';
+  phEl.style.display  = '';
+  mapEl.style.display = 'none';
+  document.getElementById('fltLiveSec').style.display = 'none';
+
+  /* 靜態班機資訊 */
+  const schLabel = isArr ? '預計抵達' : '預計出發';
+  const actLabel = isArr ? '實際抵達' : '實際出發';
+  document.getElementById('fltStaticSec').innerHTML = `
+    <div class="flt-info-title">班機資訊</div>
+    <div class="flt-info-grid">
+      <div class="flt-info-cell"><div class="flt-info-label">航空公司</div><div class="flt-info-val">${airline || '—'}</div></div>
+      <div class="flt-info-cell"><div class="flt-info-label">${isArr ? '出發地' : '目的地'}</div><div class="flt-info-val">${counterAp} ${cityName}</div></div>
+      <div class="flt-info-cell"><div class="flt-info-label">${schLabel}</div><div class="flt-info-val">${sch ? fmtHHMM(sch) : '—'}</div></div>
+      <div class="flt-info-cell"><div class="flt-info-label">${isArr ? '行李轉盤' : '報到櫃檯'}</div><div class="flt-info-val">${isArr ? baggage : counter}</div></div>
+      <div class="flt-info-cell"><div class="flt-info-label">登機門</div><div class="flt-info-val">${gate}</div></div>
+      <div class="flt-info-cell"><div class="flt-info-label">機型</div><div class="flt-info-val">${acType}</div></div>
+      ${terminal !== '—' ? `<div class="flt-info-cell"><div class="flt-info-label">航廈</div><div class="flt-info-val">T${terminal}</div></div>` : ''}
+      ${act ? `<div class="flt-info-cell"><div class="flt-info-label">${actLabel}</div><div class="flt-info-val">${fmtHHMM(act)}</div></div>` : ''}
+      ${est && !act ? `<div class="flt-info-cell"><div class="flt-info-label">${schLabel}(更新)</div><div class="flt-info-val">${fmtHHMM(est)}</div></div>` : ''}
+    </div>`;
+
+  /* 開啟 sheet */
+  document.getElementById('fltOverlay').classList.add('open');
+  document.getElementById('fltSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  /* 取得即時位置 */
+  try {
+    const res  = await fetch(`/api/flight/live?cs=${encodeURIComponent(primaryNum)}`);
+    const live = await res.json();
+
+    if (live.found && live.lat != null && live.lon != null) {
+      phEl.style.display  = 'none';
+      mapEl.style.display = '';
+
+      requestAnimationFrame(() => {
+        _leafletMap = L.map('fltMap', { zoomControl: true, attributionControl: false })
+          .setView([live.lat, live.lon], 7);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 18, subdomains: 'abcd',
+        }).addTo(_leafletMap);
+
+        const heading = live.heading || 0;
+        const planeIcon = L.divIcon({
+          html: `<div style="transform:rotate(${heading}deg);font-size:30px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">✈</div>`,
+          className: '', iconSize: [34, 34], iconAnchor: [17, 17],
+        });
+        L.marker([live.lat, live.lon], { icon: planeIcon }).addTo(_leafletMap)
+          .bindPopup(`<b>${fltNum}</b>${live.altitude_ft ? '<br>' + live.altitude_ft.toLocaleString() + ' ft' : ''}`).openPopup();
+      });
+
+      const speed  = live.ground_speed   != null ? Math.round(live.ground_speed) + ' kt'     : '—';
+      const alt    = live.altitude_ft    != null ? live.altitude_ft.toLocaleString() + ' ft'  : '—';
+      const hdg    = live.heading        != null ? live.heading + '°'                         : '—';
+      const vs     = live.vertical_speed != null
+                       ? (live.vertical_speed > 0 ? '+' : '') + Math.round(live.vertical_speed) + ' ft/min'
+                       : '—';
+      const state  = live.on_ground ? '地面' : '飛行中';
+      const reg    = live.registration || live.aircraft_code || live.icao24 || '—';
+
+      document.getElementById('fltLiveGrid').innerHTML = `
+        <div class="flt-info-cell"><div class="flt-info-label">狀態</div><div class="flt-info-val">${state}</div></div>
+        <div class="flt-info-cell"><div class="flt-info-label">速度</div><div class="flt-info-val">${speed}</div></div>
+        <div class="flt-info-cell"><div class="flt-info-label">高度</div><div class="flt-info-val">${alt}</div></div>
+        <div class="flt-info-cell"><div class="flt-info-label">航向</div><div class="flt-info-val">${hdg}</div></div>
+        <div class="flt-info-cell"><div class="flt-info-label">垂直速率</div><div class="flt-info-val">${vs}</div></div>
+        <div class="flt-info-cell"><div class="flt-info-label">機號/呼號</div><div class="flt-info-val">${reg}</div></div>`;
+      document.getElementById('fltLiveSec').style.display = '';
+
+    } else {
+      phEl.innerHTML = '<i class="bi bi-geo-alt-fill" style="font-size:2rem;color:#c7c7cc"></i><div>目前無即時位置資料</div>';
+    }
+  } catch (_) {
+    phEl.innerHTML = '<i class="bi bi-wifi-off" style="font-size:2rem;color:#c7c7cc"></i><div>無法取得即時資料</div>';
+  }
+}
+
+/* ── 卡片點擊委派 ── */
+['listArr','listDep','allResults'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    const card = e.target.closest('[data-fltkey]');
+    if (card) openFlightDetail(card.dataset.fltkey);
+  });
+});
 
 /* ── 卡片錯開入場 ── */
 function staggerCards(container, interval) {

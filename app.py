@@ -2483,6 +2483,91 @@ def v_del():
     return jsonify({"ok": True, "items": items})
 
 
+_fl_cache: dict = {}
+_fl_lock  = threading.Lock()
+_FL_TTL   = 30  # seconds
+
+@app.route("/api/flight/live")
+def flight_live_api():
+    callsign = request.args.get("cs", "").strip().upper().replace(" ", "")
+    if not callsign or len(callsign) > 10:
+        return jsonify({"found": False, "error": "invalid"}), 400
+
+    with _fl_lock:
+        cached = _fl_cache.get(callsign)
+        if cached and time.time() < cached.get("expires_at", 0):
+            return jsonify(cached["data"])
+
+    data: dict | None = None
+
+    # ── FlightRadarAPI（unofficial） ──
+    try:
+        from FlightRadarAPI import FlightRadar24API
+        fr      = FlightRadar24API()
+        results = fr.search(callsign)
+        if isinstance(results, dict):
+            live = results.get("live") or []
+        elif isinstance(results, list):
+            live = results
+        else:
+            live = []
+        if live:
+            fl = live[0]
+            data = {
+                "found":         True,
+                "source":        "fr24",
+                "callsign":      getattr(fl, "callsign",       callsign),
+                "lat":           getattr(fl, "latitude",       None),
+                "lon":           getattr(fl, "longitude",      None),
+                "altitude_ft":   getattr(fl, "altitude",       None),
+                "heading":       getattr(fl, "heading",        None),
+                "ground_speed":  getattr(fl, "ground_speed",   None),
+                "vertical_speed":getattr(fl, "vertical_speed", None),
+                "on_ground":     bool(getattr(fl, "on_ground", False)),
+                "registration":  getattr(fl, "registration",  ""),
+                "aircraft_code": getattr(fl, "aircraft_code", ""),
+                "icao_24bit":    getattr(fl, "icao_24bit",    ""),
+            }
+    except Exception:
+        pass
+
+    # ── OpenSky Network fallback（free, no key） ──
+    if not data:
+        try:
+            cs_padded = callsign.ljust(8)
+            r = _requests.get(
+                "https://opensky-network.org/api/states/all",
+                params={"callsign": cs_padded}, timeout=8,
+            )
+            if r.ok:
+                states = (r.json() or {}).get("states") or []
+                if states:
+                    s = states[0]
+                    data = {
+                        "found":         True,
+                        "source":        "opensky",
+                        "icao24":        s[0] or "",
+                        "callsign":      (s[1] or "").strip(),
+                        "lat":           s[6],
+                        "lon":           s[5],
+                        "altitude_ft":   round(s[7] * 3.28084) if s[7] else None,
+                        "on_ground":     bool(s[8]),
+                        "ground_speed":  round(s[9] * 1.944) if s[9] else None,
+                        "heading":       s[10],
+                        "vertical_speed":s[11],
+                    }
+        except Exception:
+            pass
+
+    if not data:
+        data = {"found": False}
+
+    with _fl_lock:
+        _fl_cache[callsign] = {"data": data, "expires_at": time.time() + _FL_TTL}
+
+    return jsonify(data)
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5566))
     print(f"啟動中，請開啟 http://localhost:{port}")
