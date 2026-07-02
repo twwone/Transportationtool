@@ -544,6 +544,20 @@ body {
   width: 6px; height: 6px; border-radius: 50%; background: #16a34a;
   animation: pulse 1.5s ease-in-out infinite;
 }
+/* 地圖上的脈衝圈 */
+.plane-pulse-ring {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid #3b82f6;
+  animation: plane-pulse 2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes plane-pulse {
+  0%   { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.plane-icon-inner {
+  transition: transform 1.5s ease-in-out;
+}
 .card { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 </style>
 </head>
@@ -698,6 +712,9 @@ let _leafletMap   = null; // active Leaflet map instance
 let _planeMarker  = null; // Leaflet marker for aircraft
 let _trailLine    = null; // Leaflet polyline for trail
 let _liveInterval = null; // polling interval handle
+let _deadReckon   = null; // { lat, lon, heading, speedKt, updateTime }
+let _animInterval = null; // 1s dead reckoning ticker
+let _pulseCircle  = null; // pulsing ring marker
 let _tab = 'arr';
 let _searchTimer  = null;
 let _prevGates    = {};
@@ -759,12 +776,14 @@ async function _refreshLiveNow() {
     _planeMarker.setLatLng([upd.lat, upd.lon]);
     _planeMarker.setIcon(_currentMakePlaneIcon(upd.heading));
     _planeMarker.setPopupContent(_currentPopupHtml(upd));
+    if (_pulseCircle) _pulseCircle.setLatLng([upd.lat, upd.lon]);
     if (upd.trail && upd.trail.length > 1) {
       const nc = upd.trail.map(p => [p.lat, p.lon]);
       _trailLine ? _trailLine.setLatLngs(nc)
                  : (_trailLine = L.polyline(nc, { color:'#3b82f6', weight:2.5, opacity:.65 }).addTo(_leafletMap));
     }
     _currentUpdateGrid(upd);
+    _startDeadReckoning(upd.lat, upd.lon, upd.heading, upd.ground_speed);
   }
 
   btn.textContent = '↻ 立即更新';
@@ -774,6 +793,26 @@ let _currentLiveCs = '';
 let _currentMakePlaneIcon = () => {};
 let _currentPopupHtml = () => '';
 let _currentUpdateGrid = () => {};
+
+/* ── Dead Reckoning：每秒推算飛機位置 ── */
+function _startDeadReckoning(lat, lon, heading, speedKt) {
+  _deadReckon = { lat, lon, heading: heading || 0, speedKt: speedKt || 0, updateTime: Date.now() };
+  if (_animInterval) { clearInterval(_animInterval); _animInterval = null; }
+  _animInterval = setInterval(() => {
+    if (!_planeMarker || !_deadReckon) return;
+    const dt      = (Date.now() - _deadReckon.updateTime) / 1000;
+    const speedMs = _deadReckon.speedKt * 0.5144;
+    const distM   = speedMs * dt;
+    const hdRad   = (_deadReckon.heading * Math.PI) / 180;
+    const latRad  = (_deadReckon.lat * Math.PI) / 180;
+    const estLat  = _deadReckon.lat + (distM * Math.cos(hdRad)) / 111320;
+    const estLon  = _deadReckon.lon + (distM * Math.sin(hdRad)) / (111320 * Math.cos(latRad));
+    _planeMarker.setLatLng([estLat, estLon]);
+    if (_pulseCircle) _pulseCircle.setLatLng([estLat, estLon]);
+    const tsEl = document.getElementById('fltLiveTs');
+    if (tsEl) tsEl.textContent = `${Math.round(dt)} 秒前資料 · 推估中`;
+  }, 1000);
+}
 
 /* ── 監控航空公司偏好（localStorage 持久化） ── */
 const _DEFAULT_CODES = ['AK','FD','QZ','Z2','XT','D7','XJ'];
@@ -1189,9 +1228,12 @@ function closeFlightSheet() {
   document.getElementById('fltSheet').classList.remove('open');
   _unlockBodyScroll();
   if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
+  if (_animInterval) { clearInterval(_animInterval); _animInterval = null; }
   if (_leafletMap)   { _leafletMap.remove(); _leafletMap = null; }
   _planeMarker = null;
   _trailLine   = null;
+  _pulseCircle = null;
+  _deadReckon  = null;
 }
 
 async function openFlightDetail(key) {
@@ -1271,7 +1313,7 @@ async function openFlightDetail(key) {
 
       /* ── 建立地圖 icon 的 helper ── */
       const _makePlaneIcon = hd => L.divIcon({
-        html: `<div style="transform:rotate(${hd||0}deg);font-size:30px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">✈</div>`,
+        html: `<div class="plane-icon-inner" style="transform:rotate(${hd||0}deg);font-size:30px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">✈</div>`,
         className: '', iconSize: [34, 34], iconAnchor: [17, 17],
       });
 
@@ -1296,7 +1338,7 @@ async function openFlightDetail(key) {
           <div class="flt-info-cell"><div class="flt-info-label">機號/呼號</div><div class="flt-info-val">${reg}</div></div>
           <div class="flt-info-cell" style="grid-column:1/-1">
             <div class="flt-info-label">資料時間</div>
-            <div class="flt-info-val" style="font-size:0.8rem;color:#8e8e93">${ts} <span style="font-weight:400;font-size:0.72rem">（自動 30 秒 / 可手動更新）</span></div>
+            <div class="flt-info-val" style="font-size:0.8rem;color:#8e8e93"><span id="fltLiveTs">剛剛更新 (${ts})</span></div>
           </div>`;
       };
 
@@ -1322,6 +1364,15 @@ async function openFlightDetail(key) {
           .addTo(_leafletMap)
           .bindPopup(`<b>${fltNum}</b>${live.altitude_ft ? '<br>' + live.altitude_ft.toLocaleString() + ' ft' : ''}`)
           .openPopup();
+
+        _pulseCircle = L.marker([live.lat, live.lon], {
+          icon: L.divIcon({
+            html: '<div class="plane-pulse-ring"></div>',
+            className: '', iconSize: [40, 40], iconAnchor: [20, 20],
+          }),
+        }).addTo(_leafletMap);
+
+        _startDeadReckoning(live.lat, live.lon, live.heading, live.ground_speed);
       });
 
       // 把 helpers 存到全局供 _refreshLiveNow 使用
@@ -1340,10 +1391,11 @@ async function openFlightDetail(key) {
         const upd = await _fetchLiveData(primaryNum);
         if (!upd.found || upd.lat == null || upd.lon == null) return;
 
-        // 移動飛機
+        // 移動飛機到真實位置
         _planeMarker.setLatLng([upd.lat, upd.lon]);
         _planeMarker.setIcon(_makePlaneIcon(upd.heading));
         _planeMarker.setPopupContent(`<b>${fltNum}</b>${upd.altitude_ft ? '<br>' + upd.altitude_ft.toLocaleString() + ' ft' : ''}`);
+        if (_pulseCircle) _pulseCircle.setLatLng([upd.lat, upd.lon]);
 
         // 更新軌跡
         if (upd.trail && upd.trail.length > 1) {
@@ -1355,8 +1407,9 @@ async function openFlightDetail(key) {
           }
         }
 
-        // 更新數字資訊
+        // 更新數字資訊並重設 dead reckoning 基準
         _updateGrid(upd);
+        _startDeadReckoning(upd.lat, upd.lon, upd.heading, upd.ground_speed);
       }, 30000);
 
     } else {
