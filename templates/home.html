@@ -271,52 +271,61 @@ body {
   .card-sm:hover::before { opacity: 1; }
 }
 
-/* 各卡顏色 */
-.card-thsr .sm-title { color: #c2550a; }
+/* 各卡顏色：icon 主色 + 淡底 + 統一深色標題 */
+.card-thsr     { background: #fff8f3; border-color: rgba(249,115,22,0.15); }
+.card-thsr .sm-icon  { color: #f97316; }
+.card-thsr .sm-title { color: var(--text); }
 .card-thsr::before   { background: linear-gradient(90deg,#ff9500,#ff6a00); }
-.card-thsr:hover .sm-arrow { color: #ff9500; }
 
-.card-mrt .sm-title { color: #6d28d9; }
+.card-mrt     { background: #faf5ff; border-color: rgba(124,58,237,0.15); }
+.card-mrt .sm-icon  { color: #7c3aed; }
+.card-mrt .sm-title { color: var(--text); }
 .card-mrt::before   { background: linear-gradient(90deg,#8b5cf6,#7c3aed); }
-.card-mrt:hover .sm-arrow { color: #7c3aed; }
 
-.card-schedule .sm-title { color: #047857; }
+.card-schedule     { background: #f0fdf9; border-color: rgba(5,150,105,0.15); }
+.card-schedule .sm-icon  { color: #059669; }
+.card-schedule .sm-title { color: var(--text); }
 .card-schedule::before   { background: linear-gradient(90deg,#10b981,#059669); }
-.card-schedule:hover .sm-arrow { color: #059669; }
 
-.card-amenities .sm-title { color: #0e7490; }
+.card-amenities     { background: #f0f9ff; border-color: rgba(8,145,178,0.15); }
+.card-amenities .sm-icon  { color: #0891b2; }
+.card-amenities .sm-title { color: var(--text); }
 .card-amenities::before   { background: linear-gradient(90deg,#06b6d4,#0891b2); }
-.card-amenities:hover .sm-arrow { color: #0891b2; }
 
-.card-visa .sm-title { color: #b45309; }
+.card-visa     { background: #fffbeb; border-color: rgba(217,119,6,0.15); }
+.card-visa .sm-icon  { color: #d97706; }
+.card-visa .sm-title { color: var(--text); }
 .card-visa::before   { background: linear-gradient(90deg,#f59e0b,#d97706); }
-.card-visa:hover .sm-arrow { color: #d97706; }
 
-.card-codes .sm-title { color: #5b21b6; }
+.card-codes     { background: #eef2ff; border-color: rgba(79,70,229,0.15); }
+.card-codes .sm-icon  { color: #4f46e5; }
+.card-codes .sm-title { color: var(--text); }
 .card-codes::before   { background: linear-gradient(90deg,#7c3aed,#6d28d9); }
-.card-codes:hover .sm-arrow { color: #6d28d9; }
 
-.card-share .sm-title { color: #1d4ed8; }
+.card-share     { background: #eff6ff; border-color: rgba(37,99,235,0.15); }
+.card-share .sm-icon  { color: #2563eb; }
+.card-share .sm-title { color: var(--text); }
 .card-share::before   { background: linear-gradient(90deg,#3b82f6,#2563eb); }
-.card-share:hover .sm-arrow { color: #2563eb; }
 
-.card-weather .sm-title { color: #0e7490; }
+.card-weather     { background: #f0f9ff; border-color: rgba(2,132,199,0.15); }
+.card-weather .sm-icon  { color: #0284c7; }
+.card-weather .sm-title { color: var(--text); }
 .card-weather::before   { background: linear-gradient(90deg,#0ea5e9,#0284c7); }
-.card-weather:hover .sm-arrow { color: #0284c7; }
 
-.card-diet .sm-title { color: #059669; }
+.card-diet     { background: #f0fdf4; border-color: rgba(22,163,74,0.15); }
+.card-diet .sm-icon  { color: #16a34a; }
+.card-diet .sm-title { color: var(--text); }
 .card-diet::before   { background: linear-gradient(90deg,#34d399,#10b981); }
-.card-diet:hover .sm-arrow { color: #10b981; }
 
-
-.card-memo .sm-title { color: #7c5c45; }
-.card-memo .sm-icon  { font-family: Georgia, serif; font-size: 1.6rem; font-weight: normal; color: #7c5c45; }
+.card-memo     { background: #fdf8f0; border-color: rgba(146,64,14,0.15); }
+.card-memo .sm-icon  { font-family: Georgia, serif; font-size: 1.6rem; font-weight: normal; color: #92400e; }
+.card-memo .sm-title { color: var(--text); }
 .card-memo::before   { background: linear-gradient(90deg,#a67c62,#7c5c45); }
-.card-memo:hover .sm-arrow { color: #7c5c45; }
 
-.card-settings .sm-title { color: #4b5563; }
+.card-settings     { background: #f8fafc; border-color: rgba(100,116,139,0.15); }
+.card-settings .sm-icon  { color: #64748b; }
+.card-settings .sm-title { color: var(--text); }
 .card-settings::before   { background: linear-gradient(90deg,#9ca3af,#6b7280); }
-.card-settings:hover .sm-arrow { color: #6b7280; }
 
 /* ── Strip 卡片（機捷 / 天氣，全寬橫條）── */
 .card-strip {
@@ -516,18 +525,33 @@ body {
   .card-sm {
     box-shadow: none;
   }
-  .card-thsr .sm-title { color: #ff9f0a; }
-  .card-mrt  .sm-title { color: #bf5af2; }
-  .card-schedule  .sm-title { color: #30d158; }
-  .card-amenities .sm-title { color: #32ade6; }
-  .card-visa  .sm-title { color: #ffd60a; }
-  .card-codes  .sm-title { color: #bf5af2; }
-  .card-share  .sm-title { color: #60a5fa; }
-  .card-weather .sm-title { color: #38bdf8; }
-  .card-diet     .sm-title { color: #34d399; }
-.card-memo     .sm-title { color: #c4967a; }
-.card-memo     .sm-icon  { color: #c4967a; }
-.card-settings .sm-title { color: #9ca3af; }
+  /* 深色模式：淡色調底 + 亮色 icon */
+  .card-thsr     { background: rgba(249,115,22,0.07); border-color: rgba(249,115,22,0.18); }
+  .card-mrt      { background: rgba(124,58,237,0.07); border-color: rgba(124,58,237,0.18); }
+  .card-schedule { background: rgba(5,150,105,0.07);  border-color: rgba(5,150,105,0.18); }
+  .card-amenities{ background: rgba(8,145,178,0.07);  border-color: rgba(8,145,178,0.18); }
+  .card-visa     { background: rgba(217,119,6,0.07);  border-color: rgba(217,119,6,0.18); }
+  .card-codes    { background: rgba(79,70,229,0.07);  border-color: rgba(79,70,229,0.18); }
+  .card-share    { background: rgba(37,99,235,0.07);  border-color: rgba(37,99,235,0.18); }
+  .card-weather  { background: rgba(2,132,199,0.07);  border-color: rgba(2,132,199,0.18); }
+  .card-diet     { background: rgba(22,163,74,0.07);  border-color: rgba(22,163,74,0.18); }
+  .card-memo     { background: rgba(146,64,14,0.07);  border-color: rgba(146,64,14,0.18); }
+  .card-settings { background: rgba(100,116,139,0.07);border-color: rgba(100,116,139,0.18); }
+  .card-thsr .sm-icon     { color: #fb923c; }
+  .card-mrt .sm-icon      { color: #a78bfa; }
+  .card-schedule .sm-icon { color: #34d399; }
+  .card-amenities .sm-icon{ color: #22d3ee; }
+  .card-visa .sm-icon     { color: #fbbf24; }
+  .card-codes .sm-icon    { color: #818cf8; }
+  .card-share .sm-icon    { color: #60a5fa; }
+  .card-weather .sm-icon  { color: #38bdf8; }
+  .card-diet .sm-icon     { color: #4ade80; }
+  .card-memo .sm-icon     { color: #c4967a; }
+  .card-settings .sm-icon { color: #94a3b8; }
+  .card-thsr .sm-title,.card-mrt .sm-title,.card-schedule .sm-title,
+  .card-amenities .sm-title,.card-visa .sm-title,.card-codes .sm-title,
+  .card-share .sm-title,.card-weather .sm-title,.card-diet .sm-title,
+  .card-memo .sm-title,.card-settings .sm-title { color: var(--text); }
   .footer   { color: #3a3a3c; }
   .sort-btn { background: rgba(255,255,255,0.1); color: #ebebf5; }
   .sort-btn.active { background: #0d9488; color: #fff; }

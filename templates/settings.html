@@ -78,10 +78,16 @@ body {
 /* ── Section ── */
 .wrap { padding: 0 16px; }
 .sec-label {
-  font-size: 0.72rem; font-weight: 600; color: var(--sub);
+  font-size: 0.75rem; font-weight: 700; color: var(--sub);
   text-transform: uppercase; letter-spacing: .05em;
   padding: 16px 4px 6px;
+  display: flex; align-items: center; gap: 5px;
 }
+.sec-label .bi-train-front-fill { color: #f97316; font-size: 0.95rem; }
+.sec-label .bi-train-front      { color: #7c3aed; font-size: 0.95rem; }
+.sec-label .bi-telegram         { color: #0088cc; font-size: 0.95rem; }
+.sec-label .bi-egg-fried        { color: #16a34a; font-size: 0.95rem; }
+.sec-label .bi-cloud-fill       { color: #0284c7; font-size: 0.95rem; }
 .sec-card {
   background: var(--surface);
   border-radius: var(--radius);
@@ -162,6 +168,11 @@ body {
   html, body { background: #000; }
   .top-bar { background: rgba(0,0,0,0.88); border-color: rgba(255,255,255,0.08); }
   .p-chip { background: rgba(28,28,30,0.95); }
+  .sec-label .bi-train-front-fill { color: #fb923c; }
+  .sec-label .bi-train-front      { color: #a78bfa; }
+  .sec-label .bi-telegram         { color: #38bdf8; }
+  .sec-label .bi-egg-fried        { color: #4ade80; }
+  .sec-label .bi-cloud-fill       { color: #38bdf8; }
 }
 </style>
 </head>
