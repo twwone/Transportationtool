@@ -1169,13 +1169,13 @@ async function openFlightDetail(key) {
   document.getElementById('fltSheet').classList.add('open');
   _lockBodyScroll();
 
-  /* 已有實際落地/起飛時間 → 不查即時（飛機已停） */
-  if (act) {
-    phEl.innerHTML = `<i class="bi bi-check-circle-fill" style="font-size:2rem;color:#22c55e"></i><div>${isArr ? '已落地' : '已起飛'}</div>`;
+  /* 抵達班機且已有實際落地時間 → 飛機已停在目的地，跳過查詢 */
+  if (isArr && act) {
+    phEl.innerHTML = '<i class="bi bi-check-circle-fill" style="font-size:2rem;color:#22c55e"></i><div>已落地</div>';
     return;
   }
 
-  /* 取得即時位置 */
+  /* 其餘情況（飛行中、滑行、等待起飛）都嘗試取得即時位置 */
   try {
     const res  = await fetch(`/api/flight/live?cs=${encodeURIComponent(primaryNum)}`);
     const live = await res.json();
@@ -1219,7 +1219,11 @@ async function openFlightDetail(key) {
       document.getElementById('fltLiveSec').style.display = '';
 
     } else {
-      phEl.innerHTML = '<i class="bi bi-geo-alt-fill" style="font-size:2rem;color:#c7c7cc"></i><div>目前無即時位置資料</div>';
+      /* 查不到：給出具體原因提示 */
+      const noSigMsg = live.on_ground === true
+        ? 'ADS-B 訊號關閉或飛機停在地面'
+        : '目前無法取得 ADS-B 訊號<br><span style="font-size:0.75rem">可能尚未起飛、已落地或機載應答機關閉</span>';
+      phEl.innerHTML = `<i class="bi bi-broadcast" style="font-size:2rem;color:#c7c7cc"></i><div style="text-align:center;line-height:1.6">${noSigMsg}</div>`;
     }
   } catch (_) {
     phEl.innerHTML = '<i class="bi bi-wifi-off" style="font-size:2rem;color:#c7c7cc"></i><div>無法取得即時資料</div>';
