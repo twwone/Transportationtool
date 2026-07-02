@@ -681,7 +681,10 @@ const TAB_PANELS = { arr: 'listArr', dep: 'listDep', all: 'panelAll' };
 
 let _arrData = [], _depData = [], _allArr = [], _allDep = [];
 let _fltDataMap = {};   // fltKey → flight object, for detail sheet lookup
-let _leafletMap = null; // active Leaflet map instance
+let _leafletMap   = null; // active Leaflet map instance
+let _planeMarker  = null; // Leaflet marker for aircraft
+let _trailLine    = null; // Leaflet polyline for trail
+let _liveInterval = null; // polling interval handle
 let _tab = 'arr';
 let _searchTimer  = null;
 let _prevGates    = {};
@@ -1140,7 +1143,10 @@ function closeFlightSheet() {
   document.getElementById('fltOverlay').classList.remove('open');
   document.getElementById('fltSheet').classList.remove('open');
   _unlockBodyScroll();
-  if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
+  if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
+  if (_leafletMap)   { _leafletMap.remove(); _leafletMap = null; }
+  _planeMarker = null;
+  _trailLine   = null;
 }
 
 async function openFlightDetail(key) {
@@ -1218,6 +1224,37 @@ async function openFlightDetail(key) {
       phEl.style.display  = 'none';
       mapEl.style.display = '';
 
+      /* ── 建立地圖 icon 的 helper ── */
+      const _makePlaneIcon = hd => L.divIcon({
+        html: `<div style="transform:rotate(${hd||0}deg);font-size:30px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">✈</div>`,
+        className: '', iconSize: [34, 34], iconAnchor: [17, 17],
+      });
+
+      /* ── 更新 info grid 的 helper ── */
+      const _updateGrid = d => {
+        const speed = d.ground_speed   != null ? Math.round(d.ground_speed) + ' kt'    : '—';
+        const alt   = d.altitude_ft    != null ? d.altitude_ft.toLocaleString() + ' ft' : '—';
+        const hdg   = d.heading        != null ? d.heading + '°'                        : '—';
+        const vs    = d.vertical_speed != null
+                        ? (d.vertical_speed > 0 ? '+' : '') + Math.round(d.vertical_speed) + ' ft/min'
+                        : '—';
+        const state = d.on_ground ? '地面' : '飛行中';
+        const reg   = d.registration || d.aircraft_code || d.icao24 || '—';
+        const now   = new Date();
+        const ts    = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+        document.getElementById('fltLiveGrid').innerHTML = `
+          <div class="flt-info-cell"><div class="flt-info-label">狀態</div><div class="flt-info-val">${state}</div></div>
+          <div class="flt-info-cell"><div class="flt-info-label">速度</div><div class="flt-info-val">${speed}</div></div>
+          <div class="flt-info-cell"><div class="flt-info-label">高度</div><div class="flt-info-val">${alt}</div></div>
+          <div class="flt-info-cell"><div class="flt-info-label">航向</div><div class="flt-info-val">${hdg}</div></div>
+          <div class="flt-info-cell"><div class="flt-info-label">垂直速率</div><div class="flt-info-val">${vs}</div></div>
+          <div class="flt-info-cell"><div class="flt-info-label">機號/呼號</div><div class="flt-info-val">${reg}</div></div>
+          <div class="flt-info-cell" style="grid-column:1/-1">
+            <div class="flt-info-label">資料時間</div>
+            <div class="flt-info-val" style="font-size:0.8rem;color:#8e8e93">${ts} <span style="font-weight:400;font-size:0.72rem">（每 30 秒更新）</span></div>
+          </div>`;
+      };
+
       requestAnimationFrame(() => {
         _leafletMap = L.map('fltMap', { zoomControl: true, attributionControl: false });
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -1228,42 +1265,48 @@ async function openFlightDetail(key) {
         const trail = live.trail || [];
         if (trail.length > 1) {
           const coords = trail.map(p => [p.lat, p.lon]);
-          const line = L.polyline(coords, { color: '#3b82f6', weight: 2.5, opacity: 0.65 }).addTo(_leafletMap);
-          // 起點標記（最舊的點）
+          _trailLine = L.polyline(coords, { color: '#3b82f6', weight: 2.5, opacity: 0.65 }).addTo(_leafletMap);
           L.circleMarker(coords[0], { radius: 5, color: '#3b82f6', fillColor: '#93c5fd', fillOpacity: 1, weight: 2 })
            .bindTooltip('起飛位置', { permanent: false }).addTo(_leafletMap);
-          // 自動縮放到顯示完整軌跡
-          _leafletMap.fitBounds(line.getBounds(), { padding: [30, 30] });
+          _leafletMap.fitBounds(_trailLine.getBounds(), { padding: [30, 30] });
         } else {
           _leafletMap.setView([live.lat, live.lon], 8);
         }
 
-        const heading = live.heading || 0;
-        const planeIcon = L.divIcon({
-          html: `<div style="transform:rotate(${heading}deg);font-size:30px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">✈</div>`,
-          className: '', iconSize: [34, 34], iconAnchor: [17, 17],
-        });
-        L.marker([live.lat, live.lon], { icon: planeIcon }).addTo(_leafletMap)
-          .bindPopup(`<b>${fltNum}</b>${live.altitude_ft ? '<br>' + live.altitude_ft.toLocaleString() + ' ft' : ''}`).openPopup();
+        _planeMarker = L.marker([live.lat, live.lon], { icon: _makePlaneIcon(live.heading) })
+          .addTo(_leafletMap)
+          .bindPopup(`<b>${fltNum}</b>${live.altitude_ft ? '<br>' + live.altitude_ft.toLocaleString() + ' ft' : ''}`)
+          .openPopup();
       });
 
-      const speed  = live.ground_speed   != null ? Math.round(live.ground_speed) + ' kt'     : '—';
-      const alt    = live.altitude_ft    != null ? live.altitude_ft.toLocaleString() + ' ft'  : '—';
-      const hdg    = live.heading        != null ? live.heading + '°'                         : '—';
-      const vs     = live.vertical_speed != null
-                       ? (live.vertical_speed > 0 ? '+' : '') + Math.round(live.vertical_speed) + ' ft/min'
-                       : '—';
-      const state  = live.on_ground ? '地面' : '飛行中';
-      const reg    = live.registration || live.aircraft_code || live.icao24 || '—';
-
-      document.getElementById('fltLiveGrid').innerHTML = `
-        <div class="flt-info-cell"><div class="flt-info-label">狀態</div><div class="flt-info-val">${state}</div></div>
-        <div class="flt-info-cell"><div class="flt-info-label">速度</div><div class="flt-info-val">${speed}</div></div>
-        <div class="flt-info-cell"><div class="flt-info-label">高度</div><div class="flt-info-val">${alt}</div></div>
-        <div class="flt-info-cell"><div class="flt-info-label">航向</div><div class="flt-info-val">${hdg}</div></div>
-        <div class="flt-info-cell"><div class="flt-info-label">垂直速率</div><div class="flt-info-val">${vs}</div></div>
-        <div class="flt-info-cell"><div class="flt-info-label">機號/呼號</div><div class="flt-info-val">${reg}</div></div>`;
+      _updateGrid(live);
       document.getElementById('fltLiveSec').style.display = '';
+
+      /* ── 每 30 秒刷新位置 ── */
+      if (_liveInterval) clearInterval(_liveInterval);
+      _liveInterval = setInterval(async () => {
+        if (!_leafletMap || !_planeMarker) return;
+        const upd = await _fetchLiveData(primaryNum);
+        if (!upd.found || upd.lat == null || upd.lon == null) return;
+
+        // 移動飛機
+        _planeMarker.setLatLng([upd.lat, upd.lon]);
+        _planeMarker.setIcon(_makePlaneIcon(upd.heading));
+        _planeMarker.setPopupContent(`<b>${fltNum}</b>${upd.altitude_ft ? '<br>' + upd.altitude_ft.toLocaleString() + ' ft' : ''}`);
+
+        // 更新軌跡
+        if (upd.trail && upd.trail.length > 1) {
+          const newCoords = upd.trail.map(p => [p.lat, p.lon]);
+          if (_trailLine) {
+            _trailLine.setLatLngs(newCoords);
+          } else {
+            _trailLine = L.polyline(newCoords, { color: '#3b82f6', weight: 2.5, opacity: 0.65 }).addTo(_leafletMap);
+          }
+        }
+
+        // 更新數字資訊
+        _updateGrid(upd);
+      }, 30000);
 
     } else {
       const noSigMsg = live.on_ground === true
