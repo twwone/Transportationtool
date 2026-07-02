@@ -2502,8 +2502,8 @@ _fl_lock  = threading.Lock()
 _FL_TTL   = 30  # seconds
 
 def _to_icao_callsign(iata_cs: str) -> str:
-    """Convert IATA callsign (e.g. AK1510) to ICAO callsign (AXM1510)."""
-    m = _re.match(r'^([A-Z0-9]{2,3})(\d+[A-Z]?)$', iata_cs)
+    """Convert IATA callsign (e.g. AK1510→AXM1510, CI113→CAL113)."""
+    m = _re.match(r'^([A-Z][A-Z0-9]|[A-Z0-9][A-Z])(\d+[A-Z]?)$', iata_cs)
     if not m:
         return iata_cs
     iata, num = m.group(1), m.group(2)

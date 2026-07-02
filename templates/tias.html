@@ -703,81 +703,27 @@ const _IATA_ICAO = {
   'BX':'ABL','7C':'JJA','RS':'ASV','TW':'TWB','MI':'SLK','GE':'TNA',
 };
 function _toIcaoCs(iataCs) {
-  const m = iataCs.match(/^([A-Z0-9]{2,3})(\d+[A-Z]?)$/);
+  const m = iataCs.match(/^([A-Z][A-Z0-9]|[A-Z0-9][A-Z])(\d+[A-Z]?)$/);
   if (!m) return iataCs;
   return (_IATA_ICAO[m[1]] || m[1]) + m[2];
 }
 
-/* ── 即時位置取得（browser-direct 優先，後端備援） ── */
+/* ── 即時位置取得（全走後端，避免 CORS 問題） ── */
 async function _fetchLiveData(iataCs) {
   const icaoCs = _toIcaoCs(iataCs);
   const _log   = [`iata:${iataCs}`, `icao:${icaoCs}`];
-
-  /* 1. adsb.lol 直接從瀏覽器呼叫（有 CORS，不走後端） */
   try {
     const ac = new AbortController();
-    const t  = setTimeout(() => ac.abort(), 6000);
-    const r  = await fetch(`https://api.adsb.lol/v2/callsign/${icaoCs}`, { signal: ac.signal });
+    const t  = setTimeout(() => ac.abort(), 15000);
+    const r  = await fetch(`/api/flight/live?cs=${encodeURIComponent(iataCs)}&debug=1`, { signal: ac.signal });
     clearTimeout(t);
-    _log.push(`adsb:${r.status}`);
-    if (r.ok) {
-      const ac_list = ((await r.json()) || {}).ac || [];
-      _log.push(`adsb_ac:${ac_list.length}`);
-      if (ac_list.length) {
-        const a = ac_list[0];
-        const onGnd = a.alt_baro === 'ground';
-        return {
-          found: true, source: 'adsb_lol', _log,
-          lat: a.lat, lon: a.lon,
-          altitude_ft: onGnd ? null : (typeof a.alt_baro === 'number' ? a.alt_baro : null),
-          heading: a.track, ground_speed: a.gs,
-          vertical_speed: typeof a.baro_rate === 'number' ? a.baro_rate : null,
-          on_ground: onGnd, registration: a.r || '', aircraft_code: a.t || '',
-        };
-      }
-    }
-  } catch (e) { _log.push(`adsb_err:${e.name}`); }
-
-  /* 2. OpenSky 直接從瀏覽器呼叫（有 CORS） */
-  try {
-    const ac = new AbortController();
-    const t  = setTimeout(() => ac.abort(), 8000);
-    const r  = await fetch(
-      `https://opensky-network.org/api/states/all?callsign=${encodeURIComponent(icaoCs.padEnd(8))}`,
-      { signal: ac.signal }
-    );
-    clearTimeout(t);
-    _log.push(`sky:${r.status}`);
-    if (r.ok) {
-      const states = ((await r.json()) || {}).states || [];
-      _log.push(`sky_n:${states.length}`);
-      if (states.length) {
-        const s = states[0];
-        return {
-          found: true, source: 'opensky', _log,
-          lat: s[6], lon: s[5],
-          altitude_ft: s[7] ? Math.round(s[7] * 3.28084) : null,
-          heading: s[10],
-          ground_speed: s[9] ? Math.round(s[9] * 1.944) : null,
-          vertical_speed: s[11],
-          on_ground: !!s[8], icao24: s[0] || '',
-        };
-      }
-    }
-  } catch (e) { _log.push(`sky_err:${e.name}`); }
-
-  /* 3. 後端備援（FR24 unofficial） */
-  try {
-    const r = await fetch(`/api/flight/live?cs=${encodeURIComponent(iataCs)}&debug=1`);
     if (r.ok) {
       const d = await r.json();
-      _log.push(`srv:${d.found ? 'ok' : 'miss'}`);
       if (d._debug) _log.push(...d._debug.log);
       return { ...d, _log };
     }
-    _log.push(`srv_http:${r.status}`);
-  } catch (e) { _log.push(`srv_err:${e.name}`); }
-
+    _log.push(`http:${r.status}`);
+  } catch (e) { _log.push(`err:${e.name}`); }
   return { found: false, _log };
 }
 
