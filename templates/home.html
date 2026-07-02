@@ -1566,7 +1566,8 @@ let _longPressTriggered = false;
     _tapTimes = _tapTimes.filter(t => now - t <= 2000);
     if (_tapTimes.length >= 5) {
       _tapTimes = [];
-      if (!localStorage.getItem(_ADMIN_LS_KEY)) _openPinModal();
+      if (localStorage.getItem(_ADMIN_LS_KEY)) _openAdminPanel();
+      else _openPinModal();
     }
   }
 })();
