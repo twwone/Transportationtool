@@ -2637,15 +2637,48 @@ def flight_live_api():
                 except Exception as ge:
                     _dbg.append(f"fr24_gf_err:{type(ge).__name__}")
 
-            # Fallback: search() — may not include coordinates, but worth trying
+            # Fallback: search() + get_flight_details() for trail position
             if not data:
                 results = fr.search(callsign)
                 live    = (results.get("live") if isinstance(results, dict) else results) or []
                 _dbg.append(f"fr24_search:{len(live)}")
                 if live:
-                    d = _fl_to_data(live[0], "fr24_s")
-                    _dbg.append(f"fr24_s_pos:{d['lat'] if d else 'null'},{d['lon'] if d else 'null'}")
-                    data = d
+                    fl = live[0]
+                    # Try get_flight_details → trail[0] has real position
+                    try:
+                        details = fr.get_flight_details(fl)
+                        trail   = details.get("trail") or []
+                        _dbg.append(f"fr24_trail:{len(trail)}")
+                        if trail:
+                            pt  = trail[0]
+                            lat = pt.get("lat")
+                            lon = pt.get("lng") or pt.get("lon")
+                            _dbg.append(f"fr24_trail_pos:{lat},{lon}")
+                            if lat is not None and lon is not None:
+                                ac      = details.get("aircraft") or {}
+                                status  = details.get("status") or {}
+                                spd_raw = pt.get("spd")
+                                alt_raw = pt.get("alt")
+                                data = {
+                                    "found":         True,
+                                    "source":        "fr24_trail",
+                                    "lat":           lat, "lon": lon,
+                                    "altitude_ft":   alt_raw,
+                                    "heading":       pt.get("hd"),
+                                    "ground_speed":  spd_raw,
+                                    "vertical_speed":None,
+                                    "on_ground":     bool(status.get("live", {}).get("isGlider", False)),
+                                    "registration":  ac.get("registration", ""),
+                                    "aircraft_code": (ac.get("model") or {}).get("code", ""),
+                                    "callsign":      callsign,
+                                }
+                    except Exception as de:
+                        _dbg.append(f"fr24_detail_err:{type(de).__name__}")
+                    # Last resort: direct attributes (usually null)
+                    if not data:
+                        d = _fl_to_data(fl, "fr24_s")
+                        _dbg.append(f"fr24_s_pos:{d['lat'] if d else 'null'},{d['lon'] if d else 'null'}")
+                        data = d
 
         except Exception as e:
             _dbg.append(f"fr24_err:{type(e).__name__}")
