@@ -460,6 +460,7 @@ body {
   .flt-info-val   { color: #f2f2f7; }
   .flt-map-placeholder { background: #1c1c1e; color: #636366; }
   .flt-live-badge { background: rgba(22,163,74,0.18); }
+  .flt-refresh-btn { background: #1c1c1e; border-color: #3a3a3c; color: #60a5fa; }
 }
 
 /* ── Flight Detail Bottom Sheet ── */
@@ -524,12 +525,21 @@ body {
 .flt-info-val   { font-size: 0.92rem; font-weight: 600; color: #1c1c1e; }
 
 .flt-live-section { padding: 10px 16px 6px; border-top: 1px solid #f0f0f5; }
+.flt-live-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
 .flt-live-badge {
   display: inline-flex; align-items: center; gap: 5px;
   background: rgba(22,163,74,0.1); color: #16a34a;
   border-radius: 8px; padding: 3px 10px;
-  font-size: 0.75rem; font-weight: 700; margin-bottom: 10px;
+  font-size: 0.75rem; font-weight: 700;
 }
+.flt-refresh-btn {
+  border: 1px solid #d1d5db; background: #fff; color: #3b82f6;
+  font-size: 0.78rem; padding: 4px 10px; cursor: pointer;
+  border-radius: 8px; font-weight: 600; transition: opacity .2s;
+}
+.flt-refresh-btn:disabled { color: #aeaeb2; border-color: #e5e7eb; cursor: default; opacity: .6; }
 .flt-live-dot {
   width: 6px; height: 6px; border-radius: 50%; background: #16a34a;
   animation: pulse 1.5s ease-in-out infinite;
@@ -596,7 +606,10 @@ body {
     <div id="fltMap" class="flt-map" style="display:none"></div>
   </div>
   <div class="flt-live-section" id="fltLiveSec" style="display:none">
-    <div class="flt-live-badge"><span class="flt-live-dot"></span>即時追蹤</div>
+    <div class="flt-live-header">
+      <div class="flt-live-badge"><span class="flt-live-dot"></span>即時追蹤</div>
+      <button class="flt-refresh-btn" id="fltRefreshBtn" onclick="_refreshLiveNow()">↻ 立即更新</button>
+    </div>
     <div class="flt-info-grid" id="fltLiveGrid"></div>
   </div>
   <div class="flt-info-section" id="fltStaticSec"></div>
@@ -712,13 +725,14 @@ function _toIcaoCs(iataCs) {
 }
 
 /* ── 即時位置取得（全走後端，避免 CORS 問題） ── */
-async function _fetchLiveData(iataCs) {
+async function _fetchLiveData(iataCs, force = false) {
   const icaoCs = _toIcaoCs(iataCs);
   const _log   = [`iata:${iataCs}`, `icao:${icaoCs}`];
   try {
-    const ac = new AbortController();
-    const t  = setTimeout(() => ac.abort(), 15000);
-    const r  = await fetch(`/api/flight/live?cs=${encodeURIComponent(iataCs)}&debug=1`, { signal: ac.signal });
+    const ac  = new AbortController();
+    const t   = setTimeout(() => ac.abort(), 15000);
+    const qs  = `/api/flight/live?cs=${encodeURIComponent(iataCs)}&debug=1${force ? '&force=1' : ''}`;
+    const r   = await fetch(qs, { signal: ac.signal });
     clearTimeout(t);
     if (r.ok) {
       const d = await r.json();
@@ -729,6 +743,37 @@ async function _fetchLiveData(iataCs) {
   } catch (e) { _log.push(`err:${e.name}`); }
   return { found: false, _log };
 }
+
+/* ── 手動立即更新（跳過 cache） ── */
+let _refreshCooldown = false;
+async function _refreshLiveNow() {
+  if (_refreshCooldown || !_leafletMap || !_planeMarker) return;
+  const btn = document.getElementById('fltRefreshBtn');
+  if (!btn) return;
+  _refreshCooldown = true;
+  btn.disabled = true;
+  btn.textContent = '更新中…';
+
+  const upd = await _fetchLiveData(_currentLiveCs, true); // force=true 繞過 cache
+  if (upd.found && upd.lat != null && upd.lon != null) {
+    _planeMarker.setLatLng([upd.lat, upd.lon]);
+    _planeMarker.setIcon(_currentMakePlaneIcon(upd.heading));
+    _planeMarker.setPopupContent(_currentPopupHtml(upd));
+    if (upd.trail && upd.trail.length > 1) {
+      const nc = upd.trail.map(p => [p.lat, p.lon]);
+      _trailLine ? _trailLine.setLatLngs(nc)
+                 : (_trailLine = L.polyline(nc, { color:'#3b82f6', weight:2.5, opacity:.65 }).addTo(_leafletMap));
+    }
+    _currentUpdateGrid(upd);
+  }
+
+  btn.textContent = '↻ 立即更新';
+  setTimeout(() => { btn.disabled = false; _refreshCooldown = false; }, 15000);
+}
+let _currentLiveCs = '';
+let _currentMakePlaneIcon = () => {};
+let _currentPopupHtml = () => '';
+let _currentUpdateGrid = () => {};
 
 /* ── 監控航空公司偏好（localStorage 持久化） ── */
 const _DEFAULT_CODES = ['AK','FD','QZ','Z2','XT','D7','XJ'];
@@ -1251,7 +1296,7 @@ async function openFlightDetail(key) {
           <div class="flt-info-cell"><div class="flt-info-label">機號/呼號</div><div class="flt-info-val">${reg}</div></div>
           <div class="flt-info-cell" style="grid-column:1/-1">
             <div class="flt-info-label">資料時間</div>
-            <div class="flt-info-val" style="font-size:0.8rem;color:#8e8e93">${ts} <span style="font-weight:400;font-size:0.72rem">（每 30 秒更新）</span></div>
+            <div class="flt-info-val" style="font-size:0.8rem;color:#8e8e93">${ts} <span style="font-weight:400;font-size:0.72rem">（自動 30 秒 / 可手動更新）</span></div>
           </div>`;
       };
 
@@ -1278,6 +1323,12 @@ async function openFlightDetail(key) {
           .bindPopup(`<b>${fltNum}</b>${live.altitude_ft ? '<br>' + live.altitude_ft.toLocaleString() + ' ft' : ''}`)
           .openPopup();
       });
+
+      // 把 helpers 存到全局供 _refreshLiveNow 使用
+      _currentLiveCs        = primaryNum;
+      _currentMakePlaneIcon = _makePlaneIcon;
+      _currentUpdateGrid    = _updateGrid;
+      _currentPopupHtml     = d => `<b>${fltNum}</b>${d.altitude_ft ? '<br>' + d.altitude_ft.toLocaleString() + ' ft' : ''}`;
 
       _updateGrid(live);
       document.getElementById('fltLiveSec').style.display = '';

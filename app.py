@@ -2513,13 +2513,15 @@ def _to_icao_callsign(iata_cs: str) -> str:
 def flight_live_api():
     callsign = request.args.get("cs", "").strip().upper().replace(" ", "")
     debug    = request.args.get("debug") == "1"
+    force    = request.args.get("force") == "1"   # bypass cache for manual refresh
     if not callsign or len(callsign) > 12:
         return jsonify({"found": False, "error": "invalid"}), 400
 
-    with _fl_lock:
-        cached = _fl_cache.get(callsign)
-        if cached and time.time() < cached.get("expires_at", 0):
-            return jsonify(cached["data"])
+    if not force:
+        with _fl_lock:
+            cached = _fl_cache.get(callsign)
+            if cached and time.time() < cached.get("expires_at", 0):
+                return jsonify(cached["data"])
 
     _dbg: list[str] = []  # debug log
 
