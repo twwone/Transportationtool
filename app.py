@@ -2483,14 +2483,36 @@ def v_del():
     return jsonify({"ok": True, "items": items})
 
 
+# IATA airline code → ICAO operator code（for ADS-B callsign lookup）
+_IATA_TO_ICAO: dict[str, str] = {
+    'AK':'AXM','FD':'AIQ','QZ':'AWQ','D7':'XAX','XT':'AWC','Z2':'APG',
+    'XJ':'TAX','CI':'CAL','BR':'EVA','CX':'CPA','KA':'HDA','MH':'MAS',
+    'SQ':'SIA','MI':'SLK','JL':'JAL','NH':'ANA','OZ':'AAR','KE':'KAL',
+    'TG':'THA','PG':'BKP','GA':'GIA','PR':'PAL','VN':'HVN','VJ':'VJC',
+    'TR':'TGW','IT':'TTW','B7':'UIA','JX':'SJX','5J':'CEB','2P':'GAP',
+    'EK':'UAE','QR':'QTR','EY':'ETD','TK':'THY','LH':'DLH','AF':'AFR',
+    'CA':'CCA','MU':'CES','CZ':'CSN','HU':'CHH','FM':'CSH','SC':'CDG',
+    'JD':'CBJ','9C':'CQH','ZH':'CSZ','KN':'CUA','GS':'GTI',
+    'OD':'MXD','LJ':'JNA','BX':'ABL','7C':'JJA','RS':'ASV','TW':'TWB',
+    'HX':'HDA','RH':'DAE','GE':'TNA',
+}
+
 _fl_cache: dict = {}
 _fl_lock  = threading.Lock()
 _FL_TTL   = 30  # seconds
 
+def _to_icao_callsign(iata_cs: str) -> str:
+    """Convert IATA callsign (e.g. AK1510) to ICAO callsign (AXM1510)."""
+    m = _re.match(r'^([A-Z0-9]{2,3})(\d+[A-Z]?)$', iata_cs)
+    if not m:
+        return iata_cs
+    iata, num = m.group(1), m.group(2)
+    return _IATA_TO_ICAO.get(iata, iata) + num
+
 @app.route("/api/flight/live")
 def flight_live_api():
     callsign = request.args.get("cs", "").strip().upper().replace(" ", "")
-    if not callsign or len(callsign) > 10:
+    if not callsign or len(callsign) > 12:
         return jsonify({"found": False, "error": "invalid"}), 400
 
     with _fl_lock:
@@ -2498,46 +2520,50 @@ def flight_live_api():
         if cached and time.time() < cached.get("expires_at", 0):
             return jsonify(cached["data"])
 
+    icao_cs  = _to_icao_callsign(callsign)
     data: dict | None = None
+    _HDR = {"User-Agent": "TransportationTool/1.0"}
 
-    # ── FlightRadarAPI（unofficial） ──
+    # ── 1. adsb.lol — real ADS-B, ICAO callsign, free, fast ──
     try:
-        from FlightRadarAPI import FlightRadar24API
-        fr      = FlightRadar24API()
-        results = fr.search(callsign)
-        if isinstance(results, dict):
-            live = results.get("live") or []
-        elif isinstance(results, list):
-            live = results
-        else:
-            live = []
-        if live:
-            fl = live[0]
-            data = {
-                "found":         True,
-                "source":        "fr24",
-                "callsign":      getattr(fl, "callsign",       callsign),
-                "lat":           getattr(fl, "latitude",       None),
-                "lon":           getattr(fl, "longitude",      None),
-                "altitude_ft":   getattr(fl, "altitude",       None),
-                "heading":       getattr(fl, "heading",        None),
-                "ground_speed":  getattr(fl, "ground_speed",   None),
-                "vertical_speed":getattr(fl, "vertical_speed", None),
-                "on_ground":     bool(getattr(fl, "on_ground", False)),
-                "registration":  getattr(fl, "registration",  ""),
-                "aircraft_code": getattr(fl, "aircraft_code", ""),
-                "icao_24bit":    getattr(fl, "icao_24bit",    ""),
-            }
+        r = _requests.get(
+            f"https://api.adsb.lol/v2/callsign/{icao_cs}",
+            timeout=5, headers=_HDR,
+        )
+        if r.ok:
+            ac_list = (r.json() or {}).get("ac") or []
+            if ac_list:
+                ac       = ac_list[0]
+                alt_baro = ac.get("alt_baro")
+                on_gnd   = alt_baro == "ground"
+                alt_ft   = None if on_gnd else (
+                    int(alt_baro) if isinstance(alt_baro, (int, float)) else None
+                )
+                vs = ac.get("baro_rate")
+                data = {
+                    "found":         True,
+                    "source":        "adsb_lol",
+                    "callsign":      (ac.get("flight") or "").strip(),
+                    "lat":           ac.get("lat"),
+                    "lon":           ac.get("lon"),
+                    "altitude_ft":   alt_ft,
+                    "heading":       ac.get("track"),
+                    "ground_speed":  ac.get("gs"),
+                    "vertical_speed":int(vs) if vs is not None else None,
+                    "on_ground":     on_gnd,
+                    "registration":  ac.get("r", ""),
+                    "aircraft_code": ac.get("t", ""),
+                }
     except Exception:
         pass
 
-    # ── OpenSky Network fallback（free, no key） ──
+    # ── 2. OpenSky Network — ICAO callsign padded to 8 chars ──
     if not data:
         try:
-            cs_padded = callsign.ljust(8)
+            cs_padded = icao_cs.ljust(8)
             r = _requests.get(
                 "https://opensky-network.org/api/states/all",
-                params={"callsign": cs_padded}, timeout=8,
+                params={"callsign": cs_padded}, timeout=8, headers=_HDR,
             )
             if r.ok:
                 states = (r.json() or {}).get("states") or []
@@ -2548,14 +2574,39 @@ def flight_live_api():
                         "source":        "opensky",
                         "icao24":        s[0] or "",
                         "callsign":      (s[1] or "").strip(),
-                        "lat":           s[6],
-                        "lon":           s[5],
+                        "lat":           s[6], "lon": s[5],
                         "altitude_ft":   round(s[7] * 3.28084) if s[7] else None,
                         "on_ground":     bool(s[8]),
                         "ground_speed":  round(s[9] * 1.944) if s[9] else None,
                         "heading":       s[10],
                         "vertical_speed":s[11],
                     }
+        except Exception:
+            pass
+
+    # ── 3. FlightRadarAPI — unofficial, IATA callsign ──
+    if not data:
+        try:
+            from FlightRadarAPI import FlightRadar24API
+            fr      = FlightRadar24API()
+            results = fr.search(callsign)
+            live    = (results.get("live") if isinstance(results, dict) else results) or []
+            if live:
+                fl   = live[0]
+                data = {
+                    "found":         True,
+                    "source":        "fr24",
+                    "callsign":      getattr(fl, "callsign",       callsign),
+                    "lat":           getattr(fl, "latitude",       None),
+                    "lon":           getattr(fl, "longitude",      None),
+                    "altitude_ft":   getattr(fl, "altitude",       None),
+                    "heading":       getattr(fl, "heading",        None),
+                    "ground_speed":  getattr(fl, "ground_speed",   None),
+                    "vertical_speed":getattr(fl, "vertical_speed", None),
+                    "on_ground":     bool(getattr(fl, "on_ground", False)),
+                    "registration":  getattr(fl, "registration",  ""),
+                    "aircraft_code": getattr(fl, "aircraft_code", ""),
+                }
         except Exception:
             pass
 
