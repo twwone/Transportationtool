@@ -711,6 +711,7 @@ function _toIcaoCs(iataCs) {
 /* ── 即時位置取得（browser-direct 優先，後端備援） ── */
 async function _fetchLiveData(iataCs) {
   const icaoCs = _toIcaoCs(iataCs);
+  const _log   = [`iata:${iataCs}`, `icao:${icaoCs}`];
 
   /* 1. adsb.lol 直接從瀏覽器呼叫（有 CORS，不走後端） */
   try {
@@ -718,13 +719,15 @@ async function _fetchLiveData(iataCs) {
     const t  = setTimeout(() => ac.abort(), 6000);
     const r  = await fetch(`https://api.adsb.lol/v2/callsign/${icaoCs}`, { signal: ac.signal });
     clearTimeout(t);
+    _log.push(`adsb:${r.status}`);
     if (r.ok) {
       const ac_list = ((await r.json()) || {}).ac || [];
+      _log.push(`adsb_ac:${ac_list.length}`);
       if (ac_list.length) {
         const a = ac_list[0];
         const onGnd = a.alt_baro === 'ground';
         return {
-          found: true, source: 'adsb_lol',
+          found: true, source: 'adsb_lol', _log,
           lat: a.lat, lon: a.lon,
           altitude_ft: onGnd ? null : (typeof a.alt_baro === 'number' ? a.alt_baro : null),
           heading: a.track, ground_speed: a.gs,
@@ -733,7 +736,7 @@ async function _fetchLiveData(iataCs) {
         };
       }
     }
-  } catch (_) {}
+  } catch (e) { _log.push(`adsb_err:${e.name}`); }
 
   /* 2. OpenSky 直接從瀏覽器呼叫（有 CORS） */
   try {
@@ -744,31 +747,38 @@ async function _fetchLiveData(iataCs) {
       { signal: ac.signal }
     );
     clearTimeout(t);
+    _log.push(`sky:${r.status}`);
     if (r.ok) {
       const states = ((await r.json()) || {}).states || [];
+      _log.push(`sky_n:${states.length}`);
       if (states.length) {
         const s = states[0];
         return {
-          found: true, source: 'opensky',
+          found: true, source: 'opensky', _log,
           lat: s[6], lon: s[5],
           altitude_ft: s[7] ? Math.round(s[7] * 3.28084) : null,
           heading: s[10],
           ground_speed: s[9] ? Math.round(s[9] * 1.944) : null,
           vertical_speed: s[11],
-          on_ground: !!s[8],
-          icao24: s[0] || '',
+          on_ground: !!s[8], icao24: s[0] || '',
         };
       }
     }
-  } catch (_) {}
+  } catch (e) { _log.push(`sky_err:${e.name}`); }
 
   /* 3. 後端備援（FR24 unofficial） */
   try {
-    const r = await fetch(`/api/flight/live?cs=${encodeURIComponent(iataCs)}`);
-    if (r.ok) return await r.json();
-  } catch (_) {}
+    const r = await fetch(`/api/flight/live?cs=${encodeURIComponent(iataCs)}&debug=1`);
+    if (r.ok) {
+      const d = await r.json();
+      _log.push(`srv:${d.found ? 'ok' : 'miss'}`);
+      if (d._debug) _log.push(...d._debug.log);
+      return { ...d, _log };
+    }
+    _log.push(`srv_http:${r.status}`);
+  } catch (e) { _log.push(`srv_err:${e.name}`); }
 
-  return { found: false };
+  return { found: false, _log };
 }
 
 /* ── 監控航空公司偏好（localStorage 持久化） ── */
@@ -1297,14 +1307,16 @@ async function openFlightDetail(key) {
       document.getElementById('fltLiveSec').style.display = '';
 
     } else {
-      /* 查不到：給出具體原因提示 */
       const noSigMsg = live.on_ground === true
         ? 'ADS-B 訊號關閉或飛機停在地面'
-        : '目前無法取得 ADS-B 訊號<br><span style="font-size:0.75rem">可能尚未起飛、已落地或機載應答機關閉</span>';
-      phEl.innerHTML = `<i class="bi bi-broadcast" style="font-size:2rem;color:#c7c7cc"></i><div style="text-align:center;line-height:1.6">${noSigMsg}</div>`;
+        : '目前無法取得 ADS-B 訊號<br><span style="font-size:0.72rem;opacity:.7">可能尚未起飛、已落地或應答機關閉</span>';
+      const dbgHtml  = (live._log || []).length
+        ? `<div style="margin-top:10px;font-size:0.65rem;color:#aeaeb2;font-family:monospace;text-align:left;background:#f8f8f8;padding:6px 10px;border-radius:8px;word-break:break-all">${(live._log||[]).join(' · ')}</div>`
+        : '';
+      phEl.innerHTML = `<i class="bi bi-broadcast" style="font-size:2rem;color:#c7c7cc"></i><div style="text-align:center;line-height:1.8">${noSigMsg}</div>${dbgHtml}`;
     }
-  } catch (_) {
-    phEl.innerHTML = '<i class="bi bi-wifi-off" style="font-size:2rem;color:#c7c7cc"></i><div>無法取得即時資料</div>';
+  } catch (e) {
+    phEl.innerHTML = `<i class="bi bi-wifi-off" style="font-size:2rem;color:#c7c7cc"></i><div>無法取得即時資料</div><div style="font-size:0.65rem;color:#aeaeb2;margin-top:6px">${e.message}</div>`;
   }
 }
 
