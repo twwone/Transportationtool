@@ -2002,7 +2002,7 @@ def _valid_sync_id(sid: str) -> bool:
 # ──────────────────────────────────────────────
 #  主頁卡片排序
 # ──────────────────────────────────────────────
-_DEFAULT_CARD_ORDER = ["tias", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "diet", "memo"]
+_DEFAULT_CARD_ORDER = ["tias", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "diet", "memo", "sop"]
 _VALID_CARD_IDS     = set(_DEFAULT_CARD_ORDER)
 
 
