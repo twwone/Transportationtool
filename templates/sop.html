@@ -6,6 +6,7 @@
 <title>TIAS</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff5f5" media="(prefers-color-scheme: light)">
@@ -41,9 +42,25 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", sans-serif;
   background: var(--bg);
   color: var(--text);
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── View 容器：兩個 view 水平並排，滑動切換 ── */
+.view-wrap {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+}
+.view-wrap.in-sub { transform: translateX(-50%); }
+
+.view {
+  width: 50%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  height: 100dvh;
   overflow: hidden;
 }
 
@@ -56,8 +73,7 @@ body {
   background: none; border: none;
   font-size: 0.78rem; font-family: inherit;
   color: var(--sub); cursor: pointer; padding: 0;
-  letter-spacing: 0.06em;
-  -webkit-tap-highlight-color: transparent;
+  letter-spacing: 0.06em; -webkit-tap-highlight-color: transparent;
 }
 .back-btn:active { color: var(--accent); }
 .header-title {
@@ -70,22 +86,54 @@ body {
 }
 .header-rule { height: 1px; background: var(--border); margin-top: 14px; }
 
-/* ── Content ── */
+/* ── Scroll content ── */
 .content {
   flex: 1; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 20px 20px max(80px, env(safe-area-inset-bottom) + 20px);
 }
 
-/* ── 系統區塊 ── */
-.sys-block { margin-bottom: 32px; }
+/* ── Hub：子系統卡片列表 ── */
+.hub-list { display: flex; flex-direction: column; gap: 12px; }
+
+.hub-card {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+  position: relative; overflow: hidden;
+}
+.hub-card::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 4px;
+  border-radius: 0 2px 2px 0;
+  background: var(--card-color, var(--accent));
+  opacity: 0; transition: opacity 0.15s;
+}
+.hub-card:active { background: var(--acc2); }
+.hub-card:active::before { opacity: 1; }
+
+.hub-icon {
+  width: 46px; height: 46px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+  background: var(--card-color-bg, var(--acc2));
+  color: var(--card-color, var(--accent));
+}
+.hub-info { flex: 1; min-width: 0; }
+.hub-name { font-size: 1rem; font-weight: 700; color: var(--text); }
+.hub-desc { font-size: 0.75rem; color: var(--sub); margin-top: 2px; }
+.hub-arrow { color: var(--sub); font-size: 0.85rem; flex-shrink: 0; }
+
+/* ── 廣播 SOP 子頁 ── */
 .sys-label {
   font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
   color: var(--sub); text-transform: uppercase;
   margin-bottom: 12px; padding: 0 2px;
 }
-
-/* ── 航班選擇 ── */
 .airline-btns {
   display: grid; grid-template-columns: repeat(4,1fr);
   gap: 8px; margin-bottom: 14px;
@@ -102,7 +150,6 @@ body {
 }
 .airline-btn:active { transform: scale(0.94); }
 
-/* ── 廣播順序清單 ── */
 .seq-list { display: flex; flex-direction: column; gap: 7px; }
 .seq-item {
   display: flex; align-items: center; gap: 12px;
@@ -134,7 +181,7 @@ body {
 }
 .seq-arrow { color: var(--sub); font-size: 0.8rem; flex-shrink: 0; }
 
-/* ── Panel ── */
+/* ── 廣播詞 Panel ── */
 .backdrop {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.42);
@@ -153,7 +200,6 @@ body {
   z-index: 101; display: flex; flex-direction: column;
 }
 .panel.open { transform: translateY(0); }
-
 .panel-handle {
   width: 36px; height: 4px; background: var(--border);
   border-radius: 2px; margin: 12px auto 0; flex-shrink: 0;
@@ -164,7 +210,6 @@ body {
 }
 .panel-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
 .panel-note { font-size: 0.72rem; color: var(--accent); margin-top: 3px; font-weight: 600; }
-
 .panel-body {
   overflow-y: auto; -webkit-overflow-scrolling: touch;
   padding: 16px 20px max(24px, env(safe-area-inset-bottom) + 16px);
@@ -184,31 +229,57 @@ body {
 </head>
 <body>
 
-<div class="header">
-  <button class="back-btn" onclick="history.back()">← 返回</button>
-  <div class="header-title">TIAS</div>
-  <div class="header-sub">地勤工作系統</div>
-  <div class="header-rule"></div>
-</div>
+<div class="view-wrap" id="view-wrap">
 
-<div class="content">
-
-  <!-- 廣播 SOP -->
-  <div class="sys-block">
-    <div class="sys-label">廣播 SOP · AirAsia</div>
-    <div class="airline-btns">
-      <button class="airline-btn active" onclick="selectAirline('AK',this)">AK</button>
-      <button class="airline-btn" onclick="selectAirline('D7',this)">D7</button>
-      <button class="airline-btn" onclick="selectAirline('FD',this)">FD</button>
-      <button class="airline-btn" onclick="selectAirline('Z2',this)">Z2</button>
+  <!-- ── View 1：TIAS 入口 ── -->
+  <div class="view" id="view-hub">
+    <div class="header">
+      <button class="back-btn" onclick="history.back()">← 返回</button>
+      <div class="header-title">TIAS</div>
+      <div class="header-sub">地勤工作系統</div>
+      <div class="header-rule"></div>
     </div>
-    <div class="seq-list" id="seq-list"></div>
+    <div class="content">
+      <div class="hub-list">
+
+        <div class="hub-card" style="--card-color:#d91430;--card-color-bg:rgba(217,20,48,0.08)" onclick="goSub('broadcast')">
+          <div class="hub-icon"><i class="bi bi-megaphone-fill"></i></div>
+          <div class="hub-info">
+            <div class="hub-name">廣播 SOP</div>
+            <div class="hub-desc">AirAsia 登機門廣播詞 · AK / D7 / FD / Z2</div>
+          </div>
+          <div class="hub-arrow">›</div>
+        </div>
+
+        <!-- 未來子系統加在這裡 -->
+
+      </div>
+    </div>
   </div>
 
-  <!-- 未來子系統放這裡 -->
+  <!-- ── View 2：廣播 SOP ── -->
+  <div class="view" id="view-broadcast">
+    <div class="header">
+      <button class="back-btn" onclick="goHub()">← TIAS</button>
+      <div class="header-title">廣播 SOP</div>
+      <div class="header-sub">AirAsia · Rev 2025/03</div>
+      <div class="header-rule"></div>
+    </div>
+    <div class="content">
+      <div class="sys-label">選擇航班代碼</div>
+      <div class="airline-btns">
+        <button class="airline-btn active" onclick="selectAirline('AK',this)">AK</button>
+        <button class="airline-btn" onclick="selectAirline('D7',this)">D7</button>
+        <button class="airline-btn" onclick="selectAirline('FD',this)">FD</button>
+        <button class="airline-btn" onclick="selectAirline('Z2',this)">Z2</button>
+      </div>
+      <div class="seq-list" id="seq-list"></div>
+    </div>
+  </div>
 
 </div>
 
+<!-- 廣播詞 Panel -->
 <div class="backdrop" id="backdrop" onclick="closePanel()"></div>
 <div class="panel" id="panel">
   <div class="panel-handle"></div>
@@ -220,6 +291,7 @@ body {
 </div>
 
 <script>
+/* ── 廣播詞資料 ── */
 const S = {
   mdac: {
     title: '馬來西亞 MDAC',
@@ -363,13 +435,23 @@ const SEQ = {
     {id:'powerbank', label:'行動電源（第一次）'},
     {id:'pre_a320',  label:'登機前廣播', note:'先英文後中文'},
     {id:'powerbank', label:'行動電源（第二次）'},
-    {id:'z1_a320',   label:'Zone 1',       note:'先英文後中文'},
-    {id:'z2_a320',   label:'Zone 2',       note:'先英文後中文'},
-    {id:'z3_a320',   label:'Zone 3 & All', note:'先英文後中文'},
+    {id:'z1_a320',   label:'Zone 1',        note:'先英文後中文'},
+    {id:'z2_a320',   label:'Zone 2',        note:'先英文後中文'},
+    {id:'z3_a320',   label:'Zone 3 & All',  note:'先英文後中文'},
     {id:'final',     label:'最後登機'},
   ],
 };
 
+/* ── View 切換 ── */
+function goSub(name) {
+  if (name === 'broadcast') renderSeq('AK');
+  document.getElementById('view-wrap').classList.add('in-sub');
+}
+function goHub() {
+  document.getElementById('view-wrap').classList.remove('in-sub');
+}
+
+/* ── 廣播 SOP ── */
 function selectAirline(code, btn) {
   document.querySelectorAll('.airline-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -377,9 +459,8 @@ function selectAirline(code, btn) {
 }
 
 function renderSeq(code) {
-  const list = document.getElementById('seq-list');
-  list.innerHTML = SEQ[code].map((item, i) => {
-    const badge = item.note ? `<span class="seq-badge">${item.note}</span>` : '';
+  document.getElementById('seq-list').innerHTML = SEQ[code].map((item, i) => {
+    const badge   = item.note ? `<span class="seq-badge">${item.note}</span>` : '';
     const enFirst = !!(item.note && item.note.includes('先英'));
     return `<div class="seq-item" onclick='openPanel(${JSON.stringify(item.id)},${JSON.stringify(item.note||'')},${enFirst})'>
       <div class="seq-num">${i+1}</div>
@@ -389,10 +470,10 @@ function renderSeq(code) {
   }).join('');
 }
 
-function fmt(text) {
-  return text.replace(/_{2,}/g, m => `<span class="blank">${m}</span>`);
+/* ── 廣播詞 Panel ── */
+function fmt(t) {
+  return t.replace(/_{2,}/g, m => `<span class="blank">${m}</span>`);
 }
-
 function openPanel(id, note, enFirst) {
   const s = S[id];
   document.getElementById('p-title').textContent = s.title;
@@ -408,13 +489,10 @@ function openPanel(id, note, enFirst) {
   document.getElementById('panel').classList.add('open');
   document.getElementById('p-body').scrollTop = 0;
 }
-
 function closePanel() {
   document.getElementById('backdrop').classList.remove('open');
   document.getElementById('panel').classList.remove('open');
 }
-
-renderSeq('AK');
 </script>
 </body>
 </html>
