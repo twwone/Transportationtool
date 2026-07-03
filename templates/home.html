@@ -322,6 +322,11 @@ body {
 .card-memo .sm-title { color: var(--text); }
 .card-memo::before   { background: linear-gradient(90deg,#a67c62,#7c5c45); }
 
+.card-sop     { background: #fff5f5; border-color: rgba(217,20,48,0.15); }
+.card-sop .sm-icon  { color: #d91430; }
+.card-sop .sm-title { color: var(--text); }
+.card-sop::before   { background: linear-gradient(90deg,#ff4d63,#d91430); }
+
 .card-settings     { background: #f8fafc; border-color: rgba(100,116,139,0.15); }
 .card-settings .sm-icon  { color: #64748b; }
 .card-settings .sm-title { color: var(--text); }
@@ -536,6 +541,7 @@ body {
   .card-weather  { background: rgba(2,132,199,0.07);  border-color: rgba(2,132,199,0.18); }
   .card-diet     { background: rgba(22,163,74,0.07);  border-color: rgba(22,163,74,0.18); }
   .card-memo     { background: rgba(146,64,14,0.07);  border-color: rgba(146,64,14,0.18); }
+  .card-sop      { background: rgba(217,20,48,0.07);  border-color: rgba(217,20,48,0.18); }
   .card-settings { background: rgba(100,116,139,0.07);border-color: rgba(100,116,139,0.18); }
   .card-thsr .sm-icon     { color: #fb923c; }
   .card-mrt .sm-icon      { color: #a78bfa; }
@@ -547,11 +553,12 @@ body {
   .card-weather .sm-icon  { color: #38bdf8; }
   .card-diet .sm-icon     { color: #4ade80; }
   .card-memo .sm-icon     { color: #c4967a; }
+  .card-sop .sm-icon      { color: #ff4455; }
   .card-settings .sm-icon { color: #94a3b8; }
   .card-thsr .sm-title,.card-mrt .sm-title,.card-schedule .sm-title,
   .card-amenities .sm-title,.card-visa .sm-title,.card-codes .sm-title,
   .card-share .sm-title,.card-weather .sm-title,.card-diet .sm-title,
-  .card-memo .sm-title,.card-settings .sm-title { color: var(--text); }
+  .card-memo .sm-title,.card-sop .sm-title,.card-settings .sm-title { color: var(--text); }
   .footer   { color: #3a3a3c; }
   .sort-btn { background: rgba(255,255,255,0.1); color: #ebebf5; }
   .sort-btn.active { background: #0d9488; color: #fff; }
@@ -1053,8 +1060,9 @@ const CARDS = {
   weather:   { icon:'<i class="bi bi-cloud-fill"></i>',         title:'天氣防禦',          url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'<i class="bi bi-cloud-fill"></i> 天氣防禦' },
   diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
   memo:      { icon:'記',                                        title:'備忘錄',             url:'/memo',                                         cls:'card-memo' },
+  sop:       { icon:'<i class="bi bi-megaphone-fill"></i>',     title:'廣播 SOP',           url:'/sop',                                          cls:'card-sop' },
 };
-const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','codes','share','weather','diet','memo'];
+const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','codes','share','weather','diet','memo','sop'];
 const _STRIP_FIXED = ['tias','mrt','weather']; // 這三張固定位置，不參與排序
 let cardOrder = [...DEFAULT_ORDER];
 let editMode  = false;

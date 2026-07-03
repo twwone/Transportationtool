@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>廣播 SOP</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff5f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a0808" media="(prefers-color-scheme: dark)">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overscroll-behavior: none; }
+
+:root {
+  --bg:      #fff5f5;
+  --surface: #ffffff;
+  --border:  rgba(220,0,0,0.09);
+  --text:    #1a0808;
+  --sub:     #9c6b6b;
+  --accent:  #d91430;
+  --acc2:    rgba(217,20,48,0.08);
+  --blank:   #d91430;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:      #1a0808;
+    --surface: #240e0e;
+    --border:  rgba(255,80,80,0.11);
+    --text:    #f5e0e0;
+    --sub:     #8a5a5a;
+    --accent:  #ff4455;
+    --acc2:    rgba(255,68,85,0.11);
+    --blank:   #ff6677;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.header {
+  padding: max(20px, env(safe-area-inset-top) + 8px) 20px 0;
+  flex-shrink: 0;
+}
+.back-btn {
+  background: none; border: none;
+  font-size: 0.78rem; font-family: inherit;
+  color: var(--sub); cursor: pointer; padding: 0;
+  letter-spacing: 0.06em;
+  -webkit-tap-highlight-color: transparent;
+}
+.back-btn:active { color: var(--accent); }
+.header-title {
+  font-size: 1.8rem; font-weight: 700;
+  color: var(--text); margin-top: 8px; letter-spacing: -0.5px;
+}
+.header-sub {
+  font-size: 0.72rem; color: var(--sub);
+  margin-top: 3px; letter-spacing: 0.02em;
+}
+.header-rule { height: 1px; background: var(--border); margin-top: 14px; }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex; padding: 0 20px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.tab {
+  flex: 1; padding: 13px 0 11px;
+  border: none; background: none; font-family: inherit;
+  font-size: 0.82rem; font-weight: 500; letter-spacing: 0.04em;
+  color: var(--sub); cursor: pointer; position: relative;
+  text-align: center; -webkit-tap-highlight-color: transparent;
+  transition: color 0.18s;
+}
+.tab.active { color: var(--accent); }
+.tab.active::after {
+  content: ''; position: absolute;
+  bottom: -1px; left: 20%; width: 60%;
+  height: 2px; background: var(--accent); border-radius: 2px;
+}
+
+/* ── Content ── */
+.content {
+  flex: 1; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px max(80px, env(safe-area-inset-bottom) + 20px);
+}
+.pane { display: none; }
+.pane.active { display: block; }
+
+/* ── Tab 0: 依航班 ── */
+.airline-btns {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 8px; margin-bottom: 18px;
+}
+.airline-btn {
+  padding: 13px 4px; border: 2px solid var(--border);
+  border-radius: 14px; background: var(--surface);
+  font-family: inherit; font-size: 1.05rem; font-weight: 700;
+  color: var(--sub); cursor: pointer; text-align: center;
+  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.airline-btn.active {
+  border-color: var(--accent); color: var(--accent); background: var(--acc2);
+}
+.airline-btn:active { transform: scale(0.94); }
+
+.seq-list { display: flex; flex-direction: column; gap: 7px; }
+.seq-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 14px;
+  background: var(--surface); border-radius: 14px;
+  border: 1px solid var(--border);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s; position: relative; overflow: hidden;
+}
+.seq-item::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--accent); opacity: 0; transition: opacity 0.15s;
+}
+.seq-item:active { background: var(--acc2); }
+.seq-item:active::before { opacity: 1; }
+.seq-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--acc2); color: var(--accent);
+  font-size: 0.75rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.seq-info { flex: 1; min-width: 0; }
+.seq-title { font-size: 0.92rem; font-weight: 600; color: var(--text); }
+.seq-badge {
+  display: inline-block; font-size: 0.63rem; font-weight: 600;
+  padding: 1px 6px; border-radius: 6px;
+  background: var(--acc2); color: var(--accent);
+  margin-left: 6px; letter-spacing: 0.02em; vertical-align: middle;
+}
+.seq-arrow { color: var(--sub); font-size: 0.8rem; flex-shrink: 0; }
+
+/* ── Tab 1: 依類別 ── */
+.cat-section { margin-bottom: 22px; }
+.cat-header {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--sub); text-transform: uppercase;
+  margin-bottom: 7px; padding: 0 2px;
+}
+.cat-list {
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--border);
+  display: flex; flex-direction: column; gap: 1px;
+}
+.cat-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; background: var(--surface);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+.cat-item:active { background: var(--acc2); }
+.cat-label { flex: 1; font-size: 0.92rem; font-weight: 500; color: var(--text); }
+.cat-arrow { color: var(--sub); font-size: 0.8rem; }
+
+/* ── Panel ── */
+.backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.42);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s; z-index: 100;
+}
+.backdrop.open { opacity: 1; pointer-events: auto; }
+
+.panel {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  max-height: 90dvh;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  z-index: 101; display: flex; flex-direction: column;
+}
+.panel.open { transform: translateY(0); }
+
+.panel-handle {
+  width: 36px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 12px auto 0; flex-shrink: 0;
+}
+.panel-head {
+  padding: 10px 20px 14px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.panel-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+.panel-note { font-size: 0.72rem; color: var(--accent); margin-top: 3px; font-weight: 600; }
+
+.panel-body {
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 16px 20px max(24px, env(safe-area-inset-bottom) + 16px);
+  flex: 1;
+}
+.script-lang {
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.12em;
+  color: var(--sub); text-transform: uppercase; margin-bottom: 8px;
+}
+.script-text {
+  font-size: 1rem; line-height: 1.8; color: var(--text);
+  white-space: pre-wrap; margin-bottom: 20px;
+}
+.blank { color: var(--blank); font-weight: 700; border-bottom: 1.5px solid var(--blank); }
+.divider { height: 1px; background: var(--border); margin: 4px 0 20px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="history.back()">← 返回</button>
+  <div class="header-title">廣播 SOP</div>
+  <div class="header-sub">AirAsia 登機門廣播詞 · Rev 2025/03</div>
+  <div class="header-rule"></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab(0,this)">依航班</button>
+  <button class="tab" onclick="switchTab(1,this)">依類別</button>
+</div>
+
+<div class="content">
+  <div class="pane active" id="pane-airline">
+    <div class="airline-btns">
+      <button class="airline-btn active" onclick="selectAirline('AK',this)">AK</button>
+      <button class="airline-btn" onclick="selectAirline('D7',this)">D7</button>
+      <button class="airline-btn" onclick="selectAirline('FD',this)">FD</button>
+      <button class="airline-btn" onclick="selectAirline('Z2',this)">Z2</button>
+    </div>
+    <div class="seq-list" id="seq-list"></div>
+  </div>
+  <div class="pane" id="pane-cat"></div>
+</div>
+
+<div class="backdrop" id="backdrop" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-handle"></div>
+  <div class="panel-head">
+    <div class="panel-title" id="p-title"></div>
+    <div class="panel-note" id="p-note"></div>
+  </div>
+  <div class="panel-body" id="p-body"></div>
+</div>
+
+<script>
+const S = {
+  mdac: {
+    title: '馬來西亞 MDAC',
+    cat: 'entry',
+    zh: '各位旅客請注意，以下提醒您馬來西亞的入境須知。所有入境馬來西亞的外籍旅客都必須完成線上入境卡；如您尚未填寫，請洽詢我們的地勤人員，謝謝。',
+    en: "Dear Passengers, we would like to remind you of Malaysia's entry requirements. All foreign visitors must complete the Digital Arrival Card prior to arrival in Malaysia.\n\nIf you have not yet completed this requirement, please contact our ground staff for assistance. Thank you."
+  },
+  etravel: {
+    title: '菲律賓 eTravel',
+    cat: 'entry',
+    zh: '各位旅客請注意，以下提醒您菲律賓的入境須知。所有入境菲律賓的旅客都必須完成 eTravel 入境申報；如您尚未填寫，請洽詢我們的地勤人員，謝謝。',
+    en: "Dear Passengers, we would like to remind you of the Philippines' entry requirements. All passengers, including the Philippines citizens, must complete the e-Travel registration prior to arrival.\n\nIf you have not yet completed this requirement, please contact our ground staff for assistance. Thank you."
+  },
+  baggage: {
+    title: '手提行李',
+    cat: 'safety',
+    zh: '各位旅客請注意，再次提醒您亞洲航空的手提行李政策。\n\n每位旅客只能攜帶一件手提行李，外加一個小提包，兩件總重不得超過 7 公斤，包含您的免稅商品。請注意，包含您的免稅商品。如超過限制，則必須支付超額行李費用。敬請配合，謝謝。',
+    en: "Dear Passengers, this is a gentle reminder of AirAsia cabin baggage policy. We allow 1 piece of cabin baggage and 1 piece of personal item, with a combined weight of 7 kilograms, including your duty-free items, including your duty-free items.\n\nPassengers carrying more than 2 pieces or exceeding the weight and dimensions will be charged a gate bag fee. Thank you for your cooperation."
+  },
+  powerbank: {
+    title: '行動電源',
+    cat: 'safety',
+    zh: '各位旅客請注意，以下是亞洲航空的安全公告。航班全程嚴格禁止使用行動電源，或為行動電源充電。\n\n請您將行動電源放在身上或前方座位置物袋內，不可置放在機艙上方行李架。感謝您配合維護飛航安全。',
+    en: "Dear Passengers, this is an important safety announcement from AirAsia. Please note that charging and using of power banks is strictly prohibited on board AirAsia flights.\n\nPlease keep the power bank in your person or in your seat pocket, and do not place them in the cabin overhead compartment. Thank you for keeping the flight safe together."
+  },
+  pre_a330: {
+    title: '登機前廣播',
+    cat: 'a330',
+    zh: '各位旅客您好，歡迎搭乘亞洲航空班機飛往____。稍後我們將依照座位區域號碼開始登機，順序為第一區至第四區，請您確認登機證上標示的區域號碼。\n\n購買豪華平躺座位、常飛客、Fast Pass、熱選座位的旅客可享受優先登機服務，也可隨時登機。\n\n此外提醒您，每位旅客只能攜帶一件手提行李，外加一個小提包，兩件總重不得超過 7 公斤，包含您的免稅商品。如超過限制，則必須支付超額行李費用。\n\n感謝您搭乘亞洲航空，祝您旅途愉快。',
+    en: "Dear Passengers, welcome to AirAsia flight to ____. We will soon begin boarding by Zone number, from Zone 1 to Zone 4. Please check your boarding pass for your zone number.\n\nPassengers who purchased Premium Flatbed, Premium Flex, Fast Pass, and Hot Seat can enjoy our Priority Boarding service, or choose to board at any time.\n\nIn addition, we allow 1 piece of cabin baggage and 1 piece of personal item, with a combined weight of 7 kilograms. Passengers carrying more than 2 pieces or exceeding the weight and dimensions will be charged a gate bag fee.\n\nThank you for travelling with AirAsia. We wish you a pleasant flight."
+  },
+  z1_a330: {
+    title: 'Zone 1',
+    cat: 'a330',
+    zh: '各位旅客您好，亞洲航空往____的航班現在開放登機。首先邀請第一區，豪華平躺座位、常飛客、Fast Pass、熱選座位的旅客由左側優先登機。\n\n第二區的旅客，請在右側排隊等候登機。其他旅客請稍候。\n\n登機時請準備登機証，將護照翻開至相片頁，並暫時脫下口罩，以利地勤人員查驗。',
+    en: "Dear Passengers, AirAsia flight to ____ is now ready for boarding. At this time, we would like to invite passengers seated in Zone 1, Premium Flatbed, Premium Flex, Fast Pass, and Hot Seat to board first from your left hand side.\n\nPassengers seated in Zone 2, please queue from your right hand side. All other passengers, please remain seated.\n\nWhile waiting for boarding, please ensure your passport is opened at the photo page with your own boarding pass, and remove your mask for inspection by our staff."
+  },
+  z2_a330: {
+    title: 'Zone 2',
+    cat: 'a330',
+    zh: '搭乘亞洲航空往____的旅客請注意，現在邀請第二區的旅客登機，其他旅客請稍候。\n\n登機時請準備登機証，將護照翻開至相片頁，並暫時脫下口罩，以利地勤人員查驗。',
+    en: "Announcement for AirAsia flight to ____. We now invite passengers seated in Zone 2 to board. All other passengers, please remain seated.\n\nWhile waiting for boarding, please ensure your passport is opened at the photo page with your own boarding pass, and remove your mask for inspection by our staff."
+  },
+  z3_a330: {
+    title: 'Zone 3',
+    cat: 'a330',
+    zh: '搭乘亞洲航空往____的旅客請注意，現在邀請第三區的旅客登機，其他旅客請稍候。\n\n登機時請準備登機証，將護照翻開至相片頁，並暫時脫下口罩，以利地勤人員查驗。',
+    en: "Announcement for AirAsia flight to ____. We now invite passengers seated in Zone 3 to board. All other passengers, please remain seated.\n\nWhile waiting for boarding, please ensure your passport is opened at the photo page with your own boarding pass, and remove your mask for inspection by our staff."
+  },
+  z4_a330: {
+    title: 'Zone 4 & All',
+    cat: 'a330',
+    zh: '搭乘亞洲航空往____的旅客請注意，現在請第四區及所有旅客登機。\n\n登機時請準備登機証，將護照翻開至相片頁，並暫時脫下口罩，以利地勤人員查驗。',
+    en: "Announcement for AirAsia flight to ____. We now invite passengers seated in Zone 4, and all remaining passenger to board.\n\nWhile waiting for boarding, please ensure your passport is opened at the photo page with your own boarding pass, and remove your mask for inspection by our staff."
+  },
+  pre_a320: {
+    title: '登機前廣播',
+    cat: 'a320',
+    zh: '各位旅客您好，歡迎搭乘亞洲航空班機飛往____。稍後我們將依照座位區域號碼開始登機，順序為第一區至第三區，請您確認登機證上標示的區域號碼。\n\n購買常飛客、Fast Pass、熱選座位的旅客可享受優先登機服務，也可隨時登機。\n\n此外提醒您，每位旅客只能攜帶一件手提行李，外加一個小提包，兩件總重不得超過 7 公斤，包含您的免稅商品。如超過限制，則必須支付超額行李費用。\n\n感謝您搭乘亞洲航空，祝您旅途愉快。',
+    en: "Dear Passengers, welcome to AirAsia flight to ____. We will soon begin boarding by Zone number, from Zone 1 to Zone 3. Please check your boarding pass for your zone number.\n\nPassengers who purchased Premium Flex, Fast Pass, and Hot Seat can enjoy our Priority Boarding service, or choose to board at any time.\n\nIn addition, we allow 1 piece of cabin baggage and 1 piece of personal item, with a combined weight of 7 kilograms. Passengers carrying more than 2 pieces or exceeding the weight and dimensions will be charged a gate bag fee.\n\nThank you for travelling with AirAsia. We wish you a pleasant flight."
+  },
+  z1_a320: {
+    title: 'Zone 1',
+    cat: 'a320',
+    zh: '各位旅客請注意，亞洲航空往____的航班現在開放登機。首先邀請第一區，常飛客、Fast Pass、熱選座位的旅客優先登機。\n\n第二區的旅客，請在右側排隊等候。其他旅客請稍候。\n\n登機時請準備登機証，將護照翻開至相片頁，並暫時脫下口罩，以利地勤人員查驗。',
+    en: "Dear Passengers, AirAsia flight to ____ is now ready for boarding. At this time, we would like to invite passengers seated in Zone 1, Premium Flex, Fast Pass, and Hot Seat to board first from your left hand side.\n\nPassengers seated in Zone 2, please queue up from your right hand side. All other passengers, please remain seated.\n\nWhile waiting for boarding, please ensure your passport is opened at the photo page with your own boarding pass, and remove your mask for inspection by our staff."
+  },
+  z2_a320: {
+    title: 'Zone 2',
+    cat: 'a320',
+    zh: '搭乘亞洲航空往____的旅客請注意，邀請第二區的旅客登機，其他旅客請稍候。\n\n登機時請準備登機証，將護照翻開至相片頁，並暫時脫下口罩，以利地勤人員查驗。',
+    en: "Announcement for AirAsia flight to ____. We now invite passengers seated in Zone 2 to board. All other passengers, please remain seated.\n\nWhile waiting for boarding, please ensure your passport is opened at the photo page with your own boarding pass, and remove your mask for inspection by our staff."
+  },
+  z3_a320: {
+    title: 'Zone 3 & All',
+    cat: 'a320',
+    zh: '搭乘亞洲航空往____的旅客請注意，現在請第三區及所有旅客登機。\n\n登機時請準備登機証，將護照翻開至相片頁，並暫時脫下口罩，以利地勤人員查驗。',
+    en: "Announcement for AirAsia flight to ____. We now invite passengers seated in Zone 3, and all remaining passenger to board.\n\nWhile waiting for boarding, please ensure your passport is opened at the photo page with your own boarding pass, and remove your mask for inspection by our staff."
+  },
+  gate_change: {
+    title: '登機門異動',
+    cat: 'general',
+    zh: '各位旅客請注意，這是登機門更改通知。如果您是搭乘亞洲航空飛往____，登機門臨時更改為____。請您前往____號登機門候機。感謝您的配合。',
+    en: "Dear Passengers, this is the gate change announcement. If you are traveling on AirAsia flight to ____, your gate number has been changed to ____. Please proceed to Gate ____ for your flight. Thank you for your cooperation."
+  },
+  time_change: {
+    title: '登機時間更改',
+    cat: 'general',
+    zh: '搭乘亞洲航空往____的旅客請注意，由於飛機延遲抵達，登機時間更改為（上午／下午）___點___分。諸多不便，敬請見諒。',
+    en: "Dear Passengers, we regret to inform you that AirAsia flight to ____ has been delayed due to the late arrival of the aircraft. The boarding time is now changed to ____ am/pm. We apologize for the inconvenience and appreciate your patience. Thank you."
+  },
+  final: {
+    title: '最後登機',
+    cat: 'general',
+    zh: '各位旅客請注意，這是亞洲航空往____航班的最後登機通知，班機即將起飛，請所有旅客儘速至____號門登機。',
+    en: "Dear Passengers, this is the final boarding call for AirAsia flight to ____. The flight will depart shortly. All remaining passengers, please proceed to Gate ____ for immediate boarding."
+  },
+  paging: {
+    title: '尋人廣播',
+    cat: 'general',
+    zh: '各位旅客請注意，這是亞洲航空往____航班的尋人廣播，我們尚未開放登機，請您留在原位。座位在____的____（先生／小姐），聽到廣播後請與地勤人員聯絡。',
+    en: "Dear Passengers, this is a paging announcement for AirAsia flight to ____. The flight is not open for boarding yet. Please remain seated. Seat number ____, (Mr./Ms.) ____, please kindly identify yourself to our ground staff. Thank you."
+  },
+  delay: {
+    title: 'DELAY',
+    cat: 'general',
+    zh: '各位旅客請注意，這是亞洲航空____班號往____航班的動態通知。由於：\n\n1. 機艙準備作業仍在進行\n2. 飛機延遲抵達\n3. 台北天候不佳\n4. 機艙安全檢查仍在進行\n5. 飛機加油作業仍在進行\n6. 飛機修護作業仍在進行\n\n此航班將會延誤。\n\nA. 登機時間更改為（上午／下午）__點__分\nB. 目前預計登機時間未定，我們將在____分鐘後提供最新消息。如需協助，請向地勤人員聯絡。\n\n諸多不便，敬請見諒。',
+    en: "Dear Passengers, this is a status update for AirAsia flight ____ to ____. We regret to advise that this flight is delayed due to…\n\n1. Cabin preparation\n2. Late arrival of the flight from ____\n3. Bad weather conditions in Taipei\n4. Security checks on the aircraft\n5. Refueling of the aircraft\n6. Aircraft maintenance\n\nA. The boarding time has been changed to __:__ am / pm.\nB. At this moment, we are unable to provide the estimated boarding time. More information will be announced ____ minutes later. Should you require any assistance, please contact our ground staff.\n\nWe apologize for inconvenience caused and thank you for your patience and understanding."
+  },
+  meal_voucher: {
+    title: '發餐券',
+    cat: 'general',
+    zh: '搭乘亞洲航空往____的旅客請注意，由於航班延誤的緣故，我們將發放餐券供您用餐，第一航廈內的餐廳皆可使用。請您手持登機證向地勤人員領取餐券。\n\n此外，請您於（上午／下午）___點___分前（回到／前往）___號登機門候機。我們再次為航班延遲感到抱歉，敬請見諒。',
+    en: "Passengers on AirAsia flight to ____, your attention please. Due to flight delay, we'll be providing meal vouchers for your convenience. The voucher can be redeemed at any restaurants located in Terminal 1. Please bring your boarding pass to the gate staff to get your meal voucher.\n\nIn addition, please [return / proceed] to Gate number ____ before ____ [am/pm] for your flight. Again, we apologize for the delay, and thank you for your understanding."
+  },
+  hotel: {
+    title: 'HOTEL 安置',
+    cat: 'general',
+    zh: '搭乘亞洲航空____班機飛往____的旅客請注意，由於：\n1. 空勤組員超時\n2. 飛機修護作業尚未完成\n\n航班無法如時起飛，我們將為您辦理退關手續，並安排飯店供您休息。請您留意以下事項：\n\n● 如果您已購買免稅品，稍後請交給地勤人員為您協助保管。\n● 如果您抵達____後仍有其他亞航營運的轉接航班，我們會在您返回機場報到時免費為您安排新的航班。\n● 如果您的轉接航班是由其他航空公司營運，請聯絡該公司協助處理。\n● 新的航班起飛時間將會在入住飯店後公告，請耐心等候我們的通知。\n\n接著，請您留在原位等候地勤人員指示。諸多不便，敬請見諒。',
+    en: "Passengers on AirAsia flight ____ to ____, your attention please. We regretfully advise that the flight will not depart as scheduled due to:\n1. flight crew duty hour limit\n2. aircraft maintenance requirements\n\nWe will be offering hotel accommodation during the waiting time. Please pay attention to the following notice:\n\n● If you purchased duty free items, please hand them over to our staff for custody\n● If you have a connecting flight with AirAsia, we will make necessary arrangements when you are back to the airport\n● If your connecting flight is operated by other airlines, please contact your airlines\n● The new departure time will be announced after hotel check-in\n\nNow, please remain seated for our further instructions. We sincerely apologize for the delay. Thank you for your understanding."
+  }
+};
+
+const SEQ = {
+  AK: [
+    {id:'mdac',      label:'MDAC'},
+    {id:'baggage',   label:'手提行李'},
+    {id:'powerbank', label:'行動電源（第一次）'},
+    {id:'pre_a320',  label:'登機前廣播'},
+    {id:'powerbank', label:'行動電源（第二次）'},
+    {id:'z1_a320',   label:'Zone 1'},
+    {id:'z2_a320',   label:'Zone 2'},
+    {id:'z3_a320',   label:'Zone 3 & All'},
+    {id:'final',     label:'最後登機'},
+  ],
+  D7: [
+    {id:'mdac',      label:'MDAC'},
+    {id:'baggage',   label:'手提行李'},
+    {id:'powerbank', label:'行動電源（第一次）'},
+    {id:'pre_a330',  label:'登機前廣播 · A330'},
+    {id:'powerbank', label:'行動電源（第二次）'},
+    {id:'z1_a330',   label:'Zone 1'},
+    {id:'z2_a330',   label:'Zone 2'},
+    {id:'z3_a330',   label:'Zone 3'},
+    {id:'z4_a330',   label:'Zone 4 & All'},
+    {id:'final',     label:'最後登機'},
+  ],
+  FD: [
+    {id:'baggage',   label:'手提行李'},
+    {id:'powerbank', label:'行動電源（第一次）'},
+    {id:'pre_a320',  label:'登機前廣播'},
+    {id:'powerbank', label:'行動電源（第二次）'},
+    {id:'z1_a320',   label:'Zone 1'},
+    {id:'z2_a320',   label:'Zone 2'},
+    {id:'z3_a320',   label:'Zone 3 & All'},
+    {id:'final',     label:'最後登機'},
+  ],
+  Z2: [
+    {id:'etravel',   label:'eTravel'},
+    {id:'baggage',   label:'手提行李'},
+    {id:'powerbank', label:'行動電源（第一次）'},
+    {id:'pre_a320',  label:'登機前廣播', note:'先英文後中文'},
+    {id:'powerbank', label:'行動電源（第二次）'},
+    {id:'z1_a320',   label:'Zone 1',       note:'先英文後中文'},
+    {id:'z2_a320',   label:'Zone 2',       note:'先英文後中文'},
+    {id:'z3_a320',   label:'Zone 3 & All', note:'先英文後中文'},
+    {id:'final',     label:'最後登機'},
+  ],
+};
+
+const CATS = [
+  {label:'入境須知', icon:'🛂', ids:['mdac','etravel']},
+  {label:'安全提醒', icon:'⚠️', ids:['baggage','powerbank']},
+  {label:'A330 登機廣播', icon:'✈️', ids:['pre_a330','z1_a330','z2_a330','z3_a330','z4_a330']},
+  {label:'A320 / A321 登機廣播', icon:'🛫', ids:['pre_a320','z1_a320','z2_a320','z3_a320']},
+  {label:'突發狀況', icon:'🚨', ids:['gate_change','time_change','final','paging','delay','meal_voucher','hotel']},
+];
+
+function switchTab(i, btn) {
+  document.querySelectorAll('.tab').forEach((t,j) => t.classList.toggle('active', j===i));
+  document.querySelectorAll('.pane').forEach((p,j) => p.classList.toggle('active', j===i));
+}
+
+function selectAirline(code, btn) {
+  document.querySelectorAll('.airline-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSeq(code);
+}
+
+function renderSeq(code) {
+  const list = document.getElementById('seq-list');
+  list.innerHTML = SEQ[code].map((item, i) => {
+    const badge = item.note ? `<span class="seq-badge">${item.note}</span>` : '';
+    const enFirst = !!(item.note && item.note.includes('先英'));
+    return `<div class="seq-item" onclick='openPanel(${JSON.stringify(item.id)},${JSON.stringify(item.note||'')},${enFirst})'>
+      <div class="seq-num">${i+1}</div>
+      <div class="seq-info"><div class="seq-title">${item.label}${badge}</div></div>
+      <div class="seq-arrow">›</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCats() {
+  document.getElementById('pane-cat').innerHTML = CATS.map(cat => `
+    <div class="cat-section">
+      <div class="cat-header">${cat.icon} &nbsp;${cat.label}</div>
+      <div class="cat-list">${cat.ids.map(id => `
+        <div class="cat-item" onclick='openPanel(${JSON.stringify(id)},"",false)'>
+          <div class="cat-label">${S[id].title}</div>
+          <div class="cat-arrow">›</div>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function fmt(text) {
+  return text.replace(/_{2,}/g, m => `<span class="blank">${m}</span>`);
+}
+
+function openPanel(id, note, enFirst) {
+  const s = S[id];
+  document.getElementById('p-title').textContent = s.title;
+  const noteEl = document.getElementById('p-note');
+  noteEl.textContent = note || '';
+  noteEl.style.display = note ? '' : 'none';
+
+  const zh = `<div class="script-lang">中文</div><div class="script-text">${fmt(s.zh)}</div>`;
+  const en = `<div class="script-lang">English</div><div class="script-text">${fmt(s.en)}</div>`;
+  document.getElementById('p-body').innerHTML = enFirst
+    ? en + '<div class="divider"></div>' + zh
+    : zh + '<div class="divider"></div>' + en;
+
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('p-body').scrollTop = 0;
+}
+
+function closePanel() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+}
+
+renderSeq('AK');
+renderCats();
+</script>
+</body>
+</html>

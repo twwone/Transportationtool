@@ -2032,6 +2032,10 @@ def card_order_set():
 # ──────────────────────────────────────────────
 _MEMO_KEY = "memo:main"
 
+@app.route("/sop")
+def sop_page():
+    return render_template("sop.html")
+
 @app.route("/memo")
 def memo_page():
     return render_template("memo.html")
