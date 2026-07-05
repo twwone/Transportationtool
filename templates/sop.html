@@ -42,14 +42,19 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", sans-serif;
   background: var(--bg);
   color: var(--text);
-  height: 100dvh;
-  overflow: hidden;
-  position: relative;
 }
 
-/* ── View：hub 固定底層，子頁面從右蓋上來 ── */
+/* ── App shell：填滿視窗，clips 子頁滑動 ── */
+#app {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ── View：absolute，在 #app 內部滑動 ── */
 .view {
-  position: fixed;
+  position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
@@ -64,8 +69,8 @@ body {
   transform: translateX(100%);
   transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
 }
-body.in-broadcast #view-broadcast { transform: translateX(0); }
-body.in-ssr       #view-ssr       { transform: translateX(0); }
+#app.in-broadcast #view-broadcast { transform: translateX(0); }
+#app.in-ssr       #view-ssr       { transform: translateX(0); }
 
 /* ── Header ── */
 .header {
@@ -275,6 +280,7 @@ body.in-ssr       #view-ssr       { transform: translateX(0); }
 </style>
 </head>
 <body>
+<div id="app">
 
   <!-- ── View 1：TIAS 入口 ── -->
   <div class="view" id="view-hub">
@@ -377,6 +383,8 @@ body.in-ssr       #view-ssr       { transform: translateX(0); }
 
     </div>
   </div>
+
+</div><!-- /#app -->
 
 <!-- 廣播詞 Panel -->
 <div class="backdrop" id="backdrop" onclick="closePanel()"></div>
@@ -542,13 +550,14 @@ const SEQ = {
 };
 
 /* ── View 切換 ── */
+const _app = document.getElementById('app');
 function goSub(name) {
-  document.body.classList.remove('in-broadcast', 'in-ssr');
-  if (name === 'broadcast') { renderSeq('AK'); document.body.classList.add('in-broadcast'); }
-  else if (name === 'ssr')  { document.body.classList.add('in-ssr'); }
+  _app.classList.remove('in-broadcast', 'in-ssr');
+  if (name === 'broadcast') { renderSeq('AK'); _app.classList.add('in-broadcast'); }
+  else if (name === 'ssr')  { _app.classList.add('in-ssr'); }
 }
 function goHub() {
-  document.body.classList.remove('in-broadcast', 'in-ssr');
+  _app.classList.remove('in-broadcast', 'in-ssr');
 }
 
 /* ── 廣播 SOP ── */
