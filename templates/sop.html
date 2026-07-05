@@ -44,33 +44,23 @@ body {
   color: var(--text);
 }
 
-/* ── App shell：填滿視窗，clips 子頁滑動 ── */
-#app {
-  position: relative;
-  width: 100%;
-  height: 100dvh;
-  overflow: hidden;
-}
+/* ── App shell ── */
+#app { width: 100%; height: 100dvh; overflow: hidden; }
 
-/* ── View：absolute，在 #app 內部滑動 ── */
+/* ── View：預設隱藏，用 display 切換顯示 ── */
 .view {
-  position: absolute;
-  inset: 0;
-  display: flex;
+  display: none;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
   background: var(--bg);
   overflow: hidden;
 }
-#view-hub { z-index: 1; }
-
-#view-broadcast,
-#view-ssr {
-  z-index: 2;
-  transform: translateX(100%);
-  transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
-}
-#app.in-broadcast #view-broadcast { transform: translateX(0); }
-#app.in-ssr       #view-ssr       { transform: translateX(0); }
+#view-hub                         { display: flex; }
+#app.in-broadcast #view-hub       { display: none; }
+#app.in-broadcast #view-broadcast { display: flex; }
+#app.in-ssr       #view-hub       { display: none; }
+#app.in-ssr       #view-ssr       { display: flex; }
 
 /* ── Header ── */
 .header {
