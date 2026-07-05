@@ -50,8 +50,10 @@ body {
 /* ── View 容器：兩個 view 水平並排，滑動切換 ── */
 .view-wrap {
   display: flex;
+  flex-wrap: nowrap;
   width: 300%;
   height: 100%;
+  overflow: hidden;
   transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
 }
 .view-wrap.in-broadcast { transform: translateX(-33.333%); }
@@ -59,6 +61,7 @@ body {
 
 .view {
   width: 33.333%;
+  flex-shrink: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
