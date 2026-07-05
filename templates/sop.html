@@ -47,7 +47,7 @@ body {
   position: relative;
 }
 
-/* ── View：每個子頁面獨立固定定位，用 translateX 滑進滑出 ── */
+/* ── View：hub 固定底層，子頁面從右蓋上來 ── */
 .view {
   position: fixed;
   inset: 0;
@@ -55,16 +55,16 @@ body {
   flex-direction: column;
   background: var(--bg);
   overflow: hidden;
-  transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
-  will-change: transform;
 }
-#view-hub       { transform: translateX(0); }
-#view-broadcast { transform: translateX(100%); }
-#view-ssr       { transform: translateX(100%); }
+#view-hub { z-index: 1; }
 
-body.in-broadcast #view-hub       { transform: translateX(-30%); }
+#view-broadcast,
+#view-ssr {
+  z-index: 2;
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+}
 body.in-broadcast #view-broadcast { transform: translateX(0); }
-body.in-ssr       #view-hub       { transform: translateX(-30%); }
 body.in-ssr       #view-ssr       { transform: translateX(0); }
 
 /* ── Header ── */
