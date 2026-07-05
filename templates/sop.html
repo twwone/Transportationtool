@@ -47,26 +47,25 @@ body {
   position: relative;
 }
 
-/* ── View 容器：兩個 view 水平並排，滑動切換 ── */
-.view-wrap {
-  display: flex;
-  flex-wrap: nowrap;
-  width: 300%;
-  height: 100%;
-  overflow: hidden;
-  transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
-}
-.view-wrap.in-broadcast { transform: translateX(-33.333%); }
-.view-wrap.in-ssr       { transform: translateX(-66.667%); }
-
+/* ── View：每個子頁面獨立固定定位，用 translateX 滑進滑出 ── */
 .view {
-  width: 33.333%;
-  flex-shrink: 0;
-  height: 100%;
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
   overflow: hidden;
+  transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+  will-change: transform;
 }
+#view-hub       { transform: translateX(0); }
+#view-broadcast { transform: translateX(100%); }
+#view-ssr       { transform: translateX(100%); }
+
+body.in-broadcast #view-hub       { transform: translateX(-30%); }
+body.in-broadcast #view-broadcast { transform: translateX(0); }
+body.in-ssr       #view-hub       { transform: translateX(-30%); }
+body.in-ssr       #view-ssr       { transform: translateX(0); }
 
 /* ── Header ── */
 .header {
@@ -277,8 +276,6 @@ body {
 </head>
 <body>
 
-<div class="view-wrap" id="view-wrap">
-
   <!-- ── View 1：TIAS 入口 ── -->
   <div class="view" id="view-hub">
     <div class="header">
@@ -380,8 +377,6 @@ body {
 
     </div>
   </div>
-
-</div>
 
 <!-- 廣播詞 Panel -->
 <div class="backdrop" id="backdrop" onclick="closePanel()"></div>
@@ -548,13 +543,12 @@ const SEQ = {
 
 /* ── View 切換 ── */
 function goSub(name) {
-  const wrap = document.getElementById('view-wrap');
-  wrap.classList.remove('in-broadcast', 'in-ssr');
-  if (name === 'broadcast') { renderSeq('AK'); wrap.classList.add('in-broadcast'); }
-  else if (name === 'ssr')  { wrap.classList.add('in-ssr'); }
+  document.body.classList.remove('in-broadcast', 'in-ssr');
+  if (name === 'broadcast') { renderSeq('AK'); document.body.classList.add('in-broadcast'); }
+  else if (name === 'ssr')  { document.body.classList.add('in-ssr'); }
 }
 function goHub() {
-  document.getElementById('view-wrap').classList.remove('in-broadcast', 'in-ssr');
+  document.body.classList.remove('in-broadcast', 'in-ssr');
 }
 
 /* ── 廣播 SOP ── */
