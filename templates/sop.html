@@ -50,14 +50,15 @@ body {
 /* ── View 容器：兩個 view 水平並排，滑動切換 ── */
 .view-wrap {
   display: flex;
-  width: 200%;
+  width: 300%;
   height: 100%;
   transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
 }
-.view-wrap.in-sub { transform: translateX(-50%); }
+.view-wrap.in-broadcast { transform: translateX(-33.333%); }
+.view-wrap.in-ssr       { transform: translateX(-66.667%); }
 
 .view {
-  width: 50%;
+  width: 33.333%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -225,6 +226,50 @@ body {
 }
 .blank { color: var(--blank); font-weight: 700; border-bottom: 1.5px solid var(--blank); }
 .divider { height: 1px; background: var(--border); margin: 4px 0 20px; }
+
+/* ── SSR 代碼清單 ── */
+.ssr-group { margin-bottom: 22px; }
+.ssr-group-lbl {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--sub); text-transform: uppercase;
+  margin-bottom: 8px; padding: 0 2px;
+  display: flex; align-items: center; gap: 5px;
+}
+.ssr-item {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 11px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 6px;
+}
+.ssr-item-warn   { border-color: rgba(217,120,0,0.25); background: rgba(255,140,0,0.06); }
+.ssr-item-spneed { border-color: rgba(90,40,200,0.2);  background: rgba(90,40,200,0.05); }
+.ssr-code {
+  font-family: "SF Mono", "Menlo", "Courier New", monospace;
+  font-size: 0.88rem; font-weight: 800; letter-spacing: 0.02em;
+  color: var(--text); white-space: nowrap; flex-shrink: 0; min-width: 80px;
+}
+.ssr-code-pri    { color: #854d0e; }
+.ssr-code-spneed { color: #5b21b6; }
+.ssr-code-addon  { color: #065f46; }
+.ssr-mid { font-size: 0.82rem; color: var(--sub); flex: 1; line-height: 1.4; }
+.ssr-kg {
+  font-size: 0.72rem; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  background: rgba(0,96,223,0.1); color: #0060df;
+  padding: 2px 7px; border-radius: 7px;
+}
+.ssr-kg-extra { background: rgba(21,128,61,0.12); color: #15803d; }
+.ssr-kg-fee   { background: rgba(194,65,12,0.12); color: #c2410c; }
+
+@media (prefers-color-scheme: dark) {
+  .ssr-code-pri    { color: #fbbf24; }
+  .ssr-code-spneed { color: #c084fc; }
+  .ssr-code-addon  { color: #6ee7b7; }
+  .ssr-kg       { background: rgba(0,96,223,0.2);   color: #93c5fd; }
+  .ssr-kg-extra { background: rgba(21,128,61,0.2);  color: #6ee7b7; }
+  .ssr-kg-fee   { background: rgba(194,65,12,0.2);  color: #fb923c; }
+}
 </style>
 </head>
 <body>
@@ -251,7 +296,14 @@ body {
           <div class="hub-arrow">›</div>
         </div>
 
-        <!-- 未來子系統加在這裡 -->
+        <div class="hub-card" style="--card-color:#0060df;--card-color-bg:rgba(0,96,223,0.08)" onclick="goSub('ssr')">
+          <div class="hub-icon"><i class="bi bi-tag-fill"></i></div>
+          <div class="hub-info">
+            <div class="hub-name">SSR 代碼</div>
+            <div class="hub-desc">行李 · 優先服務 · 特殊需求 · 加購</div>
+          </div>
+          <div class="hub-arrow">›</div>
+        </div>
 
       </div>
     </div>
@@ -274,6 +326,55 @@ body {
         <button class="airline-btn" onclick="selectAirline('Z2',this)">Z2</button>
       </div>
       <div class="seq-list" id="seq-list"></div>
+    </div>
+    <!-- ── View 3：SSR 代碼 ── -->
+  <div class="view" id="view-ssr">
+    <div class="header">
+      <button class="back-btn" onclick="goHub()">← TIAS</button>
+      <div class="header-title">SSR 代碼</div>
+      <div class="header-sub">AirAsia · 行李 / 優先 / 特需 / 加購</div>
+      <div class="header-rule"></div>
+    </div>
+    <div class="content">
+
+      <div class="ssr-group">
+        <div class="ssr-group-lbl"><i class="bi bi-luggage-fill"></i> 行李類</div>
+        <div class="ssr-item"><span class="ssr-code">PBAA / PBLA</span><span class="ssr-mid">一般託運行李（國內線）</span><span class="ssr-kg">15 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PBAB / PBLB</span><span class="ssr-mid">一般託運行李</span><span class="ssr-kg">20 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PBAC / PBLC</span><span class="ssr-mid">一般託運行李</span><span class="ssr-kg">25 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PBAD / PBLD</span><span class="ssr-mid">一般託運行李</span><span class="ssr-kg">30 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PBAF / PBLF</span><span class="ssr-mid">一般託運行李</span><span class="ssr-kg">40 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PBAG / PBLG</span><span class="ssr-mid">一般託運行李</span><span class="ssr-kg">50 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PBAH / PBLH</span><span class="ssr-mid">一般託運行李</span><span class="ssr-kg">60 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PSEA</span><span class="ssr-mid">運動器材（國內線）</span><span class="ssr-kg">15 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PSEB</span><span class="ssr-mid">運動器材</span><span class="ssr-kg">20 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PSEC</span><span class="ssr-mid">運動器材</span><span class="ssr-kg">25 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PSED</span><span class="ssr-mid">運動器材</span><span class="ssr-kg">30 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">PSEF</span><span class="ssr-mid">運動器材</span><span class="ssr-kg">40 KG</span></div>
+        <div class="ssr-item"><span class="ssr-code">CBWT</span><span class="ssr-mid">Xtra Carry On — 加購隨身行李</span><span class="ssr-kg ssr-kg-extra">+7 KG</span></div>
+        <div class="ssr-item ssr-item-warn"><span class="ssr-code">CBE</span><span class="ssr-mid">Cabin Bag Excess — 超重費</span><span class="ssr-kg ssr-kg-fee">$80/KG</span></div>
+      </div>
+
+      <div class="ssr-group">
+        <div class="ssr-group-lbl"><i class="bi bi-star-fill"></i> 優先服務／會員辨識</div>
+        <div class="ssr-item"><span class="ssr-code ssr-code-pri">HFL</span><span class="ssr-mid">Premium Flex 旅客辨識（優先標籤）</span></div>
+        <div class="ssr-item"><span class="ssr-code ssr-code-pri">GCP</span><span class="ssr-mid">Premium Flex 旅客辨識（優先標籤）</span></div>
+        <div class="ssr-item"><span class="ssr-code ssr-code-pri">APSV</span><span class="ssr-mid">BIG Loyalty Black/Platinum（優先標籤、優先報到）</span></div>
+        <div class="ssr-item"><span class="ssr-code ssr-code-pri">XBAG</span><span class="ssr-mid">Xpress Baggage — 優先行李（優先標籤）</span></div>
+      </div>
+
+      <div class="ssr-group">
+        <div class="ssr-group-lbl"><i class="bi bi-person-wheelchair"></i> 特殊需求旅客</div>
+        <div class="ssr-item ssr-item-spneed"><span class="ssr-code ssr-code-spneed">WCHR</span><span class="ssr-mid">輪椅旅客</span></div>
+        <div class="ssr-item ssr-item-spneed"><span class="ssr-code ssr-code-spneed">YP</span><span class="ssr-mid">無成人陪伴兒童（UM）</span></div>
+      </div>
+
+      <div class="ssr-group">
+        <div class="ssr-group-lbl"><i class="bi bi-bag-plus-fill"></i> 加購服務</div>
+        <div class="ssr-item"><span class="ssr-code ssr-code-addon">APVP</span><span class="ssr-mid">Fast Pass 服務代碼</span></div>
+        <div class="ssr-item"><span class="ssr-code ssr-code-addon">APUP</span><span class="ssr-mid">Airport Upgrade — 升等至 Premium Flatbed</span></div>
+      </div>
+
     </div>
   </div>
 
@@ -444,11 +545,13 @@ const SEQ = {
 
 /* ── View 切換 ── */
 function goSub(name) {
-  if (name === 'broadcast') renderSeq('AK');
-  document.getElementById('view-wrap').classList.add('in-sub');
+  const wrap = document.getElementById('view-wrap');
+  wrap.classList.remove('in-broadcast', 'in-ssr');
+  if (name === 'broadcast') { renderSeq('AK'); wrap.classList.add('in-broadcast'); }
+  else if (name === 'ssr')  { wrap.classList.add('in-ssr'); }
 }
 function goHub() {
-  document.getElementById('view-wrap').classList.remove('in-sub');
+  document.getElementById('view-wrap').classList.remove('in-broadcast', 'in-ssr');
 }
 
 /* ── 廣播 SOP ── */
