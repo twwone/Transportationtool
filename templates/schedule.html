@@ -3,569 +3,261 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>週班表 – 交通助理</title>
+<title>我的班表</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
-<link rel="apple-touch-icon" href="/static/icon.svg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="交通助理">
-<meta name="theme-color" content="#f0f4ff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<script src="/static/config.js"></script>
+<meta name="theme-color" content="#f0fdf4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#071410" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overscroll-behavior: none; }
+html, body { height: 100%; overscroll-behavior: none; }
+
 :root {
-  --green:  #059669;
-  --green2: #10b981;
-  --gl:     #d1fae5;
-  --teal:   #0d9488;
+  --bg:      #f0fdf4;
+  --surface: #ffffff;
+  --border:  rgba(5,150,105,0.10);
+  --text:    #0a1f14;
+  --sub:     #5a8a72;
+  --accent:  #059669;
+  --acc2:    rgba(5,150,105,0.08);
 }
-
-/* ── 關鍵影格 ── */
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(14px) scale(0.988); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f0f4ff;
-  color: #1c1c1e;
-  min-height: 100vh;
-  animation: pageIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* ── Top bar ── */
-.topbar {
-  background: rgba(240,244,255,0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: none;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
-  padding: 12px 16px;
-  padding-top: max(12px, env(safe-area-inset-top) + 8px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  box-sizing: border-box;
-}
-.back-link {
-  font-size: 0.9rem;
-  color: var(--green);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.15s, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s;
-}
-.back-link:active { transform: scale(0.88); opacity: 0.65; }
-
-/* ── Toggle with sliding pill — 動態島式 ── */
-.toggle-wrap {
-  position: relative;
-  display: flex;
-  background: rgba(118, 118, 128, 0.12);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 100px;
-  padding: 2px;
-  gap: 0;
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
-}
-/* 滑動背景藥丸 */
-.toggle-pill {
-  position: absolute;
-  top: 2px; bottom: 2px;
-  background: #fff;
-  border-radius: 100px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(255,255,255,0.6);
-  transition:
-    left  0.3s cubic-bezier(0.25, 1, 0.5, 1),
-    width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  pointer-events: none;
-  will-change: left, width;
-}
-.toggle-btn {
-  position: relative;
-  z-index: 1;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 100px;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  color: #8e8e93;
-  transition: color 0.22s;
-}
-.toggle-btn.active {
-  color: var(--green);
-  background: transparent;
-  box-shadow: none;
-}
-.toggle-btn:active { transform: scale(0.93); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
-.topbar-title {
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-/* ── Main layout ── */
-.main {
-  padding: 12px 16px 80px;
-  /* 補 topbar 高度（fixed 後不占文件流），加上 safe-area-inset-top */
-  padding-top: calc(60px + max(0px, env(safe-area-inset-top)));
-  max-width: 540px;
-  margin: 0 auto;
-}
-.summary {
-  font-size: 0.78rem;
-  color: #8e8e93;
-  text-align: center;
-  margin-bottom: 14px;
-  transition: opacity 0.2s;
-}
-
-/* ── Day card ── */
-.day-card {
-  background: #fff;
-  border-radius: 22px;
-  border: 1.5px solid #e5e5ea;
-  padding: 18px 16px;
-  margin-bottom: 12px;
-  will-change: transform;
-  transition:
-    transform      0.3s cubic-bezier(0.25, 1, 0.5, 1),
-    box-shadow     0.3s cubic-bezier(0.25, 1, 0.5, 1),
-    border-color   0.2s ease;
-}
-.day-card:active {
-  transform: scale(0.965) !important;
-  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
-}
-@media (hover: hover) {
-  .day-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.07);
-  }
-}
-/* 入場動畫 class，由 JS 注入 */
-.day-card.card-anim {
-  animation: cardIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.day-card.today    { border-color: var(--green); }
-.day-card.peak-high { border-color: #ef4444; }
-.day-card.peak-mid  { border-color: #f59e0b; }
-
-.day-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.day-info {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.day-name {
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-.day-date {
-  font-size: 0.78rem;
-  color: #8e8e93;
-}
-.badges { display: flex; gap: 4px; }
-
-.badge {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 20px;
-}
-.badge-today { background: var(--gl); color: #065f46; }
-.badge-high  { background: #fee2e2; color: #b91c1c; }
-.badge-mid   { background: #fef3c7; color: #92400e; }
-
-/* ── Flight counts row ── */
-.counts-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 0;
-  margin-bottom: 14px;
-}
-.count-item {
-  flex: 1;
-  text-align: center;
-}
-.count-divider {
-  width: 1px;
-  height: 36px;
-  background: #e5e5ea;
-  flex-shrink: 0;
-  margin-bottom: 14px;
-}
-.count-num {
-  font-size: 2.6rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -2px;
-}
-.count-label {
-  font-size: 0.65rem;
-  color: #8e8e93;
-  margin-top: 3px;
-}
-.count-item.dep .count-num   { color: var(--green); }
-.count-item.arr .count-num   { color: var(--teal); }
-.count-item.total .count-num { color: #1c1c1e; }
-
-/* ── Hour bar chart ── */
-.chart-wrap { position: relative; }
-.hour-chart {
-  display: flex;
-  align-items: flex-end;
-  height: 52px;
-  gap: 1px;
-  background-image:
-    repeating-linear-gradient(90deg, rgba(142,142,147,0.2) 0px, rgba(142,142,147,0.2) 3px, transparent 3px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(142,142,147,0.2) 0px, rgba(142,142,147,0.2) 3px, transparent 3px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(142,142,147,0.2) 0px, rgba(142,142,147,0.2) 3px, transparent 3px, transparent 8px);
-  background-size: 100% 1px, 100% 1px, 100% 1px;
-  background-position: 0 25%, 0 50%, 0 75%;
-  background-repeat: repeat-x, repeat-x, repeat-x;
-}
-.hour-col {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 1px;
-  transition: opacity 0.12s;
-}
-.hour-col:hover { opacity: 0.75; }
-.bar-dep {
-  background: var(--green);
-  border-radius: 100px;
-  min-height: 0;
-  transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-}
-.bar-arr {
-  background: var(--teal);
-  opacity: 0.55;
-  border-radius: 100px;
-  min-height: 0;
-  transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-}
-.hour-axis {
-  display: flex;
-  gap: 1px;
-  margin-top: 3px;
-}
-.hour-tick {
-  flex: 1;
-  font-size: 0.44rem;
-  color: #c7c7cc;
-  text-align: center;
-}
-.chart-legend {
-  display: flex;
-  gap: 12px;
-  margin-top: 6px;
-  font-size: 0.68rem;
-  color: #636366;
-}
-.leg-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  vertical-align: middle;
-  margin-right: 3px;
-}
-
-/* ── States ── */
-.spinner {
-  display: flex;
-  justify-content: center;
-  padding: 60px 0;
-}
-.spinner::after {
-  content: '';
-  width: 28px;
-  height: 28px;
-  border: 3px solid #e5e5ea;
-  border-top-color: var(--green);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-.no-data {
-  text-align: center;
-  color: #c7c7cc;
-  font-size: 0.85rem;
-  padding: 40px 0;
-}
-.footer {
-  text-align: center;
-  font-size: 0.68rem;
-  color: #c7c7cc;
-  margin-top: 6px;
-}
-
-/* ── 卡片容器淡入淡出 ── */
-#cards {
-  transition: opacity 0.14s ease-out;
-}
-#cards.fading { opacity: 0; }
-
 @media (prefers-color-scheme: dark) {
   :root {
-    --green:  #30d158;
-    --green2: #32d74b;
-    --gl:     rgba(48,209,88,0.18);
-    --teal:   #32ade6;
+    --bg:      #071410;
+    --surface: #0d2018;
+    --border:  rgba(52,211,153,0.12);
+    --text:    #ddf2e8;
+    --sub:     #4a7a60;
+    --accent:  #34d399;
+    --acc2:    rgba(52,211,153,0.09);
   }
-  body { background: #000; color: #f2f2f7; }
-  .topbar { background: rgba(0,0,0,0.75); box-shadow: 0 1px 0 rgba(255,255,255,0.06); border-bottom: none; }
-  .topbar-title { color: #f2f2f7; }
-  .back-btn { color: #30d158; }
-  .airasia-toggle { background: #2c2c2e; }
-  .airasia-btn { color: #48484a; }
-  .airasia-btn.active { background: rgba(5,150,105,0.25); color: #30d158; }
-  .day-card { background: #1c1c1e; border-color: #2c2c2e; }
-  .day-card:hover { border-color: #3a3a3c; }
-  .day-card.today { border-color: var(--green); }
-  .day-card.peak-high { border-color: #f87171; }
-  .day-card.peak-mid  { border-color: #fbbf24; }
-  .day-label { color: #8e8e93; }
-  .day-date  { color: #636366; }
-  .badge-today { background: rgba(48,209,88,0.15);  color: var(--green); }
-  .badge-high  { background: rgba(239,68,68,0.15);  color: #f87171; }
-  .badge-mid   { background: rgba(245,158,11,0.15); color: #fbbf24; }
-  .count-item label { color: #48484a; }
-  .detail-card { background: #1c1c1e; border-color: #2c2c2e; }
-  .detail-title { color: #8e8e93; }
-  .hour-label { color: #48484a; }
-  .hour-none  { color: #3a3a3c; }
-  .chart-legend { color: #48484a; }
-  .leg-dot { opacity: 0.85; }
-  .setup-error { background: #1c1c1e; border-color: #2c2c2e; color: #636366; }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+}
+
+/* ── Topbar ── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: max(14px, env(safe-area-inset-top) + 10px) 20px 12px;
+  background: rgba(240,253,244,0.9);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+@media (prefers-color-scheme: dark) {
+  .topbar { background: rgba(7,20,16,0.9); }
+}
+.back-link {
+  font-size: 0.88rem; font-weight: 600;
+  color: var(--accent); text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.back-link:active { opacity: 0.55; }
+.topbar-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+
+/* ── Main ── */
+main {
+  padding-top: calc(max(14px, env(safe-area-inset-top) + 10px) + 44px + 16px);
+  padding-bottom: max(40px, env(safe-area-inset-bottom) + 24px);
+  padding-left: 16px; padding-right: 16px;
+}
+
+.month-header {
+  font-size: 1.7rem; font-weight: 700;
+  letter-spacing: -0.5px; color: var(--text);
+  margin-bottom: 4px;
+}
+.month-sub {
+  font-size: 0.75rem; color: var(--sub);
+  margin-bottom: 20px; letter-spacing: 0.02em;
+}
+
+/* ── Day list ── */
+.day-list { display: flex; flex-direction: column; gap: 7px; }
+
+.day-row {
+  display: flex; align-items: center; gap: 0;
+  padding: 13px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.day-row.today {
+  border-color: var(--accent);
+  background: var(--acc2);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.day-row.is-off { opacity: 0.65; }
+
+/* date block */
+.day-date {
+  width: 48px; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.day-num {
+  font-size: 1.25rem; font-weight: 700; line-height: 1; color: var(--text);
+}
+.day-num.wknd { color: var(--accent); }
+.day-week {
+  font-size: 0.62rem; color: var(--sub); letter-spacing: 0.04em;
+}
+.day-week.wknd { color: var(--accent); }
+.today-pip {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent); margin-top: 2px;
+}
+
+/* divider */
+.vline {
+  width: 1px; height: 34px; background: var(--border);
+  margin: 0 14px; flex-shrink: 0;
+}
+
+/* shift block */
+.day-shift { flex: 1; min-width: 0; }
+
+.shift-badge {
+  display: inline-block;
+  font-family: "SF Mono","Menlo","Courier New", monospace;
+  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em;
+  padding: 2px 7px; border-radius: 6px;
+  margin-bottom: 3px;
+  color: var(--accent); background: var(--acc2);
+}
+.shift-time {
+  font-size: 1.05rem; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 4px; letter-spacing: -0.2px;
+}
+.shift-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.arrow-sep { color: var(--sub); font-size: 0.85rem; font-weight: 400; }
+
+.shift-class {
+  font-size: 0.97rem; font-weight: 700;
+  color: #2563eb; display: flex; align-items: center; gap: 5px;
+}
+@media (prefers-color-scheme: dark) { .shift-class { color: #93c5fd; } }
+
+.shift-off {
+  font-size: 0.95rem; font-weight: 500; color: var(--sub);
+}
+.shift-unknown {
+  font-size: 0.92rem; font-weight: 600; color: #dc2626;
 }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <a href="/" class="back-link">‹ 返回</a>
-  <span class="topbar-title">週班表</span>
-  <div class="toggle-wrap">
-    <div class="toggle-pill" id="togglePill"></div>
-    <button class="toggle-btn active" id="btn-aa"  onclick="setFilter(1)">AirAsia</button>
-    <button class="toggle-btn"        id="btn-all" onclick="setFilter(0)">全部</button>
-  </div>
+  <a class="back-link" href="/">← 首頁</a>
+  <span class="topbar-title">我的班表</span>
+  <span></span>
 </div>
 
-<div class="main">
-  <div class="summary" id="summary">載入中…</div>
-  <div id="cards"><div class="spinner"></div></div>
-  <div class="footer" id="footer"></div>
-</div>
+<main>
+  <div class="month-header" id="month-hdr"></div>
+  <div class="month-sub"   id="month-sub"></div>
+  <div class="day-list"    id="day-list"></div>
+</main>
 
 <script>
-let _filter = Config.getActive().schedule.airasiaOnly ? 1 : 0;
+/* ── 班別對照表（432 筆 B 開頭） ── */
+const T = {"B0A":["00:00","08:00"],"B0B":["00:30","08:30"],"B0C":["00:30","09:00"],"B0D":["00:30","09:30"],"B0E":["00:30","10:00"],"B0F":["00:30","10:30"],"B0G":["00:30","11:00"],"B0H":["00:30","11:30"],"B0I":["00:30","12:00"],"B0J":["00:30","12:30"],"B0S":["00:00","08:30"],"B0T":["00:00","09:00"],"B0U":["00:00","09:30"],"B0V":["00:00","10:00"],"B0W":["00:00","10:30"],"B0X":["00:00","11:00"],"B0Y":["00:00","11:30"],"B0Z":["00:00","12:00"],"B10A":["10:00","18:00"],"B10B":["10:30","18:30"],"B10C":["10:30","19:00"],"B10D":["10:30","19:30"],"B10E":["10:30","20:00"],"B10F":["10:30","20:30"],"B10G":["10:30","21:00"],"B10H":["10:30","21:30"],"B10I":["10:30","22:00"],"B10J":["10:30","22:30"],"B10S":["10:00","18:30"],"B10T":["10:00","19:00"],"B10U":["10:00","19:30"],"B10V":["10:00","20:00"],"B10W":["10:00","20:30"],"B10X":["10:00","21:00"],"B10Y":["10:00","21:30"],"B10Z":["10:00","22:00"],"B11A":["11:00","19:00"],"B11B":["11:30","19:30"],"B11C":["11:30","20:00"],"B11D":["11:30","20:30"],"B11E":["11:30","21:00"],"B11F":["11:30","21:30"],"B11G":["11:30","22:00"],"B11H":["11:30","22:30"],"B11I":["11:30","23:00"],"B11J":["11:30","23:30"],"B11S":["11:00","19:30"],"B11T":["11:00","20:00"],"B11U":["11:00","20:30"],"B11V":["11:00","21:00"],"B11W":["11:00","21:30"],"B11X":["11:00","22:00"],"B11Y":["11:00","22:30"],"B11Z":["11:00","23:00"],"B12A":["12:00","20:00"],"B12B":["12:30","20:30"],"B12C":["12:30","21:00"],"B12D":["12:30","21:30"],"B12E":["12:30","22:00"],"B12F":["12:30","22:30"],"B12G":["12:30","23:00"],"B12H":["12:30","23:30"],"B12I":["12:30","00:00"],"B12J":["12:30","00:30"],"B12S":["12:00","20:30"],"B12T":["12:00","21:00"],"B12U":["12:00","21:30"],"B12V":["12:00","22:00"],"B12W":["12:00","22:30"],"B12X":["12:00","23:00"],"B12Y":["12:00","23:30"],"B12Z":["12:00","00:00"],"B13A":["13:00","21:00"],"B13B":["13:30","21:30"],"B13C":["13:30","22:00"],"B13D":["13:30","22:30"],"B13E":["13:30","23:00"],"B13F":["13:30","23:30"],"B13G":["13:30","00:00"],"B13H":["13:30","00:30"],"B13I":["13:30","01:00"],"B13J":["13:30","01:30"],"B13S":["13:00","21:30"],"B13T":["13:00","22:00"],"B13U":["13:00","22:30"],"B13V":["13:00","23:00"],"B13W":["13:00","23:30"],"B13X":["13:00","00:00"],"B13Y":["13:00","00:30"],"B13Z":["13:00","01:00"],"B14A":["14:00","22:00"],"B14B":["14:30","22:30"],"B14C":["14:30","23:00"],"B14D":["14:30","23:30"],"B14E":["14:30","00:00"],"B14F":["14:30","00:30"],"B14G":["14:30","01:00"],"B14H":["14:30","01:30"],"B14I":["14:30","02:00"],"B14J":["14:30","02:30"],"B14S":["14:00","22:30"],"B14T":["14:00","23:00"],"B14U":["14:00","23:30"],"B14V":["14:00","00:00"],"B14W":["14:00","00:30"],"B14X":["14:00","01:00"],"B14Y":["14:00","01:30"],"B14Z":["14:00","02:00"],"B15A":["15:00","23:00"],"B15B":["15:30","23:30"],"B15C":["15:30","00:00"],"B15D":["15:30","00:30"],"B15E":["15:30","01:00"],"B15F":["15:30","01:30"],"B15G":["15:30","02:00"],"B15H":["15:30","02:30"],"B15I":["15:30","03:00"],"B15J":["15:30","03:30"],"B15S":["15:00","23:30"],"B15T":["15:00","00:00"],"B15U":["15:00","00:30"],"B15V":["15:00","01:00"],"B15W":["15:00","01:30"],"B15X":["15:00","02:00"],"B15Y":["15:00","02:30"],"B15Z":["15:00","03:00"],"B16A":["16:00","00:00"],"B16B":["16:30","00:30"],"B16C":["16:30","01:00"],"B16D":["16:30","01:30"],"B16E":["16:30","02:00"],"B16F":["16:30","02:30"],"B16G":["16:30","03:00"],"B16H":["16:30","03:30"],"B16I":["16:30","04:00"],"B16J":["16:30","04:30"],"B16S":["16:00","00:30"],"B16T":["16:00","01:00"],"B16U":["16:00","01:30"],"B16V":["16:00","02:00"],"B16W":["16:00","02:30"],"B16X":["16:00","03:00"],"B16Y":["16:00","03:30"],"B16Z":["16:00","04:00"],"B17A":["17:00","01:00"],"B17B":["17:30","01:30"],"B17C":["17:30","02:00"],"B17D":["17:30","02:30"],"B17E":["17:30","03:00"],"B17F":["17:30","03:30"],"B17G":["17:30","04:00"],"B17H":["17:30","04:30"],"B17I":["17:30","05:00"],"B17J":["17:30","05:30"],"B17S":["17:00","01:30"],"B17T":["17:00","02:00"],"B17U":["17:00","02:30"],"B17V":["17:00","03:00"],"B17W":["17:00","03:30"],"B17X":["17:00","04:00"],"B17Y":["17:00","04:30"],"B17Z":["17:00","05:00"],"B18A":["18:00","02:00"],"B18B":["18:30","02:30"],"B18C":["18:30","03:00"],"B18D":["18:30","03:30"],"B18E":["18:30","04:00"],"B18F":["18:30","04:30"],"B18G":["18:30","05:00"],"B18H":["18:30","05:30"],"B18I":["18:30","06:00"],"B18J":["18:30","06:30"],"B18S":["18:00","02:30"],"B18T":["18:00","03:00"],"B18U":["18:00","03:30"],"B18V":["18:00","04:00"],"B18W":["18:00","04:30"],"B18X":["18:00","05:00"],"B18Y":["18:00","05:30"],"B18Z":["18:00","06:00"],"B19A":["19:00","03:00"],"B19B":["19:30","03:30"],"B19C":["19:30","04:00"],"B19D":["19:30","04:30"],"B19E":["19:30","05:00"],"B19F":["19:30","05:30"],"B19G":["19:30","06:00"],"B19H":["19:30","06:30"],"B19I":["19:30","07:00"],"B19J":["19:30","07:30"],"B19S":["19:00","03:30"],"B19T":["19:00","04:00"],"B19U":["19:00","04:30"],"B19V":["19:00","05:00"],"B19W":["19:00","05:30"],"B19X":["19:00","06:00"],"B19Y":["19:00","06:30"],"B19Z":["19:00","07:00"],"B1A":["01:00","09:00"],"B1B":["01:30","09:30"],"B1C":["01:30","10:00"],"B1D":["01:30","10:30"],"B1E":["01:30","11:00"],"B1F":["01:30","11:30"],"B1G":["01:30","12:00"],"B1H":["01:30","12:30"],"B1I":["01:30","13:00"],"B1J":["01:30","13:30"],"B1S":["01:00","09:30"],"B1T":["01:00","10:00"],"B1U":["01:00","10:30"],"B1V":["01:00","11:00"],"B1W":["01:00","11:30"],"B1X":["01:00","12:00"],"B1Y":["01:00","12:30"],"B1Z":["01:00","13:00"],"B20A":["20:00","04:00"],"B20B":["20:30","04:30"],"B20C":["20:30","05:00"],"B20D":["20:30","05:30"],"B20E":["20:30","06:00"],"B20F":["20:30","06:30"],"B20G":["20:30","07:00"],"B20H":["20:30","07:30"],"B20I":["20:30","08:00"],"B20J":["20:30","08:30"],"B20S":["20:00","04:30"],"B20T":["20:00","05:00"],"B20U":["20:00","05:30"],"B20V":["20:00","06:00"],"B20W":["20:00","06:30"],"B20X":["20:00","07:00"],"B20Y":["20:00","07:30"],"B20Z":["20:00","08:00"],"B21A":["21:00","05:00"],"B21B":["21:30","05:30"],"B21C":["21:30","06:00"],"B21D":["21:30","06:30"],"B21E":["21:30","07:00"],"B21F":["21:30","07:30"],"B21G":["21:30","08:00"],"B21H":["21:30","08:30"],"B21I":["21:30","09:00"],"B21J":["21:30","09:30"],"B21S":["21:00","05:30"],"B21T":["21:00","06:00"],"B21U":["21:00","06:30"],"B21V":["21:00","07:00"],"B21W":["21:00","07:30"],"B21X":["21:00","08:00"],"B21Y":["21:00","08:30"],"B21Z":["21:00","09:00"],"B22A":["22:00","06:00"],"B22B":["22:30","06:30"],"B22C":["22:30","07:00"],"B22D":["22:30","07:30"],"B22E":["22:30","08:00"],"B22F":["22:30","08:30"],"B22G":["22:30","09:00"],"B22H":["22:30","09:30"],"B22I":["22:30","10:00"],"B22J":["22:30","10:30"],"B22S":["22:00","06:30"],"B22T":["22:00","07:00"],"B22U":["22:00","07:30"],"B22V":["22:00","08:00"],"B22W":["22:00","08:30"],"B22X":["22:00","09:00"],"B22Y":["22:00","09:30"],"B22Z":["22:00","10:00"],"B23A":["23:00","07:00"],"B23B":["23:30","07:30"],"B23C":["23:30","08:00"],"B23D":["23:30","08:30"],"B23E":["23:30","09:00"],"B23F":["23:30","09:30"],"B23G":["23:30","10:00"],"B23H":["23:30","10:30"],"B23I":["23:30","11:00"],"B23J":["23:30","11:30"],"B23S":["23:00","07:30"],"B23T":["23:00","08:00"],"B23U":["23:00","08:30"],"B23V":["23:00","09:00"],"B23W":["23:00","09:30"],"B23X":["23:00","10:00"],"B23Y":["23:00","10:30"],"B23Z":["23:00","11:00"],"B2A":["02:00","10:00"],"B2B":["02:30","10:30"],"B2C":["02:30","11:00"],"B2D":["02:30","11:30"],"B2E":["02:30","12:00"],"B2F":["02:30","12:30"],"B2G":["02:30","13:00"],"B2H":["02:30","13:30"],"B2I":["02:30","14:00"],"B2J":["02:30","14:30"],"B2S":["02:00","10:30"],"B2T":["02:00","11:00"],"B2U":["02:00","11:30"],"B2V":["02:00","12:00"],"B2W":["02:00","12:30"],"B2X":["02:00","13:00"],"B2Y":["02:00","13:30"],"B2Z":["02:00","14:00"],"B3A":["03:00","11:00"],"B3B":["03:30","11:30"],"B3C":["03:30","12:00"],"B3D":["03:30","12:30"],"B3E":["03:30","13:00"],"B3F":["03:30","13:30"],"B3G":["03:30","14:00"],"B3H":["03:30","14:30"],"B3I":["03:30","15:00"],"B3J":["03:30","15:30"],"B3S":["03:00","11:30"],"B3T":["03:00","12:00"],"B3U":["03:00","12:30"],"B3V":["03:00","13:00"],"B3W":["03:00","13:30"],"B3X":["03:00","14:00"],"B3Y":["03:00","14:30"],"B3Z":["03:00","15:00"],"B4A":["04:00","12:00"],"B4B":["04:30","12:30"],"B4C":["04:30","13:00"],"B4D":["04:30","13:30"],"B4E":["04:30","14:00"],"B4F":["04:30","14:30"],"B4G":["04:30","15:00"],"B4H":["04:30","15:30"],"B4I":["04:30","16:00"],"B4J":["04:30","16:30"],"B4S":["04:00","12:30"],"B4T":["04:00","13:00"],"B4U":["04:00","13:30"],"B4V":["04:00","14:00"],"B4W":["04:00","14:30"],"B4X":["04:00","15:00"],"B4Y":["04:00","15:30"],"B4Z":["04:00","16:00"],"B5A":["05:00","13:00"],"B5B":["05:30","13:30"],"B5C":["05:30","14:00"],"B5D":["05:30","14:30"],"B5E":["05:30","15:00"],"B5F":["05:30","15:30"],"B5G":["05:30","16:00"],"B5H":["05:30","16:30"],"B5I":["05:30","17:00"],"B5J":["05:30","17:30"],"B5S":["05:00","13:30"],"B5T":["05:00","14:00"],"B5U":["05:00","14:30"],"B5V":["05:00","15:00"],"B5W":["05:00","15:30"],"B5X":["05:00","16:00"],"B5Y":["05:00","16:30"],"B5Z":["05:00","17:00"],"B6A":["06:00","14:00"],"B6B":["06:30","14:30"],"B6C":["06:30","15:00"],"B6D":["06:30","15:30"],"B6E":["06:30","16:00"],"B6F":["06:30","16:30"],"B6G":["06:30","17:00"],"B6H":["06:30","17:30"],"B6I":["06:30","18:00"],"B6J":["06:30","18:30"],"B6S":["06:00","14:30"],"B6T":["06:00","15:00"],"B6U":["06:00","15:30"],"B6V":["06:00","16:00"],"B6W":["06:00","16:30"],"B6X":["06:00","17:00"],"B6Y":["06:00","17:30"],"B6Z":["06:00","18:00"],"B7A":["07:00","15:00"],"B7B":["07:30","15:30"],"B7C":["07:30","16:00"],"B7D":["07:30","16:30"],"B7E":["07:30","17:00"],"B7F":["07:30","17:30"],"B7G":["07:30","18:00"],"B7H":["07:30","18:30"],"B7I":["07:30","19:00"],"B7J":["07:30","19:30"],"B7S":["07:00","15:30"],"B7T":["07:00","16:00"],"B7U":["07:00","16:30"],"B7V":["07:00","17:00"],"B7W":["07:00","17:30"],"B7X":["07:00","18:00"],"B7Y":["07:00","18:30"],"B7Z":["07:00","19:00"],"B8A":["08:00","16:00"],"B8B":["08:30","16:30"],"B8C":["08:30","17:00"],"B8D":["08:30","17:30"],"B8E":["08:30","18:00"],"B8F":["08:30","18:30"],"B8G":["08:30","19:00"],"B8H":["08:30","19:30"],"B8I":["08:30","20:00"],"B8J":["08:30","20:30"],"B8S":["08:00","16:30"],"B8T":["08:00","17:00"],"B8U":["08:00","17:30"],"B8V":["08:00","18:00"],"B8W":["08:00","18:30"],"B8X":["08:00","19:00"],"B8Y":["08:00","19:30"],"B8Z":["08:00","20:00"],"B9A":["09:00","17:00"],"B9B":["09:30","17:30"],"B9C":["09:30","18:00"],"B9D":["09:30","18:30"],"B9E":["09:30","19:00"],"B9F":["09:30","19:30"],"B9G":["09:30","20:00"],"B9H":["09:30","20:30"],"B9I":["09:30","21:00"],"B9J":["09:30","21:30"],"B9S":["09:00","17:30"],"B9T":["09:00","18:00"],"B9U":["09:00","18:30"],"B9V":["09:00","19:00"],"B9W":["09:00","19:30"],"B9X":["09:00","20:00"],"B9Y":["09:00","20:30"],"B9Z":["09:00","21:00"]};
 
-/* ── 藥丸滑動到 active 按鈕位置 ── */
-function updateTogglePill() {
-  const btn  = document.querySelector('.toggle-btn.active');
-  const pill = document.getElementById('togglePill');
-  if (btn && pill) {
-    pill.style.left  = btn.offsetLeft + 'px';
-    pill.style.width = btn.offsetWidth + 'px';
-  }
+/* ── 月份資料（每月更新 codes 陣列） ── */
+const SCHEDULE = {
+  year:  2026,
+  month: 7,
+  codes: ['E','E','@','E','@','E','@','E','E','E','@','B9S','H7C','B5A','B10A','@','B10T','B10A','@','B5A','H12A','@','B10T','B9S','B9S','@','B10T','B10A','H12A','@','@']
+};
+
+/* ── 查班別（去頭字母 → 補 B → 查表） ── */
+function lookup(code) {
+  if (!code || code === '@') return { type: 'off' };
+  if (code === 'E')          return { type: 'class' };
+  const norm = 'B' + code.slice(1);
+  const t = T[norm];
+  if (t) return { type: 'work', label: code, start: t[0], end: t[1] };
+  return { type: 'unknown', label: code };
 }
 
-function setFilter(v) {
-  _filter = v;
-  Config.save({ schedule: { airasiaOnly: v === 1 } });
-  document.getElementById('btn-aa').classList.toggle('active',  v === 1);
-  document.getElementById('btn-all').classList.toggle('active', v === 0);
-  updateTogglePill();
-
-  /* 切換時讓卡片先淡出，再重載 */
-  const cardsEl = document.getElementById('cards');
-  cardsEl.classList.add('fading');
-  setTimeout(() => {
-    cardsEl.classList.remove('fading');
-    load();
-  }, 150);
+/* ── 顏色依上班時段 ── */
+function dotColor(start) {
+  const h = parseInt(start);
+  if (h < 5)  return '#7c3aed';
+  if (h < 8)  return '#d97706';
+  if (h < 10) return '#059669';
+  if (h < 12) return '#0d9488';
+  return '#ea580c';
 }
 
-async function load() {
-  const cardsEl = document.getElementById('cards');
-  cardsEl.innerHTML = '<div class="spinner"></div>';
-  try {
-    const r = await fetch('/api/schedule/week?airasia=' + _filter);
-    if (!r.ok) throw new Error(r.status);
-    render(await r.json());
-  } catch(e) {
-    cardsEl.innerHTML = '<div class="no-data">載入失敗，請確認 TDX 設定後重試</div>';
-  }
-}
+/* ── 渲染 ── */
+(function render() {
+  const today = new Date();
+  const { year, month, codes } = SCHEDULE;
+  const WD = ['日','一','二','三','四','五','六'];
+  const isThisMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
 
-function render(d) {
-  if (!d.configured) {
-    document.getElementById('cards').innerHTML = '<div class="no-data">TDX API 尚未設定</div>';
-    return;
-  }
+  document.getElementById('month-hdr').textContent = `${year}年 ${month}月`;
 
-  let gMax = 0;
-  for (const day of d.days) {
-    for (let h = 0; h < 24; h++) {
-      const v = (day.dep_hours[h] || 0) + (day.arr_hours[h] || 0);
-      if (v > gMax) gMax = v;
-    }
-  }
+  const workDays  = codes.filter(c => c !== '@' && c !== 'E').length;
+  const classDays = codes.filter(c => c === 'E').length;
+  const offDays   = codes.filter(c => c === '@').length;
+  document.getElementById('month-sub').textContent =
+    `上班 ${workDays} 天 · 上課 ${classDays} 天 · 休假 ${offDays} 天`;
 
-  const label = d.airasia_only ? 'AirAsia 集團' : '全部航空';
-  document.getElementById('summary').textContent =
-    `${label} · 出發 ${d.total_dep} 個路線 · 抵達 ${d.total_arr} 個路線`;
-
-  const CHART_H = 52;
   let html = '';
+  for (let d = 1; d <= 31; d++) {
+    const date = new Date(year, month - 1, d);
+    if (date.getMonth() !== month - 1) break;
+    const dow     = date.getDay();
+    const isToday = isThisMonth && today.getDate() === d;
+    const isWknd  = dow === 0 || dow === 6;
+    const s       = lookup(codes[d - 1]);
 
-  for (const day of d.days) {
-    const cls = ['day-card'];
-    if (day.is_today)        cls.push('today');
-    if (day.peak === 'high') cls.push('peak-high');
-    else if (day.peak === 'mid') cls.push('peak-mid');
-
-    let badges = '';
-    if (day.is_today) badges += '<span class="badge badge-today">今天</span>';
-    if (day.peak === 'high') badges += '<span class="badge badge-high">大流量</span>';
-    else if (day.peak === 'mid') badges += '<span class="badge badge-mid">略忙</span>';
-
-    const dt   = new Date(day.date + 'T00:00:00');
-    const mmdd = `${dt.getMonth()+1}/${dt.getDate()}`;
-
-    let bars = '', ticks = '';
-    for (let h = 0; h < 24; h++) {
-      const dep  = day.dep_hours[h] || 0;
-      const arr  = day.arr_hours[h] || 0;
-      const depH = gMax > 0 ? Math.round(dep / gMax * CHART_H) : 0;
-      const arrH = gMax > 0 ? Math.round(arr / gMax * CHART_H) : 0;
-      bars  += `<div class="hour-col" title="${h}:00  出發${dep} 抵達${arr}">` +
-               `<div class="bar-arr" style="height:${arrH}px"></div>` +
-               `<div class="bar-dep" style="height:${depH}px"></div>` +
-               `</div>`;
-      ticks += `<div class="hour-tick">${[0,6,12,18].includes(h) ? h : ''}</div>`;
+    let shiftHtml = '';
+    if (s.type === 'work') {
+      const col = dotColor(s.start);
+      shiftHtml = `<span class="shift-badge">${s.label}</span>
+        <div class="shift-time">
+          <span class="shift-dot" style="background:${col}"></span>
+          ${s.start}<span class="arrow-sep"> → </span>${s.end}
+        </div>`;
+    } else if (s.type === 'class') {
+      shiftHtml = `<span class="shift-class"><i class="bi bi-mortarboard-fill"></i>&nbsp;上課</span>`;
+    } else if (s.type === 'off') {
+      shiftHtml = `<span class="shift-off">休假</span>`;
+    } else {
+      shiftHtml = `<span class="shift-unknown">${s.label || '?'}</span>`;
     }
 
-    html += `
-<div class="${cls.join(' ')}">
-  <div class="day-header">
-    <div class="day-info">
-      <span class="day-name">週${day.weekday_zh}</span>
-      <span class="day-date">${mmdd}</span>
-    </div>
-    <div class="badges">${badges}</div>
-  </div>
-  <div class="counts-row">
-    <div class="count-item dep">
-      <div class="count-num">${day.dep_count}</div>
-      <div class="count-label">出發班次</div>
-    </div>
-    <div class="count-divider"></div>
-    <div class="count-item arr">
-      <div class="count-num">${day.arr_count}</div>
-      <div class="count-label">抵達班次</div>
-    </div>
-    <div class="count-divider"></div>
-    <div class="count-item total">
-      <div class="count-num">${day.total}</div>
-      <div class="count-label">合計</div>
-    </div>
-  </div>
-  <div class="chart-wrap">
-    <div class="hour-chart">${bars}</div>
-    <div class="hour-axis">${ticks}</div>
-    <div class="chart-legend">
-      <span><span class="leg-dot" style="background:var(--green)"></span>出發</span>
-      <span><span class="leg-dot" style="background:var(--teal);opacity:0.55"></span>抵達</span>
-      <span style="margin-left:auto;color:#c7c7cc">懸停可見詳情</span>
-    </div>
-  </div>
-</div>`;
+    html += `<div class="day-row${isToday ? ' today' : ''}${s.type === 'off' ? ' is-off' : ''}">
+      <div class="day-date">
+        <span class="day-num${isWknd ? ' wknd' : ''}">${d}</span>
+        <span class="day-week${isWknd ? ' wknd' : ''}">週${WD[dow]}</span>
+        ${isToday ? '<div class="today-pip"></div>' : ''}
+      </div>
+      <div class="vline"></div>
+      <div class="day-shift">${shiftHtml}</div>
+    </div>`;
   }
 
-  const cardsEl = document.getElementById('cards');
-  cardsEl.innerHTML = html || '<div class="no-data">目前無班表資料</div>';
-  document.getElementById('footer').textContent = '資料更新：' + d.updated_at + '（每小時快取）';
+  document.getElementById('day-list').innerHTML = html;
 
-  /* 每張卡片錯開入場 */
-  cardsEl.querySelectorAll('.day-card').forEach((card, i) => {
-    card.style.animationDelay = (i * 55) + 'ms';
-    card.classList.add('card-anim');
-  });
-}
-
-/* 根據 profile 設定初始 toggle 狀態 */
-document.getElementById('btn-aa').classList.toggle('active',  _filter === 1);
-document.getElementById('btn-all').classList.toggle('active', _filter === 0);
-load();
-
-/* 初始化藥丸位置（等 layout 完成） */
-requestAnimationFrame(updateTogglePill);
-
-/* ── bfcache 恢復：重播 body 入場 + 卡片動畫 ── */
-window.addEventListener('pageshow', e => {
-  if (!e.persisted) return;
-
-  /* 清除任何殘留的 inline opacity / transform / transition */
-  document.body.style.opacity    = '';
-  document.body.style.transform  = '';
-  document.body.style.transition = '';
-
-  document.body.style.animationName = 'none';
-  void document.body.offsetWidth;
-  document.body.style.animationName = '';
-
-  const cardsEl = document.getElementById('cards');
-  const dayCards = cardsEl.querySelectorAll('.day-card');
-  dayCards.forEach(c => { c.classList.remove('card-anim'); c.style.animationDelay = ''; });
-  void cardsEl.offsetWidth;
-  dayCards.forEach((c, i) => {
-    c.style.animationDelay = (i * 55) + 'ms';
-    c.classList.add('card-anim');
-  });
-
-  requestAnimationFrame(updateTogglePill);
-});
-
-/* ── 防縮放（iOS 雙保險） ── */
-document.addEventListener('touchmove', function(e) {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false });
-let _lastTap = 0;
-document.addEventListener('touchend', function(e) {
-  const now = Date.now();
-  if (now - _lastTap < 300) e.preventDefault();
-  _lastTap = now;
-}, { passive: false });
+  if (isThisMonth) {
+    const el = document.querySelector('.today');
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+  }
+})();
 </script>
 </body>
 </html>
