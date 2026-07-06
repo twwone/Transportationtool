@@ -884,9 +884,6 @@ def visa_guide():
     return render_template("visa-guide.html")
 
 
-@app.route("/code-dictionary")
-def code_dictionary():
-    return render_template("code_dictionary.html")
 
 
 @app.route("/amenities")

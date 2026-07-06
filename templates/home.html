@@ -1055,14 +1055,13 @@ const CARDS = {
   schedule:  { icon:'<i class="bi bi-calendar3"></i>',          title:'我的班表',         url:'/schedule',                                     cls:'card-schedule' },
   amenities: { icon:'<i class="bi bi-map-fill"></i>',           title:'Airport Map',     url:'/amenities',                                    cls:'card-amenities' },
   visa:      { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'Visa Guide',      url:'/visa-guide',                                   cls:'card-visa' },
-  codes:     { icon:'<i class="bi bi-folder2-open"></i>',       title:'Code Book',       url:'/code-dictionary',                              cls:'card-codes' },
   share:     { icon:'<i class="bi bi-clipboard-fill"></i>',     title:'Clipboard',       url:'/share',                                        cls:'card-share' },
   weather:   { icon:'<i class="bi bi-cloud-fill"></i>',         title:'天氣防禦',          url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'<i class="bi bi-cloud-fill"></i> 天氣防禦' },
   diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
   memo:      { icon:'記',                                        title:'備忘錄',             url:'/memo',                                         cls:'card-memo' },
   sop:       { icon:'<i class="bi bi-megaphone-fill"></i>',     title:'TIAS',               url:'/sop',                                          cls:'card-sop' },
 };
-const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','codes','share','weather','diet','memo','sop'];
+const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop'];
 const _STRIP_FIXED = ['tias','mrt','weather']; // 這三張固定位置，不參與排序
 let cardOrder = [...DEFAULT_ORDER];
 let editMode  = false;
