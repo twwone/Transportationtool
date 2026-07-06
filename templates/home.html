@@ -297,10 +297,6 @@ body {
 .card-visa .sm-title { color: var(--text); }
 .card-visa::before   { background: linear-gradient(90deg,#f59e0b,#d97706); }
 
-.card-codes     { background: #eef2ff; border-color: rgba(79,70,229,0.15); }
-.card-codes .sm-icon  { color: #4f46e5; }
-.card-codes .sm-title { color: var(--text); }
-.card-codes::before   { background: linear-gradient(90deg,#7c3aed,#6d28d9); }
 
 .card-share     { background: #eff6ff; border-color: rgba(37,99,235,0.15); }
 .card-share .sm-icon  { color: #2563eb; }
@@ -536,7 +532,6 @@ body {
   .card-schedule { background: rgba(5,150,105,0.07);  border-color: rgba(5,150,105,0.18); }
   .card-amenities{ background: rgba(8,145,178,0.07);  border-color: rgba(8,145,178,0.18); }
   .card-visa     { background: rgba(217,119,6,0.07);  border-color: rgba(217,119,6,0.18); }
-  .card-codes    { background: rgba(79,70,229,0.07);  border-color: rgba(79,70,229,0.18); }
   .card-share    { background: rgba(37,99,235,0.07);  border-color: rgba(37,99,235,0.18); }
   .card-weather  { background: rgba(2,132,199,0.07);  border-color: rgba(2,132,199,0.18); }
   .card-diet     { background: rgba(22,163,74,0.07);  border-color: rgba(22,163,74,0.18); }
@@ -548,7 +543,6 @@ body {
   .card-schedule .sm-icon { color: #34d399; }
   .card-amenities .sm-icon{ color: #22d3ee; }
   .card-visa .sm-icon     { color: #fbbf24; }
-  .card-codes .sm-icon    { color: #818cf8; }
   .card-share .sm-icon    { color: #60a5fa; }
   .card-weather .sm-icon  { color: #38bdf8; }
   .card-diet .sm-icon     { color: #4ade80; }
@@ -556,7 +550,7 @@ body {
   .card-sop .sm-icon      { color: #ff4455; }
   .card-settings .sm-icon { color: #94a3b8; }
   .card-thsr .sm-title,.card-mrt .sm-title,.card-schedule .sm-title,
-  .card-amenities .sm-title,.card-visa .sm-title,.card-codes .sm-title,
+  .card-amenities .sm-title,.card-visa .sm-title,
   .card-share .sm-title,.card-weather .sm-title,.card-diet .sm-title,
   .card-memo .sm-title,.card-sop .sm-title,.card-settings .sm-title { color: var(--text); }
   .footer   { color: #3a3a3c; }
@@ -1253,9 +1247,12 @@ function _saveOrder() {
 /* ── 初始載入 ── */
 (async () => {
   // 先用 localStorage 快取立即渲染，消除空白等待
-  const cached = localStorage.getItem('card_order_cache');
-  try { renderBento(cached ? JSON.parse(cached) : DEFAULT_ORDER); }
-  catch { renderBento(DEFAULT_ORDER); }
+  let cached = localStorage.getItem('card_order_cache');
+  try {
+    let order = cached ? JSON.parse(cached) : DEFAULT_ORDER;
+    order = order.filter(k => k !== 'codes');
+    renderBento(order);
+  } catch { renderBento(DEFAULT_ORDER); }
 
   // 背景同步伺服器順序
   try {
