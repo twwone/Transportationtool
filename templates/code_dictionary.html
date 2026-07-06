@@ -181,8 +181,6 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 }
 .type-airport  { background: #dbeafe; color: #1d4ed8; }
 .type-airline  { background: #ffedd5; color: #c2410c; }
-.type-pnr      { background: #f3e8ff; color: #7c3aed; }
-.type-ops      { background: #dcfce7; color: #15803d; }
 
 /* Card meta */
 .card-meta { flex: 1; min-width: 0; }
@@ -198,8 +196,6 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 }
 .badge-type-airport { background: #dbeafe; color: #1d4ed8; }
 .badge-type-airline { background: #ffedd5; color: #c2410c; }
-.badge-type-pnr     { background: #f3e8ff; color: #7c3aed; }
-.badge-type-ops     { background: #dcfce7; color: #15803d; }
 .badge-tz           { background: #f1f3f5; color: #495057; }
 .badge-terminal     { background: #fff3bf; color: #854d0e; }
 
@@ -285,12 +281,8 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   .detail-val strong { color: #fb923c; }
   .type-airport  { background: rgba(29,78,216,0.2);   color: #60a5fa; }
   .type-airline  { background: rgba(194,65,12,0.2);   color: #fb923c; }
-  .type-pnr      { background: rgba(124,58,237,0.2);  color: #c084fc; }
-  .type-ops      { background: rgba(21,128,61,0.2);   color: #4ade80; }
   .badge-type-airport { background: rgba(29,78,216,0.2);  color: #60a5fa; }
   .badge-type-airline { background: rgba(194,65,12,0.2);  color: #fb923c; }
-  .badge-type-pnr     { background: rgba(124,58,237,0.2); color: #c084fc; }
-  .badge-type-ops     { background: rgba(21,128,61,0.2);  color: #4ade80; }
   .badge-tz           { background: #2c2c2e; color: #636366; }
   .badge-terminal     { background: rgba(133,77,14,0.2);  color: #fbbf24; }
   .see-also   { background: rgba(29,78,216,0.15); color: #60a5fa; }
@@ -342,8 +334,6 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   <div class="chip active" data-cat="all"     onclick="setCat('all',this)">全部</div>
   <div class="chip"        data-cat="airport" onclick="setCat('airport',this)"><i class="bi bi-airplane"></i> 機場</div>
   <div class="chip"        data-cat="airline" onclick="setCat('airline',this)"><i class="bi bi-airplane-fill"></i> 航空公司</div>
-  <div class="chip"        data-cat="pnr"     onclick="setCat('pnr',this)"><i class="bi bi-clipboard-fill"></i> 預訂代碼</div>
-  <div class="chip"        data-cat="ops"     onclick="setCat('ops',this)"><i class="bi bi-tools"></i> 作業縮寫</div>
 </div>
 
 <div class="count-bar" id="countBar"></div>
