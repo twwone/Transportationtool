@@ -503,7 +503,7 @@ function buildCats(cats) {
     btn.dataset.cat = key;
     btn.style.setProperty('--cat-color', meta.color);
     btn.innerHTML =
-      `<span class="cat-emoji">${meta.emoji}</span>` +
+      `<span class="cat-emoji"><i class="bi bi-${meta.icon}"></i></span>` +
       `<span class="cat-label-zh">${meta.label}</span>` +
       `<span class="cat-label-en">${meta.label_en || ''}</span>`;
     grid.appendChild(btn);
