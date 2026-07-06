@@ -61,6 +61,8 @@ body {
 #app.in-broadcast #view-broadcast { display: flex; }
 #app.in-ssr       #view-hub       { display: none; }
 #app.in-ssr       #view-ssr       { display: flex; }
+#app.in-codes     #view-hub       { display: none; }
+#app.in-codes     #view-codes     { display: flex; }
 
 /* ── Header ── */
 .header {
@@ -267,6 +269,138 @@ body {
   .ssr-kg-extra { background: rgba(21,128,61,0.2);  color: #6ee7b7; }
   .ssr-kg-fee   { background: rgba(194,65,12,0.2);  color: #fb923c; }
 }
+
+/* ── Code Book View ── */
+#view-codes .cb-search-wrap { padding: 12px 16px 6px; }
+#view-codes .cb-search-box {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.97);
+  border-radius: 16px; padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 18px rgba(0,0,0,0.07);
+  border: 1px solid rgba(255,255,255,0.65);
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+#view-codes .cb-search-box:focus-within {
+  box-shadow: 0 0 0 3.5px rgba(217,20,48,0.18), 0 4px 18px rgba(217,20,48,0.1);
+  transform: scale(1.012);
+}
+#view-codes .cb-search-icon { font-size: 0.9rem; color: #8e8e93; flex-shrink: 0; }
+#view-codes .cb-search-box input {
+  flex: 1; border: none; background: none;
+  font-family: inherit; font-size: 0.96rem; color: var(--text); outline: none; min-width: 0;
+}
+#view-codes .cb-search-box input::placeholder { color: #aeaeb2; }
+#view-codes .cb-clear {
+  background: rgba(60,60,67,0.2); border: none; border-radius: 50%;
+  width: 18px; height: 18px; font-size: 0.6rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; flex-shrink: 0;
+}
+#view-codes .cb-clear.hidden { display: none; }
+#view-codes .cb-hot-wrap { padding: 6px 16px 4px; display: flex; flex-wrap: wrap; gap: 7px; }
+#view-codes .cb-hot-tag {
+  font-family: "SF Mono","Menlo",monospace;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 5px 12px; border-radius: 100px;
+  background: rgba(255,255,255,0.82); color: #3a3a3c;
+  border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: transform 0.2s;
+}
+#view-codes .cb-hot-tag:active { transform: scale(0.91); }
+#view-codes .cb-chips {
+  display: flex; gap: 8px; padding: 8px 16px;
+  overflow-x: auto; scrollbar-width: none;
+}
+#view-codes .cb-chips::-webkit-scrollbar { display: none; }
+#view-codes .cb-chip {
+  flex-shrink: 0; padding: 5px 14px; border-radius: 100px;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  background: rgba(255,255,255,0.72); color: #3a3a3c;
+  border: 1.5px solid transparent; -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s;
+}
+#view-codes .cb-chip.active { background: var(--text); color: var(--bg); }
+#view-codes .cb-chip:active { transform: scale(0.93); }
+#view-codes .cb-count { padding: 0 16px 8px; font-size: 0.72rem; color: var(--sub); }
+#view-codes .cb-list { padding: 0 16px; }
+#view-codes .cb-card {
+  background: rgba(255,255,255,0.96);
+  border-radius: 18px; margin-bottom: 10px; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.05);
+  position: relative;
+}
+#view-codes .cb-card-hd {
+  display: flex; align-items: center; gap: 13px;
+  padding: 13px 15px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#view-codes .cb-badge {
+  font-family: "SF Mono","Menlo",monospace;
+  font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px;
+  min-width: 58px; text-align: center; padding: 7px 9px; border-radius: 12px; line-height: 1;
+}
+#view-codes .cb-badge.ap { background: #dbeafe; color: #1d4ed8; }
+#view-codes .cb-badge.al { background: #ffedd5; color: #c2410c; }
+#view-codes .cb-meta { flex: 1; min-width: 0; }
+#view-codes .cb-name { font-size: 0.92rem; font-weight: 700; color: #1c1c1e; margin-bottom: 2px; }
+#view-codes .cb-sub  { font-size: 0.73rem; color: #8e8e93; line-height: 1.35; }
+#view-codes .cb-pills { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+#view-codes .cb-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 100px; font-size: 0.63rem; font-weight: 700;
+}
+#view-codes .cb-pill.ap  { background: #dbeafe; color: #1d4ed8; }
+#view-codes .cb-pill.al  { background: #ffedd5; color: #c2410c; }
+#view-codes .cb-pill.tz  { background: #f1f3f5; color: #495057; }
+#view-codes .cb-pill.trm { background: #fff3bf; color: #854d0e; }
+#view-codes .cb-chev {
+  font-size: 0.8rem; color: #c7c7cc; flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.25,1,0.5,1);
+}
+#view-codes .cb-card.open .cb-chev { transform: rotate(90deg); }
+#view-codes .cb-body { height: 0; overflow: hidden; }
+#view-codes .cb-body-inner {
+  padding: 0 15px 14px; border-top: 1px solid rgba(60,60,67,0.08);
+  opacity: 0; transform: translateY(-4px);
+  transition: opacity 0.22s ease 0.06s, transform 0.22s ease 0.06s;
+}
+#view-codes .cb-body.open .cb-body-inner { opacity: 1; transform: none; }
+#view-codes .cb-row {
+  display: flex; gap: 10px; padding: 7px 0;
+  border-bottom: 1px solid rgba(60,60,67,0.06); font-size: 0.81rem;
+}
+#view-codes .cb-row:last-child { border-bottom: none; }
+#view-codes .cb-key {
+  font-size: 0.67rem; font-weight: 700; color: #8e8e93;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  white-space: nowrap; margin-top: 1px; width: 56px; flex-shrink: 0;
+}
+#view-codes .cb-val { color: #1c1c1e; line-height: 1.5; flex: 1; }
+#view-codes .cb-empty {
+  text-align: center; padding: 48px 20px; color: #8e8e93; font-size: 0.9rem;
+}
+#view-codes .cb-alliance {
+  display: inline-block; padding: 2px 7px; border-radius: 7px;
+  font-size: 0.67rem; font-weight: 700;
+  background: rgba(60,60,67,0.08); color: #3a3a3c;
+}
+@media (prefers-color-scheme: dark) {
+  #view-codes .cb-search-box { background: rgba(44,44,46,0.97); border-color: rgba(255,255,255,0.08); }
+  #view-codes .cb-search-box input { color: #f2f2f7; }
+  #view-codes .cb-hot-tag { background: rgba(44,44,46,0.9); color: #e5e5ea; }
+  #view-codes .cb-chip { background: rgba(44,44,46,0.72); color: #e5e5ea; }
+  #view-codes .cb-chip.active { background: #e5e5ea; color: #1c1c1e; }
+  #view-codes .cb-card { background: rgba(28,28,30,0.96); }
+  #view-codes .cb-name { color: #f2f2f7; }
+  #view-codes .cb-badge.ap { background: rgba(29,78,216,0.22); color: #60a5fa; }
+  #view-codes .cb-badge.al { background: rgba(194,65,12,0.22); color: #fb923c; }
+  #view-codes .cb-pill.ap  { background: rgba(29,78,216,0.22); color: #60a5fa; }
+  #view-codes .cb-pill.al  { background: rgba(194,65,12,0.22); color: #fb923c; }
+  #view-codes .cb-pill.tz  { background: #2c2c2e; color: #636366; }
+  #view-codes .cb-pill.trm { background: rgba(133,77,14,0.2); color: #fbbf24; }
+  #view-codes .cb-val { color: #e5e5ea; }
+  #view-codes .cb-alliance { background: rgba(60,60,67,0.35); color: #aeaeb2; }
+}
 </style>
 </head>
 <body>
@@ -297,6 +431,15 @@ body {
           <div class="hub-info">
             <div class="hub-name">SSR 代碼</div>
             <div class="hub-desc">行李 · 優先服務 · 特殊需求 · 加購</div>
+          </div>
+          <div class="hub-arrow">›</div>
+        </div>
+
+        <div class="hub-card" style="--card-color:#7c3aed;--card-color-bg:rgba(124,58,237,0.08)" onclick="goSub('codes')">
+          <div class="hub-icon"><i class="bi bi-folder2-open"></i></div>
+          <div class="hub-info">
+            <div class="hub-name">代碼字典</div>
+            <div class="hub-desc">機場 IATA · 航空公司代碼快查</div>
           </div>
           <div class="hub-arrow">›</div>
         </div>
@@ -373,6 +516,44 @@ body {
         <div class="ssr-item"><span class="ssr-code ssr-code-addon">APUP</span><span class="ssr-mid">Airport Upgrade — 升等至 Premium Flatbed</span></div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ── View 4：代碼字典 ── -->
+  <div class="view" id="view-codes">
+    <div class="header">
+      <button class="back-btn" onclick="goHub()">← TIAS</button>
+      <div class="header-title">代碼字典</div>
+      <div class="header-sub">機場 · 航空公司</div>
+      <div class="header-rule"></div>
+    </div>
+    <div class="cb-search-wrap">
+      <div class="cb-search-box" id="cb-searchBox">
+        <span class="cb-search-icon"><i class="bi bi-search"></i></span>
+        <input id="cb-input" type="search" placeholder="輸入機場代碼、城市、航空公司…"
+               autocomplete="off" autocorrect="off" spellcheck="false">
+        <button class="cb-clear hidden" id="cb-clear" onclick="cbClearSearch()">✕</button>
+      </div>
+    </div>
+    <div class="cb-hot-wrap">
+      <button class="cb-hot-tag" onclick="cbHotSearch('TPE')">TPE</button>
+      <button class="cb-hot-tag" onclick="cbHotSearch('KUL')">KUL</button>
+      <button class="cb-hot-tag" onclick="cbHotSearch('DMK')">DMK</button>
+      <button class="cb-hot-tag" onclick="cbHotSearch('BKK')">BKK</button>
+      <button class="cb-hot-tag" onclick="cbHotSearch('SIN')">SIN</button>
+      <button class="cb-hot-tag" onclick="cbHotSearch('NRT')">NRT</button>
+      <button class="cb-hot-tag" onclick="cbHotSearch('AK')">AK</button>
+      <button class="cb-hot-tag" onclick="cbHotSearch('D7')">D7</button>
+    </div>
+    <div class="cb-chips" id="cb-chips">
+      <div class="cb-chip active" data-cat="all"     onclick="cbSetCat('all',this)">全部</div>
+      <div class="cb-chip"        data-cat="airport" onclick="cbSetCat('airport',this)"><i class="bi bi-airplane"></i> 機場</div>
+      <div class="cb-chip"        data-cat="airline" onclick="cbSetCat('airline',this)"><i class="bi bi-airplane-fill"></i> 航空公司</div>
+    </div>
+    <div class="cb-count" id="cb-count"></div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div class="cb-list" id="cb-list"></div>
+      <div id="cb-sentinel" style="height:1px"></div>
     </div>
   </div>
 
@@ -544,12 +725,13 @@ const SEQ = {
 /* ── View 切換 ── */
 const _app = document.getElementById('app');
 function goSub(name) {
-  _app.classList.remove('in-broadcast', 'in-ssr');
+  _app.classList.remove('in-broadcast', 'in-ssr', 'in-codes');
   if (name === 'broadcast') { renderSeq('AK'); _app.classList.add('in-broadcast'); }
   else if (name === 'ssr')  { _app.classList.add('in-ssr'); }
+  else if (name === 'codes') { cbInit(); _app.classList.add('in-codes'); }
 }
 function goHub() {
-  _app.classList.remove('in-broadcast', 'in-ssr');
+  _app.classList.remove('in-broadcast', 'in-ssr', 'in-codes');
 }
 
 /* ── 廣播 SOP ── */
@@ -593,6 +775,192 @@ function openPanel(id, note, enFirst) {
 function closePanel() {
   document.getElementById('backdrop').classList.remove('open');
   document.getElementById('panel').classList.remove('open');
+}
+
+/* ══════════════════════════════════════════
+   Code Book（代碼字典）內嵌邏輯
+   ══════════════════════════════════════════ */
+let _cb_entries = [], _cb_filtered = [], _cb_rendered = 0;
+let _cb_cat = 'all', _cb_query = '', _cb_debT = null, _cb_obs = null;
+let _cb_loaded = false;
+
+async function cbInit() {
+  if (_cb_loaded) return;
+  _cb_loaded = true;
+  try {
+    const r = await fetch('/static/airport_codes.json');
+    const d = await r.json();
+    const airports = (d.airports || []).map(a => ({ ...a, _type: 'airport' }));
+    const airlines = (d.airlines || []).map(a => ({ ...a, _type: 'airline' }));
+    _cb_entries = [...airports, ...airlines];
+    cbRender();
+  } catch(e) {
+    document.getElementById('cb-list').innerHTML =
+      '<div class="cb-empty"><i class="bi bi-exclamation-triangle-fill"></i><br>資料載入失敗</div>';
+  }
+  document.getElementById('cb-input').addEventListener('input', function() { cbOnSearch(this.value); });
+}
+
+function cbHotSearch(c) {
+  const inp = document.getElementById('cb-input');
+  inp.value = c; cbOnSearch(c);
+}
+function cbClearSearch() {
+  document.getElementById('cb-input').value = ''; cbOnSearch('');
+}
+function cbOnSearch(v) {
+  _cb_query = v;
+  document.getElementById('cb-clear').classList.toggle('hidden', !v);
+  clearTimeout(_cb_debT);
+  _cb_debT = setTimeout(cbRender, 150);
+}
+function cbSetCat(v, el) {
+  _cb_cat = v;
+  document.querySelectorAll('#cb-chips .cb-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  cbRender();
+}
+function cbMatches(e, q) {
+  if (!q) return true;
+  const lq = q.toLowerCase();
+  const fs = [e.iata, e.icao, e.code, e.name_zh, e.name_en,
+              e.city_zh, e.city_en, e.country_zh]
+    .filter(Boolean).map(f => f.toLowerCase());
+  if (fs.some(f => f.includes(lq))) return true;
+  if (e.tags && e.tags.some(t => t.toLowerCase().includes(lq))) return true;
+  return false;
+}
+function cbTzBadge(d) {
+  if (d === 0) return '同台灣';
+  return d > 0 ? `快 ${d}h` : `慢 ${Math.abs(d)}h`;
+}
+function cbBuildCard(e, idx) {
+  const id = `cb${idx}`;
+  const code = e.iata || e.icao || '??';
+  const cls  = e._type === 'airport' ? 'ap' : 'al';
+  const primaryName = e.name_zh || '';
+  const subName = e._type === 'airport'
+    ? `${e.name_en} · ${e.city_zh} ${e.flag || ''}`
+    : `${e.name_en} · ${e.country_zh} ${e.flag || ''}`;
+  const pills = e._type === 'airport'
+    ? `<span class="cb-pill ap">機場</span><span class="cb-pill tz">${cbTzBadge(e.tz_diff)}</span>${e.airasia_terminal && e.airasia_terminal!=='—'?`<span class="cb-pill trm">亞航 ${e.airasia_terminal}</span>`:''}`
+    : `<span class="cb-pill al">航空公司</span><span class="cb-alliance">${e.alliance||''}</span>`;
+  const detail = e._type === 'airport' ? cbAirportDetail(e) : cbAirlineDetail(e);
+  const borderColor = e._type === 'airport' ? '#1d4ed8' : '#c2410c';
+  return `<div class="cb-card" id="cbcard-${id}" style="border-left:4px solid ${borderColor}">
+    <div class="cb-card-hd" onclick="cbToggle('${id}')">
+      <div><div class="cb-badge ${cls}">${code}</div></div>
+      <div class="cb-meta">
+        <div class="cb-name">${primaryName}</div>
+        <div class="cb-sub">${subName}</div>
+        <div class="cb-pills">${pills}</div>
+      </div>
+      <span class="cb-chev">›</span>
+    </div>
+    <div class="cb-body" id="cbbody-${id}">
+      <div class="cb-body-inner">${detail}</div>
+    </div>
+  </div>`;
+}
+function cbAirportDetail(e) {
+  const rows = [];
+  if (e.tz_label) rows.push(['時區', e.tz_label]);
+  if (e.airasia_terminal && e.airasia_terminal !== '—') rows.push(['亞航廈', e.airasia_terminal]);
+  if (e.airasia_note) rows.push(['亞航備註', e.airasia_note]);
+  if (e.icao) rows.push(['ICAO', e.icao]);
+  if (e.notes) rows.push(['地勤備註', e.notes]);
+  return rows.map(([k,v]) => `<div class="cb-row"><div class="cb-key">${k}</div><div class="cb-val">${v}</div></div>`).join('');
+}
+function cbAirlineDetail(e) {
+  const rows = [];
+  if (e.hub) rows.push(['基地', e.hub]);
+  if (e.alliance) rows.push(['聯盟', e.alliance]);
+  if (e.icao) rows.push(['ICAO', e.icao]);
+  if (e.notes) rows.push(['備註', e.notes]);
+  return rows.map(([k,v]) => `<div class="cb-row"><div class="cb-key">${k}</div><div class="cb-val">${v}</div></div>`).join('');
+}
+function cbToggle(id) {
+  const card = document.getElementById('cbcard-' + id);
+  const body = document.getElementById('cbbody-' + id);
+  const inner = body.querySelector('.cb-body-inner');
+  const isOpen = card.classList.contains('open');
+  card.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+  if (!isOpen) {
+    const h = inner.scrollHeight;
+    body.style.height = '0px'; body.style.transition = 'none';
+    requestAnimationFrame(() => {
+      body.style.transition = 'height 0.35s cubic-bezier(0.34,1.56,0.64,1)';
+      body.style.height = h + 'px';
+      setTimeout(() => { body.style.height = 'auto'; body.style.transition = ''; }, 380);
+    });
+  } else {
+    body.style.height = body.offsetHeight + 'px'; body.style.transition = 'none';
+    requestAnimationFrame(() => {
+      body.style.transition = 'height 0.2s ease';
+      body.style.height = '0px';
+      setTimeout(() => { body.style.transition = ''; }, 220);
+    });
+  }
+}
+function cbRender() {
+  const q = _cb_query.trim().toLowerCase();
+  _cb_filtered = _cb_entries.filter(e => {
+    if (_cb_cat !== 'all' && e._type !== _cb_cat) return false;
+    return cbMatches(e, q);
+  });
+  _cb_rendered = 0;
+  const count = document.getElementById('cb-count');
+  count.textContent = _cb_filtered.length === _cb_entries.length
+    ? `共 ${_cb_entries.length} 筆`
+    : `顯示 ${_cb_filtered.length} / ${_cb_entries.length} 筆`;
+  const list = document.getElementById('cb-list');
+  if (!_cb_filtered.length) {
+    list.innerHTML = '<div class="cb-empty">找不到符合的代碼</div>';
+    cbDisconnect(); return;
+  }
+  const PAGE = 40;
+  const chunk = _cb_filtered.slice(0, PAGE);
+  list.innerHTML = chunk.map((e, i) => cbBuildCard(e, i)).join('');
+  _cb_rendered = chunk.length;
+  const cards = list.querySelectorAll('.cb-card');
+  cards.forEach((el, i) => {
+    if (i < 15) {
+      el.style.opacity = '0'; el.style.transform = 'translateY(8px)';
+      requestAnimationFrame(() => {
+        el.style.transition = `opacity 0.28s ease ${i*25}ms, transform 0.28s ease ${i*25}ms`;
+        el.style.opacity = '1'; el.style.transform = 'none';
+      });
+    }
+  });
+  cbSetupObserver();
+}
+function cbSetupObserver() {
+  cbDisconnect();
+  if (_cb_rendered >= _cb_filtered.length) return;
+  const sentinel = document.getElementById('cb-sentinel');
+  _cb_obs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) cbAppendMore();
+  }, { rootMargin: '200px' });
+  _cb_obs.observe(sentinel);
+}
+function cbDisconnect() {
+  if (_cb_obs) { _cb_obs.disconnect(); _cb_obs = null; }
+}
+function cbAppendMore() {
+  if (_cb_rendered >= _cb_filtered.length) { cbDisconnect(); return; }
+  const PAGE = 40;
+  const list = document.getElementById('cb-list');
+  const chunk = _cb_filtered.slice(_cb_rendered, _cb_rendered + PAGE);
+  const frag = document.createDocumentFragment();
+  chunk.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.innerHTML = cbBuildCard(e, _cb_rendered + i);
+    frag.appendChild(div.firstElementChild);
+  });
+  list.appendChild(frag);
+  _cb_rendered += chunk.length;
+  if (_cb_rendered >= _cb_filtered.length) cbDisconnect();
 }
 </script>
 </body>
