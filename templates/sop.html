@@ -341,6 +341,7 @@ body {
 }
 #view-codes .cb-badge.ap { background: #dbeafe; color: #1d4ed8; }
 #view-codes .cb-badge.al { background: #ffedd5; color: #c2410c; }
+#view-codes .cb-badge.cn { background: #fce7f3; color: #9d174d; }
 #view-codes .cb-meta { flex: 1; min-width: 0; }
 #view-codes .cb-name { font-size: 0.92rem; font-weight: 700; color: #1c1c1e; margin-bottom: 2px; }
 #view-codes .cb-sub  { font-size: 0.73rem; color: #8e8e93; line-height: 1.35; }
@@ -351,8 +352,13 @@ body {
 }
 #view-codes .cb-pill.ap  { background: #dbeafe; color: #1d4ed8; }
 #view-codes .cb-pill.al  { background: #ffedd5; color: #c2410c; }
+#view-codes .cb-pill.cn  { background: #fce7f3; color: #9d174d; }
 #view-codes .cb-pill.tz  { background: #f1f3f5; color: #495057; }
 #view-codes .cb-pill.trm { background: #fff3bf; color: #854d0e; }
+#view-codes .cb-pill.rg-asia   { background: #fff7ed; color: #c2410c; }
+#view-codes .cb-pill.rg-europe { background: #eff6ff; color: #1d4ed8; }
+#view-codes .cb-pill.rg-usa    { background: #f0fdf4; color: #15803d; }
+#view-codes .cb-pill.rg-other  { background: #f3f4f6; color: #374151; }
 #view-codes .cb-chev {
   font-size: 0.8rem; color: #c7c7cc; flex-shrink: 0;
   transition: transform 0.3s cubic-bezier(0.25,1,0.5,1);
@@ -394,10 +400,16 @@ body {
   #view-codes .cb-name { color: #f2f2f7; }
   #view-codes .cb-badge.ap { background: rgba(29,78,216,0.22); color: #60a5fa; }
   #view-codes .cb-badge.al { background: rgba(194,65,12,0.22); color: #fb923c; }
+  #view-codes .cb-badge.cn { background: rgba(157,23,77,0.22); color: #f9a8d4; }
   #view-codes .cb-pill.ap  { background: rgba(29,78,216,0.22); color: #60a5fa; }
   #view-codes .cb-pill.al  { background: rgba(194,65,12,0.22); color: #fb923c; }
+  #view-codes .cb-pill.cn  { background: rgba(157,23,77,0.22); color: #f9a8d4; }
   #view-codes .cb-pill.tz  { background: #2c2c2e; color: #636366; }
   #view-codes .cb-pill.trm { background: rgba(133,77,14,0.2); color: #fbbf24; }
+  #view-codes .cb-pill.rg-asia   { background: rgba(194,65,12,0.15); color: #fb923c; }
+  #view-codes .cb-pill.rg-europe { background: rgba(29,78,216,0.15); color: #93c5fd; }
+  #view-codes .cb-pill.rg-usa    { background: rgba(21,128,61,0.15); color: #4ade80; }
+  #view-codes .cb-pill.rg-other  { background: #2c2c2e; color: #636366; }
   #view-codes .cb-val { color: #e5e5ea; }
   #view-codes .cb-alliance { background: rgba(60,60,67,0.35); color: #aeaeb2; }
 }
@@ -524,13 +536,13 @@ body {
     <div class="header">
       <button class="back-btn" onclick="goHub()">← TIAS</button>
       <div class="header-title">代碼字典</div>
-      <div class="header-sub">機場 · 航空公司</div>
+      <div class="header-sub">機場 · 航空公司 · 國家代碼</div>
       <div class="header-rule"></div>
     </div>
     <div class="cb-search-wrap">
       <div class="cb-search-box" id="cb-searchBox">
         <span class="cb-search-icon"><i class="bi bi-search"></i></span>
-        <input id="cb-input" type="search" placeholder="輸入機場代碼、城市、航空公司…"
+        <input id="cb-input" type="search" placeholder="輸入機場、國家代碼、城市、航空公司…"
                autocomplete="off" autocorrect="off" spellcheck="false">
         <button class="cb-clear hidden" id="cb-clear" onclick="cbClearSearch()">✕</button>
       </div>
@@ -549,6 +561,7 @@ body {
       <div class="cb-chip active" data-cat="all"     onclick="cbSetCat('all',this)">全部</div>
       <div class="cb-chip"        data-cat="airport" onclick="cbSetCat('airport',this)"><i class="bi bi-airplane"></i> 機場</div>
       <div class="cb-chip"        data-cat="airline" onclick="cbSetCat('airline',this)"><i class="bi bi-airplane-fill"></i> 航空公司</div>
+      <div class="cb-chip"        data-cat="country" onclick="cbSetCat('country',this)"><i class="bi bi-globe2"></i> 國家代碼</div>
     </div>
     <div class="cb-count" id="cb-count"></div>
     <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
@@ -784,15 +797,28 @@ let _cb_entries = [], _cb_filtered = [], _cb_rendered = 0;
 let _cb_cat = 'all', _cb_query = '', _cb_debT = null, _cb_obs = null;
 let _cb_loaded = false;
 
+function cbCountryFlag(code) {
+  if (!code || code.length !== 2) return '';
+  try {
+    return [...code.toUpperCase()].map(c =>
+      String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
+    ).join('');
+  } catch(e) { return ''; }
+}
+
 async function cbInit() {
   if (_cb_loaded) return;
   _cb_loaded = true;
   try {
     const r = await fetch('/static/airport_codes.json');
     const d = await r.json();
-    const airports = (d.airports || []).map(a => ({ ...a, _type: 'airport' }));
-    const airlines = (d.airlines || []).map(a => ({ ...a, _type: 'airline' }));
-    _cb_entries = [...airports, ...airlines];
+    const airports  = (d.airports  || []).map(a => ({ ...a, _type: 'airport' }));
+    const airlines  = (d.airlines  || []).map(a => ({ ...a, _type: 'airline' }));
+    const countries = (d.countries || []).map(c => ({
+      ...c, _type: 'country', flag: cbCountryFlag(c.code),
+      tags: [c.code, c.name_zh, c.region].filter(Boolean)
+    }));
+    _cb_entries = [...airports, ...airlines, ...countries];
     cbRender();
   } catch(e) {
     document.getElementById('cb-list').innerHTML =
@@ -824,7 +850,7 @@ function cbMatches(e, q) {
   if (!q) return true;
   const lq = q.toLowerCase();
   const fs = [e.iata, e.icao, e.code, e.name_zh, e.name_en,
-              e.city_zh, e.city_en, e.country_zh]
+              e.city_zh, e.city_en, e.country_zh, e.region]
     .filter(Boolean).map(f => f.toLowerCase());
   if (fs.some(f => f.includes(lq))) return true;
   if (e.tags && e.tags.some(t => t.toLowerCase().includes(lq))) return true;
@@ -836,17 +862,26 @@ function cbTzBadge(d) {
 }
 function cbBuildCard(e, idx) {
   const id = `cb${idx}`;
-  const code = e.iata || e.icao || '??';
-  const cls  = e._type === 'airport' ? 'ap' : 'al';
+  const code = e.iata || e.code || e.icao || '??';
+  const cls  = e._type === 'airport' ? 'ap' : e._type === 'country' ? 'cn' : 'al';
   const primaryName = e.name_zh || '';
   const subName = e._type === 'airport'
     ? `${e.name_en} · ${e.city_zh} ${e.flag || ''}`
+    : e._type === 'country'
+    ? `${e.flag || ''} ${e.region}`
     : `${e.name_en} · ${e.country_zh} ${e.flag || ''}`;
+  const rgCls = e._type === 'country'
+    ? (e.region === '亞洲' ? 'rg-asia' : e.region === '歐洲' ? 'rg-europe' : e.region === '美洲' ? 'rg-usa' : 'rg-other')
+    : '';
   const pills = e._type === 'airport'
     ? `<span class="cb-pill ap">機場</span><span class="cb-pill tz">${cbTzBadge(e.tz_diff)}</span>${e.airasia_terminal && e.airasia_terminal!=='—'?`<span class="cb-pill trm">亞航 ${e.airasia_terminal}</span>`:''}`
+    : e._type === 'country'
+    ? `<span class="cb-pill cn">國家代碼</span><span class="cb-pill ${rgCls}">${e.region}</span>`
     : `<span class="cb-pill al">航空公司</span><span class="cb-alliance">${e.alliance||''}</span>`;
-  const detail = e._type === 'airport' ? cbAirportDetail(e) : cbAirlineDetail(e);
-  const borderColor = e._type === 'airport' ? '#1d4ed8' : '#c2410c';
+  const detail = e._type === 'airport' ? cbAirportDetail(e)
+               : e._type === 'country' ? cbCountryDetail(e)
+               : cbAirlineDetail(e);
+  const borderColor = e._type === 'airport' ? '#1d4ed8' : e._type === 'country' ? '#9d174d' : '#c2410c';
   return `<div class="cb-card" id="cbcard-${id}" style="border-left:4px solid ${borderColor}">
     <div class="cb-card-hd" onclick="cbToggle('${id}')">
       <div><div class="cb-badge ${cls}">${code}</div></div>
@@ -877,6 +912,11 @@ function cbAirlineDetail(e) {
   if (e.alliance) rows.push(['聯盟', e.alliance]);
   if (e.icao) rows.push(['ICAO', e.icao]);
   if (e.notes) rows.push(['備註', e.notes]);
+  return rows.map(([k,v]) => `<div class="cb-row"><div class="cb-key">${k}</div><div class="cb-val">${v}</div></div>`).join('');
+}
+function cbCountryDetail(e) {
+  const rows = [['地區', e.region]];
+  if (e.flag) rows.push(['旗幟', e.flag]);
   return rows.map(([k,v]) => `<div class="cb-row"><div class="cb-key">${k}</div><div class="cb-val">${v}</div></div>`).join('');
 }
 function cbToggle(id) {
