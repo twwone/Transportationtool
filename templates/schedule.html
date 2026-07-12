@@ -67,92 +67,201 @@ body {
 main {
   padding-top: calc(max(14px, env(safe-area-inset-top) + 10px) + 44px + 16px);
   padding-bottom: max(40px, env(safe-area-inset-bottom) + 24px);
-  padding-left: 16px; padding-right: 16px;
+  padding-left: 14px; padding-right: 14px;
 }
 
 .month-header {
-  font-size: 1.7rem; font-weight: 700;
+  font-size: 1.5rem; font-weight: 700;
   letter-spacing: -0.5px; color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .month-sub {
   font-size: 0.75rem; color: var(--sub);
-  margin-bottom: 20px; letter-spacing: 0.02em;
+  margin-bottom: 14px; letter-spacing: 0.02em;
 }
 
-/* ── Day list ── */
-.day-list { display: flex; flex-direction: column; gap: 7px; }
+/* ── Calendar ── */
+.cal-dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.cal-dow {
+  text-align: center;
+  font-size: 0.66rem; font-weight: 600;
+  color: var(--sub); letter-spacing: 0.04em;
+  padding: 2px 0;
+}
+.cal-dow.wknd { color: var(--accent); }
 
-.day-row {
-  display: flex; align-items: center; gap: 0;
-  padding: 13px 16px;
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-cell {
+  aspect-ratio: 1 / 1.25;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 3px 5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: hidden;
+  transition: opacity 0.12s;
 }
-.day-row.today {
+.cal-cell:active { opacity: 0.65; }
+.cal-cell.empty {
+  background: transparent; border-color: transparent;
+  pointer-events: none;
+}
+.cal-cell.today {
   border-color: var(--accent);
-  background: var(--acc2);
   box-shadow: 0 0 0 1.5px var(--accent);
+  background: var(--acc2);
 }
-.day-row.is-off { opacity: 0.65; }
-
-/* date block */
-.day-date {
-  width: 48px; flex-shrink: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-}
-.day-num {
-  font-size: 1.25rem; font-weight: 700; line-height: 1; color: var(--text);
-}
-.day-num.wknd { color: var(--accent); }
-.day-week {
-  font-size: 0.62rem; color: var(--sub); letter-spacing: 0.04em;
-}
-.day-week.wknd { color: var(--accent); }
-.today-pip {
+.cal-cell.is-off { opacity: 0.5; }
+.cal-cell.modified::after {
+  content: '';
+  position: absolute; top: 4px; right: 4px;
   width: 5px; height: 5px; border-radius: 50%;
-  background: var(--accent); margin-top: 2px;
+  background: #f59e0b;
 }
 
-/* divider */
-.vline {
-  width: 1px; height: 34px; background: var(--border);
-  margin: 0 14px; flex-shrink: 0;
+.cal-day-num {
+  font-size: 0.78rem; font-weight: 700;
+  color: var(--text); align-self: flex-start;
+  padding-left: 4px; line-height: 1;
 }
+.cal-day-num.wknd { color: var(--accent); }
 
-/* shift block */
-.day-shift { flex: 1; min-width: 0; }
-
-.shift-badge {
-  display: inline-block;
+.cal-shift {
+  margin-top: auto;
+  text-align: center;
+  width: 100%;
+  padding: 0 2px;
+}
+.cal-badge {
   font-family: "SF Mono","Menlo","Courier New", monospace;
-  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em;
-  padding: 2px 7px; border-radius: 6px;
-  margin-bottom: 3px;
+  font-size: 0.56rem; font-weight: 800;
   color: var(--accent); background: var(--acc2);
+  padding: 1px 3px; border-radius: 4px;
+  letter-spacing: 0.02em;
+  display: block;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.shift-time {
-  font-size: 1.05rem; font-weight: 700; color: var(--text);
-  display: flex; align-items: center; gap: 4px; letter-spacing: -0.2px;
+.cal-time {
+  font-size: 0.57rem; font-weight: 600;
+  color: var(--sub); margin-top: 1px;
+  letter-spacing: -0.2px;
 }
-.shift-dot {
-  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+.cal-off-label {
+  font-size: 0.65rem; font-weight: 600;
+  color: var(--sub);
 }
-.arrow-sep { color: var(--sub); font-size: 0.85rem; font-weight: 400; }
+.cal-class-label {
+  font-size: 0.65rem; font-weight: 700;
+  color: #2563eb;
+}
+@media (prefers-color-scheme: dark) {
+  .cal-class-label { color: #93c5fd; }
+}
 
-.shift-class {
-  font-size: 0.97rem; font-weight: 700;
-  color: #2563eb; display: flex; align-items: center; gap: 5px;
+/* ── Edit Sheet ── */
+.sheet-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.45);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
 }
-@media (prefers-color-scheme: dark) { .shift-class { color: #93c5fd; } }
+.sheet-overlay.open { display: block; }
 
-.shift-off {
-  font-size: 0.95rem; font-weight: 500; color: var(--sub);
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 201;
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: 16px 20px max(24px, env(safe-area-inset-bottom) + 16px);
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+  will-change: transform;
 }
-.shift-unknown {
-  font-size: 0.92rem; font-weight: 600; color: #dc2626;
+.sheet.open { transform: translateY(0); }
+
+.sheet-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--border); margin: 0 auto 16px;
 }
+.sheet-title {
+  font-size: 1.1rem; font-weight: 700;
+  color: var(--text); margin-bottom: 3px;
+}
+.sheet-current {
+  font-size: 0.8rem; color: var(--sub);
+  margin-bottom: 18px; min-height: 1.1em;
+}
+.sheet-current b { color: var(--accent); }
+
+.input-label {
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--sub); margin-bottom: 6px;
+}
+.sheet-input {
+  width: 100%;
+  font-family: "SF Mono","Menlo","Courier New", monospace;
+  font-size: 1.15rem; font-weight: 700;
+  color: var(--text); background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  outline: none;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.sheet-input:focus { border-color: var(--accent); }
+
+.quick-row {
+  display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap;
+}
+.quick-btn {
+  padding: 7px 14px; border-radius: 20px;
+  font-size: 0.82rem; font-weight: 700;
+  background: var(--acc2); color: var(--accent);
+  border: 1px solid var(--border);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.quick-btn:active { opacity: 0.65; }
+
+.sheet-actions {
+  display: flex; gap: 10px; align-items: stretch;
+}
+.btn-confirm {
+  flex: 1; padding: 14px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 16px;
+  font-size: 1rem; font-weight: 700;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.btn-confirm:active { opacity: 0.8; }
+.btn-reset {
+  padding: 14px 18px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  font-size: 0.88rem; font-weight: 600;
+  color: var(--sub);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  display: none;
+}
+.btn-reset.show { display: block; }
+.btn-reset:active { opacity: 0.65; }
 </style>
 </head>
 <body>
@@ -166,8 +275,35 @@ main {
 <main>
   <div class="month-header" id="month-hdr"></div>
   <div class="month-sub"   id="month-sub"></div>
-  <div class="day-list"    id="day-list"></div>
+  <div class="cal-dow-row">
+    <span class="cal-dow wknd">日</span>
+    <span class="cal-dow">一</span>
+    <span class="cal-dow">二</span>
+    <span class="cal-dow">三</span>
+    <span class="cal-dow">四</span>
+    <span class="cal-dow">五</span>
+    <span class="cal-dow wknd">六</span>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
 </main>
+
+<!-- Edit sheet -->
+<div class="sheet-overlay" id="overlay"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title"   id="sheet-title"></div>
+  <div class="sheet-current" id="sheet-current"></div>
+  <div class="input-label">班別代碼</div>
+  <input class="sheet-input" id="sheet-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+  <div class="quick-row">
+    <button class="quick-btn" onclick="quickSet('@')">@ 休假</button>
+    <button class="quick-btn" onclick="quickSet('E')">E 上課</button>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn-reset" id="btn-reset" onclick="resetDay()">還原原始</button>
+    <button class="btn-confirm" onclick="confirmEdit()">確認</button>
+  </div>
+</div>
 
 <script>
 /* ── 班別對照表（432 筆 B 開頭） ── */
@@ -180,7 +316,15 @@ const SCHEDULE = {
   codes: ['E','E','E','@','E','@','E','E','@','E','@','@','B9S','H7C','B5A','B10A','@','@','B10T','B10A','@','B5A','H12A','@','B10T','B9S','B9S','@','B10T','B10A','H12A']
 };
 
-/* ── 查班別（去頭字母 → 補 B → 查表） ── */
+/* ── 手動調整存 localStorage ── */
+const OVERRIDE_KEY = `sched_overrides_${SCHEDULE.year}_${SCHEDULE.month}`;
+let overrides = JSON.parse(localStorage.getItem(OVERRIDE_KEY) || '{}');
+
+function getCode(day) {
+  return overrides[day] !== undefined ? overrides[day] : SCHEDULE.codes[day - 1];
+}
+
+/* ── 查班別 ── */
 function lookup(code) {
   if (!code || code === '@') return { type: 'off' };
   if (code === 'E')          return { type: 'class' };
@@ -190,74 +334,132 @@ function lookup(code) {
   return { type: 'unknown', label: code };
 }
 
-/* ── 顏色依上班時段 ── */
-function dotColor(start) {
-  const h = parseInt(start);
-  if (h < 5)  return '#7c3aed';
-  if (h < 8)  return '#d97706';
-  if (h < 10) return '#059669';
-  if (h < 12) return '#0d9488';
-  return '#ea580c';
-}
-
-/* ── 渲染 ── */
-(function render() {
+/* ── 渲染月曆 ── */
+function render() {
   const today = new Date();
-  const { year, month, codes } = SCHEDULE;
-  const WD = ['日','一','二','三','四','五','六'];
+  const { year, month } = SCHEDULE;
   const isThisMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDow    = new Date(year, month - 1, 1).getDay();
 
   document.getElementById('month-hdr').textContent = `${year}年 ${month}月`;
 
-  const workDays  = codes.filter(c => c !== '@' && c !== 'E').length;
-  const classDays = codes.filter(c => c === 'E').length;
-  const offDays   = codes.filter(c => c === '@').length;
+  let workDays = 0, classDays = 0, offDays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const c = getCode(d);
+    if (c === '@') offDays++;
+    else if (c === 'E') classDays++;
+    else workDays++;
+  }
   document.getElementById('month-sub').textContent =
     `上班 ${workDays} 天 · 上課 ${classDays} 天 · 休假 ${offDays} 天`;
 
   let html = '';
-  for (let d = 1; d <= 31; d++) {
-    const date = new Date(year, month - 1, d);
-    if (date.getMonth() !== month - 1) break;
-    const dow     = date.getDay();
-    const isToday = isThisMonth && today.getDate() === d;
-    const isWknd  = dow === 0 || dow === 6;
-    const s       = lookup(codes[d - 1]);
+  for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell empty"></div>';
+
+  const WD = ['日','一','二','三','四','五','六'];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dow      = new Date(year, month - 1, d).getDay();
+    const isToday  = isThisMonth && today.getDate() === d;
+    const isWknd   = dow === 0 || dow === 6;
+    const code     = getCode(d);
+    const modified = overrides[d] !== undefined;
+    const s        = lookup(code);
 
     let shiftHtml = '';
     if (s.type === 'work') {
-      const col = dotColor(s.start);
-      shiftHtml = `<span class="shift-badge">${s.label}</span>
-        <div class="shift-time">
-          <span class="shift-dot" style="background:${col}"></span>
-          ${s.start}<span class="arrow-sep"> → </span>${s.end}
-        </div>`;
+      shiftHtml = `<div class="cal-shift">
+        <span class="cal-badge">${s.label}</span>
+        <div class="cal-time">${s.start}</div>
+      </div>`;
     } else if (s.type === 'class') {
-      shiftHtml = `<span class="shift-class"><i class="bi bi-mortarboard-fill"></i>&nbsp;上課</span>`;
+      shiftHtml = `<div class="cal-shift"><span class="cal-class-label">課</span></div>`;
     } else if (s.type === 'off') {
-      shiftHtml = `<span class="shift-off">休假</span>`;
+      shiftHtml = `<div class="cal-shift"><span class="cal-off-label">休</span></div>`;
     } else {
-      shiftHtml = `<span class="shift-unknown">${s.label || '?'}</span>`;
+      shiftHtml = `<div class="cal-shift"><span class="cal-badge" style="color:#dc2626;background:rgba(220,38,38,.08)">${s.label||'?'}</span></div>`;
     }
 
-    html += `<div class="day-row${isToday ? ' today' : ''}${s.type === 'off' ? ' is-off' : ''}">
-      <div class="day-date">
-        <span class="day-num${isWknd ? ' wknd' : ''}">${d}</span>
-        <span class="day-week${isWknd ? ' wknd' : ''}">週${WD[dow]}</span>
-        ${isToday ? '<div class="today-pip"></div>' : ''}
-      </div>
-      <div class="vline"></div>
-      <div class="day-shift">${shiftHtml}</div>
+    const cls = ['cal-cell'];
+    if (isToday)  cls.push('today');
+    if (s.type === 'off') cls.push('is-off');
+    if (modified) cls.push('modified');
+
+    html += `<div class="${cls.join(' ')}" onclick="openEdit(${d})">
+      <span class="cal-day-num${isWknd ? ' wknd' : ''}">${d}</span>
+      ${shiftHtml}
     </div>`;
   }
 
-  document.getElementById('day-list').innerHTML = html;
+  document.getElementById('cal-grid').innerHTML = html;
+}
 
-  if (isThisMonth) {
-    const el = document.querySelector('.today');
-    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
-  }
-})();
+/* ── 編輯表單 ── */
+let editDay = null;
+
+function openEdit(day) {
+  editDay = day;
+  const { year, month } = SCHEDULE;
+  const dow      = new Date(year, month - 1, day).getDay();
+  const WD       = ['日','一','二','三','四','五','六'];
+  const code     = getCode(day);
+  const origCode = SCHEDULE.codes[day - 1];
+  const modified = overrides[day] !== undefined;
+
+  document.getElementById('sheet-title').textContent = `${month}月${day}日（週${WD[dow]}）`;
+  document.getElementById('sheet-current').innerHTML = modified
+    ? `原始：<b>${origCode}</b>　→　已調整為 <b>${code}</b>`
+    : `目前班別：<b>${code}</b>`;
+  document.getElementById('sheet-input').value = code;
+
+  const btnReset = document.getElementById('btn-reset');
+  modified ? btnReset.classList.add('show') : btnReset.classList.remove('show');
+
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  setTimeout(() => {
+    const inp = document.getElementById('sheet-input');
+    inp.focus();
+    inp.select();
+  }, 300);
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+  editDay = null;
+}
+
+function quickSet(code) {
+  document.getElementById('sheet-input').value = code;
+  document.getElementById('sheet-input').focus();
+}
+
+function confirmEdit() {
+  if (editDay === null) return;
+  const raw = document.getElementById('sheet-input').value.trim().toUpperCase();
+  if (!raw) return;
+  overrides[editDay] = raw;
+  localStorage.setItem(OVERRIDE_KEY, JSON.stringify(overrides));
+  closeSheet();
+  render();
+}
+
+function resetDay() {
+  if (editDay === null) return;
+  delete overrides[editDay];
+  localStorage.setItem(OVERRIDE_KEY, JSON.stringify(overrides));
+  closeSheet();
+  render();
+}
+
+document.getElementById('overlay').addEventListener('click', closeSheet);
+document.getElementById('sheet-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmEdit();
+  if (e.key === 'Escape') closeSheet();
+});
+
+render();
 </script>
 </body>
 </html>
