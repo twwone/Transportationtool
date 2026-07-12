@@ -1848,7 +1848,7 @@ def _fetch_cwa(township_info):
     except Exception as e:
         result["error"] = f"預報取得失敗：{str(e)[:120]}"
 
-    # ── 逐時預報（odd endpoint，3 小時間距）──
+    # ── 逐時預報（odd endpoint，每 1 小時溫度 + 最近 3h 天氣狀況）──
     try:
         ep_num = int(endpoint[-3:]) - 2
         odd_ep = f"F-D0047-{ep_num:03d}"
@@ -1874,27 +1874,48 @@ def _fetch_cwa(township_info):
                 if loc_o:
                     break
             if loc_o:
-                els_o  = loc_o.get("WeatherElement") or loc_o.get("weatherElement") or []
-                h_wx   = _get_el(els_o, "天氣現象")
-                h_t    = _get_el(els_o, "溫度")
-                h_pop  = _get_el(els_o, "3小時降雨機率")
-                t_map   = {_slot_start(s): _ev_get(s, "Temperature") for s in h_t}
+                els_o   = loc_o.get("WeatherElement") or loc_o.get("weatherElement") or []
+                h_wx    = _get_el(els_o, "天氣現象")
+                h_t     = _get_el(els_o, "溫度")
+                h_pop   = _get_el(els_o, "3小時降雨機率")
+                # 3h 間距的天氣狀況 / 降雨機率：用排序後向前找最近鍵
+                wx_map  = {_slot_start(s): _ev_get(s, "WeatherCode") for s in h_wx}
                 pop_map = {_slot_start(s): _ev_get(s, "ProbabilityOfPrecipitation") for s in h_pop}
+                sorted_wx  = sorted(wx_map.keys())
+                sorted_pop = sorted(pop_map.keys())
+
+                def _best_le(keys, ts16):
+                    res = None
+                    for k in keys:
+                        if k[:16] <= ts16:
+                            res = k
+                        else:
+                            break
+                    return res
+
                 now_ts = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%dT%H")
                 hourly = []
-                for sl in h_wx:
+                # 以 1 小時解析度的溫度 slots 為基準迭代
+                for sl in h_t:
                     ts = _slot_start(sl)
                     if not ts or ts[:13] < now_ts:
                         continue
-                    wc = _ev_get(sl, "WeatherCode")
+                    temp = _ev_get(sl, "Temperature")
+                    if not temp:
+                        continue
+                    ts16 = ts[:16]
+                    wc_key  = _best_le(sorted_wx,  ts16)
+                    pop_key = _best_le(sorted_pop, ts16)
+                    wc  = wx_map.get(wc_key,  "") if wc_key  else ""
+                    pop = pop_map.get(pop_key, "") if pop_key else ""
                     hourly.append({
-                        "time":    ts[:16],
-                        "icon":   _wx_icon(wc),
+                        "time":    ts16,
+                        "icon":    _wx_icon(wc),
                         "wx_code": int(wc) if wc else 0,
-                        "temp":    t_map.get(ts, "—") or "—",
-                        "pop":     pop_map.get(ts, "") or "",
+                        "temp":    temp,
+                        "pop":     pop,
                     })
-                    if len(hourly) >= 16:
+                    if len(hourly) >= 24:
                         break
                 result["hourly"] = hourly
     except Exception:
