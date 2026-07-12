@@ -262,6 +262,42 @@ main {
 }
 .btn-reset.show { display: block; }
 .btn-reset:active { opacity: 0.65; }
+
+/* ── Time picker section ── */
+.time-sep {
+  display: flex; align-items: center; gap: 10px;
+  margin: 14px 0 12px;
+  font-size: 0.68rem; color: var(--sub); font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.time-sep::before, .time-sep::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.time-row {
+  display: flex; align-items: flex-end; gap: 10px;
+  margin-bottom: 8px;
+}
+.time-field { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.time-field label {
+  font-size: 0.72rem; color: var(--sub); font-weight: 600;
+}
+.time-input {
+  width: 100%;
+  font-size: 0.98rem; font-weight: 600;
+  color: var(--text); background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 10px;
+  outline: none;
+  -webkit-appearance: none;
+}
+.time-input:focus { border-color: var(--accent); }
+.time-arrow { color: var(--sub); font-size: 1.1rem; flex-shrink: 0; padding-bottom: 10px; }
+.time-hint {
+  font-size: 0.8rem; font-weight: 600;
+  min-height: 1.2em; margin-bottom: 6px;
+  transition: color 0.15s;
+}
 </style>
 </head>
 <body>
@@ -295,6 +331,21 @@ main {
   <div class="sheet-current" id="sheet-current"></div>
   <div class="input-label">班別代碼</div>
   <input class="sheet-input" id="sheet-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+
+  <div class="time-sep">或直接選時間</div>
+  <div class="time-row">
+    <div class="time-field">
+      <label for="time-start">上班時間</label>
+      <input class="time-input" type="time" id="time-start" step="1800">
+    </div>
+    <span class="time-arrow">→</span>
+    <div class="time-field">
+      <label for="time-end">下班時間</label>
+      <input class="time-input" type="time" id="time-end" step="1800">
+    </div>
+  </div>
+  <div class="time-hint" id="time-hint"></div>
+
   <div class="quick-row">
     <button class="quick-btn" onclick="quickSet('@')">@ 休假</button>
     <button class="quick-btn" onclick="quickSet('E')">E 上課</button>
@@ -394,6 +445,31 @@ function render() {
   document.getElementById('cal-grid').innerHTML = html;
 }
 
+/* ── 時間反查班別代碼 ── */
+function reverseT(start, end) {
+  for (const [code, times] of Object.entries(T)) {
+    if (times[0] === start && times[1] === end) return code;
+  }
+  return null;
+}
+
+function onTimeChange() {
+  const start = document.getElementById('time-start').value;
+  const end   = document.getElementById('time-end').value;
+  const hint  = document.getElementById('time-hint');
+  if (!start || !end) { hint.textContent = ''; return; }
+  const code = reverseT(start, end);
+  if (code) {
+    document.getElementById('sheet-input').value = code;
+    hint.style.color = 'var(--accent)';
+    hint.textContent = `✓ 對應代碼：${code}`;
+  } else {
+    document.getElementById('sheet-input').value = '';
+    hint.style.color = '#dc2626';
+    hint.textContent = '✗ 查無對應代碼';
+  }
+}
+
 /* ── 編輯表單 ── */
 let editDay = null;
 
@@ -411,6 +487,12 @@ function openEdit(day) {
     ? `原始：<b>${origCode}</b>　→　已調整為 <b>${code}</b>`
     : `目前班別：<b>${code}</b>`;
   document.getElementById('sheet-input').value = code;
+
+  // 預填時間選擇器
+  const s = lookup(code);
+  document.getElementById('time-start').value = (s.type === 'work') ? s.start : '';
+  document.getElementById('time-end').value   = (s.type === 'work') ? s.end   : '';
+  document.getElementById('time-hint').textContent = '';
 
   const btnReset = document.getElementById('btn-reset');
   modified ? btnReset.classList.add('show') : btnReset.classList.remove('show');
@@ -454,6 +536,8 @@ function resetDay() {
 }
 
 document.getElementById('overlay').addEventListener('click', closeSheet);
+document.getElementById('time-start').addEventListener('change', onTimeChange);
+document.getElementById('time-end').addEventListener('change', onTimeChange);
 document.getElementById('sheet-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmEdit();
   if (e.key === 'Escape') closeSheet();
