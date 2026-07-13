@@ -1269,7 +1269,8 @@ function _saveOrder() {
   try {
     const r = await fetch('/api/card-order');
     const d = await r.json();
-    const order = d.order || DEFAULT_ORDER;
+    let order = d.order || DEFAULT_ORDER;
+    if (!order.includes('passport')) order.push('passport');
     localStorage.setItem('card_order_cache', JSON.stringify(order));
     if (JSON.stringify(order) !== JSON.stringify(cardOrder))
       renderBento(order);
