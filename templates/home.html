@@ -343,6 +343,13 @@ body {
   background: linear-gradient(135deg,#0891b2 0%,#22d3ee 100%);
   box-shadow: 0 4px 20px rgba(8,145,178,.22);
 }
+.card-passport-strip {
+  background: linear-gradient(135deg,#065f46 0%,#10b981 100%);
+  box-shadow: 0 4px 20px rgba(5,150,105,.22);
+}
+.passport-ring-wrap {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 .strip-inner {
   position: absolute; inset: 0;
   padding: 0 20px;
@@ -372,6 +379,7 @@ body {
 @media (prefers-color-scheme: dark) {
   .card-mrt-strip     { background: linear-gradient(135deg,#6d28d9 0%,#a21caf 100%); }
   .card-weather-strip { background: linear-gradient(135deg,#0e7490 0%,#06b6d4 100%); }
+  .card-passport-strip { background: linear-gradient(135deg,#064e3b 0%,#059669 100%); }
 }
 
 /* ── 排列按鈕 ── */
@@ -1054,9 +1062,10 @@ const CARDS = {
   diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
   memo:      { icon:'記',                                        title:'備忘錄',             url:'/memo',                                         cls:'card-memo' },
   sop:       { icon:'<i class="bi bi-megaphone-fill"></i>',     title:'TIAS',               url:'/sop',                                          cls:'card-sop' },
+  passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照效期',            url:'/settings', strip:true, stripCls:'card-passport-strip', stripTag:'<i class="bi bi-person-badge-fill"></i> 護照效期' },
 };
-const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop'];
-const _STRIP_FIXED = ['tias','mrt','weather']; // 這三張固定位置，不參與排序
+const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop','passport'];
+const _STRIP_FIXED = ['tias','mrt','weather','passport']; // 這四張固定位置，不參與排序
 let cardOrder = [...DEFAULT_ORDER];
 let editMode  = false;
 
@@ -1078,8 +1087,8 @@ function renderBento(order) {
     delay += 60;
   }
 
-  // 2. 固定 strip（機捷、天氣）
-  for (const id of ['mrt','weather']) {
+  // 2. 固定 strip（機捷、天氣、護照）
+  for (const id of ['mrt','weather','passport']) {
     if (!order.includes(id)) continue;
     const c = CARDS[id];
     const el = document.createElement('a');
@@ -1127,6 +1136,7 @@ function renderBento(order) {
   // 載入 strip 即時資料
   loadMrtStrip();
   loadWeatherStrip();
+  loadPassportStrip();
 }
 
 function _setupCardClicks() {
@@ -1251,6 +1261,7 @@ function _saveOrder() {
   try {
     let order = cached ? JSON.parse(cached) : DEFAULT_ORDER;
     order = order.filter(k => k !== 'codes');
+    if (!order.includes('passport')) order.push('passport');
     renderBento(order);
   } catch { renderBento(DEFAULT_ORDER); }
 
@@ -1425,6 +1436,85 @@ async function loadWeatherStrip() {
   } catch {
     el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-cloud-fill"></i> 天氣防禦</div><div class="strip-name" style="opacity:.6">載入失敗</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
   }
+}
+
+function loadPassportStrip() {
+  const el = document.getElementById('strip-passport');
+  if (!el) return;
+  const parent = el.closest('a.card-passport-strip');
+  const expiry = localStorage.getItem('passportExpiry');
+
+  if (!expiry) {
+    el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-person-badge-fill"></i> 護照效期</div><div class="strip-name" style="opacity:.6">點此設定到期日</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    if (parent) parent.style.background = 'linear-gradient(135deg,#4b5563 0%,#6b7280 100%)';
+    return;
+  }
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const expiryDate = new Date(expiry + 'T00:00:00');
+  const sixMonthsLater = new Date(today);
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+
+  const daysRemaining = Math.floor((expiryDate - today) / 86400000);
+  const daysInSafeZone = Math.floor((expiryDate - sixMonthsLater) / 86400000);
+
+  let bgGrad, ringColor, shadowColor, topLabel;
+  if (daysRemaining <= 0) {
+    bgGrad = 'linear-gradient(135deg,#991b1b 0%,#ef4444 100%)';
+    ringColor = '#fca5a5'; shadowColor = 'rgba(239,68,68,.35)';
+    topLabel = '⛔ 護照已過期';
+  } else if (daysInSafeZone <= 0) {
+    bgGrad = 'linear-gradient(135deg,#9a3412 0%,#f97316 100%)';
+    ringColor = '#fed7aa'; shadowColor = 'rgba(249,115,22,.35)';
+    topLabel = `⚠️ 未達六個月有效期`;
+  } else if (daysInSafeZone <= 90) {
+    bgGrad = 'linear-gradient(135deg,#92400e 0%,#f59e0b 100%)';
+    ringColor = '#fde68a'; shadowColor = 'rgba(245,158,11,.3)';
+    topLabel = '⚠️ 六個月緩衝將耗盡';
+  } else {
+    bgGrad = 'linear-gradient(135deg,#065f46 0%,#10b981 100%)';
+    ringColor = '#6ee7b7'; shadowColor = 'rgba(16,185,129,.3)';
+    topLabel = '✓ 護照效期安全';
+  }
+
+  if (parent) {
+    parent.style.background = bgGrad;
+    parent.style.boxShadow = `0 4px 20px ${shadowColor}`;
+  }
+
+  const R = 26, C = (2 * Math.PI * R).toFixed(2);
+  const pct = Math.max(0, Math.min(1, daysInSafeZone / 365));
+  const dash = (C * (1 - pct)).toFixed(2);
+
+  const bigNum = daysRemaining <= 0 ? 'EXP' :
+                 daysInSafeZone > 0 ? daysInSafeZone : daysRemaining;
+  const smallLbl = daysRemaining <= 0 ? '' :
+                   daysInSafeZone > 0 ? '安全天數' : '剩餘天數';
+
+  const expiryStr = `${expiryDate.getFullYear()}/${String(expiryDate.getMonth()+1).padStart(2,'0')}/${String(expiryDate.getDate()).padStart(2,'0')} 到期`;
+
+  el.innerHTML = `
+    <div class="strip-left">
+      <div class="strip-tag"><i class="bi bi-person-badge-fill"></i> 護照效期</div>
+      <div class="strip-name">${topLabel}</div>
+      <div style="font-size:.58rem;color:rgba(255,255,255,.55);margin-top:3px">${expiryStr}</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="passport-ring-wrap">
+      <svg width="72" height="72" viewBox="0 0 64 64" style="overflow:visible">
+        <circle cx="32" cy="32" r="${R}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="5.5"/>
+        <circle cx="32" cy="32" r="${R}" fill="none" stroke="${ringColor}" stroke-width="5.5"
+          stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${dash}"
+          transform="rotate(-90 32 32)"/>
+        <text x="32" y="30" text-anchor="middle" dominant-baseline="middle"
+          fill="white" font-size="${String(bigNum).length > 3 ? 10 : 15}" font-weight="800"
+          font-family="-apple-system,BlinkMacSystemFont,sans-serif">${bigNum}</text>
+        <text x="32" y="46" text-anchor="middle" dominant-baseline="middle"
+          fill="rgba(255,255,255,0.6)" font-size="7"
+          font-family="-apple-system,BlinkMacSystemFont,sans-serif">${smallLbl}</text>
+      </svg>
+    </div>
+    <div class="strip-arr">›</div>`;
 }
 
 function _getSession() {
