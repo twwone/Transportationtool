@@ -1062,7 +1062,7 @@ const CARDS = {
   diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
   memo:      { icon:'記',                                        title:'備忘錄',             url:'/memo',                                         cls:'card-memo' },
   sop:       { icon:'<i class="bi bi-megaphone-fill"></i>',     title:'TIAS',               url:'/sop',                                          cls:'card-sop' },
-  passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照效期',            url:'/settings', strip:true, stripCls:'card-passport-strip', stripTag:'<i class="bi bi-person-badge-fill"></i> 護照效期' },
+  passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照查驗',            url:'#', strip:true, stripCls:'card-passport-strip', stripTag:'<i class="bi bi-person-badge-fill"></i> 旅客護照查驗' },
 };
 const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop','passport'];
 const _STRIP_FIXED = ['tias','mrt','weather','passport']; // 這四張固定位置，不參與排序
@@ -1147,6 +1147,7 @@ function _setupCardClicks() {
     a.addEventListener('click', function(e) {
       if (editMode) { e.preventDefault(); return; }
       if (this.target === '_blank') return;
+      if (this.getAttribute('href') === '#') { e.preventDefault(); return; }
       e.preventDefault();
       const href = this.href;
       const ease = 'cubic-bezier(0.4,0,1,1)';
@@ -1439,83 +1440,61 @@ async function loadWeatherStrip() {
   }
 }
 
+let _passportTimer = null;
 function loadPassportStrip() {
   const el = document.getElementById('strip-passport');
   if (!el) return;
   const parent = el.closest('a.card-passport-strip');
-  const expiry = localStorage.getItem('passportExpiry');
 
-  if (!expiry) {
-    el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-person-badge-fill"></i> 護照效期</div><div class="strip-name" style="opacity:.6">點此設定到期日</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
-    if (parent) parent.style.background = 'linear-gradient(135deg,#4b5563 0%,#6b7280 100%)';
-    return;
-  }
+  const now = new Date();
+  const plusSix = new Date(now.getTime() + 6 * 3600000);
 
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const expiryDate = new Date(expiry + 'T00:00:00');
-  const sixMonthsLater = new Date(today);
-  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+  // 判斷 +6 小時是否跨過午夜
+  const isCrossDay = plusSix.getDate() !== now.getDate()
+                  || plusSix.getMonth() !== now.getMonth()
+                  || plusSix.getFullYear() !== now.getFullYear();
 
-  const daysRemaining = Math.floor((expiryDate - today) / 86400000);
-  const daysInSafeZone = Math.floor((expiryDate - sixMonthsLater) / 86400000);
+  // 有效基準日（今日或明日），取其 00:00
+  const baseDate = new Date(isCrossDay ? plusSix : now);
+  baseDate.setHours(0, 0, 0, 0);
 
-  let bgGrad, ringColor, shadowColor, topLabel;
-  if (daysRemaining <= 0) {
-    bgGrad = 'linear-gradient(135deg,#991b1b 0%,#ef4444 100%)';
-    ringColor = '#fca5a5'; shadowColor = 'rgba(239,68,68,.35)';
-    topLabel = '⛔ 護照已過期';
-  } else if (daysInSafeZone <= 0) {
-    bgGrad = 'linear-gradient(135deg,#9a3412 0%,#f97316 100%)';
-    ringColor = '#fed7aa'; shadowColor = 'rgba(249,115,22,.35)';
-    topLabel = `⚠️ 未達六個月有效期`;
-  } else if (daysInSafeZone <= 90) {
-    bgGrad = 'linear-gradient(135deg,#92400e 0%,#f59e0b 100%)';
-    ringColor = '#fde68a'; shadowColor = 'rgba(245,158,11,.3)';
-    topLabel = '⚠️ 六個月緩衝將耗盡';
+  // 護照最低有效期：基準日 + 6 個月
+  const minExpiry = new Date(baseDate);
+  minExpiry.setMonth(minExpiry.getMonth() + 6);
+
+  const pad = n => String(n).padStart(2, '0');
+  const minExpiryStr = `${minExpiry.getFullYear()} / ${pad(minExpiry.getMonth()+1)} / ${pad(minExpiry.getDate())}`;
+  const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const plusSixStr = `${pad(plusSix.getHours())}:${pad(plusSix.getMinutes())}`;
+
+  if (isCrossDay) {
+    if (parent) {
+      parent.style.background = 'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)';
+      parent.style.boxShadow = '0 4px 20px rgba(59,130,246,.3)';
+    }
   } else {
-    bgGrad = 'linear-gradient(135deg,#065f46 0%,#10b981 100%)';
-    ringColor = '#6ee7b7'; shadowColor = 'rgba(16,185,129,.3)';
-    topLabel = '✓ 護照效期安全';
+    if (parent) {
+      parent.style.background = 'linear-gradient(135deg,#065f46 0%,#10b981 100%)';
+      parent.style.boxShadow = '0 4px 20px rgba(16,185,129,.28)';
+    }
   }
-
-  if (parent) {
-    parent.style.background = bgGrad;
-    parent.style.boxShadow = `0 4px 20px ${shadowColor}`;
-  }
-
-  const R = 26, C = (2 * Math.PI * R).toFixed(2);
-  const pct = Math.max(0, Math.min(1, daysInSafeZone / 365));
-  const dash = (C * (1 - pct)).toFixed(2);
-
-  const bigNum = daysRemaining <= 0 ? 'EXP' :
-                 daysInSafeZone > 0 ? daysInSafeZone : daysRemaining;
-  const smallLbl = daysRemaining <= 0 ? '' :
-                   daysInSafeZone > 0 ? '安全天數' : '剩餘天數';
-
-  const expiryStr = `${expiryDate.getFullYear()}/${String(expiryDate.getMonth()+1).padStart(2,'0')}/${String(expiryDate.getDate()).padStart(2,'0')} 到期`;
 
   el.innerHTML = `
-    <div class="strip-left">
-      <div class="strip-tag"><i class="bi bi-person-badge-fill"></i> 護照效期</div>
-      <div class="strip-name">${topLabel}</div>
-      <div style="font-size:.58rem;color:rgba(255,255,255,.55);margin-top:3px">${expiryStr}</div>
+    <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+      <div class="strip-tag"><i class="bi bi-person-badge-fill"></i> 旅客護照查驗</div>
+      <div style="font-size:.65rem;color:rgba(255,255,255,.65);margin-top:1px">護照有效期限不得早於</div>
+      <div style="font-size:1.22rem;font-weight:800;color:#fff;letter-spacing:.5px;line-height:1.2">${minExpiryStr}</div>
     </div>
-    <div style="flex:1"></div>
-    <div class="passport-ring-wrap">
-      <svg width="72" height="72" viewBox="0 0 64 64" style="overflow:visible">
-        <circle cx="32" cy="32" r="${R}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="5.5"/>
-        <circle cx="32" cy="32" r="${R}" fill="none" stroke="${ringColor}" stroke-width="5.5"
-          stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${dash}"
-          transform="rotate(-90 32 32)"/>
-        <text x="32" y="30" text-anchor="middle" dominant-baseline="middle"
-          fill="white" font-size="${String(bigNum).length > 3 ? 10 : 15}" font-weight="800"
-          font-family="-apple-system,BlinkMacSystemFont,sans-serif">${bigNum}</text>
-        <text x="32" y="46" text-anchor="middle" dominant-baseline="middle"
-          fill="rgba(255,255,255,0.6)" font-size="7"
-          font-family="-apple-system,BlinkMacSystemFont,sans-serif">${smallLbl}</text>
-      </svg>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;padding-left:10px">
+      <div style="font-size:.58rem;background:rgba(255,255,255,.18);border-radius:100px;padding:3px 9px;color:#fff;font-weight:700;white-space:nowrap">${isCrossDay ? '⭢ 跨日到達' : '✓ 當日到達'}</div>
+      <div style="font-size:1.3rem;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;line-height:1">${nowStr}</div>
+      <div style="font-size:.58rem;color:rgba(255,255,255,.5)">+6h → ${plusSixStr}${isCrossDay ? '（明）' : ''}</div>
     </div>
-    <div class="strip-arr">›</div>`;
+    <div class="strip-arr" style="margin-left:8px">›</div>`;
+
+  // 每分鐘整點更新
+  if (_passportTimer) clearTimeout(_passportTimer);
+  _passportTimer = setTimeout(loadPassportStrip, (60 - now.getSeconds()) * 1000);
 }
 
 function _getSession() {

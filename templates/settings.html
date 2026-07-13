@@ -308,16 +308,6 @@ body {
     <div class="tag-list" id="wxFavList"></div>
   </div>
 
-  <!-- 護照 -->
-  <div class="sec-label"><i class="bi bi-person-badge-fill" style="color:#7c3aed;font-size:.95rem"></i> 護照有效期</div>
-  <div class="sec-card">
-    <div class="s-row">
-      <span class="s-label">到期日</span>
-      <div class="s-val">
-        <input id="passportExpiry" class="s-input" type="date" style="color-scheme:light dark">
-      </div>
-    </div>
-  </div>
 
 </div><!-- /wrap -->
 
@@ -376,9 +366,6 @@ function loadProfile(id) {
   document.getElementById('dietLimit').value  = ds.dailyLimit  || 2500;
   document.getElementById('geminiKey').value  = ds.geminiKey   || '';
 
-  // Passport
-  document.getElementById('passportExpiry').value = localStorage.getItem('passportExpiry') || '';
-
   // Weather favorites
   const favs = _safeJson('wx_favorites_v2', []);
   const list  = document.getElementById('wxFavList');
@@ -418,11 +405,6 @@ function saveAll() {
   ds.dailyLimit = parseInt(document.getElementById('dietLimit').value) || 2500;
   ds.geminiKey  = document.getElementById('geminiKey').value.trim();
   localStorage.setItem('dietSettings', JSON.stringify(ds));
-
-  // Passport（全域）
-  const pe = document.getElementById('passportExpiry').value;
-  if (pe) localStorage.setItem('passportExpiry', pe);
-  else localStorage.removeItem('passportExpiry');
 
   _toast('已儲存');
   const sk = Config.getActive().syncKey;
