@@ -1454,9 +1454,10 @@ function loadPassportStrip() {
                   || plusSix.getMonth() !== now.getMonth()
                   || plusSix.getFullYear() !== now.getFullYear();
 
-  // 有效基準日（今日或明日），取其 00:00
+  // 有效基準日（今日或明日 +1 天緩衝），取其 00:00
   const baseDate = new Date(isCrossDay ? plusSix : now);
   baseDate.setHours(0, 0, 0, 0);
+  baseDate.setDate(baseDate.getDate() + 1);
 
   // 護照最低有效期：基準日 + 6 個月
   const minExpiry = new Date(baseDate);
