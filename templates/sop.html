@@ -63,6 +63,8 @@ body {
 #app.in-ssr       #view-ssr       { display: flex; }
 #app.in-codes     #view-hub       { display: none; }
 #app.in-codes     #view-codes     { display: flex; }
+#app.in-preg      #view-hub       { display: none; }
+#app.in-preg      #view-preg      { display: flex; }
 
 /* ── Header ── */
 .header {
@@ -413,6 +415,75 @@ body {
   #view-codes .cb-val { color: #e5e5ea; }
   #view-codes .cb-alliance { background: rgba(60,60,67,0.35); color: #aeaeb2; }
 }
+
+/* ── 孕婦查驗 ── */
+#view-preg { display: none; flex-direction: column; }
+.preg-wrap { padding: 16px 16px max(40px, calc(env(safe-area-inset-bottom) + 20px)); }
+.preg-mode-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.preg-mode-btn {
+  flex: 1; padding: 9px 0; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  font-size: 0.88rem; font-weight: 600; color: var(--sub);
+  cursor: pointer; font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.preg-mode-btn.active { background: rgba(217,20,48,0.08); border-color: var(--accent); color: var(--accent); }
+.preg-mode-btn:active { opacity: 0.7; }
+.preg-input-card {
+  background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px;
+  padding: 16px; margin-bottom: 18px; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+.preg-input-label { font-size: 0.72rem; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+.preg-date-input, .preg-week-input {
+  width: 100%; padding: 13px 16px; border: 1.5px solid var(--border); border-radius: 12px;
+  font-size: 1rem; color: var(--text); background: var(--bg);
+  outline: none; font-family: inherit; box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.preg-date-input:focus, .preg-week-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(217,20,48,0.1); }
+.preg-week-row { display: flex; align-items: center; gap: 10px; }
+.preg-week-input { text-align: center; font-size: 2rem; font-weight: 800; letter-spacing: -1px; max-width: 140px; }
+.preg-week-unit { font-size: 1.1rem; font-weight: 600; color: var(--sub); }
+.preg-result { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.preg-ring-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+.preg-ring-center { position: absolute; text-align: center; pointer-events: none; }
+.preg-week-big { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -2px; }
+.preg-week-sub  { font-size: 0.72rem; font-weight: 600; color: var(--sub); margin-top: 2px; }
+.preg-status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 18px; border-radius: 100px;
+  font-size: 0.82rem; font-weight: 700;
+}
+.preg-req-card {
+  width: 100%; background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 18px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+.preg-req-title {
+  padding: 12px 16px 8px; font-size: 0.72rem; font-weight: 700;
+  color: var(--sub); text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid var(--border);
+}
+.preg-req-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--border); }
+.preg-req-row:last-child { border-bottom: none; }
+.preg-req-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.preg-req-text { font-size: 0.88rem; color: var(--text); line-height: 1.4; }
+.preg-req-text .sub { font-size: 0.76rem; color: var(--sub); display: block; margin-top: 2px; }
+.preg-deny-card {
+  width: 100%; background: rgba(217,20,48,0.07); border: 1.5px solid rgba(217,20,48,0.25);
+  border-radius: 18px; padding: 24px 20px; text-align: center;
+}
+.preg-deny-title { font-size: 1.1rem; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+.preg-deny-sub   { font-size: 0.82rem; color: var(--sub); }
+.preg-fly-thru {
+  width: 100%; background: rgba(245,158,11,0.08); border: 1.5px solid rgba(245,158,11,0.25);
+  border-radius: 12px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: #92400e; font-weight: 600;
+}
+@media (prefers-color-scheme: dark) {
+  .preg-fly-thru { color: #fbbf24; border-color: rgba(245,158,11,0.2); background: rgba(245,158,11,0.07); }
+}
 </style>
 </head>
 <body>
@@ -452,6 +523,15 @@ body {
           <div class="hub-info">
             <div class="hub-name">代碼字典</div>
             <div class="hub-desc">機場 IATA · 航空公司代碼快查</div>
+          </div>
+          <div class="hub-arrow">›</div>
+        </div>
+
+        <div class="hub-card" style="--card-color:#be185d;--card-color-bg:rgba(190,24,93,0.08)" onclick="goSub('preg')">
+          <div class="hub-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+          <div class="hub-info">
+            <div class="hub-name">孕婦查驗</div>
+            <div class="hub-desc">週數計算 · 搭機資格 · 所需文件</div>
           </div>
           <div class="hub-arrow">›</div>
         </div>
@@ -531,7 +611,56 @@ body {
     </div>
   </div>
 
-  <!-- ── View 4：代碼字典 ── -->
+  <!-- ── View 4：孕婦查驗 ── -->
+  <div class="view" id="view-preg">
+    <div class="header">
+      <button class="back-btn" onclick="goHub()">← TIAS</button>
+      <div class="header-title">孕婦查驗</div>
+      <div class="header-sub">AirAsia X · Expectant Mother</div>
+      <div class="header-rule"></div>
+    </div>
+    <div class="content">
+      <div class="preg-wrap">
+        <div class="preg-mode-row">
+          <button class="preg-mode-btn active" id="pregModeDue"  onclick="setPregMode('due')">預產期</button>
+          <button class="preg-mode-btn"        id="pregModeWeek" onclick="setPregMode('week')">直接填週數</button>
+        </div>
+        <div class="preg-input-card">
+          <div id="pregInputDue">
+            <div class="preg-input-label">預產期（Due Date）</div>
+            <input type="date" id="pregDueDate" class="preg-date-input"
+                   style="color-scheme:light dark" oninput="calcPreg()">
+          </div>
+          <div id="pregInputWeek" style="display:none">
+            <div class="preg-input-label">目前懷孕週數</div>
+            <div class="preg-week-row">
+              <input type="number" id="pregWeekVal" class="preg-week-input"
+                     min="1" max="45" placeholder="—" oninput="calcPreg()">
+              <span class="preg-week-unit">週</span>
+            </div>
+          </div>
+        </div>
+        <div class="preg-result" id="pregResult" style="display:none">
+          <div class="preg-ring-wrap">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <circle cx="80" cy="80" r="64" fill="none" stroke="var(--border)" stroke-width="10"/>
+              <circle id="pregArc" cx="80" cy="80" r="64" fill="none" stroke="#10b981" stroke-width="10"
+                stroke-linecap="round" stroke-dasharray="402.12" stroke-dashoffset="402.12"
+                transform="rotate(-90 80 80)"/>
+            </svg>
+            <div class="preg-ring-center">
+              <div class="preg-week-big" id="pregWeekBig">—</div>
+              <div class="preg-week-sub">週</div>
+            </div>
+          </div>
+          <div class="preg-status-badge" id="pregStatusBadge"></div>
+          <div id="pregReqArea" style="width:100%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── View 5：代碼字典 ── -->
   <div class="view" id="view-codes">
     <div class="header">
       <button class="back-btn" onclick="goHub()">← TIAS</button>
@@ -738,13 +867,71 @@ const SEQ = {
 /* ── View 切換 ── */
 const _app = document.getElementById('app');
 function goSub(name) {
-  _app.classList.remove('in-broadcast', 'in-ssr', 'in-codes');
+  _app.classList.remove('in-broadcast', 'in-ssr', 'in-codes', 'in-preg');
   if (name === 'broadcast') { renderSeq('AK'); _app.classList.add('in-broadcast'); }
   else if (name === 'ssr')  { _app.classList.add('in-ssr'); }
   else if (name === 'codes') { cbInit(); _app.classList.add('in-codes'); }
+  else if (name === 'preg') { _app.classList.add('in-preg'); }
 }
 function goHub() {
-  _app.classList.remove('in-broadcast', 'in-ssr', 'in-codes');
+  _app.classList.remove('in-broadcast', 'in-ssr', 'in-codes', 'in-preg');
+}
+
+/* ── 孕婦查驗 ── */
+let _pregMode = 'due';
+function setPregMode(mode) {
+  _pregMode = mode;
+  document.getElementById('pregModeDue').classList.toggle('active',  mode === 'due');
+  document.getElementById('pregModeWeek').classList.toggle('active', mode === 'week');
+  document.getElementById('pregInputDue').style.display  = mode === 'due'  ? '' : 'none';
+  document.getElementById('pregInputWeek').style.display = mode === 'week' ? '' : 'none';
+  document.getElementById('pregResult').style.display    = 'none';
+}
+function calcPreg() {
+  let weeks;
+  if (_pregMode === 'due') {
+    const val = document.getElementById('pregDueDate').value;
+    if (!val) { document.getElementById('pregResult').style.display = 'none'; return; }
+    const due   = new Date(val + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    weeks = Math.round(40 - (due - today) / 86400000 / 7);
+  } else {
+    weeks = parseInt(document.getElementById('pregWeekVal').value);
+    if (!weeks || weeks < 1) { document.getElementById('pregResult').style.display = 'none'; return; }
+  }
+  weeks = Math.max(1, Math.min(45, weeks));
+
+  const R = 64, C = 2 * Math.PI * R;
+  const offset = (C * (1 - Math.min(1, weeks / 40))).toFixed(2);
+  let arcColor, statusBg, statusColor, statusText;
+  if (weeks < 28) {
+    arcColor = '#10b981'; statusBg = 'rgba(16,185,129,0.1)'; statusColor = '#065f46'; statusText = '✓ 可搭乘';
+  } else if (weeks <= 34) {
+    arcColor = '#f97316'; statusBg = 'rgba(249,115,22,0.1)'; statusColor = '#9a3412'; statusText = '⚠ 需額外文件';
+  } else {
+    arcColor = '#ef4444'; statusBg = 'rgba(239,68,68,0.1)'; statusColor = '#991b1b'; statusText = '⛔ 拒絕登機';
+  }
+  const arc = document.getElementById('pregArc');
+  arc.setAttribute('stroke', arcColor);
+  arc.setAttribute('stroke-dasharray', C.toFixed(2));
+  arc.setAttribute('stroke-dashoffset', offset);
+  document.getElementById('pregWeekBig').textContent = weeks;
+  document.getElementById('pregWeekBig').style.color = arcColor;
+  const badge = document.getElementById('pregStatusBadge');
+  badge.textContent = statusText;
+  badge.style.background = statusBg;
+  badge.style.color = statusColor;
+
+  const flyThru = `<div class="preg-fly-thru" style="margin-top:10px"><i class="bi bi-exclamation-triangle-fill"></i><span>Fly-Thru 訂位需填寫 2 份表格</span></div>`;
+  const area = document.getElementById('pregReqArea');
+  if (weeks >= 35) {
+    area.innerHTML = `<div class="preg-deny-card"><div class="preg-deny-title">⛔ 拒絕登機</div><div class="preg-deny-sub">35 週以上（含）不得搭乘 AirAsia X 班機</div></div>`;
+  } else if (weeks < 28) {
+    area.innerHTML = `<div class="preg-req-card"><div class="preg-req-title">所需文件</div><div class="preg-req-row"><span class="preg-req-icon">📝</span><div class="preg-req-text">Release &amp; Indemnity Form<span class="sub">所有文字一律英文填寫</span></div></div></div>${flyThru}`;
+  } else {
+    area.innerHTML = `<div class="preg-req-card"><div class="preg-req-title">所需文件</div><div class="preg-req-row"><span class="preg-req-icon">📝</span><div class="preg-req-text">Release &amp; Indemnity Form<span class="sub">所有文字一律英文填寫</span></div></div><div class="preg-req-row"><span class="preg-req-icon">🏥</span><div class="preg-req-text">醫生證明（英文版）<span class="sub">✔ 含懷孕週數　✔ Fit to Travel　✔ 30 天內開立　✔ 英文填寫</span></div></div></div>${flyThru}`;
+  }
+  document.getElementById('pregResult').style.display = '';
 }
 
 /* ── 廣播 SOP ── */

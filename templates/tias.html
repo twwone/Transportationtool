@@ -406,96 +406,6 @@ body {
 .picker-checked { border-color: #bfdbfe; background: #eff6ff; }
 .picker-checked .picker-check { color: #1a56db; }
 
-/* ════════════════════════════════════════
-   孕婦查驗面板
-   ════════════════════════════════════════ */
-.preg-wrap { padding: 16px 12px max(40px, calc(env(safe-area-inset-bottom) + 20px)); max-width: 480px; margin: 0 auto; }
-.preg-mode-row { display: flex; gap: 8px; margin-bottom: 14px; }
-.preg-mode-btn {
-  flex: 1; padding: 9px 0; border-radius: 12px; border: 1.5px solid #e5e5ea;
-  background: #fff; font-size: 0.88rem; font-weight: 600; color: #8e8e93;
-  cursor: pointer; font-family: inherit;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.preg-mode-btn.active { background: #eff6ff; border-color: #1a56db; color: #1a56db; }
-.preg-mode-btn:active { opacity: 0.7; }
-.preg-input-card {
-  background: #fff; border: 1.5px solid #e5e5ea; border-radius: 18px;
-  padding: 16px; margin-bottom: 18px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-}
-.preg-input-label { font-size: 0.72rem; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
-.preg-date-input, .preg-week-input {
-  width: 100%; padding: 13px 16px; border: 1.5px solid #e5e5ea; border-radius: 12px;
-  font-size: 1rem; color: #1c1c1e; background: #f9f9fb;
-  outline: none; font-family: inherit; box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.preg-date-input:focus, .preg-week-input:focus {
-  border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
-  background: #fff;
-}
-.preg-week-row { display: flex; align-items: center; gap: 10px; }
-.preg-week-input { text-align: center; font-size: 2rem; font-weight: 800; letter-spacing: -1px; max-width: 140px; }
-.preg-week-unit { font-size: 1.1rem; font-weight: 600; color: #8e8e93; }
-
-/* 結果區 */
-.preg-result { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.preg-ring-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
-.preg-ring-center { position: absolute; text-align: center; pointer-events: none; }
-.preg-week-big { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -2px; }
-.preg-week-sub  { font-size: 0.72rem; font-weight: 600; color: #8e8e93; margin-top: 2px; }
-.preg-status-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 18px; border-radius: 100px;
-  font-size: 0.82rem; font-weight: 700; letter-spacing: .01em;
-}
-.preg-req-card {
-  width: 100%; background: #fff; border: 1.5px solid #e5e5ea;
-  border-radius: 18px; overflow: hidden;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-}
-.preg-req-title {
-  padding: 12px 16px 8px; font-size: 0.72rem; font-weight: 700;
-  color: #8e8e93; text-transform: uppercase; letter-spacing: .05em;
-  border-bottom: 1px solid #f0f0f5;
-}
-.preg-req-row {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 11px 16px; border-bottom: 1px solid #f0f0f5;
-}
-.preg-req-row:last-child { border-bottom: none; }
-.preg-req-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
-.preg-req-text { font-size: 0.88rem; color: #1c1c1e; line-height: 1.4; }
-.preg-req-text .sub { font-size: 0.76rem; color: #8e8e93; display: block; margin-top: 2px; }
-.preg-deny-card {
-  width: 100%; background: #fef2f2; border: 1.5px solid rgba(239,68,68,0.3);
-  border-radius: 18px; padding: 24px 20px; text-align: center;
-}
-.preg-deny-icon { font-size: 2.2rem; margin-bottom: 8px; }
-.preg-deny-title { font-size: 1.1rem; font-weight: 800; color: #b91c1c; margin-bottom: 4px; }
-.preg-deny-sub   { font-size: 0.82rem; color: #ef4444; }
-.preg-fly-thru {
-  width: 100%; background: #fffbeb; border: 1.5px solid rgba(245,158,11,0.3);
-  border-radius: 12px; padding: 10px 14px;
-  display: flex; align-items: center; gap: 8px;
-  font-size: 0.82rem; color: #92400e; font-weight: 600;
-}
-
-@media (prefers-color-scheme: dark) {
-  .preg-mode-btn { background: #1c1c1e; border-color: #3a3a3c; color: #636366; }
-  .preg-mode-btn.active { background: rgba(26,86,219,0.15); border-color: #1a56db; color: #60a5fa; }
-  .preg-input-card, .preg-req-card { background: #1c1c1e; border-color: #3a3a3c; box-shadow: none; }
-  .preg-date-input, .preg-week-input { background: #2c2c2e; border-color: #3a3a3c; color: #f2f2f7; }
-  .preg-req-title { border-bottom-color: #2c2c2e; color: #636366; }
-  .preg-req-row { border-bottom-color: #2c2c2e; }
-  .preg-req-text { color: #f2f2f7; }
-  .preg-req-text .sub { color: #636366; }
-  .preg-week-sub { color: #636366; }
-  .preg-deny-card { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); }
-  .preg-fly-thru { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2); color: #fbbf24; }
-}
 
 @media (prefers-color-scheme: dark) {
   body { background: #000; color: #f2f2f7; }
@@ -662,10 +572,9 @@ body {
     <button class="refresh-btn" id="refreshBtn" onclick="load(true)">↻ 重新整理</button>
   </div>
   <div class="tabs">
-    <div class="tab active" id="tab-arr"  onclick="switchTab('arr')"><i class="bi bi-arrow-bar-down"></i> 抵達</div>
-    <div class="tab"        id="tab-dep"  onclick="switchTab('dep')"><i class="bi bi-arrow-bar-up"></i> 出發</div>
-    <div class="tab"        id="tab-all"  onclick="switchTab('all')"><i class="bi bi-search"></i> 全部航班</div>
-    <div class="tab"        id="tab-preg" onclick="switchTab('preg')"><i class="bi bi-heart-pulse-fill"></i> 孕婦查驗</div>
+    <div class="tab active" id="tab-arr" onclick="switchTab('arr')"><i class="bi bi-arrow-bar-down"></i> 抵達</div>
+    <div class="tab"        id="tab-dep" onclick="switchTab('dep')"><i class="bi bi-arrow-bar-up"></i> 出發</div>
+    <div class="tab"        id="tab-all" onclick="switchTab('all')"><i class="bi bi-search"></i> 全部航班</div>
     <div class="tab-indicator" id="tabIndicator"></div>
   </div>
   <div class="topbar-search" id="topbarSearch">
@@ -735,53 +644,6 @@ body {
   <div class="list" id="allResults"></div>
 </div>
 
-<div id="panelPreg" style="display:none">
-  <div class="preg-wrap">
-    <!-- 輸入模式切換 -->
-    <div class="preg-mode-row">
-      <button class="preg-mode-btn active" id="pregModeDue"  onclick="setPregMode('due')">預產期</button>
-      <button class="preg-mode-btn"        id="pregModeWeek" onclick="setPregMode('week')">直接填週數</button>
-    </div>
-
-    <!-- 輸入卡 -->
-    <div class="preg-input-card">
-      <div id="pregInputDue">
-        <div class="preg-input-label">預產期（Due Date）</div>
-        <input type="date" id="pregDueDate" class="preg-date-input"
-               style="color-scheme:light dark" oninput="calcPreg()">
-      </div>
-      <div id="pregInputWeek" style="display:none">
-        <div class="preg-input-label">目前懷孕週數</div>
-        <div class="preg-week-row">
-          <input type="number" id="pregWeekVal" class="preg-week-input"
-                 min="1" max="45" placeholder="—" oninput="calcPreg()">
-          <span class="preg-week-unit">週</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 結果 -->
-    <div class="preg-result" id="pregResult" style="display:none">
-      <!-- SVG 圓環 -->
-      <div class="preg-ring-wrap">
-        <svg id="pregSvg" width="160" height="160" viewBox="0 0 160 160">
-          <circle cx="80" cy="80" r="64" fill="none" stroke="#f0f0f5" stroke-width="10"/>
-          <circle id="pregArc" cx="80" cy="80" r="64" fill="none" stroke="#10b981" stroke-width="10"
-            stroke-linecap="round" stroke-dasharray="402.12" stroke-dashoffset="402.12"
-            transform="rotate(-90 80 80)"/>
-        </svg>
-        <div class="preg-ring-center">
-          <div class="preg-week-big" id="pregWeekBig">—</div>
-          <div class="preg-week-sub">週</div>
-        </div>
-      </div>
-
-      <div class="preg-status-badge" id="pregStatusBadge"></div>
-
-      <div id="pregReqArea" style="width:100%"></div>
-    </div>
-  </div>
-</div>
 
 <script>
 /* ── 動態元資料對照（由 /api/tias/flights 的 airline_map / airport_map 填入） ── */
@@ -843,8 +705,8 @@ const MILESTONES = [
 ];
 
 /* ── Tab 順序（用於判斷滑動方向） ── */
-const TAB_ORDER  = { arr: 0, dep: 1, all: 2, preg: 3 };
-const TAB_PANELS = { arr: 'listArr', dep: 'listDep', all: 'panelAll', preg: 'panelPreg' };
+const TAB_ORDER  = { arr: 0, dep: 1, all: 2 };
+const TAB_PANELS = { arr: 'listArr', dep: 'listDep', all: 'panelAll' };
 
 let _arrData = [], _depData = [], _allArr = [], _allDep = [];
 let _fltDataMap = {};   // fltKey → flight object, for detail sheet lookup
@@ -1582,111 +1444,6 @@ function staggerCards(container, interval) {
   });
 }
 
-/* ════════════════════════════════════════
-   孕婦查驗
-   ════════════════════════════════════════ */
-let _pregMode = 'due';
-
-function setPregMode(mode) {
-  _pregMode = mode;
-  document.getElementById('pregModeDue').classList.toggle('active',  mode === 'due');
-  document.getElementById('pregModeWeek').classList.toggle('active', mode === 'week');
-  document.getElementById('pregInputDue').style.display  = mode === 'due'  ? '' : 'none';
-  document.getElementById('pregInputWeek').style.display = mode === 'week' ? '' : 'none';
-  document.getElementById('pregResult').style.display    = 'none';
-}
-
-function calcPreg() {
-  let weeks;
-  if (_pregMode === 'due') {
-    const val = document.getElementById('pregDueDate').value;
-    if (!val) { document.getElementById('pregResult').style.display = 'none'; return; }
-    const due   = new Date(val + 'T00:00:00');
-    const today = new Date(); today.setHours(0,0,0,0);
-    const daysLeft = Math.floor((due - today) / 86400000);
-    weeks = Math.round(40 - daysLeft / 7);
-  } else {
-    weeks = parseInt(document.getElementById('pregWeekVal').value);
-    if (!weeks || weeks < 1) { document.getElementById('pregResult').style.display = 'none'; return; }
-  }
-
-  weeks = Math.max(1, Math.min(45, weeks));
-
-  // 圓環進度
-  const R = 64, C = 2 * Math.PI * R;
-  const pct = Math.min(1, weeks / 40);
-  const offset = (C * (1 - pct)).toFixed(2);
-
-  let arcColor, statusBg, statusColor, statusText;
-  if (weeks < 28) {
-    arcColor = '#10b981'; statusBg = 'rgba(16,185,129,0.1)'; statusColor = '#065f46'; statusText = '✓ 可搭乘';
-  } else if (weeks <= 34) {
-    arcColor = '#f97316'; statusBg = 'rgba(249,115,22,0.1)'; statusColor = '#9a3412'; statusText = '⚠ 需額外文件';
-  } else {
-    arcColor = '#ef4444'; statusBg = 'rgba(239,68,68,0.1)'; statusColor = '#991b1b'; statusText = '⛔ 拒絕登機';
-  }
-
-  const arc = document.getElementById('pregArc');
-  arc.setAttribute('stroke', arcColor);
-  arc.setAttribute('stroke-dasharray', C.toFixed(2));
-  arc.setAttribute('stroke-dashoffset', offset);
-
-  document.getElementById('pregWeekBig').textContent    = weeks;
-  document.getElementById('pregWeekBig').style.color    = arcColor;
-  const badge = document.getElementById('pregStatusBadge');
-  badge.textContent   = statusText;
-  badge.style.background = statusBg;
-  badge.style.color      = statusColor;
-
-  // 需求說明
-  const area = document.getElementById('pregReqArea');
-  if (weeks >= 35) {
-    area.innerHTML = `
-      <div class="preg-deny-card">
-        <div class="preg-deny-icon">🚫</div>
-        <div class="preg-deny-title">拒絕登機</div>
-        <div class="preg-deny-sub">35 週以上（含）不得搭乘 AirAsia X 班機</div>
-      </div>`;
-  } else {
-    const flyThru = `
-      <div class="preg-fly-thru" style="margin-top:10px">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-        <span>Fly-Thru 訂位需填寫 2 份表格</span>
-      </div>`;
-    if (weeks < 28) {
-      area.innerHTML = `
-        <div class="preg-req-card">
-          <div class="preg-req-title">所需文件</div>
-          <div class="preg-req-row">
-            <span class="preg-req-icon">📝</span>
-            <div class="preg-req-text">Release & Indemnity Form
-              <span class="sub">所有文字一律英文填寫</span>
-            </div>
-          </div>
-        </div>${flyThru}`;
-    } else {
-      area.innerHTML = `
-        <div class="preg-req-card">
-          <div class="preg-req-title">所需文件</div>
-          <div class="preg-req-row">
-            <span class="preg-req-icon">📝</span>
-            <div class="preg-req-text">Release & Indemnity Form
-              <span class="sub">所有文字一律英文填寫</span>
-            </div>
-          </div>
-          <div class="preg-req-row">
-            <span class="preg-req-icon">🏥</span>
-            <div class="preg-req-text">醫生證明（英文版）
-              <span class="sub">✔ 含懷孕週數　✔ 適航聲明（Fit to Travel）<br>✔ 30 天內開立　✔ 英文填寫</span>
-            </div>
-          </div>
-        </div>${flyThru}`;
-    }
-  }
-
-  document.getElementById('pregResult').style.display = '';
-}
-
 /* ── Tab 指示器滑動到目標位置 ── */
 function updateTabIndicator(tab) {
   const el  = document.getElementById('tab-' + tab);
@@ -1709,7 +1466,7 @@ function switchTab(tab) {
   const inPanel  = document.getElementById(TAB_PANELS[tab]);
 
   /* 立即更新 tab label + 指示線 */
-  ['arr','dep','all','preg'].forEach(t =>
+  ['arr','dep','all'].forEach(t =>
     document.getElementById('tab-' + t).classList.toggle('active', t === tab)
   );
   updateTabIndicator(tab);
@@ -1774,7 +1531,6 @@ function switchTab(tab) {
 
 function renderAirlineHint() {
   const hint = document.getElementById('airlineHint');
-  if (_tab === 'preg') { hint.textContent = ''; return; }
   if (_tab !== 'all') {
     hint.textContent = _watchCodes.size
       ? [..._watchCodes].map(code => {
