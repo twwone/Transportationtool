@@ -390,16 +390,13 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 }
 .nat-backdrop.open { opacity: 1; pointer-events: auto; }
 .nat-sheet {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
-  top: max(48px, calc(env(safe-area-inset-top) + 8px));
-  display: flex; flex-direction: column;
+  position: fixed; inset: 0; z-index: 100;
+  display: none; flex-direction: column;
   background: #f0f4ff;
-  border-radius: 20px 20px 0 0;
-  transform: translateY(100%);
-  transition: transform 0.34s cubic-bezier(0.22,1,0.36,1);
+  padding-top: max(12px, env(safe-area-inset-top));
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
-.nat-sheet.open { transform: none; }
+.nat-sheet.open { display: flex; }
 .nat-sheet-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 18px 10px;
@@ -470,7 +467,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 <body>
 
 <!-- DEBUG 診斷列（暫時，抓完問題會移除）-->
-<div id="dbg" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#000;color:#0f0;font:11px/1.4 monospace;padding:4px 8px;white-space:pre-wrap;word-break:break-all;">DBG build=0717c 載入中…</div>
+<div id="dbg" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#000;color:#0f0;font:11px/1.4 monospace;padding:4px 8px;white-space:pre-wrap;word-break:break-all;">DBG build=0717d 載入中…</div>
 
 <div class="topbar">
   <button class="back-btn" onclick="goBack()">‹ 返回</button>
@@ -530,7 +527,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 
 <script>
 /* ── DEBUG 探針（暫時）── */
-var DBG_BUILD = '0717c';
+var DBG_BUILD = '0717d';
 function dbg(msg){ var d=document.getElementById('dbg'); if(d) d.textContent = 'DBG '+DBG_BUILD+' '+msg; }
 window.addEventListener('error', function(ev){
   dbg('JS錯誤: '+(ev.message||ev.type)+' @'+(ev.filename||'').split('/').pop()+':'+ev.lineno);
