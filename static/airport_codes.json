@@ -8850,6 +8850,12 @@
     {"code":"YT","name_zh":"美亞特","region":"其他"},
     {"code":"ZA","name_zh":"南非共和國","region":"其他"},
     {"code":"ZM","name_zh":"尚比亞","region":"其他"},
-    {"code":"ZW","name_zh":"辛巴威（羅德西亞）","region":"其他"}
+    {"code":"ZW","name_zh":"辛巴威（羅德西亞）","region":"其他"},
+    {"code":"ME","name_zh":"蒙特內哥羅","region":"歐洲"},
+    {"code":"RS","name_zh":"塞爾維亞","region":"歐洲"},
+    {"code":"XK","name_zh":"科索沃","region":"歐洲"},
+    {"code":"PS","name_zh":"巴勒斯坦","region":"亞洲"},
+    {"code":"TL","name_zh":"東帝汶","region":"亞洲"},
+    {"code":"SS","name_zh":"南蘇丹","region":"其他"}
   ]
 }
