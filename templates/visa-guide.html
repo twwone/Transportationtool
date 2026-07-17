@@ -235,6 +235,11 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .badge-free    { background: #d3f9d8; color: #2b8a3e; }
 .badge-evisa   { background: #dbe4ff; color: #3b5bdb; }
 .badge-required{ background: #fff3bf; color: #e67700; }
+.card-basic-note {
+  padding: 0 17px 14px; font-size: 0.72rem; color: #8e8e93; line-height: 1.4;
+}
+.badge-voa    { background: #e3fafc; color: #0c8599; }
+.badge-denied { background: #ffe3e3; color: #c92a2a; }
 
 .stay-days { margin-top: 4px; font-size: 0.73rem; color: #8e8e93; }
 .chevron {
@@ -363,6 +368,65 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 }
 .disclaimer strong { font-weight: 700; }
 
+/* ── 國籍列 ── */
+.nat-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin: 10px 16px 0; padding: 12px 16px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 16px; cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 4px 14px rgba(0,0,0,0.06);
+  -webkit-tap-highlight-color: transparent;
+}
+.nat-bar:active { transform: scale(0.99); }
+.nat-label { font-size: 0.78rem; color: #8e8e93; font-weight: 600; }
+.nat-current { flex: 1; font-size: 0.95rem; font-weight: 700; color: #1c1c1e; }
+.nat-caret { color: #c7c7cc; font-size: 0.8rem; }
+
+/* ── 國籍選單（全螢幕 sheet）── */
+.nat-backdrop {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(0,0,0,0.35); opacity: 0; pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+.nat-backdrop.open { opacity: 1; pointer-events: auto; }
+.nat-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+  max-height: 82vh; display: flex; flex-direction: column;
+  background: #f0f4ff;
+  border-radius: 20px 20px 0 0;
+  transform: translateY(100%);
+  transition: transform 0.34s cubic-bezier(0.22,1,0.36,1);
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+.nat-sheet.open { transform: none; }
+.nat-sheet-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px 10px;
+}
+.nat-sheet-title { font-size: 1.05rem; font-weight: 700; }
+.nat-sheet-close {
+  background: none; border: none; color: #007aff;
+  font-size: 0.95rem; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.nat-search-wrap { padding: 0 16px 8px; }
+.nat-search-wrap input {
+  width: 100%; border: none; border-radius: 12px;
+  padding: 11px 14px; font-size: 0.92rem; font-family: inherit;
+  background: rgba(255,255,255,0.96); outline: none; color: #1c1c1e;
+}
+.nat-list { overflow-y: auto; padding: 4px 12px 8px; }
+.nat-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 12px; border-radius: 12px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nat-item:active { background: rgba(0,0,0,0.05); }
+.nat-item.selected { background: rgba(0,122,255,0.1); }
+.nat-item .nat-flag { font-size: 1.5rem; }
+.nat-item .nat-name { flex: 1; font-size: 0.95rem; font-weight: 600; color: #1c1c1e; }
+.nat-item .nat-check { color: #007aff; opacity: 0; }
+.nat-item.selected .nat-check { opacity: 1; }
+
 @media (prefers-color-scheme: dark) {
   body { background: #000; color: #f2f2f7; }
   .topbar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
@@ -381,6 +445,8 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   .badge-free    { background: rgba(43,138,62,0.2);  color: #4ade80; }
   .badge-evisa   { background: rgba(59,91,219,0.2);  color: #818cf8; }
   .badge-required{ background: rgba(230,119,0,0.2);  color: #fb923c; }
+  .badge-voa    { background: rgba(12,133,153,0.2); color: #3bc9db; }
+  .badge-denied { background: rgba(201,42,42,0.2);  color: #f87171; }
   .badge-valid   { background: rgba(43,138,62,0.2);  color: #4ade80; }
   .badge-warn    { background: rgba(201,42,42,0.2);  color: #f87171; }
   .doc-tag.must  { background: rgba(201,42,42,0.15); color: #f87171; }
@@ -408,6 +474,24 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   <div class="topbar-spacer"></div>
 </div>
 
+<div class="nat-bar" id="natBar" onclick="openNatPicker()">
+  <span class="nat-label">旅客國籍</span>
+  <span class="nat-current" id="natCurrent">🇹🇼 台灣</span>
+  <span class="nat-caret"><i class="bi bi-chevron-down"></i></span>
+</div>
+
+<div class="nat-sheet" id="natSheet">
+  <div class="nat-sheet-head">
+    <div class="nat-sheet-title">選擇旅客國籍</div>
+    <button class="nat-sheet-close" onclick="closeNatPicker()">完成</button>
+  </div>
+  <div class="nat-search-wrap">
+    <input id="natSearch" type="search" placeholder="搜尋國籍…" autocomplete="off">
+  </div>
+  <div class="nat-list" id="natList"></div>
+</div>
+<div class="nat-backdrop" id="natBackdrop" onclick="closeNatPicker()"></div>
+
 <div class="pinned-section">
   <div class="section-header">常用熱門航點</div>
   <div class="pinned-grid" id="pinnedGrid"></div>
@@ -425,30 +509,94 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 <div class="chips" id="chipRow">
   <div class="chip active" data-filter="all"      onclick="setFilter('all',this)">全部</div>
   <div class="chip"        data-filter="free"     onclick="setFilter('free',this)">免簽</div>
-  <div class="chip"        data-filter="evisa"    onclick="setFilter('evisa',this)">電子授權</div>
+  <div class="chip"        data-filter="voa"      onclick="setFilter('voa',this)">落地簽</div>
+  <div class="chip"        data-filter="evisa"    onclick="setFilter('evisa',this)">電子簽/授權</div>
   <div class="chip"        data-filter="required" onclick="setFilter('required',this)">需簽證</div>
 </div>
 
 <div class="count-bar" id="countBar"></div>
 
 <div class="disclaimer">
-  <strong><i class="bi bi-exclamation-triangle-fill"></i> 注意：</strong>本指南資料僅供參考，出發前請至<strong>外交部領事事務局</strong>或各國官方移民機關確認最新入境規定。
+  <strong><i class="bi bi-exclamation-triangle-fill"></i> 注意：</strong>
+  非台灣護照之簽證狀態資料來源為 <strong>passport-index-dataset</strong>（社群整理，僅供大方向參考）；
+  台灣護照為手動整理之詳細資料。實際入境文件與最新規定，一律以<strong>各國官方移民機關或外交部領事事務局</strong>為準。
 </div>
 
 <div class="list" id="cardList"></div>
 
 <script>
-let _data   = [];
+let _rich   = [];     // visa-data.json：台灣手作詳細卡
+let _matrix = {};     // visa-matrix.json：國籍→目的地→狀態
+let _countries = [];  // visa-countries.json：代碼→中文名→國旗
+let _natMap = {};     // 代碼→{name_zh,flag} 快查
+let _nat    = 'TW';   // 目前選定國籍，預設台灣
 let _filter = 'all';
 let _query  = '';
 let _rafId  = null;
 
+/* 狀態碼 → class + 標籤 */
+const STATUS = {
+  f: { cls: 'free',     label: '免簽' },
+  o: { cls: 'voa',      label: '落地簽' },
+  e: { cls: 'evisa',    label: '電子簽' },
+  a: { cls: 'evisa',    label: '電子授權' },
+  r: { cls: 'required', label: '需簽證' },
+  n: { cls: 'denied',   label: '禁止入境' },
+};
+/* 預設顯示的熱門航點（真實 ISO2 代碼）*/
+const HOT = ['JP','KR','US','TH','VN','SG','MY','PH','ID','HK','MO','AU','CA','CN'];
+
 /* ── Fetch & init ── */
+function buildNatBar() {
+  const cur = _natMap[_nat] || { flag: '🏳️', name_zh: _nat };
+  document.getElementById('natCurrent').textContent = `${cur.flag} ${cur.name_zh}`;
+}
+
+function renderNatList(q = '') {
+  const lq = q.trim().toLowerCase();
+  const items = _countries
+    .filter(c => !lq || c.name_zh.includes(lq) || c.code.toLowerCase().includes(lq))
+    .map(c => `
+      <div class="nat-item ${c.code === _nat ? 'selected' : ''}" onclick="pickNat('${c.code}')">
+        <span class="nat-flag">${c.flag}</span>
+        <span class="nat-name">${c.name_zh}</span>
+        <span class="nat-check"><i class="bi bi-check-lg"></i></span>
+      </div>`).join('');
+  document.getElementById('natList').innerHTML = items ||
+    '<div class="empty" style="padding:30px;">找不到國籍</div>';
+}
+
+function openNatPicker() {
+  renderNatList('');
+  document.getElementById('natSearch').value = '';
+  document.getElementById('natBackdrop').classList.add('open');
+  document.getElementById('natSheet').classList.add('open');
+}
+function closeNatPicker() {
+  document.getElementById('natBackdrop').classList.remove('open');
+  document.getElementById('natSheet').classList.remove('open');
+}
+function pickNat(code) {
+  _nat = code;
+  buildNatBar();
+  closeNatPicker();
+  buildPinned();
+  render();
+}
+
 async function init() {
   try {
-    const r = await fetch('/static/visa-data.json');
-    const j = await r.json();
-    _data = j.routes || [];
+    const [rich, matrix, countries] = await Promise.all([
+      fetch('/static/visa-data.json').then(r => r.json()),
+      fetch('/static/visa-matrix.json').then(r => r.json()),
+      fetch('/static/visa-countries.json').then(r => r.json()),
+    ]);
+    _rich = rich.routes || [];
+    _matrix = matrix;
+    _countries = countries;
+    _natMap = {};
+    countries.forEach(c => { _natMap[c.code] = c; });
+    buildNatBar();
     buildPinned();
     render();
   } catch(e) {
@@ -459,14 +607,15 @@ async function init() {
 
 /* ── Pinned hot destinations ── */
 function buildPinned() {
-  const pinned = _data.filter(r => r.pinned);
   const grid = document.getElementById('pinnedGrid');
-  grid.innerHTML = pinned.map(r => `
-    <button class="pin-btn" onclick="jumpTo('${r.id}')" style="box-shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 14px ${r.color}22">
-      <span class="pin-flag">${r.flag}</span>
-      <span class="pin-name">${r.country_zh}</span>
-    </button>
-  `).join('');
+  grid.innerHTML = HOT.map(code => {
+    const meta = _natMap[code] || { flag: '🏳️', name_zh: code };
+    return `
+      <button class="pin-btn" onclick="jumpTo('${code}')">
+        <span class="pin-flag">${meta.flag}</span>
+        <span class="pin-name">${meta.name_zh}</span>
+      </button>`;
+  }).join('');
 }
 
 /* ── Jump to card (from pinned button) ── */
@@ -486,7 +635,8 @@ function jumpTo(id) {
     if (!card) return;
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => {
-      if (!card.classList.contains('open')) toggleCard(id);
+      const hasBody = card.querySelector('.card-body');
+      if (hasBody && !card.classList.contains('open')) toggleCard(id);
       card.style.transition = 'box-shadow 0.35s cubic-bezier(0.22,1,0.36,1)';
       card.style.boxShadow = '0 0 0 3.5px rgba(0,122,255,0.42), 0 8px 32px rgba(0,0,0,0.12)';
       setTimeout(() => {
@@ -504,20 +654,60 @@ function scheduleRender() {
   _rafId = requestAnimationFrame(() => { render(); _rafId = null; });
 }
 
-function badgeClass(ec) {
-  if (ec === 'free')   return 'badge-free';
-  if (ec === 'evisa')  return 'badge-evisa';
-  return 'badge-required';
-}
-
-function matches(r, q) {
+function matchesCode(code, q) {
   if (!q) return true;
   const lq = q.toLowerCase();
-  if (r.country_zh.includes(lq)) return true;
-  if (r.country_en.toLowerCase().includes(lq)) return true;
-  if (r.id.toLowerCase() === lq) return true;
-  if (r.search_tags && r.search_tags.some(t => t.toLowerCase().includes(lq))) return true;
+  const meta = _natMap[code];
+  if (meta && meta.name_zh.includes(lq)) return true;
+  if (code.toLowerCase() === lq || code.toLowerCase().includes(lq)) return true;
+  const r = _rich.find(x => x.id === code);
+  if (r) {
+    if (r.country_en && r.country_en.toLowerCase().includes(lq)) return true;
+    if (r.search_tags && r.search_tags.some(t => t.toLowerCase().includes(lq))) return true;
+  }
   return false;
+}
+
+/* 取某目的地對目前國籍的狀態物件 {s,d} 或 null */
+function lookupStatus(destCode) {
+  const row = _matrix[_nat];
+  return row ? (row[destCode] || null) : null;
+}
+
+/* 目前國籍要顯示的目的地代碼清單 */
+function destUniverse() {
+  const row = _matrix[_nat] || {};
+  let codes = Object.keys(row);
+  /* 台灣：把手作詳細卡的 id（含 EU 這種非 ISO2）也納入 */
+  if (_nat === 'TW') {
+    _rich.forEach(r => { if (!codes.includes(r.id)) codes.push(r.id); });
+  }
+  return codes;
+}
+
+function basicCardHTML(code) {
+  const st = lookupStatus(code);
+  const meta = _natMap[code] || { flag: '🏳️', name_zh: code };
+  const info = st ? STATUS[st.s] : null;
+  const badge = info
+    ? `<span class="visa-badge badge-${info.cls}">${info.label}${st.d ? ' ' + st.d + ' 天' : ''}</span>`
+    : `<span class="visa-badge badge-required">資料不足</span>`;
+  const days = (st && st.d)
+    ? `<div class="stay-days"><i class="bi bi-calendar3"></i> 最長停留 ${st.d} 天</div>` : '';
+  return `
+  <div class="country-card basic" id="card-${code}">
+    <div class="card-header" style="cursor:default">
+      <div class="flag-wrap">${meta.flag}</div>
+      <div class="card-meta">
+        <div class="country-name">${meta.name_zh}</div>
+        ${badge}
+        ${days}
+      </div>
+    </div>
+    <div class="card-basic-note">
+      <i class="bi bi-info-circle"></i> 詳細文件與最新規定請洽各國官方
+    </div>
+  </div>`;
 }
 
 function buildCardHTML(r) {
@@ -548,7 +738,7 @@ function buildCardHTML(r) {
         <div class="country-name">${r.country_zh}
           <span class="country-name-en">${r.country_en}</span>
         </div>
-        <span class="visa-badge ${badgeClass(r.entry_class)}">${r.visa_type}</span>
+        <span class="visa-badge badge-${r.entry_class === 'free' ? 'free' : r.entry_class === 'evisa' ? 'evisa' : 'required'}">${r.visa_type}</span>
         <div class="stay-days"><i class="bi bi-calendar3"></i> 最長停留 ${r.stay_days} 天</div>
       </div>
       <span class="chevron">›</span>
@@ -572,23 +762,44 @@ function buildCardHTML(r) {
 
 function render() {
   const q = _query.trim().toLowerCase();
-  const filtered = _data.filter(r => {
-    if (_filter !== 'all' && r.entry_class !== _filter) return false;
-    return matches(r, q);
+  let codes = destUniverse();
+
+  if (_filter !== 'all') {
+    codes = codes.filter(code => {
+      const st = lookupStatus(code);
+      return st && STATUS[st.s] && STATUS[st.s].cls === _filter;
+    });
+  }
+  if (q) {
+    codes = codes.filter(code => matchesCode(code, q));
+  } else if (_filter === 'all') {
+    codes = codes.filter(code => HOT.includes(code));
+  }
+
+  codes.sort((a, b) => {
+    const ia = HOT.indexOf(a), ib = HOT.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    const na = (_natMap[a] || {}).name_zh || a;
+    const nb = (_natMap[b] || {}).name_zh || b;
+    return na.localeCompare(nb, 'zh-Hant');
   });
 
+  const total = Object.keys(_matrix[_nat] || {}).length;
   document.getElementById('countBar').textContent =
-    filtered.length === _data.length
-      ? `共 ${_data.length} 個目的地`
-      : `顯示 ${filtered.length} / ${_data.length} 個目的地`;
+    q || _filter !== 'all'
+      ? `顯示 ${codes.length} 個目的地`
+      : `熱門航點 ${codes.length} 個（搜尋可查全部 ${total} 國）`;
 
-  if (!filtered.length) {
+  if (!codes.length) {
     document.getElementById('cardList').innerHTML =
       '<div class="empty"><span class="empty-icon"><i class="bi bi-search"></i></span>找不到符合的目的地</div>';
     return;
   }
 
-  document.getElementById('cardList').innerHTML = filtered.map(buildCardHTML).join('');
+  document.getElementById('cardList').innerHTML = codes.map(code => {
+    const rich = (_nat === 'TW') ? _rich.find(r => r.id === code) : null;
+    return rich ? buildCardHTML(rich) : basicCardHTML(code);
+  }).join('');
 
   /* Staggered fade-in via CSS transitions (GPU-composited, 60fps) */
   const cards = document.querySelectorAll('.country-card');
@@ -675,6 +886,10 @@ function goBack() {
 /* Search input listener */
 document.getElementById('searchInput').addEventListener('input', function() {
   onSearch(this.value);
+});
+
+document.getElementById('natSearch').addEventListener('input', function() {
+  renderNatList(this.value);
 });
 
 /* Prevent double-tap zoom */
