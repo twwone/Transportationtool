@@ -414,7 +414,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   padding: 11px 14px; font-size: 0.92rem; font-family: inherit;
   background: rgba(255,255,255,0.96); outline: none; color: #1c1c1e;
 }
-.nat-list { overflow-y: auto; padding: 4px 12px 8px; }
+.nat-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 12px 8px; }
 .nat-item {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 12px; border-radius: 12px; cursor: pointer;
@@ -571,10 +571,15 @@ function openNatPicker() {
   document.getElementById('natSearch').value = '';
   document.getElementById('natBackdrop').classList.add('open');
   document.getElementById('natSheet').classList.add('open');
+  syncNatSheetToKeyboard();
 }
 function closeNatPicker() {
   document.getElementById('natBackdrop').classList.remove('open');
-  document.getElementById('natSheet').classList.remove('open');
+  const sheet = document.getElementById('natSheet');
+  sheet.classList.remove('open');
+  /* 還原鍵盤調整用的 inline 樣式 */
+  sheet.style.bottom = '';
+  sheet.style.maxHeight = '';
 }
 function pickNat(code) {
   _nat = code;
@@ -891,6 +896,20 @@ document.getElementById('searchInput').addEventListener('input', function() {
 document.getElementById('natSearch').addEventListener('input', function() {
   renderNatList(this.value);
 });
+
+/* iOS 軟鍵盤彈出時，把國籍選單抬到鍵盤上方並縮高，避免清單被鍵盤擋住 */
+function syncNatSheetToKeyboard() {
+  const sheet = document.getElementById('natSheet');
+  if (!window.visualViewport || !sheet.classList.contains('open')) return;
+  const vv = window.visualViewport;
+  const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  sheet.style.bottom = kb + 'px';
+  sheet.style.maxHeight = Math.min(window.innerHeight * 0.82, vv.height - 24) + 'px';
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', syncNatSheetToKeyboard);
+  window.visualViewport.addEventListener('scroll', syncNatSheetToKeyboard);
+}
 
 /* Prevent double-tap zoom */
 let _lastTap = 0;
