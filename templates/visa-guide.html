@@ -391,7 +391,8 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .nat-backdrop.open { opacity: 1; pointer-events: auto; }
 .nat-sheet {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
-  max-height: 82vh; display: flex; flex-direction: column;
+  top: max(48px, calc(env(safe-area-inset-top) + 8px));
+  display: flex; flex-direction: column;
   background: #f0f4ff;
   border-radius: 20px 20px 0 0;
   transform: translateY(100%);
@@ -571,15 +572,10 @@ function openNatPicker() {
   document.getElementById('natSearch').value = '';
   document.getElementById('natBackdrop').classList.add('open');
   document.getElementById('natSheet').classList.add('open');
-  syncNatSheetToKeyboard();
 }
 function closeNatPicker() {
   document.getElementById('natBackdrop').classList.remove('open');
-  const sheet = document.getElementById('natSheet');
-  sheet.classList.remove('open');
-  /* 還原鍵盤調整用的 inline 樣式 */
-  sheet.style.bottom = '';
-  sheet.style.maxHeight = '';
+  document.getElementById('natSheet').classList.remove('open');
 }
 function pickNat(code) {
   _nat = code;
@@ -896,20 +892,6 @@ document.getElementById('searchInput').addEventListener('input', function() {
 document.getElementById('natSearch').addEventListener('input', function() {
   renderNatList(this.value);
 });
-
-/* iOS 軟鍵盤彈出時，把國籍選單抬到鍵盤上方並縮高，避免清單被鍵盤擋住 */
-function syncNatSheetToKeyboard() {
-  const sheet = document.getElementById('natSheet');
-  if (!window.visualViewport || !sheet.classList.contains('open')) return;
-  const vv = window.visualViewport;
-  const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-  sheet.style.bottom = kb + 'px';
-  sheet.style.maxHeight = Math.min(window.innerHeight * 0.82, vv.height - 24) + 'px';
-}
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', syncNatSheetToKeyboard);
-  window.visualViewport.addEventListener('scroll', syncNatSheetToKeyboard);
-}
 
 /* Prevent double-tap zoom */
 let _lastTap = 0;
