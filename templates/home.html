@@ -18,13 +18,14 @@
 html, body { overscroll-behavior: none; }
 
 :root {
-  --bg:       #f0f4ff;
+  --bg:       #fbfbfd;
   --surface:  #ffffff;
-  --border:   rgba(0,0,0,0.07);
-  --text:     #0f0f1a;
-  --sub:      #6b7280;
-  --radius-l: 28px;
-  --radius-m: 20px;
+  --border:   rgba(0,0,0,0.08);
+  --divider:  rgba(0,0,0,0.09);
+  --text:     #1d1d1f;
+  --sub:      #86868b;
+  --radius-l: 20px;
+  --radius-m: 14px;
 }
 
 /* ── 動畫 ── */
@@ -55,16 +56,16 @@ body {
   flex-direction: column;
   align-items: center;
   padding:
-    max(20px, env(safe-area-inset-top) + 8px)
-    16px
-    max(48px, env(safe-area-inset-bottom) + 20px);
+    max(28px, env(safe-area-inset-top) + 16px)
+    20px
+    max(56px, env(safe-area-inset-bottom) + 28px);
 }
 
 /* ── Header ── */
 .header {
   width: 100%;
   max-width: 480px;
-  margin-bottom: 22px;
+  margin-bottom: 40px;
   animation: headerSlide 0.5s cubic-bezier(0.22,1,0.36,1) both;
 }
 .header-top {
@@ -75,23 +76,23 @@ body {
 }
 .greeting {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 590;
   color: var(--sub);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: 2px;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
 }
 .header-title {
-  font-size: 2rem;
-  font-weight: 800;
+  font-size: 2.6rem;
+  font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.5px;
-  line-height: 1.1;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
 }
 .header-sub {
-  font-size: 0.8rem;
+  font-size: 0.92rem;
   color: var(--sub);
-  margin-top: 6px;
+  margin-top: 10px;
+  letter-spacing: -0.01em;
 }
 .profile-chip {
   display: inline-flex;
@@ -115,11 +116,11 @@ body {
 .profile-chip:active { transform: scale(0.92); }
 .pc-chevron { font-size: 0.58rem; color: var(--sub); }
 
-/* ── Bento Grid ── */
+/* ── Feature List（原 bento grid，改為 Apple 官網式全寬垂直清單）── */
 .bento {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   width: 100%;
   max-width: 480px;
 }
@@ -128,71 +129,48 @@ body {
 .card {
   display: block;
   text-decoration: none;
-  border-radius: var(--radius-l);
   position: relative;
-  overflow: hidden;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    transform 0.3s cubic-bezier(0.25,1,0.5,1),
-    box-shadow 0.3s cubic-bezier(0.25,1,0.5,1);
-  will-change: transform;
+  transition: opacity 0.3s cubic-bezier(0.25,1,0.5,1);
+  will-change: transform, opacity;
   opacity: 0;
 }
-.card:active {
-  transform: scale(0.955) !important;
-  transition: transform 0.18s cubic-bezier(0.25,1,0.5,1) !important;
-}
-@media (hover: hover) {
-  .card:hover { transform: translateY(-4px) scale(1.01); }
-}
+.card:active { opacity: 0.55 !important; transition: opacity 0.12s ease !important; }
 
-/* ── Hero 卡片（航空看板，全寬） ── */
+/* ── Hero 卡片（航空看板，Apple 官網式開場區塊） ── */
 .card-hero {
-  grid-column: 1 / -1;
-  height: 132px;
-  background: linear-gradient(135deg, #3b82f6 0%, #818cf8 50%, #6366f1 100%);
-  background-size: 200% 200%;
-  animation-name: gradientShift, fadeUp;
-  animation-duration: 8s, 0.6s;
-  animation-timing-function: ease, cubic-bezier(0.22,1,0.36,1);
-  animation-iteration-count: infinite, 1;
-  animation-delay: 0s, 0.05s;
-  animation-fill-mode: none, both;
-  box-shadow: 0 8px 32px rgba(99,102,241,0.28), 0 2px 8px rgba(59,130,246,0.18);
-}
-.card-hero:active { box-shadow: 0 4px 16px rgba(99,102,241,0.18) !important; }
-@media (hover: hover) {
-  .card-hero:hover {
-    box-shadow: 0 16px 40px rgba(99,102,241,0.36), 0 4px 12px rgba(59,130,246,0.2);
-  }
+  border-radius: var(--radius-l);
+  margin-bottom: 36px;
+  padding: 32px 26px 28px;
+  background: linear-gradient(165deg, #1d1d1f 0%, #000 70%);
+  animation-name: fadeUp;
+  animation-duration: 0.6s;
+  animation-timing-function: cubic-bezier(0.22,1,0.36,1);
+  animation-delay: 0.05s;
+  animation-fill-mode: both;
 }
 .hero-inner {
-  position: absolute;
-  inset: 0;
-  padding: 14px 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 18px;
 }
 .hero-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
 }
-.hero-icon { font-size: 2.0rem; line-height: 1; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2)); }
+.hero-icon { font-size: 1.5rem; line-height: 1; color: rgba(255,255,255,0.9); }
 .live-badge {
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(255,255,255,0.18);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.28);
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: 100px;
   padding: 4px 10px 4px 7px;
   font-size: 0.65rem;
   font-weight: 700;
-  color: #fff;
+  color: rgba(255,255,255,0.85);
   letter-spacing: 0.04em;
 }
 .live-dot {
@@ -204,209 +182,136 @@ body {
 }
 .hero-bottom {}
 .hero-title {
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-size: 2rem;
+  font-weight: 700;
   color: #fff;
-  letter-spacing: -0.3px;
-  margin-bottom: 4px;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin-bottom: 8px;
 }
 .hero-desc {
-  font-size: 0.76rem;
-  color: rgba(255,255,255,0.72);
+  font-size: 0.92rem;
+  color: rgba(255,255,255,0.56);
   line-height: 1.4;
-}
-/* 光折射邊框 */
-.card-hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-l);
-  padding: 1px;
-  background: linear-gradient(155deg,rgba(255,255,255,0.45) 0%,rgba(255,255,255,0.04) 60%,rgba(255,255,255,0.15) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: destination-out;
-  mask-composite: exclude;
-  pointer-events: none;
+  letter-spacing: -0.01em;
 }
 
-/* ── 小卡片（2 欄）── */
+/* ── 功能列（原小卡片，改為 Apple 官網式全寬清單列）── */
 .card-sm {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
-  padding: 20px 18px 18px;
-  min-height: 148px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
-  text-align: center;
-  gap: 10px;
+  gap: 16px;
+  padding: 18px 4px;
+  border-bottom: 1px solid var(--divider);
 }
+.card-sm:last-of-type { border-bottom: none; }
 .sm-icon {
-  font-size: 2.2rem;
+  flex-shrink: 0;
+  width: 30px;
+  font-size: 1.4rem;
   line-height: 1;
+  text-align: center;
   transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
 }
 @media (hover: hover) {
-  .card-sm:hover .sm-icon { transform: scale(1.12) rotate(-5deg); }
+  .card-sm:hover .sm-icon { transform: scale(1.1); }
 }
+.sm-text { flex: 1; min-width: 0; }
 .sm-title {
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 1.02rem;
+  font-weight: 590;
   line-height: 1.3;
-  letter-spacing: -0.1px;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
-/* 每張小卡的底部色條 */
-.card-sm::before {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 3px;
-  border-radius: 0 0 var(--radius-l) var(--radius-l);
-  opacity: 0;
-  transition: opacity 0.2s;
+.sm-desc {
+  font-size: 0.82rem;
+  color: var(--sub);
+  margin-top: 2px;
+  letter-spacing: -0.005em;
 }
-@media (hover: hover) {
-  .card-sm:hover::before { opacity: 1; }
+.sm-chevron {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--sub);
+  opacity: 0.6;
 }
 
-/* 各卡顏色：icon 主色 + 淡底 + 統一深色標題 */
-.card-thsr     { background: #fff8f3; border-color: rgba(249,115,22,0.15); }
-.card-thsr .sm-icon  { color: #f97316; }
-.card-thsr .sm-title { color: var(--text); }
-.card-thsr::before   { background: linear-gradient(90deg,#ff9500,#ff6a00); }
+/* 各項目 icon 識別色（僅圖示上色，不再整塊填色） */
+.card-thsr      .sm-icon { color: #f97316; }
+.card-mrt       .sm-icon { color: #7c3aed; }
+.card-schedule  .sm-icon { color: #059669; }
+.card-amenities .sm-icon { color: #0891b2; }
+.card-visa      .sm-icon { color: #d97706; }
+.card-share     .sm-icon { color: #2563eb; }
+.card-weather   .sm-icon { color: #0284c7; }
+.card-diet      .sm-icon { color: #16a34a; }
+.card-memo      .sm-icon { font-family: Georgia, serif; font-weight: normal; color: #92400e; }
+.card-sop       .sm-icon { color: #d91430; }
+.card-settings  .sm-icon { color: #64748b; }
 
-.card-mrt     { background: #faf5ff; border-color: rgba(124,58,237,0.15); }
-.card-mrt .sm-icon  { color: #7c3aed; }
-.card-mrt .sm-title { color: var(--text); }
-.card-mrt::before   { background: linear-gradient(90deg,#8b5cf6,#7c3aed); }
-
-.card-schedule     { background: #f0fdf9; border-color: rgba(5,150,105,0.15); }
-.card-schedule .sm-icon  { color: #059669; }
-.card-schedule .sm-title { color: var(--text); }
-.card-schedule::before   { background: linear-gradient(90deg,#10b981,#059669); }
-
-.card-amenities     { background: #f0f9ff; border-color: rgba(8,145,178,0.15); }
-.card-amenities .sm-icon  { color: #0891b2; }
-.card-amenities .sm-title { color: var(--text); }
-.card-amenities::before   { background: linear-gradient(90deg,#06b6d4,#0891b2); }
-
-.card-visa     { background: #fffbeb; border-color: rgba(217,119,6,0.15); }
-.card-visa .sm-icon  { color: #d97706; }
-.card-visa .sm-title { color: var(--text); }
-.card-visa::before   { background: linear-gradient(90deg,#f59e0b,#d97706); }
-
-
-.card-share     { background: #eff6ff; border-color: rgba(37,99,235,0.15); }
-.card-share .sm-icon  { color: #2563eb; }
-.card-share .sm-title { color: var(--text); }
-.card-share::before   { background: linear-gradient(90deg,#3b82f6,#2563eb); }
-
-.card-weather     { background: #f0f9ff; border-color: rgba(2,132,199,0.15); }
-.card-weather .sm-icon  { color: #0284c7; }
-.card-weather .sm-title { color: var(--text); }
-.card-weather::before   { background: linear-gradient(90deg,#0ea5e9,#0284c7); }
-
-.card-diet     { background: #f0fdf4; border-color: rgba(22,163,74,0.15); }
-.card-diet .sm-icon  { color: #16a34a; }
-.card-diet .sm-title { color: var(--text); }
-.card-diet::before   { background: linear-gradient(90deg,#34d399,#10b981); }
-
-.card-memo     { background: #fdf8f0; border-color: rgba(146,64,14,0.15); }
-.card-memo .sm-icon  { font-family: Georgia, serif; font-size: 1.6rem; font-weight: normal; color: #92400e; }
-.card-memo .sm-title { color: var(--text); }
-.card-memo::before   { background: linear-gradient(90deg,#a67c62,#7c5c45); }
-
-.card-sop     { background: #fff5f5; border-color: rgba(217,20,48,0.15); }
-.card-sop .sm-icon  { color: #d91430; }
-.card-sop .sm-title { color: var(--text); }
-.card-sop::before   { background: linear-gradient(90deg,#ff4d63,#d91430); }
-
-.card-settings     { background: #f8fafc; border-color: rgba(100,116,139,0.15); }
-.card-settings .sm-icon  { color: #64748b; }
-.card-settings .sm-title { color: var(--text); }
-.card-settings::before   { background: linear-gradient(90deg,#9ca3af,#6b7280); }
-
-/* ── Strip 卡片（機捷 / 天氣，全寬橫條）── */
+/* ── Strip 列（機捷 / 天氣 / 護照，融入同一份清單，僅數字保留識別色）── */
 .card-strip {
-  grid-column: 1 / -1;
-  height: 120px;
   position: relative;
-  overflow: hidden;
-}
-.card-mrt-strip {
-  background: linear-gradient(135deg,#7c3aed 0%,#c026d3 100%);
-  box-shadow: 0 4px 20px rgba(124,58,237,.22);
-}
-.card-weather-strip {
-  background: linear-gradient(135deg,#0891b2 0%,#22d3ee 100%);
-  box-shadow: 0 4px 20px rgba(8,145,178,.22);
-}
-.card-passport-strip {
-  background: linear-gradient(135deg,#065f46 0%,#10b981 100%);
-  box-shadow: 0 4px 20px rgba(5,150,105,.22);
-}
-.passport-ring-wrap {
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--divider);
 }
 .strip-inner {
-  position: absolute; inset: 0;
-  padding: 0 20px;
   display: flex; align-items: center; gap: 10px;
 }
 .strip-left { display: flex; flex-direction: column; gap: 3px; flex: 0 0 auto; min-width: 0; }
-.strip-tag  { font-size: .6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.6); }
-.strip-name { font-size: .88rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.strip-tag  { font-size: .74rem; font-weight: 600; color: var(--sub); }
+.strip-name { font-size: .95rem; font-weight: 590; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
 .strip-trains { display: flex; gap: 8px; margin-left: auto; }
-.tp { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,.16); border-radius: 10px; padding: 6px 11px; }
-.tp-badge { font-size: .58rem; font-weight: 800; color: rgba(255,255,255,.65); }
-.tp-mins { font-size: 1.1rem; font-weight: 800; color: #fff; line-height: 1; }
+.tp { display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,.045); border-radius: 10px; padding: 6px 11px; }
+.tp-badge { font-size: .58rem; font-weight: 700; color: var(--sub); }
+.tp-mins { font-size: 1.05rem; font-weight: 700; color: var(--text); line-height: 1; }
 .tp-mins small { font-size: .58rem; opacity: .7; margin-left: 1px; }
 .strip-wx { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.wx-emoji-lg { font-size: 2rem; line-height: 1; }
+.wx-emoji-lg { font-size: 1.6rem; line-height: 1; color: #0284c7; }
 .wx-info { display: flex; flex-direction: column; }
-.wx-temp-lg { font-size: 1.4rem; font-weight: 800; color: #fff; line-height: 1; }
-.wx-desc-sm { font-size: .62rem; color: rgba(255,255,255,.65); margin-top: 2px; max-width: 72px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wx-temp-lg { font-size: 1.2rem; font-weight: 700; color: var(--text); line-height: 1; }
+.wx-desc-sm { font-size: .68rem; color: var(--sub); margin-top: 2px; max-width: 72px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fc-mini { display: flex; flex-direction: column; gap: 5px; margin-left: 10px; }
 .fc-mini-row { display: flex; align-items: center; gap: 5px; }
-.fc-mini-day   { font-size: .58rem; color: rgba(255,255,255,.55); min-width: 16px; }
+.fc-mini-day   { font-size: .58rem; color: var(--sub); min-width: 16px; }
 .fc-mini-emoji { font-size: .82rem; line-height: 1; }
-.fc-mini-temp  { font-size: .78rem; font-weight: 700; color: #fff; }
-.strip-arr { font-size: 1.1rem; color: rgba(255,255,255,.38); flex-shrink: 0; margin-left: 8px; }
+.fc-mini-temp  { font-size: .78rem; font-weight: 700; color: var(--text); }
+.strip-arr { font-size: 1.1rem; color: var(--sub); opacity: .6; flex-shrink: 0; margin-left: 8px; }
 @keyframes stripPulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
-.strip-skel { border-radius: 7px; background: rgba(255,255,255,.14); animation: stripPulse 1.4s ease-in-out infinite; }
+.strip-skel { border-radius: 7px; background: rgba(0,0,0,.06); animation: stripPulse 1.4s ease-in-out infinite; }
 @media (prefers-color-scheme: dark) {
-  .card-mrt-strip     { background: linear-gradient(135deg,#6d28d9 0%,#a21caf 100%); }
-  .card-weather-strip { background: linear-gradient(135deg,#0e7490 0%,#06b6d4 100%); }
-  .card-passport-strip { background: linear-gradient(135deg,#064e3b 0%,#059669 100%); }
+  .tp { background: rgba(255,255,255,.07); }
+  .strip-skel { background: rgba(255,255,255,.08); }
 }
 
 /* ── 排列按鈕 ── */
 .sort-btn {
-  background: rgba(0,0,0,0.06);
+  background: rgba(0,0,0,0.05);
   border: none; cursor: pointer;
   padding: 5px 10px; border-radius: 10px;
-  font-size: 0.75rem; font-weight: 600;
-  font-family: inherit; color: #555;
-  letter-spacing: 0.02em;
+  font-size: 0.75rem; font-weight: 590;
+  font-family: inherit; color: var(--sub);
+  letter-spacing: -0.01em;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s, transform 0.15s;
 }
-.sort-btn.active { background: #0d9488; color: #fff; }
+.sort-btn.active { background: var(--text); color: var(--bg); }
 .sort-btn:active { transform: scale(0.88); }
 
 /* ── 拖曳把手 ── */
 .drag-handle {
   display: none;
-  position: absolute; top: 6px; right: 6px;
+  flex-shrink: 0;
   width: 26px; height: 26px; border-radius: 7px;
-  background: rgba(0,0,0,0.07);
+  background: rgba(0,0,0,0.05);
   align-items: center; justify-content: center;
-  font-size: 0.78rem; color: rgba(0,0,0,0.35);
+  font-size: 0.78rem; color: var(--sub);
   z-index: 2; touch-action: none; user-select: none;
   line-height: 1;
+  margin-left: auto;
 }
+.bento.edit-mode .card-sm:not(.card-settings) .sm-chevron { display: none; }
 .bento.edit-mode .card-sm:not(.card-settings) .drag-handle { display: flex; }
 .bento.edit-mode .card-sm:not(.card-settings) { touch-action: none; user-select: none; cursor: grab; }
 .bento.edit-mode .card-sm:not(.card-settings):active { transform: none !important; }
@@ -523,29 +428,16 @@ body {
   :root {
     --bg:      #000;
     --surface: #1c1c1e;
-    --border:  rgba(255,255,255,0.07);
-    --text:    #f2f2f7;
-    --sub:     #636366;
+    --border:  rgba(255,255,255,0.09);
+    --divider: rgba(255,255,255,0.12);
+    --text:    #f5f5f7;
+    --sub:     #86868b;
   }
   .card-hero {
-    background: linear-gradient(135deg, #0c1d4d 0%, #1d3a8a 45%, #075985 100%);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    background: linear-gradient(165deg, #1c1c1e 0%, #000 70%);
+    border: 1px solid rgba(255,255,255,0.08);
   }
-  .card-sm {
-    box-shadow: none;
-  }
-  /* 深色模式：淡色調底 + 亮色 icon */
-  .card-thsr     { background: rgba(249,115,22,0.07); border-color: rgba(249,115,22,0.18); }
-  .card-mrt      { background: rgba(124,58,237,0.07); border-color: rgba(124,58,237,0.18); }
-  .card-schedule { background: rgba(5,150,105,0.07);  border-color: rgba(5,150,105,0.18); }
-  .card-amenities{ background: rgba(8,145,178,0.07);  border-color: rgba(8,145,178,0.18); }
-  .card-visa     { background: rgba(217,119,6,0.07);  border-color: rgba(217,119,6,0.18); }
-  .card-share    { background: rgba(37,99,235,0.07);  border-color: rgba(37,99,235,0.18); }
-  .card-weather  { background: rgba(2,132,199,0.07);  border-color: rgba(2,132,199,0.18); }
-  .card-diet     { background: rgba(22,163,74,0.07);  border-color: rgba(22,163,74,0.18); }
-  .card-memo     { background: rgba(146,64,14,0.07);  border-color: rgba(146,64,14,0.18); }
-  .card-sop      { background: rgba(217,20,48,0.07);  border-color: rgba(217,20,48,0.18); }
-  .card-settings { background: rgba(100,116,139,0.07);border-color: rgba(100,116,139,0.18); }
+  /* 深色模式：僅圖示提亮，清單本身維持無底色 */
   .card-thsr .sm-icon     { color: #fb923c; }
   .card-mrt .sm-icon      { color: #a78bfa; }
   .card-schedule .sm-icon { color: #34d399; }
@@ -1051,18 +943,18 @@ document.addEventListener('touchend', e => {
    卡片資料 & 動態渲染
    ════════════════════════════════════════ */
 const CARDS = {
-  tias:      { icon:'<i class="bi bi-airplane-fill"></i>',      title:'航空資訊看板',     url:'/tias',                                         hero:true },
-  thsr:      { icon:'<i class="bi bi-train-front-fill"></i>',   title:'THSR Ticket',     url:'https://thsr-ticket-bot-j7qr.onrender.com',    cls:'card-thsr', ext:true },
-  mrt:       { icon:'<i class="bi bi-train-front"></i>',        title:'MRT Train',       url:'/mrt',     strip:true, stripCls:'card-mrt-strip',     stripTag:'<i class="bi bi-train-front"></i> 機場捷運' },
-  schedule:  { icon:'<i class="bi bi-calendar3"></i>',          title:'我的班表',         url:'/schedule',                                     cls:'card-schedule' },
-  amenities: { icon:'<i class="bi bi-map-fill"></i>',           title:'Airport Map',     url:'/amenities',                                    cls:'card-amenities' },
-  visa:      { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'Visa Guide',      url:'/visa-guide',                                   cls:'card-visa' },
-  share:     { icon:'<i class="bi bi-clipboard-fill"></i>',     title:'Clipboard',       url:'/share',                                        cls:'card-share' },
-  weather:   { icon:'<i class="bi bi-cloud-fill"></i>',         title:'天氣防禦',          url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'<i class="bi bi-cloud-fill"></i> 天氣防禦' },
-  diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          url:'/diet',                                         cls:'card-diet' },
-  memo:      { icon:'記',                                        title:'備忘錄',             url:'/memo',                                         cls:'card-memo' },
-  sop:       { icon:'<i class="bi bi-megaphone-fill"></i>',     title:'TIAS',               url:'/sop',                                          cls:'card-sop' },
-  passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照查驗',            url:'#', strip:true, stripCls:'card-passport-strip', stripTag:'<i class="bi bi-person-badge-fill"></i> 旅客護照查驗' },
+  tias:      { icon:'<i class="bi bi-airplane-fill"></i>',      title:'航空資訊看板',     desc:'即時航班動態',           url:'/tias',                                         hero:true },
+  thsr:      { icon:'<i class="bi bi-train-front-fill"></i>',   title:'THSR Ticket',     desc:'高鐵訂票查詢',           url:'https://thsr-ticket-bot-j7qr.onrender.com',    cls:'card-thsr', ext:true },
+  mrt:       { icon:'<i class="bi bi-train-front"></i>',        title:'MRT Train',       desc:'機場捷運即時班次',        url:'/mrt',     strip:true, stripCls:'card-mrt-strip',     stripTag:'<i class="bi bi-train-front"></i> 機場捷運' },
+  schedule:  { icon:'<i class="bi bi-calendar3"></i>',          title:'我的班表',         desc:'排班一覽',               url:'/schedule',                                     cls:'card-schedule' },
+  amenities: { icon:'<i class="bi bi-map-fill"></i>',           title:'Airport Map',     desc:'航廈設施地圖',           url:'/amenities',                                    cls:'card-amenities' },
+  visa:      { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'Visa Guide',      desc:'簽證資訊查詢',           url:'/visa-guide',                                   cls:'card-visa' },
+  share:     { icon:'<i class="bi bi-clipboard-fill"></i>',     title:'Clipboard',       desc:'跨裝置剪貼簿',           url:'/share',                                        cls:'card-share' },
+  weather:   { icon:'<i class="bi bi-cloud-fill"></i>',         title:'天氣防禦',          desc:'即時天氣與預報',         url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'<i class="bi bi-cloud-fill"></i> 天氣防禦' },
+  diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          desc:'飲食紀錄',              url:'/diet',                                         cls:'card-diet' },
+  memo:      { icon:'記',                                        title:'備忘錄',             desc:'隨手筆記',              url:'/memo',                                         cls:'card-memo' },
+  sop:       { icon:'<i class="bi bi-megaphone-fill"></i>',     title:'TIAS',               desc:'廣播 SOP 與廣播詞',       url:'/sop',                                          cls:'card-sop' },
+  passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照查驗',            desc:'有效期限計算',           url:'#', strip:true, stripCls:'card-passport-strip', stripTag:'<i class="bi bi-person-badge-fill"></i> 旅客護照查驗' },
 };
 const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop','passport'];
 const _STRIP_FIXED = ['tias','mrt','weather','passport']; // 這四張固定位置，不參與排序
@@ -1082,7 +974,7 @@ function renderBento(order) {
     el.href = c.url; el.dataset.id = 'tias';
     el.className = 'card card-hero';
     el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay}ms both`;
-    el.innerHTML = `<div class="hero-inner"><div class="hero-top"><span class="hero-icon">${c.icon}</span><div class="live-badge"><div class="live-dot"></div>LIVE</div></div><div class="hero-bottom"><div class="hero-title">${c.title}</div></div></div>`;
+    el.innerHTML = `<div class="hero-inner"><div class="hero-top"><span class="hero-icon">${c.icon}</span><div class="live-badge"><div class="live-dot"></div>LIVE</div></div><div class="hero-bottom"><div class="hero-title">${c.title}</div><div class="hero-desc">${c.desc || ''}</div></div></div>`;
     bento.appendChild(el);
     delay += 60;
   }
@@ -1119,7 +1011,7 @@ function renderBento(order) {
     el.className = `card card-sm ${c.cls || ''}`;
     el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay + i * 55}ms both`;
     if (c.ext) { el.target = '_blank'; el.rel = 'noopener'; }
-    el.innerHTML = `<div class="drag-handle" aria-hidden="true">⠿</div><span class="sm-icon">${c.icon}</span><div class="sm-title">${c.title}</div>`;
+    el.innerHTML = `<span class="sm-icon">${c.icon}</span><div class="sm-text"><div class="sm-title">${c.title}</div><div class="sm-desc">${c.desc || ''}</div></div><span class="sm-chevron">›</span><div class="drag-handle" aria-hidden="true">⠿</div>`;
     bento.appendChild(el);
   });
 
@@ -1127,7 +1019,7 @@ function renderBento(order) {
   const st = document.createElement('a');
   st.href = '/settings'; st.className = 'card card-sm card-settings';
   st.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay + smOrder.length * 55}ms both`;
-  st.innerHTML = '<span class="sm-icon"><i class="bi bi-gear-fill"></i></span><div class="sm-title">設定</div>';
+  st.innerHTML = '<span class="sm-icon"><i class="bi bi-gear-fill"></i></span><div class="sm-text"><div class="sm-title">設定</div></div><span class="sm-chevron">›</span>';
   bento.appendChild(st);
 
   _setupCardClicks();
@@ -1333,7 +1225,7 @@ async function loadMrtStrip() {
     const pill = (t, label) => {
       if (!t) return '';
       const mins = t._mins;
-      const col  = mins < 3 ? '#f87171' : mins <= 8 ? '#fb923c' : '#fff';
+      const col  = mins < 3 ? '#dc2626' : mins <= 8 ? '#d97706' : 'var(--text)';
       return `<div class="tp"><span class="tp-badge">${label}</span><span class="tp-mins" style="color:${col}">${mins}<small>分</small></span></div>`;
     };
 
@@ -1362,7 +1254,7 @@ async function loadMrtStrip() {
         <div class="strip-tag"><i class="bi bi-train-front"></i> 機場捷運</div>
         <div class="strip-name">${sName}</div>
       </div>
-      <div class="strip-trains">${pillsHtml || '<span style="font-size:.72rem;color:rgba(255,255,255,.5)">無班次</span>'}</div>
+      <div class="strip-trains">${pillsHtml || '<span style="font-size:.72rem;color:var(--sub)">無班次</span>'}</div>
       <div class="strip-arr">›</div>`;
   } catch {
     el.innerHTML = `<div class="strip-left"><div class="strip-tag">🚇 機場捷運</div><div class="strip-name">${sName}</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
@@ -1444,7 +1336,6 @@ let _passportTimer = null;
 function loadPassportStrip() {
   const el = document.getElementById('strip-passport');
   if (!el) return;
-  const parent = el.closest('a.card-passport-strip');
 
   const now = new Date();
   const plusSix = new Date(now.getTime() + 6 * 3600000);
@@ -1468,28 +1359,18 @@ function loadPassportStrip() {
   const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const plusSixStr = `${pad(plusSix.getHours())}:${pad(plusSix.getMinutes())}`;
 
-  if (isCrossDay) {
-    if (parent) {
-      parent.style.background = 'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)';
-      parent.style.boxShadow = '0 4px 20px rgba(59,130,246,.3)';
-    }
-  } else {
-    if (parent) {
-      parent.style.background = 'linear-gradient(135deg,#065f46 0%,#10b981 100%)';
-      parent.style.boxShadow = '0 4px 20px rgba(16,185,129,.28)';
-    }
-  }
+  const statusColor = isCrossDay ? '#2563eb' : '#059669';
 
   el.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
       <div class="strip-tag"><i class="bi bi-person-badge-fill"></i> 旅客護照查驗</div>
-      <div style="font-size:.65rem;color:rgba(255,255,255,.65);margin-top:1px">護照有效期限不得早於</div>
-      <div style="font-size:1.22rem;font-weight:800;color:#fff;letter-spacing:.5px;line-height:1.2">${minExpiryStr}</div>
+      <div style="font-size:.7rem;color:var(--sub);margin-top:1px">護照有效期限不得早於</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text);letter-spacing:.01em;line-height:1.2">${minExpiryStr}</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;padding-left:10px">
-      <div style="font-size:.58rem;background:rgba(255,255,255,.18);border-radius:100px;padding:3px 9px;color:#fff;font-weight:700;white-space:nowrap">${isCrossDay ? '⭢ 跨日到達' : '✓ 當日到達'}</div>
-      <div style="font-size:1.3rem;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;line-height:1">${nowStr}</div>
-      <div style="font-size:.58rem;color:rgba(255,255,255,.5)">+6h → ${plusSixStr}${isCrossDay ? '（明）' : ''}</div>
+      <div style="font-size:.62rem;background:${statusColor}1a;border-radius:100px;padding:3px 9px;color:${statusColor};font-weight:700;white-space:nowrap">${isCrossDay ? '⭢ 跨日到達' : '✓ 當日到達'}</div>
+      <div style="font-size:1.15rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1">${nowStr}</div>
+      <div style="font-size:.6rem;color:var(--sub)">+6h → ${plusSixStr}${isCrossDay ? '（明）' : ''}</div>
     </div>
     <div class="strip-arr" style="margin-left:8px">›</div>`;
 
