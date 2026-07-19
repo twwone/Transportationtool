@@ -485,7 +485,6 @@ body {
   .flt-sheet-header { background: #1c1c1e; border-bottom-color: #2c2c2e; }
   .flt-sheet-title { color: #f2f2f7; }
   .flt-close-btn { background: #2c2c2e; color: #8e8e93; }
-  .flt-info-title { color: #636366; }
   .flt-info-label { color: #636366; }
   .flt-info-val   { color: #f2f2f7; }
   .flt-map-placeholder { background: #1c1c1e; color: #636366; }
@@ -545,11 +544,18 @@ body {
 
 .flt-info-section { padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
 .flt-info-title {
-  font-size: 0.7rem; font-weight: 700; color: var(--sub);
-  letter-spacing: 0.06em; text-transform: uppercase;
-  margin-bottom: 10px;
+  display: inline-flex; align-items: center;
+  font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--accent); text-transform: uppercase; margin-bottom: 10px;
+  background: var(--accent-soft); padding: 4px 10px;
+  border-radius: 100px;
 }
-.flt-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; }
+.flt-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px 10px;
+  background: var(--bg); border: 1px solid var(--divider);
+  border-radius: var(--radius-m, 14px);
+  padding: 16px 16px;
+}
 .flt-info-cell { display: flex; flex-direction: column; gap: 2px; }
 .flt-info-label { font-size: 0.7rem; font-weight: 590; color: var(--sub); }
 .flt-info-val   { font-size: 0.92rem; font-weight: 600; color: var(--text); }

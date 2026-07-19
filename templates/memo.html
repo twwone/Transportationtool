@@ -305,30 +305,36 @@ body {
   padding: 0 24px 16px;
 }
 .sh-label {
-  font-size: 0.68rem;
-  color: var(--sub);
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--accent);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  background: var(--accent-2);
+  padding: 4px 10px;
+  border-radius: 100px;
+  margin-bottom: 10px;
 }
 .sh-textarea {
   width: 100%;
-  padding: 0;
-  border: none;
-  border-bottom: 1.5px solid var(--border);
-  background: transparent;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m, 14px);
+  background: var(--bg);
   font-size: 0.95rem;
   color: var(--text);
   font-family: inherit;
   outline: none;
   resize: none;
-  line-height: 1.6;
+  line-height: 1.8;
   -webkit-appearance: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
   display: block;
   overflow: hidden;
 }
-.sh-textarea:focus { border-bottom-color: var(--accent); }
+.sh-textarea:focus { border-color: var(--accent); }
 .sh-textarea::placeholder { color: var(--sub); }
 .sh-note-area { font-size: 0.85rem; min-height: 36px; }
 

@@ -266,8 +266,18 @@ body::before{
 @media(prefers-color-scheme:dark){.alert-banner{background:rgba(255,69,58,.14);border-color:rgba(255,69,58,.4)}}
 .alert-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
 .alert-content{flex:1;min-width:0}
-.alert-title{font-size:.8rem;font-weight:700;color:var(--danger);margin-bottom:4px}
-.alert-list{font-size:.78rem;color:var(--danger);line-height:1.7;list-style:none;padding:0}
+.alert-title{
+  display:inline-flex;align-items:center;
+  font-size:.64rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--danger);background:rgba(239,68,68,.14);
+  padding:4px 10px;border-radius:100px;margin-bottom:8px;
+}
+@media(prefers-color-scheme:dark){.alert-title{background:rgba(255,69,58,.18)}}
+.alert-list{
+  font-size:.78rem;color:var(--danger);line-height:1.8;list-style:none;
+  background:var(--bg);border:1px solid var(--alert-border);
+  border-radius:var(--radius-m,14px);padding:14px 16px;
+}
 
 /* ── Main weather card ── */
 .main-card{

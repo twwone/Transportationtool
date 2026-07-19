@@ -350,23 +350,33 @@ body {
 
 /* ── Timetable ── */
 .tt-header {
-  padding: 12px 14px 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-m, 14px) var(--radius-m, 14px) 0 0;
+  padding: 16px 18px 12px;
   max-width: 600px;
-  margin: 0 auto;
+  margin: 12px auto 0;
 }
 .tt-station-title {
-  font-size: 1.1rem;
+  font-size: 1.16rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
 }
 .tt-subtitle {
   font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
   color: var(--sub);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 .tt-list {
-  padding: 4px 14px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-m, 14px) var(--radius-m, 14px);
+  padding: 4px 18px 12px;
   max-width: 600px;
   margin: 0 auto;
 }
@@ -374,7 +384,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--divider);
 }
 .tt-row:last-child { border-bottom: none; }
@@ -383,9 +393,9 @@ body {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.4px;
-  padding: 3px 8px;
-  border-radius: 7px;
-  min-width: 36px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  min-width: 40px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -402,15 +412,21 @@ body {
 .tt-time.soon { color: #ea580c; }
 .tt-time.now  { color: #dc2626; }
 .tt-countdown {
-  font-size: 0.78rem;
+  display: inline-block;
+  font-size: 0.72rem;
   color: var(--sub);
-  font-weight: 500;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   min-width: 54px;
   text-align: right;
   flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: transparent;
 }
-.tt-countdown.soon { color: #ea580c; }
-.tt-countdown.now  { color: #dc2626; }
+.tt-countdown:not(:empty) { background: rgba(118,118,128,0.1); }
+.tt-countdown.soon { color: #ea580c; background: rgba(234,88,12,0.12); }
+.tt-countdown.now  { color: #dc2626; background: rgba(220,38,38,0.12); }
 .tt-empty {
   text-align: center;
   padding: 40px 20px;
