@@ -160,7 +160,13 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-.hero-icon { font-size: 1.5rem; line-height: 1; color: rgba(255,255,255,0.9); }
+.hero-icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem; line-height: 1; color: #fff;
+  background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06));
+  border: 1px solid rgba(255,255,255,0.18);
+}
 .live-badge {
   display: flex;
   align-items: center;
@@ -207,14 +213,20 @@ body {
 .card-sm:last-of-type { border-bottom: none; }
 .sm-icon {
   flex-shrink: 0;
-  width: 30px;
-  font-size: 1.4rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
   line-height: 1;
-  text-align: center;
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.14), 0 4px 10px rgba(0,0,0,0.10);
   transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
 }
 @media (hover: hover) {
-  .card-sm:hover .sm-icon { transform: scale(1.1); }
+  .card-sm:hover .sm-icon { transform: scale(1.08); }
 }
 .sm-text { flex: 1; min-width: 0; }
 .sm-title {
@@ -237,18 +249,18 @@ body {
   opacity: 0.6;
 }
 
-/* 各項目 icon 識別色（僅圖示上色，不再整塊填色） */
-.card-thsr      .sm-icon { color: #f97316; }
-.card-mrt       .sm-icon { color: #7c3aed; }
-.card-schedule  .sm-icon { color: #059669; }
-.card-amenities .sm-icon { color: #0891b2; }
-.card-visa      .sm-icon { color: #d97706; }
-.card-share     .sm-icon { color: #2563eb; }
-.card-weather   .sm-icon { color: #0284c7; }
-.card-diet      .sm-icon { color: #16a34a; }
-.card-memo      .sm-icon { font-family: Georgia, serif; font-weight: normal; color: #92400e; }
-.card-sop       .sm-icon { color: #d91430; }
-.card-settings  .sm-icon { color: #64748b; }
+/* 各項目 icon 識別色 — iOS 設定 App 式圓角色塊圖示，淺色/深色模式共用 */
+.card-thsr      .sm-icon { background: linear-gradient(135deg,#fb923c,#f97316); }
+.card-mrt       .sm-icon { background: linear-gradient(135deg,#a78bfa,#7c3aed); }
+.card-schedule  .sm-icon { background: linear-gradient(135deg,#34d399,#059669); }
+.card-amenities .sm-icon { background: linear-gradient(135deg,#22d3ee,#0891b2); }
+.card-visa      .sm-icon { background: linear-gradient(135deg,#fbbf24,#d97706); }
+.card-share     .sm-icon { background: linear-gradient(135deg,#60a5fa,#2563eb); }
+.card-weather   .sm-icon { background: linear-gradient(135deg,#38bdf8,#0284c7); }
+.card-diet      .sm-icon { background: linear-gradient(135deg,#4ade80,#16a34a); }
+.card-memo      .sm-icon { background: linear-gradient(135deg,#c4967a,#92400e); font-family: Georgia, serif; font-weight: 600; }
+.card-sop       .sm-icon { background: linear-gradient(135deg,#ff6b7a,#d91430); }
+.card-settings  .sm-icon { background: linear-gradient(135deg,#94a3b8,#64748b); }
 
 /* ── Strip 列（機捷 / 天氣 / 護照，融入同一份清單，僅數字保留識別色）── */
 .card-strip {
@@ -437,22 +449,7 @@ body {
     background: linear-gradient(165deg, #1c1c1e 0%, #000 70%);
     border: 1px solid rgba(255,255,255,0.08);
   }
-  /* 深色模式：僅圖示提亮，清單本身維持無底色 */
-  .card-thsr .sm-icon     { color: #fb923c; }
-  .card-mrt .sm-icon      { color: #a78bfa; }
-  .card-schedule .sm-icon { color: #34d399; }
-  .card-amenities .sm-icon{ color: #22d3ee; }
-  .card-visa .sm-icon     { color: #fbbf24; }
-  .card-share .sm-icon    { color: #60a5fa; }
-  .card-weather .sm-icon  { color: #38bdf8; }
-  .card-diet .sm-icon     { color: #4ade80; }
-  .card-memo .sm-icon     { color: #c4967a; }
-  .card-sop .sm-icon      { color: #ff4455; }
-  .card-settings .sm-icon { color: #94a3b8; }
-  .card-thsr .sm-title,.card-mrt .sm-title,.card-schedule .sm-title,
-  .card-amenities .sm-title,.card-visa .sm-title,
-  .card-share .sm-title,.card-weather .sm-title,.card-diet .sm-title,
-  .card-memo .sm-title,.card-sop .sm-title,.card-settings .sm-title { color: var(--text); }
+  /* 圖示色塊在淺色/深色模式下共用同一組漸層，不需個別覆寫 */
   .footer   { color: #3a3a3c; }
   .sort-btn { background: rgba(255,255,255,0.1); color: #ebebf5; }
   .sort-btn.active { background: #0d9488; color: #fff; }
