@@ -212,15 +212,22 @@ body {
   flex: 1;
 }
 .script-lang {
-  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.12em;
-  color: var(--sub); text-transform: uppercase; margin-bottom: 8px;
+  display: inline-flex; align-items: center;
+  font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--accent); text-transform: uppercase; margin-bottom: 10px;
+  background: var(--acc2, rgba(0,0,0,0.05)); padding: 4px 10px;
+  border-radius: 100px;
 }
 .script-text {
   font-size: 1rem; line-height: 1.8; color: var(--text);
-  white-space: pre-wrap; margin-bottom: 20px;
+  white-space: pre-wrap; margin-bottom: 22px;
+  background: var(--bg); border: 1px solid var(--divider);
+  border-radius: var(--radius-m, 14px);
+  padding: 18px 20px;
+  letter-spacing: -0.005em;
 }
 .blank { color: var(--blank); font-weight: 700; border-bottom: 1.5px solid var(--blank); }
-.divider { height: 1px; background: var(--border); margin: 4px 0 20px; }
+.divider { height: 0; margin: 0 0 4px; }
 
 /* ── SSR 代碼清單 ── */
 .ssr-group { margin-bottom: 22px; }
