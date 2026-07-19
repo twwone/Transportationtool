@@ -277,9 +277,15 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 }
 
 .body-section-title {
-  font-size: 0.68rem; font-weight: 700; color: var(--sub);
-  text-transform: uppercase; letter-spacing: 0.06em;
-  margin: 12px 0 6px;
+  display: inline-flex; align-items: center;
+  font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--accent); text-transform: uppercase;
+  background: rgba(217,119,6,0.1); padding: 4px 10px;
+  border-radius: 100px;
+  margin: 14px 0 8px;
+}
+@media (prefers-color-scheme: dark) {
+  .body-section-title { background: rgba(251,191,36,0.14); }
 }
 
 /* ── Valid frame (SVG-corner-bracket style) ── */
@@ -351,10 +357,17 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .doc-tag.opt  { background: #f1f3f5; color: #868e96; }
 
 /* ── Tips ── */
-.tip-row {
-  display: flex; gap: 8px; padding: 5px 0;
-  font-size: 0.79rem; color: var(--text); line-height: 1.5;
+.tips-card {
+  background: var(--bg); border: 1px solid var(--divider);
+  border-radius: var(--radius-m, 14px);
+  padding: 4px 14px; margin-bottom: 10px;
 }
+.tip-row {
+  display: flex; gap: 8px; padding: 8px 0;
+  font-size: 0.79rem; color: var(--text); line-height: 1.5;
+  border-bottom: 1px solid var(--divider);
+}
+.tip-row:last-child { border-bottom: none; }
 .tip-dot { flex-shrink: 0; color: var(--sub); margin-top: 1px; }
 
 /* ── Official link ── */
@@ -737,8 +750,8 @@ function buildCardHTML(r) {
       </div>
     </div>`).join('');
 
-  const tips = r.tips.map(t => `
-    <div class="tip-row"><span class="tip-dot">•</span><span>${t}</span></div>`).join('');
+  const tips = r.tips.length ? `<div class="tips-card">${r.tips.map(t => `
+    <div class="tip-row"><span class="tip-dot">•</span><span>${t}</span></div>`).join('')}</div>` : '';
 
   const warnings = r.warnings && r.warnings.length ? `
     <div class="warn-frame">

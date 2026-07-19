@@ -207,10 +207,14 @@ main {
   color: var(--text); margin-bottom: 3px;
 }
 .sheet-current {
-  font-size: 0.8rem; font-weight: 500; color: var(--sub);
+  display: inline-block;
+  font-size: 0.78rem; font-weight: 500; color: var(--sub);
   margin-bottom: 18px; min-height: 1.1em;
+  background: var(--acc2); border-radius: 100px;
+  padding: 6px 12px;
 }
-.sheet-current b { color: var(--accent); }
+.sheet-current:empty { display: none; padding: 0; margin-bottom: 0; }
+.sheet-current b { color: var(--accent); font-weight: 700; }
 
 .input-label {
   font-size: 0.75rem; font-weight: 600;
