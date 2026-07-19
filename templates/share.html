@@ -1253,7 +1253,7 @@ function showFileCard(url, name) {
   currentFileUrl = url;
   const info = getFileIcon(name);
   $id('fileIconWrap').style.background = info.bg;
-  $id('fileIconEmoji').textContent      = info.icon;
+  $id('fileIconEmoji').innerHTML        = info.icon;
   $id('fileNameText').textContent       = name;
   $id('fileTypeText').textContent       = (name.split('.').pop() || 'FILE').toUpperCase() + ' 檔案';
   $id('fileCard').classList.add('show');
