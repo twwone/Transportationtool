@@ -8,15 +8,16 @@
 <script src="/static/config.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overscroll-behavior: none; background: #f2f2f7; }
+html, body { overscroll-behavior: none; background: var(--bg); }
 :root {
-  --bg:      #f2f2f7;
-  --surface: rgba(255,255,255,0.9);
-  --text:    #1c1c1e;
-  --sub:     #6b7280;
+  --bg:      #fbfbfd;
+  --surface: #ffffff;
+  --text:    #1d1d1f;
+  --sub:     #86868b;
   --tint:    #007aff;
   --red:     #ff3b30;
-  --border:  rgba(60,60,67,0.1);
+  --border:  rgba(0,0,0,0.08);
+  --divider: rgba(0,0,0,0.09);
   --radius:  16px;
 }
 
@@ -31,7 +32,7 @@ body {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center;
   padding: max(14px, env(safe-area-inset-top)) 16px 12px;
-  background: rgba(242,242,247,0.92);
+  background: rgba(251,251,253,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -47,6 +48,7 @@ body {
 .top-title {
   flex: 1; text-align: center;
   font-size: 1rem; font-weight: 700; color: var(--text);
+  letter-spacing: -0.01em;
 }
 .save-btn {
   min-width: 64px; text-align: right;
@@ -81,13 +83,20 @@ body {
   font-size: 0.75rem; font-weight: 700; color: var(--sub);
   text-transform: uppercase; letter-spacing: .05em;
   padding: 16px 4px 6px;
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; gap: 7px;
 }
-.sec-label .bi-train-front-fill { color: #f97316; font-size: 0.95rem; }
-.sec-label .bi-train-front      { color: #7c3aed; font-size: 0.95rem; }
-.sec-label .bi-telegram         { color: #0088cc; font-size: 0.95rem; }
-.sec-label .bi-egg-fried        { color: #16a34a; font-size: 0.95rem; }
-.sec-label .bi-cloud-fill       { color: #0284c7; font-size: 0.95rem; }
+/* 分類小圖示 — iOS 設定 App 式圓角色塊圖示，淺色/深色模式共用同一組漸層 */
+.cat-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 6px;
+  color: #fff; font-size: 0.66rem; line-height: 1; flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);
+}
+.cat-thsr { background: linear-gradient(135deg,#fb923c,#f97316); }
+.cat-mrt  { background: linear-gradient(135deg,#a78bfa,#7c3aed); }
+.cat-tg   { background: linear-gradient(135deg,#5ac8fa,#0088cc); }
+.cat-diet { background: linear-gradient(135deg,#4ade80,#16a34a); }
+.cat-wx   { background: linear-gradient(135deg,#38bdf8,#0284c7); }
 .sec-card {
   background: var(--surface);
   border-radius: var(--radius);
@@ -99,12 +108,13 @@ body {
 .s-row {
   display: flex; align-items: center;
   padding: 11px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--divider);
   gap: 12px; min-height: 46px;
 }
 .s-row:last-child { border-bottom: none; }
 .s-label {
-  font-size: 0.9rem; color: var(--text); font-weight: 500;
+  font-size: 0.9rem; color: var(--text); font-weight: 590;
+  letter-spacing: -0.01em;
   flex-shrink: 0; min-width: 76px;
 }
 .s-val {
@@ -160,19 +170,15 @@ body {
 @media (prefers-color-scheme: dark) {
   :root {
     --bg:      #000;
-    --surface: rgba(28,28,30,0.95);
-    --text:    #f2f2f7;
-    --sub:     #8e8e93;
-    --border:  rgba(255,255,255,0.08);
+    --surface: #1c1c1e;
+    --text:    #f5f5f7;
+    --sub:     #86868b;
+    --border:  rgba(255,255,255,0.09);
+    --divider: rgba(255,255,255,0.12);
   }
   html, body { background: #000; }
-  .top-bar { background: rgba(0,0,0,0.88); border-color: rgba(255,255,255,0.08); }
-  .p-chip { background: rgba(28,28,30,0.95); }
-  .sec-label .bi-train-front-fill { color: #fb923c; }
-  .sec-label .bi-train-front      { color: #a78bfa; }
-  .sec-label .bi-telegram         { color: #38bdf8; }
-  .sec-label .bi-egg-fried        { color: #4ade80; }
-  .sec-label .bi-cloud-fill       { color: #38bdf8; }
+  .top-bar { background: rgba(0,0,0,0.88); border-color: rgba(255,255,255,0.09); }
+  /* 分類圖示色塊在淺色/深色模式下共用同一組漸層，不需個別覆寫 */
 }
 </style>
 </head>
@@ -207,7 +213,7 @@ body {
   </div>
 
   <!-- 高鐵 -->
-  <div class="sec-label"><i class="bi bi-train-front-fill"></i> 高鐵設定</div>
+  <div class="sec-label"><span class="cat-chip cat-thsr"><i class="bi bi-train-front-fill"></i></span> 高鐵設定</div>
   <div class="sec-card">
     <div class="s-row">
       <span class="s-label">起站</span>
@@ -259,7 +265,7 @@ body {
   </div>
 
   <!-- 機場捷運 -->
-  <div class="sec-label"><i class="bi bi-train-front"></i> 機場捷運</div>
+  <div class="sec-label"><span class="cat-chip cat-mrt"><i class="bi bi-train-front"></i></span> 機場捷運</div>
   <div class="sec-card">
     <div class="s-row">
       <span class="s-label">收藏站點</span>
@@ -268,7 +274,7 @@ body {
   </div>
 
   <!-- Telegram -->
-  <div class="sec-label"><i class="bi bi-telegram"></i> Telegram Bot</div>
+  <div class="sec-label"><span class="cat-chip cat-tg"><i class="bi bi-telegram"></i></span> Telegram Bot</div>
   <div class="sec-card">
     <div class="s-row">
       <span class="s-label">Bot Token</span>
@@ -285,7 +291,7 @@ body {
   </div>
 
   <!-- 熱量追蹤 -->
-  <div class="sec-label"><i class="bi bi-egg-fried"></i> 熱量追蹤</div>
+  <div class="sec-label"><span class="cat-chip cat-diet"><i class="bi bi-egg-fried"></i></span> 熱量追蹤</div>
   <div class="sec-card">
     <div class="s-row">
       <span class="s-label">每日目標</span>
@@ -303,7 +309,7 @@ body {
   </div>
 
   <!-- 天氣 -->
-  <div class="sec-label"><i class="bi bi-cloud-fill"></i> 天氣常用地點</div>
+  <div class="sec-label"><span class="cat-chip cat-wx"><i class="bi bi-cloud-fill"></i></span> 天氣常用地點</div>
   <div class="sec-card">
     <div class="tag-list" id="wxFavList"></div>
   </div>

@@ -9,29 +9,33 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#fff5f5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a0808" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overscroll-behavior: none; }
 
 :root {
-  --bg:      #fff5f5;
-  --surface: #ffffff;
-  --border:  rgba(220,0,0,0.09);
-  --text:    #1a0808;
-  --sub:     #9c6b6b;
-  --accent:  #d91430;
-  --acc2:    rgba(217,20,48,0.08);
-  --blank:   #d91430;
+  --bg:       #fbfbfd;
+  --surface:  #ffffff;
+  --border:   rgba(0,0,0,0.08);
+  --divider:  rgba(0,0,0,0.09);
+  --text:     #1d1d1f;
+  --sub:      #86868b;
+  --accent:   #d91430;
+  --acc2:     rgba(217,20,48,0.08);
+  --blank:    #d91430;
+  --radius-l: 20px;
+  --radius-m: 14px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:      #1a0808;
-    --surface: #240e0e;
-    --border:  rgba(255,80,80,0.11);
-    --text:    #f5e0e0;
-    --sub:     #8a5a5a;
+    --bg:      #000;
+    --surface: #1c1c1e;
+    --border:  rgba(255,255,255,0.09);
+    --divider: rgba(255,255,255,0.12);
+    --text:    #f5f5f7;
+    --sub:     #86868b;
     --accent:  #ff4455;
     --acc2:    rgba(255,68,85,0.11);
     --blank:   #ff6677;
@@ -79,8 +83,8 @@ body {
 }
 .back-btn:active { color: var(--accent); }
 .header-title {
-  font-size: 1.8rem; font-weight: 700;
-  color: var(--text); margin-top: 8px; letter-spacing: -0.5px;
+  font-size: 1.9rem; font-weight: 700;
+  color: var(--text); margin-top: 8px; letter-spacing: -0.03em;
 }
 .header-sub {
   font-size: 0.72rem; color: var(--sub);
@@ -95,40 +99,34 @@ body {
   padding: 20px 20px max(80px, env(safe-area-inset-bottom) + 20px);
 }
 
-/* ── Hub：子系統卡片列表 ── */
-.hub-list { display: flex; flex-direction: column; gap: 12px; }
+/* ── Hub：子系統列表（Apple 官網式全寬清單，hairline divider）── */
+.hub-list { display: flex; flex-direction: column; gap: 0; }
 
 .hub-card {
   display: flex; align-items: center; gap: 16px;
-  padding: 18px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  padding: 16px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--divider);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s;
-  position: relative; overflow: hidden;
+  transition: opacity 0.12s ease;
+  position: relative;
 }
-.hub-card::before {
-  content: ''; position: absolute;
-  left: 0; top: 0; bottom: 0; width: 4px;
-  border-radius: 0 2px 2px 0;
-  background: var(--card-color, var(--accent));
-  opacity: 0; transition: opacity 0.15s;
-}
-.hub-card:active { background: var(--acc2); }
-.hub-card:active::before { opacity: 1; }
+.hub-list .hub-card:last-child { border-bottom: none; }
+.hub-card:active { opacity: 0.55; }
 
 .hub-icon {
   width: 46px; height: 46px; border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.3rem; flex-shrink: 0;
-  background: var(--card-color-bg, var(--acc2));
-  color: var(--card-color, var(--accent));
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.14), 0 4px 10px rgba(0,0,0,0.10);
+  background: var(--card-grad, linear-gradient(135deg, var(--accent), var(--accent)));
 }
 .hub-info { flex: 1; min-width: 0; }
-.hub-name { font-size: 1rem; font-weight: 700; color: var(--text); }
+.hub-name { font-size: 1rem; font-weight: 590; letter-spacing: -0.01em; color: var(--text); }
 .hub-desc { font-size: 0.75rem; color: var(--sub); margin-top: 2px; }
-.hub-arrow { color: var(--sub); font-size: 0.85rem; flex-shrink: 0; }
+.hub-arrow { color: var(--sub); font-size: 0.85rem; flex-shrink: 0; opacity: 0.6; }
 
 /* ── 廣播 SOP 子頁 ── */
 .sys-label {
@@ -152,21 +150,17 @@ body {
 }
 .airline-btn:active { transform: scale(0.94); }
 
-.seq-list { display: flex; flex-direction: column; gap: 7px; }
+.seq-list { display: flex; flex-direction: column; gap: 0; }
 .seq-item {
   display: flex; align-items: center; gap: 12px;
-  padding: 13px 14px;
-  background: var(--surface); border-radius: 14px;
-  border: 1px solid var(--border);
+  padding: 14px 4px;
+  background: transparent; border-radius: 0;
+  border: none; border-bottom: 1px solid var(--divider);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s; position: relative; overflow: hidden;
+  transition: opacity 0.12s ease; position: relative;
 }
-.seq-item::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-  width: 3px; background: var(--accent); opacity: 0; transition: opacity 0.15s;
-}
-.seq-item:active { background: var(--acc2); }
-.seq-item:active::before { opacity: 1; }
+.seq-list .seq-item:last-child { border-bottom: none; }
+.seq-item:active { opacity: 0.55; }
 .seq-num {
   width: 26px; height: 26px; border-radius: 50%;
   background: var(--acc2); color: var(--accent);
@@ -500,7 +494,7 @@ body {
     <div class="content">
       <div class="hub-list">
 
-        <div class="hub-card" style="--card-color:#d91430;--card-color-bg:rgba(217,20,48,0.08)" onclick="goSub('broadcast')">
+        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#ff6b7a,#d91430)" onclick="goSub('broadcast')">
           <div class="hub-icon"><i class="bi bi-megaphone-fill"></i></div>
           <div class="hub-info">
             <div class="hub-name">廣播 SOP</div>
@@ -509,7 +503,7 @@ body {
           <div class="hub-arrow">›</div>
         </div>
 
-        <div class="hub-card" style="--card-color:#0060df;--card-color-bg:rgba(0,96,223,0.08)" onclick="goSub('ssr')">
+        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#60a5fa,#2563eb)" onclick="goSub('ssr')">
           <div class="hub-icon"><i class="bi bi-tag-fill"></i></div>
           <div class="hub-info">
             <div class="hub-name">SSR 代碼</div>
@@ -518,7 +512,7 @@ body {
           <div class="hub-arrow">›</div>
         </div>
 
-        <div class="hub-card" style="--card-color:#7c3aed;--card-color-bg:rgba(124,58,237,0.08)" onclick="goSub('codes')">
+        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#a78bfa,#7c3aed)" onclick="goSub('codes')">
           <div class="hub-icon"><i class="bi bi-folder2-open"></i></div>
           <div class="hub-info">
             <div class="hub-name">代碼字典</div>
@@ -527,7 +521,7 @@ body {
           <div class="hub-arrow">›</div>
         </div>
 
-        <div class="hub-card" style="--card-color:#be185d;--card-color-bg:rgba(190,24,93,0.08)" onclick="goSub('preg')">
+        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#f472b6,#be185d)" onclick="goSub('preg')">
           <div class="hub-icon"><i class="bi bi-heart-pulse-fill"></i></div>
           <div class="hub-info">
             <div class="hub-name">孕婦查驗</div>

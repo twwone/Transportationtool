@@ -9,11 +9,23 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; height: 100%; }
+
+:root {
+  --bg:       #fbfbfd;
+  --surface:  #ffffff;
+  --border:   rgba(0,0,0,0.08);
+  --divider:  rgba(0,0,0,0.09);
+  --text:     #1d1d1f;
+  --sub:      #86868b;
+  --radius-l: 20px;
+  --radius-m: 14px;
+  --accent:   #d97706;
+}
 
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(14px) scale(0.99); }
@@ -21,9 +33,9 @@ html, body { overscroll-behavior: none; height: 100%; }
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f0f4ff;
-  color: #1c1c1e;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
   min-height: 100vh;
   padding-bottom: max(40px, env(safe-area-inset-bottom));
   animation: pageIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -35,10 +47,10 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   position: sticky;
   top: 0;
   z-index: 60;
-  background: rgba(240, 244, 255, 0.88);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(60, 60, 67, 0.1);
+  border-bottom: 1px solid var(--divider);
   padding: max(14px, env(safe-area-inset-top) + 8px) 16px 10px;
   display: flex;
   align-items: center;
@@ -55,10 +67,10 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .back-btn:active { opacity: 0.5; }
 .topbar-title {
   flex: 1; text-align: center;
-  font-size: 1.02rem; font-weight: 700; color: #1c1c1e;
-  letter-spacing: -0.2px;
+  font-size: 1.05rem; font-weight: 700; color: var(--text);
+  letter-spacing: -0.03em;
 }
-.topbar-title .bi { color: #007aff; }
+.topbar-title .bi { color: var(--accent); }
 .topbar-spacer { width: 60px; flex-shrink: 0; }
 
 /* ── Pinned hot destinations ── */
@@ -68,7 +80,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .section-header {
   font-size: 0.68rem;
   font-weight: 700;
-  color: #8e8e93;
+  color: var(--sub);
   text-transform: uppercase;
   letter-spacing: 0.07em;
   margin-bottom: 10px;
@@ -110,7 +122,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .pin-name {
   font-size: 0.62rem;
   font-weight: 700;
-  color: #3a3a3c;
+  color: var(--text);
   letter-spacing: -0.1px;
   text-align: center;
   white-space: nowrap;
@@ -145,13 +157,13 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
     inset 0 1px 0 rgba(255,255,255,0.85);
   transform: scale(1.012);
 }
-.search-icon { font-size: 0.88rem; color: #8e8e93; flex-shrink: 0; }
+.search-icon { font-size: 0.88rem; color: var(--sub); flex-shrink: 0; }
 .search-box input {
   flex: 1; border: none; background: none;
   font-family: inherit; font-size: 0.92rem;
-  color: #1c1c1e; outline: none;
+  color: var(--text); outline: none;
 }
-.search-box input::placeholder { color: #aeaeb2; }
+.search-box input::placeholder { color: var(--sub); }
 .clear-btn {
   background: rgba(60,60,67,0.2); border: none; border-radius: 50%;
   width: 18px; height: 18px; font-size: 0.6rem;
@@ -172,17 +184,17 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   flex-shrink: 0; padding: 5px 14px;
   border-radius: 100px; font-size: 0.78rem; font-weight: 600;
   cursor: pointer; border: 1.5px solid transparent;
-  background: rgba(255,255,255,0.72); color: #3a3a3c;
+  background: rgba(0,0,0,0.045); color: var(--sub);
   -webkit-tap-highlight-color: transparent;
   transition: all 0.18s cubic-bezier(0.22,1,0.36,1);
 }
-.chip.active { background: #1c1c1e; color: #fff; border-color: transparent; }
+.chip.active { background: var(--text); color: var(--bg); border-color: transparent; }
 .chip:active { transform: scale(0.93); }
 
 /* ── Count bar ── */
 .count-bar {
   padding: 0 16px 8px;
-  font-size: 0.72rem; color: #8e8e93; font-weight: 500;
+  font-size: 0.72rem; color: var(--sub); font-weight: 500;
 }
 
 /* ── Country card ── */
@@ -222,10 +234,10 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 }
 .card-meta { flex: 1; min-width: 0; }
 .country-name {
-  font-size: 1.12rem; font-weight: 700; color: #1c1c1e; margin-bottom: 4px;
+  font-size: 1.12rem; font-weight: 700; color: var(--text); letter-spacing: -0.01em; margin-bottom: 4px;
 }
 .country-name-en {
-  font-size: 0.78rem; font-weight: 500; color: #8e8e93; margin-left: 2px;
+  font-size: 0.78rem; font-weight: 500; color: var(--sub); margin-left: 2px;
 }
 .visa-badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -236,14 +248,14 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .badge-evisa   { background: #dbe4ff; color: #3b5bdb; }
 .badge-required{ background: #fff3bf; color: #e67700; }
 .card-basic-note {
-  padding: 0 17px 14px; font-size: 0.72rem; color: #8e8e93; line-height: 1.4;
+  padding: 0 17px 14px; font-size: 0.72rem; color: var(--sub); line-height: 1.4;
 }
 .badge-voa    { background: #e3fafc; color: #0c8599; }
 .badge-denied { background: #ffe3e3; color: #c92a2a; }
 
-.stay-days { margin-top: 4px; font-size: 0.73rem; color: #8e8e93; }
+.stay-days { margin-top: 4px; font-size: 0.73rem; color: var(--sub); }
 .chevron {
-  font-size: 0.8rem; color: #c7c7cc; flex-shrink: 0;
+  font-size: 0.8rem; color: var(--sub); flex-shrink: 0;
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .country-card.open .chevron { transform: rotate(90deg); }
@@ -252,7 +264,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .card-body { height: 0; overflow: hidden; }
 .card-body-inner {
   padding: 0 17px 17px;
-  border-top: 1px solid rgba(60,60,67,0.08);
+  border-top: 1px solid var(--divider);
   opacity: 0;
   transform: translateY(-5px);
   transition:
@@ -265,7 +277,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 }
 
 .body-section-title {
-  font-size: 0.68rem; font-weight: 700; color: #8e8e93;
+  font-size: 0.68rem; font-weight: 700; color: var(--sub);
   text-transform: uppercase; letter-spacing: 0.06em;
   margin: 12px 0 6px;
 }
@@ -324,13 +336,13 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 /* ── Doc rows ── */
 .doc-row {
   display: flex; align-items: flex-start; gap: 9px;
-  padding: 7px 0; border-bottom: 1px solid rgba(60,60,67,0.06);
+  padding: 7px 0; border-bottom: 1px solid var(--divider);
 }
 .doc-row:last-child { border-bottom: none; }
 .doc-icon { font-size: 0.8rem; margin-top: 1px; flex-shrink: 0; width: 18px; text-align: center; }
 .doc-info { flex: 1; }
-.doc-label { font-size: 0.86rem; font-weight: 600; color: #1c1c1e; }
-.doc-note { font-size: 0.73rem; color: #8e8e93; margin-top: 2px; line-height: 1.4; }
+.doc-label { font-size: 0.86rem; font-weight: 600; color: var(--text); }
+.doc-note { font-size: 0.73rem; color: var(--sub); margin-top: 2px; line-height: 1.4; }
 .doc-tag {
   display: inline-block; padding: 1px 7px; border-radius: 6px;
   font-size: 0.6rem; font-weight: 700; margin-left: 6px; vertical-align: middle;
@@ -341,9 +353,9 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 /* ── Tips ── */
 .tip-row {
   display: flex; gap: 8px; padding: 5px 0;
-  font-size: 0.79rem; color: #3a3a3c; line-height: 1.5;
+  font-size: 0.79rem; color: var(--text); line-height: 1.5;
 }
-.tip-dot { flex-shrink: 0; color: #868e96; margin-top: 1px; }
+.tip-dot { flex-shrink: 0; color: var(--sub); margin-top: 1px; }
 
 /* ── Official link ── */
 .official-link {
@@ -356,7 +368,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .official-link:active { opacity: 0.6; }
 
 /* ── Empty / Disclaimer ── */
-.empty { text-align: center; padding: 56px 20px; color: #8e8e93; font-size: 0.9rem; }
+.empty { text-align: center; padding: 56px 20px; color: var(--sub); font-size: 0.9rem; }
 .empty-icon { font-size: 2.4rem; display: block; margin-bottom: 10px; }
 
 .disclaimer {
@@ -372,15 +384,16 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .nat-bar {
   display: flex; align-items: center; gap: 10px;
   margin: 10px 16px 0; padding: 12px 16px;
-  background: rgba(255,255,255,0.92);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px; cursor: pointer;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 4px 14px rgba(0,0,0,0.06);
   -webkit-tap-highlight-color: transparent;
 }
 .nat-bar:active { transform: scale(0.99); }
-.nat-label { font-size: 0.78rem; color: #8e8e93; font-weight: 600; }
-.nat-current { flex: 1; font-size: 0.95rem; font-weight: 700; color: #1c1c1e; }
-.nat-caret { color: #c7c7cc; font-size: 0.8rem; }
+.nat-label { font-size: 0.78rem; color: var(--sub); font-weight: 600; }
+.nat-current { flex: 1; font-size: 0.95rem; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.nat-caret { color: var(--sub); font-size: 0.8rem; }
 
 /* ── 國籍選單（全螢幕 sheet）── */
 .nat-backdrop {
@@ -392,7 +405,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .nat-sheet {
   position: fixed; inset: 0; z-index: 100;
   display: none; flex-direction: column;
-  background: #f0f4ff;
+  background: var(--bg);
   padding-top: max(12px, env(safe-area-inset-top));
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
@@ -401,7 +414,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 18px 10px;
 }
-.nat-sheet-title { font-size: 1.05rem; font-weight: 700; }
+.nat-sheet-title { font-size: 1.05rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
 .nat-sheet-close {
   background: none; border: none; color: #007aff;
   font-size: 0.95rem; font-weight: 600; font-family: inherit; cursor: pointer;
@@ -410,7 +423,8 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .nat-search-wrap input {
   width: 100%; border: none; border-radius: 12px;
   padding: 11px 14px; font-size: 0.92rem; font-family: inherit;
-  background: rgba(255,255,255,0.96); outline: none; color: #1c1c1e;
+  background: var(--surface); outline: none; color: var(--text);
+  border: 1px solid var(--border);
 }
 .nat-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 12px 8px; }
 .nat-item {
@@ -421,25 +435,28 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 .nat-item:active { background: rgba(0,0,0,0.05); }
 .nat-item.selected { background: rgba(0,122,255,0.1); }
 .nat-item .nat-flag { font-size: 1.5rem; }
-.nat-item .nat-name { flex: 1; font-size: 0.95rem; font-weight: 600; color: #1c1c1e; }
+.nat-item .nat-name { flex: 1; font-size: 0.95rem; font-weight: 600; color: var(--text); }
 .nat-item .nat-check { color: #007aff; opacity: 0; }
 .nat-item.selected .nat-check { opacity: 1; }
 
 @media (prefers-color-scheme: dark) {
-  body { background: #000; color: #f2f2f7; }
-  .topbar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
-  .topbar-title { color: #f2f2f7; }
+  :root {
+    --bg:      #000;
+    --surface: #1c1c1e;
+    --border:  rgba(255,255,255,0.09);
+    --divider: rgba(255,255,255,0.12);
+    --text:    #f5f5f7;
+    --sub:     #86868b;
+  }
+  .topbar { background: rgba(28,28,30,0.88); }
   .back-btn { color: #0a84ff; }
-  .search-wrap { background: #1c1c1e; border-color: #2c2c2e; }
-  .search-wrap:focus-within { border-color: #0a84ff; }
-  .search-wrap input { color: #f2f2f7; }
-  .search-wrap input::placeholder { color: #48484a; }
-  .search-icon { color: #48484a; }
-  .country-card { background: #1c1c1e; }
+  .pin-btn { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,0.3), 0 4px 14px rgba(0,0,0,0.24); }
+  .pin-btn::after { background: linear-gradient(155deg, rgba(255,255,255,0.08) 0%, transparent 60%); }
+  .search-box { background: var(--surface); border-color: var(--border); }
+  .search-box:focus-within { box-shadow: 0 0 0 3.5px rgba(10,132,255,0.28), 0 4px 16px rgba(10,132,255,0.14), 0 8px 28px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04); }
+  .chip { background: rgba(255,255,255,0.08); }
+  .country-card { background: var(--surface); }
   .country-card:hover { background: #2c2c2e; }
-  .country-name { color: #f2f2f7; }
-  .country-sub  { color: #636366; }
-  .country-toggle { background: #2c2c2e; color: #636366; }
   .badge-free    { background: rgba(43,138,62,0.2);  color: #4ade80; }
   .badge-evisa   { background: rgba(59,91,219,0.2);  color: #818cf8; }
   .badge-required{ background: rgba(230,119,0,0.2);  color: #fb923c; }
@@ -449,18 +466,19 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   .badge-warn    { background: rgba(201,42,42,0.2);  color: #f87171; }
   .doc-tag.must  { background: rgba(201,42,42,0.15); color: #f87171; }
   .doc-tag.opt   { background: #2c2c2e;               color: #636366; }
-  .detail-section { background: #1c1c1e; border-color: #2c2c2e; }
-  .detail-section h4 { color: #8e8e93; }
-  .tip-row { color: #8e8e93; }
+  .tip-row { color: var(--sub); }
   .tip-dot { color: #48484a; }
-  .country-link { color: #0a84ff; }
+  .official-link { color: #0a84ff; background: rgba(10,132,255,0.1); }
   .disclaimer {
     background: rgba(255,149,0,0.06);
     border-color: rgba(255,149,0,0.2);
-    color: #636366;
+    color: #98989d;
   }
-  .section-header { color: #636366; }
   .flag-wrap { opacity: 0.9; }
+  .nat-bar { box-shadow: none; }
+  .nat-item:active { background: rgba(255,255,255,0.06); }
+  .nat-item.selected { background: rgba(10,132,255,0.16); }
+  .nat-sheet-close, .nat-item .nat-check { color: #0a84ff; }
 }
 </style>
 </head>

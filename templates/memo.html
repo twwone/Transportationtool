@@ -9,30 +9,30 @@
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#f5f1eb" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a1714" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overscroll-behavior: none; }
 
 :root {
-  --bg:       #f5f1eb;
-  --surface:  #fdfaf6;
-  --border:   rgba(90, 65, 45, 0.12);
-  --rule:     rgba(90, 65, 45, 0.1);
-  --text:     #2c1f14;
-  --sub:      #9c8a7c;
-  --accent:   #7c5c45;
-  --accent-2: rgba(124, 92, 69, 0.08);
+  --bg:       #fbfbfd;
+  --surface:  #ffffff;
+  --border:   rgba(0, 0, 0, 0.08);
+  --rule:     rgba(0, 0, 0, 0.09);
+  --text:     #1d1d1f;
+  --sub:      #86868b;
+  --accent:   #92400e;
+  --accent-2: rgba(146, 64, 14, 0.08);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:       #1a1714;
-    --surface:  #211e1a;
-    --border:   rgba(200, 175, 150, 0.1);
-    --rule:     rgba(200, 175, 150, 0.08);
-    --text:     #e8ddd3;
-    --sub:      #7a6e65;
+    --bg:       #000;
+    --surface:  #1c1c1e;
+    --border:   rgba(255, 255, 255, 0.09);
+    --rule:     rgba(255, 255, 255, 0.12);
+    --text:     #f5f5f7;
+    --sub:      #86868b;
     --accent:   #c4967a;
     --accent-2: rgba(196, 150, 122, 0.08);
   }
@@ -65,13 +65,12 @@ body {
 }
 .back-btn:active { color: var(--accent); }
 .header-title {
-  font-family: Georgia, "Noto Serif TC", "Times New Roman", serif;
-  font-size: 1.9rem;
-  font-weight: normal;
-  letter-spacing: -0.5px;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   color: var(--text);
   margin-top: 10px;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 .header-rule { height: 1px; background: var(--border); margin-top: 16px; }
 
@@ -125,9 +124,9 @@ body {
   color: var(--sub);
 }
 .empty-label {
-  font-family: Georgia, "Noto Serif TC", serif;
   font-size: 0.95rem;
-
+  font-weight: 590;
+  letter-spacing: -0.01em;
 }
 
 @keyframes itemIn {
@@ -270,7 +269,7 @@ body {
   transition: background 0.3s ease;
 }
 .sheet-overlay.open {
-  background: rgba(30, 20, 10, 0.35);
+  background: rgba(0, 0, 0, 0.28);
   pointer-events: auto;
 }
 
@@ -296,9 +295,8 @@ body {
   margin: 12px auto 0;
 }
 .sh-title {
-  font-family: Georgia, "Noto Serif TC", serif;
   font-size: 0.75rem;
-
+  font-weight: 590;
   color: var(--sub);
   padding: 16px 24px 4px;
   letter-spacing: 0.04em;

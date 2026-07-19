@@ -9,32 +9,37 @@
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#050d1a">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overscroll-behavior:none;overflow-x:hidden}
 
 @keyframes pageIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes ringGrow{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.35)}50%{box-shadow:0 0 0 14px rgba(52,211,153,0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.32)}50%{box-shadow:0 0 0 14px rgba(22,163,74,0)}}
 @keyframes shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
 @keyframes fadeSlideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 @keyframes cheatBounce{0%{transform:scale(.92);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 :root{
-  --bg:#050d1a;
-  --surface:rgba(255,255,255,.07);
-  --glass:rgba(255,255,255,.11);
-  --glass-border:rgba(255,255,255,.18);
-  --text:#f2f2f7;
-  --sub:#8e8e93;
-  --green:#34d399;
-  --blue:#38bdf8;
-  --orange:#fb923c;
-  --radius-l:28px;
-  --radius-m:20px;
-  --radius-s:14px;
+  --bg:#fbfbfd;
+  --surface:#ffffff;
+  --glass:#ffffff;
+  --glass-border:rgba(0,0,0,.08);
+  --divider:rgba(0,0,0,.09);
+  --text:#1d1d1f;
+  --sub:#86868b;
+  --green:#16a34a;
+  --blue:#0284c7;
+  --orange:#d97706;
+  --input-bg:rgba(0,0,0,.04);
+  --track-bg:rgba(0,0,0,.06);
+  --chip-bg:rgba(0,0,0,.05);
+  --radius-l:20px;
+  --radius-m:14px;
+  --radius-s:12px;
 }
 
 body{
@@ -46,17 +51,6 @@ body{
     max(16px, env(safe-area-inset-top)) 0
     max(48px, env(safe-area-inset-bottom) + 20px);
   display:flex;flex-direction:column;align-items:center;
-}
-
-/* ── Page aurora background ── */
-body::before{
-  content:'';
-  position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(52,211,153,.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 5%,  rgba(56,189,248,.10) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 60% at 50% 90%, rgba(251,146,60,.08)  0%, transparent 60%);
-  pointer-events:none;z-index:0;
 }
 
 /* ── Header ── */
@@ -77,7 +71,7 @@ body::before{
 }
 .back-btn:active{transform:scale(.88)}
 .header-info{flex:1}
-.header-title{font-size:1.5rem;font-weight:800;letter-spacing:-.5px}
+.header-title{font-size:1.6rem;font-weight:700;letter-spacing:-0.03em}
 .header-sub{font-size:.75rem;color:var(--sub);margin-top:2px}
 .header-budget{
   text-align:right;font-size:.72rem;color:var(--sub);
@@ -96,11 +90,10 @@ body::before{
 /* ── Glass card ── */
 .glass-card{
   background:var(--glass);
-  backdrop-filter:blur(24px) saturate(1.6);
-  -webkit-backdrop-filter:blur(24px) saturate(1.6);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-l);
   overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
 }
 
 /* ── Camera Section ── */
@@ -112,11 +105,11 @@ body::before{
 .camera-btns{display:flex;gap:20px;align-items:center}
 .camera-btn{
   width:96px;height:96px;border-radius:50%;
-  background:linear-gradient(135deg,#10b981,#059669);
+  background:linear-gradient(135deg,#4ade80,#16a34a);
   display:flex;align-items:center;justify-content:center;
-  font-size:2.4rem;cursor:pointer;
+  font-size:2.4rem;cursor:pointer;color:#fff;
   border:none;
-  box-shadow:0 0 0 0 rgba(52,211,153,.35);
+  box-shadow:0 0 0 0 rgba(22,163,74,.32);
   animation:pulse 2.4s ease-in-out infinite;
   transition:transform .2s cubic-bezier(.22,1,.36,1);
   -webkit-tap-highlight-color:transparent;
@@ -124,8 +117,9 @@ body::before{
 .camera-btn:active{transform:scale(.88)}
 .gallery-btn{
   width:72px;height:72px;border-radius:50%;
-  background:rgba(56,189,248,.18);
-  border:1.5px solid rgba(56,189,248,.4);
+  background:var(--glass);
+  border:1.5px solid var(--glass-border);
+  color:var(--sub);
   display:flex;align-items:center;justify-content:center;
   font-size:1.9rem;cursor:pointer;
   -webkit-tap-highlight-color:transparent;
@@ -146,7 +140,7 @@ body::before{
 }
 .analyze-btn{
   width:100%;padding:14px;border-radius:var(--radius-s);
-  background:linear-gradient(135deg,#10b981,#059669);
+  background:linear-gradient(135deg,#4ade80,#16a34a);
   color:#fff;font-size:1rem;font-weight:700;
   border:none;cursor:pointer;
   font-family:inherit;letter-spacing:.03em;
@@ -163,7 +157,7 @@ body::before{
 }
 .spinner{
   width:36px;height:36px;
-  border:3px solid rgba(255,255,255,.15);
+  border:3px solid var(--glass-border);
   border-top-color:var(--green);
   border-radius:50%;
   animation:spin 1s linear infinite;
@@ -185,9 +179,8 @@ body::before{
 .result-cal{text-align:right;flex-shrink:0}
 .result-cal-num{
   font-size:2.4rem;font-weight:900;
-  background:linear-gradient(135deg,var(--green),#0ea5e9);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;letter-spacing:-1px;line-height:1;
+  color:var(--text);
+  letter-spacing:-.03em;line-height:1;
 }
 .result-cal-unit{font-size:.7rem;color:var(--sub);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
 
@@ -216,15 +209,15 @@ body::before{
 /* ── Hint input (pre-analysis) ── */
 .hint-input{
   width:100%;
-  background:rgba(255,255,255,.08);
+  background:var(--input-bg);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-s);
   color:var(--text);font-size:.88rem;font-family:inherit;
   padding:10px 14px;outline:none;
   transition:border-color .2s;
 }
-.hint-input:focus{border-color:rgba(52,211,153,.5)}
-.hint-input::placeholder{color:rgba(255,255,255,.28)}
+.hint-input:focus{border-color:rgba(22,163,74,.5)}
+.hint-input::placeholder{color:var(--sub);opacity:.7}
 
 /* ── Edit section (post-analysis) ── */
 .edit-section{padding:0 20px 4px;display:flex;flex-direction:column;gap:6px}
@@ -232,29 +225,29 @@ body::before{
 .edit-row{display:flex;gap:8px}
 .edit-input{
   flex:1;min-width:0;
-  background:rgba(255,255,255,.08);
+  background:var(--input-bg);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-s);
   color:var(--text);font-size:.9rem;font-family:inherit;
   padding:10px 12px;outline:none;
   transition:border-color .2s;
 }
-.edit-input:focus{border-color:rgba(52,211,153,.5)}
+.edit-input:focus{border-color:rgba(22,163,74,.5)}
 .edit-cal{flex:0 0 88px;text-align:center;font-weight:700}
 
 /* ── Save button ── */
 .save-section{padding:8px 20px 20px}
 .save-btn{
   width:100%;padding:14px;border-radius:var(--radius-s);
-  background:rgba(52,211,153,.18);
-  border:1px solid rgba(52,211,153,.35);
+  background:rgba(22,163,74,.12);
+  border:1px solid rgba(22,163,74,.32);
   color:var(--green);font-size:1rem;font-weight:700;
   cursor:pointer;font-family:inherit;
   transition:transform .2s,background .2s;
   -webkit-tap-highlight-color:transparent;
 }
 .save-btn:active{transform:scale(.96)}
-.save-btn.saved{background:rgba(52,211,153,.32);color:#fff}
+.save-btn.saved{background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;border-color:transparent}
 
 /* ── Daily Bank ── */
 .bank-section{animation:fadeSlideUp .55s cubic-bezier(.22,1,.36,1) .1s both}
@@ -270,33 +263,39 @@ body::before{
 }
 .bank-today-bar{
   margin:0 16px 12px;
-  background:rgba(255,255,255,.06);
+  background:var(--track-bg);
   border-radius:10px;height:8px;overflow:hidden;
 }
 .bank-today-fill{
   height:100%;border-radius:10px;
-  background:linear-gradient(90deg,var(--green),#0ea5e9);
+  background:linear-gradient(90deg,#4ade80,#16a34a);
   transition:width 1s cubic-bezier(.22,1,.36,1);
   width:0%;
 }
-.bank-records{display:flex;flex-direction:column;gap:8px;padding:0 16px 16px}
+.bank-records{display:flex;flex-direction:column;gap:0;padding:0 16px 16px}
 .record-item{
   display:flex;align-items:center;gap:12px;
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.09);
-  border-radius:var(--radius-s);
-  padding:12px 14px;
+  padding:12px 4px;
+  border-bottom:1px solid var(--divider);
 }
-.record-icon{font-size:1.4rem;flex-shrink:0}
+.record-item:last-child{border-bottom:none}
+.record-icon{
+  flex-shrink:0;
+  width:38px;height:38px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.05rem;color:#fff;
+  background:linear-gradient(135deg,#4ade80,#16a34a);
+  box-shadow:0 1px 2px rgba(0,0,0,.14),0 4px 10px rgba(0,0,0,.10);
+}
 .record-info{flex:1;min-width:0}
 .record-name{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .record-macros{font-size:.7rem;color:var(--sub);margin-top:2px}
-.record-cal{font-size:1rem;font-weight:800;color:var(--green);flex-shrink:0}
+.record-cal{font-size:1rem;font-weight:800;color:var(--text);flex-shrink:0}
 .bank-total{
   margin:0 16px 12px;
   display:flex;justify-content:space-between;align-items:center;
   padding:10px 14px;
-  background:rgba(255,255,255,.05);
+  background:var(--chip-bg);
   border-radius:var(--radius-s);
 }
 .bank-total-lbl{font-size:.82rem;color:var(--sub)}
@@ -309,17 +308,17 @@ body::before{
 /* ── Cheat Meal Card ── */
 .cheat-card{
   margin:0 16px 16px;
-  background:linear-gradient(135deg,rgba(251,146,60,.18),rgba(239,68,68,.14));
-  border:1px solid rgba(251,146,60,.4);
+  background:linear-gradient(135deg,rgba(217,119,6,.14),rgba(190,60,50,.10));
+  border:1px solid rgba(217,119,6,.32);
   border-radius:var(--radius-m);
   padding:16px 18px;
   animation:cheatBounce .5s cubic-bezier(.22,1,.36,1) both;
 }
 .cheat-header{font-size:1rem;font-weight:800;margin-bottom:8px}
-.cheat-body{font-size:.82rem;color:rgba(255,255,255,.8);line-height:1.6;margin-bottom:12px}
+.cheat-body{font-size:.82rem;color:var(--sub);line-height:1.6;margin-bottom:12px}
 .cheat-days{display:flex;gap:10px}
 .cheat-day{
-  flex:1;background:rgba(0,0,0,.25);border-radius:10px;
+  flex:1;background:rgba(0,0,0,.08);border-radius:10px;
   padding:8px 10px;text-align:center;
 }
 .cheat-day-lbl{font-size:.68rem;color:var(--sub)}
@@ -327,7 +326,7 @@ body::before{
 
 /* ── Shimmer skeleton ── */
 .skeleton{
-  background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.04) 75%);
+  background:linear-gradient(90deg,rgba(0,0,0,.04) 25%,rgba(0,0,0,.09) 50%,rgba(0,0,0,.04) 75%);
   background-size:600px 100%;
   animation:shimmer 1.5s infinite;
   border-radius:8px;height:14px;
@@ -359,8 +358,8 @@ body::before{
   -webkit-tap-highlight-color:transparent;
 }
 .tab-btn.active{
-  background:rgba(52,211,153,.18);
-  border-color:rgba(52,211,153,.35);
+  background:rgba(22,163,74,.12);
+  border-color:rgba(22,163,74,.3);
   color:var(--green);
 }
 
@@ -374,7 +373,7 @@ body::before{
 .modal-overlay.open{display:flex;animation:fadeSlideUp .35s cubic-bezier(.22,1,.36,1) both}
 .modal-card{
   width:100%;max-width:480px;
-  background:rgba(10,20,36,.97);
+  background:var(--surface);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-l) var(--radius-l) var(--radius-m) var(--radius-m);
   padding:24px 20px max(24px,env(safe-area-inset-bottom));
@@ -383,14 +382,14 @@ body::before{
 .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
 .form-label{font-size:.8rem;color:var(--sub);font-weight:600;letter-spacing:.02em}
 .form-input{
-  background:rgba(255,255,255,.08);
+  background:var(--input-bg);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-s);
   color:var(--text);font-size:.95rem;font-family:inherit;
   padding:12px 14px;outline:none;
   transition:border-color .2s;width:100%;
 }
-.form-input:focus{border-color:rgba(52,211,153,.5)}
+.form-input:focus{border-color:rgba(22,163,74,.5)}
 .form-hint{font-size:.72rem;color:var(--sub);margin-top:3px;line-height:1.5}
 .modal-actions{display:flex;gap:8px;margin-top:8px}
 .modal-btn{
@@ -400,8 +399,8 @@ body::before{
   -webkit-tap-highlight-color:transparent;border:none;
 }
 .modal-btn:active{transform:scale(.96)}
-.modal-btn.cancel{background:rgba(255,255,255,.1);color:var(--sub)}
-.modal-btn.confirm{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+.modal-btn.cancel{background:var(--chip-bg);color:var(--sub)}
+.modal-btn.confirm{background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff}
 
 /* ── History Section ── */
 .history-container{
@@ -413,9 +412,9 @@ body::before{
 .history-empty{text-align:center;padding:48px 20px;font-size:.9rem;color:var(--sub)}
 .history-day-card{
   background:var(--glass);
-  backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-m);overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
 }
 .history-day-header{
   display:flex;align-items:center;padding:14px 16px;
@@ -426,13 +425,13 @@ body::before{
   font-size:.75rem;font-weight:700;padding:3px 10px;
   border-radius:20px;white-space:nowrap;
 }
-.history-day-badge.ok{background:rgba(52,211,153,.2);color:var(--green)}
-.history-day-badge.over{background:rgba(251,146,60,.2);color:var(--orange)}
+.history-day-badge.ok{background:rgba(22,163,74,.14);color:var(--green)}
+.history-day-badge.over{background:rgba(217,119,6,.14);color:var(--orange)}
 .history-day-chevron{font-size:.7rem;color:var(--sub);transition:transform .25s;margin-left:4px}
 .history-day-card.expanded .history-day-chevron{transform:rotate(180deg)}
-.history-day-bar{margin:0 16px 10px;background:rgba(255,255,255,.06);border-radius:6px;height:5px;overflow:hidden}
-.history-day-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--green),#0ea5e9);width:0%;transition:width .6s cubic-bezier(.22,1,.36,1)}
-.history-records{display:none;padding:0 12px 12px;flex-direction:column;gap:6px}
+.history-day-bar{margin:0 16px 10px;background:var(--track-bg);border-radius:6px;height:5px;overflow:hidden}
+.history-day-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#4ade80,#16a34a);width:0%;transition:width .6s cubic-bezier(.22,1,.36,1)}
+.history-records{display:none;padding:0 12px 12px;flex-direction:column;gap:0}
 .history-day-card.expanded .history-records{display:flex}
 
 /* ── Stats Container ── */
@@ -453,8 +452,8 @@ body::before{
   -webkit-tap-highlight-color:transparent;
 }
 .period-btn.active{
-  background:rgba(56,189,248,.18);
-  border-color:rgba(56,189,248,.35);
+  background:rgba(2,132,199,.12);
+  border-color:rgba(2,132,199,.3);
   color:var(--blue);
 }
 
@@ -465,35 +464,32 @@ body::before{
 .stat-card{
   flex:1;
   background:var(--glass);
-  backdrop-filter:blur(24px) saturate(1.6);
-  -webkit-backdrop-filter:blur(24px) saturate(1.6);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-m);
   padding:14px 10px;text-align:center;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
 }
-.stat-val{font-size:1.3rem;font-weight:900;letter-spacing:-.4px;line-height:1.1}
+.stat-val{font-size:1.3rem;font-weight:900;letter-spacing:-.03em;line-height:1.1}
 .stat-lbl{font-size:.68rem;color:var(--sub);margin-top:4px;font-weight:600;letter-spacing:.02em}
 
-/* ── Light mode ── */
-@media(prefers-color-scheme:light){
+/* ── Dark mode ── */
+@media(prefers-color-scheme:dark){
   :root{
-    --bg:#f0f7f4;
-    --surface:rgba(255,255,255,.9);
-    --glass:rgba(255,255,255,.72);
-    --glass-border:rgba(0,0,0,.1);
-    --text:#0f0f1a;
-    --sub:#6b7280;
+    --bg:#000;
+    --surface:#1c1c1e;
+    --glass:#1c1c1e;
+    --glass-border:rgba(255,255,255,.09);
+    --divider:rgba(255,255,255,.12);
+    --text:#f5f5f7;
+    --sub:#86868b;
+    --green:#34d399;
+    --blue:#38bdf8;
+    --orange:#fb923c;
+    --input-bg:rgba(255,255,255,.08);
+    --track-bg:rgba(255,255,255,.06);
+    --chip-bg:rgba(255,255,255,.1);
   }
-  body::before{
-    background:
-      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(16,185,129,.08) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 80% 5%,  rgba(14,165,233,.07) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 60% at 50% 90%, rgba(251,146,60,.05)  0%, transparent 60%);
-  }
-  .record-item{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.07)}
-  .bank-today-bar{background:rgba(0,0,0,.08)}
-  .bank-total{background:rgba(0,0,0,.04)}
-  .cheat-day{background:rgba(0,0,0,.08)}
+  .cheat-day{background:rgba(0,0,0,.22)}
 }
 
 /* ── Admin View Bar ── */
@@ -612,7 +608,7 @@ body::before{
              placeholder="選填：校正提示，如「地瓜（長得像杏鮑菇）」「大份」">
       <div style="width:100%;padding:0 4px;display:flex;gap:8px">
         <button class="analyze-btn" style="flex:1" id="analyzeBtn" onclick="doAnalyze()"><i class="bi bi-search"></i> AI 辨識熱量</button>
-        <button class="analyze-btn" style="width:48px;background:rgba(255,255,255,.15)" onclick="resetCapture()">✕</button>
+        <button class="analyze-btn" style="width:48px;background:var(--chip-bg);color:var(--sub)" onclick="resetCapture()">✕</button>
       </div>
     </div>
 
@@ -628,8 +624,8 @@ body::before{
     <div id="errorIcon" style="font-size:2rem;margin-bottom:8px"><i class="bi bi-exclamation-triangle-fill"></i></div>
     <div id="errorMsg" style="font-size:.9rem;line-height:1.6;color:var(--text);margin-bottom:14px"></div>
     <div style="display:flex;gap:8px">
-      <button onclick="resetCapture()" style="flex:1;padding:11px;border-radius:var(--radius-s);background:rgba(255,255,255,.1);border:none;color:var(--sub);font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit">重試</button>
-      <button id="errorActionBtn" style="flex:1;padding:11px;border-radius:var(--radius-s);background:rgba(56,189,248,.18);border:1px solid rgba(56,189,248,.35);color:#38bdf8;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;display:none" onclick="openSettings()">前往設定</button>
+      <button onclick="resetCapture()" style="flex:1;padding:11px;border-radius:var(--radius-s);background:var(--chip-bg);border:none;color:var(--sub);font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit">重試</button>
+      <button id="errorActionBtn" style="flex:1;padding:11px;border-radius:var(--radius-s);background:rgba(2,132,199,.12);border:1px solid rgba(2,132,199,.3);color:var(--blue);font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;display:none" onclick="openSettings()">前往設定</button>
     </div>
   </div>
 
@@ -662,39 +658,32 @@ body::before{
             </linearGradient>
             <linearGradient id="gFat" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stop-color="#fb923c"/>
-              <stop offset="100%" stop-color="#f43f5e"/>
+              <stop offset="100%" stop-color="#ea580c"/>
             </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
           </defs>
           <!-- Track rings -->
-          <circle cx="130" cy="130" r="108" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20"/>
-          <circle cx="130" cy="130" r="80"  fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20"/>
-          <circle cx="130" cy="130" r="52"  fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20"/>
+          <circle cx="130" cy="130" r="108" fill="none" stroke="rgba(128,128,128,0.16)" stroke-width="20"/>
+          <circle cx="130" cy="130" r="80"  fill="none" stroke="rgba(128,128,128,0.16)" stroke-width="20"/>
+          <circle cx="130" cy="130" r="52"  fill="none" stroke="rgba(128,128,128,0.16)" stroke-width="20"/>
           <!-- Active rings -->
           <circle id="ring-carbs"
             cx="130" cy="130" r="108" fill="none"
             stroke="url(#gCarbs)" stroke-width="20"
             stroke-linecap="round"
             transform="rotate(-90 130 130)"
-            stroke-dasharray="678.58" stroke-dashoffset="678.58"
-            filter="url(#glow)"/>
+            stroke-dasharray="678.58" stroke-dashoffset="678.58"/>
           <circle id="ring-protein"
             cx="130" cy="130" r="80" fill="none"
             stroke="url(#gProtein)" stroke-width="20"
             stroke-linecap="round"
             transform="rotate(-90 130 130)"
-            stroke-dasharray="502.65" stroke-dashoffset="502.65"
-            filter="url(#glow)"/>
+            stroke-dasharray="502.65" stroke-dashoffset="502.65"/>
           <circle id="ring-fat"
             cx="130" cy="130" r="52" fill="none"
             stroke="url(#gFat)" stroke-width="20"
             stroke-linecap="round"
             transform="rotate(-90 130 130)"
-            stroke-dasharray="326.73" stroke-dashoffset="326.73"
-            filter="url(#glow)"/>
+            stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
         </svg>
         <div class="rings-center">
           <span class="rings-center-label">三大營養素</span>
@@ -766,7 +755,7 @@ body::before{
       <label class="form-label">同步代碼</label>
       <div style="display:flex;gap:8px">
         <input class="form-input" type="text" id="setSyncId" placeholder="自動產生" style="flex:1;font-family:monospace;font-size:.82rem">
-        <button onclick="copySyncId()" style="padding:0 14px;border-radius:var(--radius-s);background:rgba(56,189,248,.18);border:1px solid rgba(56,189,248,.35);color:#38bdf8;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit" id="copyBtn">複製</button>
+        <button onclick="copySyncId()" style="padding:0 14px;border-radius:var(--radius-s);background:rgba(2,132,199,.12);border:1px solid rgba(2,132,199,.3);color:var(--blue);font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit" id="copyBtn">複製</button>
       </div>
       <div class="form-hint">其他裝置輸入相同代碼即可同步資料。<br>⚠ 更改代碼後會切換到該代碼的資料。</div>
     </div>
@@ -1307,7 +1296,7 @@ async function renderBank() {
 
   // Total
   if (day.records.length > 0) {
-    const totalColor = effective > getDailyLimit() ? '#fb923c' : 'var(--green)';
+    const totalColor = effective > getDailyLimit() ? 'var(--orange)' : 'var(--green)';
     const debtNote   = debt > 0 ? ` <span style="color:var(--orange);font-size:.7rem">（含 ${debt} 前日分期）</span>` : '';
     html += `
       <div class="bank-total">
@@ -1411,8 +1400,8 @@ async function renderStats(refetch) {
   const yAxisSvg = ticks.map(v => {
     const y = mt + toY(v);
     const lbl = v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v;
-    return `<text x="${ml-4}" y="${(y+3.5).toFixed(1)}" text-anchor="end" fill="rgba(200,200,200,.3)" font-size="9">${lbl}</text>
-            <line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,.05)" stroke-width="1"/>`;
+    return `<text x="${ml-4}" y="${(y+3.5).toFixed(1)}" text-anchor="end" fill="var(--sub)" font-size="9">${lbl}</text>
+            <line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="var(--divider)" stroke-width="1"/>`;
   }).join('');
 
   const limitY = mt + toY(limit);
@@ -1422,21 +1411,21 @@ async function renderStats(refetch) {
     const bh   = v > 0 ? Math.max(3, (v / cap) * ch) : 0;
     const y    = mt + ch - bh;
     const isF  = key > todayStr;
-    const col  = isF  ? 'rgba(255,255,255,.07)'
-               : v === 0 ? 'rgba(255,255,255,.09)'
-               : v <= limit ? '#34d399' : '#fb923c';
+    const col  = isF  ? 'var(--track-bg)'
+               : v === 0 ? 'var(--divider)'
+               : v <= limit ? 'var(--green)' : 'var(--orange)';
     const isToday_ = key === todayStr;
     const lbl  = labels[i];
     return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="2.5" fill="${col}" opacity="${isF ? 1 : 0.88}"/>
-            ${lbl ? `<text x="${(x+barW/2).toFixed(1)}" y="${(H-mb+13).toFixed(1)}" text-anchor="middle" fill="${isToday_ ? '#f2f2f7' : 'rgba(200,200,200,.38)'}" font-size="8.5" font-weight="${isToday_ ? 700 : 400}">${lbl}</text>` : ''}`;
+            ${lbl ? `<text x="${(x+barW/2).toFixed(1)}" y="${(H-mb+13).toFixed(1)}" text-anchor="middle" fill="${isToday_ ? 'var(--text)' : 'var(--sub)'}" font-size="8.5" font-weight="${isToday_ ? 700 : 400}">${lbl}</text>` : ''}`;
   }).join('');
 
   const chartHtml = `
     <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible">
       ${yAxisSvg}
       <line x1="${ml}" y1="${limitY.toFixed(1)}" x2="${W-mr}" y2="${limitY.toFixed(1)}"
-            stroke="rgba(251,146,60,.55)" stroke-width="1.5" stroke-dasharray="4,3"/>
-      <text x="${W-mr}" y="${(limitY-4).toFixed(1)}" text-anchor="end" fill="rgba(251,146,60,.65)" font-size="8.5">目標</text>
+            stroke="var(--orange)" stroke-width="1.5" stroke-dasharray="4,3" opacity=".6"/>
+      <text x="${W-mr}" y="${(limitY-4).toFixed(1)}" text-anchor="end" fill="var(--orange)" opacity=".75" font-size="8.5">目標</text>
       ${barsSvg}
     </svg>`;
 
