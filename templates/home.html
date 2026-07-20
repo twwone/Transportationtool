@@ -972,6 +972,19 @@ const _STRIP_FIXED = ['tias','mrt','weather','passport']; // 這四張固定位�
 let cardOrder = [...DEFAULT_ORDER];
 let editMode  = false;
 
+/* 提前宣告：renderBento() 會在頁面載入時立刻呼叫 loadMrtStrip()，
+   若 _MRT_NAMES/_MRT_EXPRESS 宣告在後面會落入 TDZ，導致已設定常用站的
+   使用者一進頁面就丟出 ReferenceError，機捷卡在骨架屏永遠跑不出來。 */
+const _MRT_NAMES = {
+  A1:'台北車站',A2:'三重站',A3:'新北產業園區站',A4:'新莊副都心站',
+  A5:'泰山站',A6:'泰山貴和站',A7:'體育大學站',A8:'長庚醫院站',
+  A9:'林口站',A10:'山鼻站',A11:'坑口站',A12:'機場第一航廈站',
+  A13:'機場第二航廈站',A14a:'機場旅館站',A15:'大園站',A16:'橫山站',
+  A17:'領航站',A18:'高鐵桃園站',A19:'桃園體育園區站',A20:'興南站',A21:'環北站'
+};
+const _MRT_EXPRESS = new Set(['A1','A12','A13','A17','A18']);
+let _passportTimer = null;
+
 function renderBento(order) {
   cardOrder = order;
   const bento = document.getElementById('bento');
@@ -1208,16 +1221,8 @@ window.addEventListener('pageshow', e => {
    ══════════════════════════════════════════ */
 /* ════════════════════════════════════════
    Strip 即時資料載入
+   （_MRT_NAMES / _MRT_EXPRESS 已提前宣告，見上方）
    ════════════════════════════════════════ */
-const _MRT_NAMES = {
-  A1:'台北車站',A2:'三重站',A3:'新北產業園區站',A4:'新莊副都心站',
-  A5:'泰山站',A6:'泰山貴和站',A7:'體育大學站',A8:'長庚醫院站',
-  A9:'林口站',A10:'山鼻站',A11:'坑口站',A12:'機場第一航廈站',
-  A13:'機場第二航廈站',A14a:'機場旅館站',A15:'大園站',A16:'橫山站',
-  A17:'領航站',A18:'高鐵桃園站',A19:'桃園體育園區站',A20:'興南站',A21:'環北站'
-};
-const _MRT_EXPRESS = new Set(['A1','A12','A13','A17','A18']);
-
 async function loadMrtStrip() {
   const el = document.getElementById('strip-mrt');
   if (!el) return;
@@ -1229,7 +1234,7 @@ async function loadMrtStrip() {
     return;
   }
   try {
-    const resp = await fetch('/api/mrt/liveboard');
+    const resp = await fetch('/api/mrt/liveboard', { signal: AbortSignal.timeout(12000) });
     const json = await resp.json();
     if (!json.configured || !json.data) throw new Error('no data');
 
@@ -1343,7 +1348,6 @@ async function loadWeatherStrip() {
   }
 }
 
-let _passportTimer = null;
 function loadPassportStrip() {
   const el = document.getElementById('strip-passport');
   if (!el) return;

@@ -634,7 +634,7 @@ function scrollToStation(id) {
 async function fetchNow() {
   refreshTick = 30;
   try {
-    const resp = await fetch("/api/mrt/liveboard");
+    const resp = await fetch("/api/mrt/liveboard", { signal: AbortSignal.timeout(12000) });
     const json = await resp.json();
     if (!json.configured) { renderNoTDX(); return; }
     if (json.error)       { renderError(json.error); return; }
@@ -794,7 +794,7 @@ async function fetchTimetable() {
   ttFetched = true;
   document.getElementById('tt-wrap').innerHTML = '<div class="loading">載入時刻表…</div>';
   try {
-    const r = await fetch('/api/mrt/timetable');
+    const r = await fetch('/api/mrt/timetable', { signal: AbortSignal.timeout(12000) });
     const j = await r.json();
     if (j.configured && Array.isArray(j.data) && j.data.length > 0) ttData = j.data;
   } catch(e) {}
