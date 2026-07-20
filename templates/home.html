@@ -249,18 +249,32 @@ body {
   opacity: 0.6;
 }
 
-/* 各項目 icon 識別色 — iOS 設定 App 式圓角色塊圖示，淺色/深色模式共用 */
-.card-thsr      .sm-icon { background: linear-gradient(135deg,#fb923c,#f97316); }
-.card-mrt       .sm-icon { background: linear-gradient(135deg,#a78bfa,#7c3aed); }
-.card-schedule  .sm-icon { background: linear-gradient(135deg,#34d399,#059669); }
-.card-amenities .sm-icon { background: linear-gradient(135deg,#22d3ee,#0891b2); }
-.card-visa      .sm-icon { background: linear-gradient(135deg,#fbbf24,#d97706); }
-.card-share     .sm-icon { background: linear-gradient(135deg,#60a5fa,#2563eb); }
-.card-weather   .sm-icon { background: linear-gradient(135deg,#38bdf8,#0284c7); }
-.card-diet      .sm-icon { background: linear-gradient(135deg,#4ade80,#16a34a); }
-.card-memo      .sm-icon { background: linear-gradient(135deg,#c4967a,#92400e); font-family: Georgia, serif; font-weight: 600; }
-.card-sop       .sm-icon { background: linear-gradient(135deg,#ff6b7a,#d91430); }
-.card-settings  .sm-icon { background: linear-gradient(135deg,#94a3b8,#64748b); }
+/* 全站統一單一品牌色 icon 色塊（Apple.com 官網藍），不再依功能分色 */
+.card-thsr      .sm-icon,
+.card-mrt       .sm-icon,
+.card-schedule  .sm-icon,
+.card-amenities .sm-icon,
+.card-visa      .sm-icon,
+.card-share     .sm-icon,
+.card-weather   .sm-icon,
+.card-diet      .sm-icon,
+.card-memo      .sm-icon,
+.card-sop       .sm-icon,
+.card-settings  .sm-icon { background: linear-gradient(135deg,#2997ff,#0071e3); }
+.card-memo      .sm-icon { font-family: Georgia, serif; font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  .card-thsr      .sm-icon,
+  .card-mrt       .sm-icon,
+  .card-schedule  .sm-icon,
+  .card-amenities .sm-icon,
+  .card-visa      .sm-icon,
+  .card-share     .sm-icon,
+  .card-weather   .sm-icon,
+  .card-diet      .sm-icon,
+  .card-memo      .sm-icon,
+  .card-sop       .sm-icon,
+  .card-settings  .sm-icon { background: linear-gradient(135deg,#4db3ff,#2997ff); }
+}
 
 /* ── Strip 列（機捷 / 天氣 / 護照，融入同一份清單，僅數字保留識別色）── */
 .card-strip {
@@ -515,7 +529,7 @@ body {
   margin: 8px 16px 0;
   box-sizing: border-box; width: calc(100% - 32px);
 }
-.auth-name-field:focus { border-color: #007aff; }
+.auth-name-field:focus { border-color: #0071e3; }
 .auth-error {
   min-height: 20px; margin: 4px 16px 8px;
   font-size: 0.82rem; color: #ff3b30;
@@ -525,7 +539,7 @@ body {
   display: block; width: calc(100% - 32px);
   margin: 0 16px 16px;
   padding: 14px; border-radius: 14px;
-  background: #007aff; color: #fff;
+  background: #0071e3; color: #fff;
   font-size: 1rem; font-weight: 700;
   border: none; cursor: pointer; font-family: inherit;
   transition: transform 0.18s, opacity 0.18s;
@@ -680,7 +694,7 @@ body {
 .admin-row-val { color: #636366; font-family: monospace; font-size: 0.8rem; max-width: 55%; text-align: right; word-break: break-all; }
 .admin-link {
   display: block; padding: 11px 16px; text-decoration: none;
-  font-size: 0.875rem; color: #007aff; font-weight: 500;
+  font-size: 0.875rem; color: #0071e3; font-weight: 500;
   border-bottom: 1px solid rgba(60,60,67,0.08);
   transition: background 0.15s; -webkit-tap-highlight-color: transparent;
 }

@@ -27,9 +27,9 @@ html, body { overscroll-behavior: none; }
   --divider:       rgba(0,0,0,0.09);
   --text:          #1d1d1f;
   --sub:           #86868b;
-  --accent:        #2563eb;
-  --accent-soft:   rgba(37,99,235,0.08);
-  --accent-border: rgba(37,99,235,0.28);
+  --accent:        #0071e3;
+  --accent-soft:   rgba(0,113,227,0.08);
+  --accent-border: rgba(0,113,227,0.28);
   --radius-l:      20px;
   --radius-m:      14px;
 }
@@ -86,7 +86,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   white-space: nowrap;
 }
-.refresh-btn:hover  { background: rgba(37,99,235,0.14); }
+.refresh-btn:hover  { background: rgba(0,113,227,0.14); }
 .refresh-btn:active { transform: scale(0.9); }
 .spin { animation: spin 0.7s linear infinite; display: inline-block; }
 
@@ -432,20 +432,20 @@ body {
     --divider:       rgba(255,255,255,0.12);
     --text:          #f5f5f7;
     --sub:           #86868b;
-    --accent:        #60a5fa;
-    --accent-soft:   rgba(96,165,250,0.12);
-    --accent-border: rgba(96,165,250,0.35);
+    --accent:        #2997ff;
+    --accent-soft:   rgba(41,151,255,0.12);
+    --accent-border: rgba(41,151,255,0.35);
   }
   body { background: var(--bg); color: var(--text); }
   .topbar { background: rgba(0,0,0,0.75); box-shadow: 0 1px 0 rgba(255,255,255,0.06); border-bottom: none; }
   .topbar-title { color: #f2f2f7; }
-  .back-btn { color: #60a5fa; }
-  .refresh-btn { color: #60a5fa; }
-  .refresh-btn:hover { background: rgba(96,165,250,0.1); }
+  .back-btn { color: #2997ff; }
+  .refresh-btn { color: #2997ff; }
+  .refresh-btn:hover { background: rgba(41,151,255,0.1); }
   .tab-bar { background: #1c1c1e; border-bottom-color: #2c2c2e; }
   .tab { color: #636366; border-bottom-color: #2c2c2e; }
-  .tab.active { color: #60a5fa; }
-  .tab-active-bar { background: #60a5fa; }
+  .tab.active { color: #2997ff; }
+  .tab-active-bar { background: #2997ff; }
   .flight-card { background: #1c1c1e; border-color: #2c2c2e; }
   .flight-card:hover { border-color: #3a3a3c; }
   .card-delayed  { background: var(--surface); border-color: var(--border); box-shadow: 0 1px 6px rgba(0,0,0,0.3), inset 3px 0 0 0 #fb923c; }
@@ -455,7 +455,7 @@ body {
   .error-banner { color: #fcd34d; border-left-color: #fbbf24; }
   .flight-airline { color: #8e8e93; }
   .flight-num  { color: #f2f2f7; }
-  .airport-badge { background: rgba(26,86,219,0.2); color: #60a5fa; }
+  .airport-badge { background: rgba(0,81,163,0.2); color: #2997ff; }
   .delay-badge   { background: rgba(194,65,12,0.15); color: #fb923c; }
   .badge-dir-arr { background: rgba(5,150,105,0.2);  color: #4ade80; }
   .badge-dir-dep { background: rgba(30,64,175,0.2);  color: #93c5fd; }
@@ -473,14 +473,14 @@ body {
   .empty-state { color: #48484a; }
   .section-label { color: #636366; }
   .airline-row { background: #1c1c1e; border-color: #2c2c2e; }
-  .picker-id   { background: rgba(96,165,250,0.15); color: #60a5fa; }
+  .picker-id   { background: rgba(41,151,255,0.15); color: #2997ff; }
   .picker-name { color: #f2f2f7; }
   .picker-check { color: #3a3a3c; }
-  .picker-checked { background: rgba(96,165,250,0.15); border-color: rgba(96,165,250,0.4); }
-  .picker-checked .picker-check { color: #60a5fa; }
+  .picker-checked { background: rgba(41,151,255,0.15); border-color: rgba(41,151,255,0.4); }
+  .picker-checked .picker-check { color: #2997ff; }
   .sheet-overlay.open { background: rgba(0,0,0,0.55); }
   .picker-sheet { background: #1c1c1e; }
-  .sh-done { color: #60a5fa; }
+  .sh-done { color: #2997ff; }
   .flt-sheet { background: #1c1c1e; }
   .flt-sheet-header { background: #1c1c1e; border-bottom-color: #2c2c2e; }
   .flt-sheet-title { color: #f2f2f7; }
@@ -489,7 +489,7 @@ body {
   .flt-info-val   { color: #f2f2f7; }
   .flt-map-placeholder { background: #1c1c1e; color: #636366; }
   .flt-live-badge { background: rgba(22,163,74,0.18); }
-  .flt-refresh-btn { background: #1c1c1e; border-color: #3a3a3c; color: #60a5fa; }
+  .flt-refresh-btn { background: #1c1c1e; border-color: #3a3a3c; color: #2997ff; }
 }
 
 /* ── Flight Detail Bottom Sheet ── */
@@ -650,7 +650,7 @@ body {
   </div>
   <div id="fltMapWrap">
     <div class="flt-map-placeholder" id="fltMapPh">
-      <div class="spin" style="font-size:1.5rem;color:#60a5fa">↻</div>
+      <div class="spin" style="font-size:1.5rem;color:#2997ff">↻</div>
       <div>正在定位飛機…</div>
     </div>
     <div id="fltMap" class="flt-map" style="display:none"></div>
@@ -1307,7 +1307,7 @@ async function openFlightDetail(key) {
   if (_leafletMap) { _leafletMap.remove(); _leafletMap = null; }
   const phEl  = document.getElementById('fltMapPh');
   const mapEl = document.getElementById('fltMap');
-  phEl.innerHTML  = '<div class="spin" style="font-size:1.5rem;color:#60a5fa">↻</div><div>正在定位飛機…</div>';
+  phEl.innerHTML  = '<div class="spin" style="font-size:1.5rem;color:#2997ff">↻</div><div>正在定位飛機…</div>';
   phEl.style.display  = '';
   mapEl.style.display = 'none';
   document.getElementById('fltLiveSec').style.display = 'none';

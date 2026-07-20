@@ -22,9 +22,9 @@ html, body { height: 100%; overscroll-behavior: none; }
   --divider:  rgba(0,0,0,0.09);
   --text:     #1d1d1f;
   --sub:      #86868b;
-  --accent:   #d91430;
-  --acc2:     rgba(217,20,48,0.08);
-  --blank:    #d91430;
+  --accent:   #0071e3;
+  --acc2:     rgba(0,113,227,0.08);
+  --blank:    #0071e3;
   --radius-l: 20px;
   --radius-m: 14px;
 }
@@ -36,9 +36,9 @@ html, body { height: 100%; overscroll-behavior: none; }
     --divider: rgba(255,255,255,0.12);
     --text:    #f5f5f7;
     --sub:     #86868b;
-    --accent:  #ff4455;
-    --acc2:    rgba(255,68,85,0.11);
-    --blank:   #ff6677;
+    --accent:  #2997ff;
+    --acc2:    rgba(41,151,255,0.14);
+    --blank:   #4db3ff;
   }
 }
 
@@ -284,7 +284,7 @@ body {
   transition: box-shadow 0.3s, transform 0.3s;
 }
 #view-codes .cb-search-box:focus-within {
-  box-shadow: 0 0 0 3.5px rgba(217,20,48,0.18), 0 4px 18px rgba(217,20,48,0.1);
+  box-shadow: 0 0 0 3.5px rgba(0,113,227,0.18), 0 4px 18px rgba(0,113,227,0.1);
   transform: scale(1.012);
 }
 #view-codes .cb-search-icon { font-size: 0.9rem; color: #8e8e93; flex-shrink: 0; }
@@ -429,7 +429,7 @@ body {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
-.preg-mode-btn.active { background: rgba(217,20,48,0.08); border-color: var(--accent); color: var(--accent); }
+.preg-mode-btn.active { background: rgba(0,113,227,0.08); border-color: var(--accent); color: var(--accent); }
 .preg-mode-btn:active { opacity: 0.7; }
 .preg-input-card {
   background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px;
@@ -442,7 +442,7 @@ body {
   outline: none; font-family: inherit; box-sizing: border-box;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.preg-date-input:focus, .preg-week-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(217,20,48,0.1); }
+.preg-date-input:focus, .preg-week-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,113,227,0.1); }
 .preg-week-row { display: flex; align-items: center; gap: 10px; }
 .preg-week-input { text-align: center; font-size: 2rem; font-weight: 800; letter-spacing: -1px; max-width: 140px; }
 .preg-week-unit { font-size: 1.1rem; font-weight: 600; color: var(--sub); }
@@ -474,7 +474,8 @@ body {
   width: 100%; background: rgba(217,20,48,0.07); border: 1.5px solid rgba(217,20,48,0.25);
   border-radius: 18px; padding: 24px 20px; text-align: center;
 }
-.preg-deny-title { font-size: 1.1rem; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+.preg-deny-title { font-size: 1.1rem; font-weight: 800; color: #d91430; margin-bottom: 4px; }
+@media (prefers-color-scheme: dark) { .preg-deny-title { color: #ff4455; } }
 .preg-deny-sub   { font-size: 0.82rem; color: var(--sub); }
 .preg-fly-thru {
   width: 100%; background: rgba(245,158,11,0.08); border: 1.5px solid rgba(245,158,11,0.25);
@@ -501,7 +502,7 @@ body {
     <div class="content">
       <div class="hub-list">
 
-        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#ff6b7a,#d91430)" onclick="goSub('broadcast')">
+        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#2997ff,#0071e3)" onclick="goSub('broadcast')">
           <div class="hub-icon"><i class="bi bi-megaphone-fill"></i></div>
           <div class="hub-info">
             <div class="hub-name">廣播 SOP</div>
@@ -510,7 +511,7 @@ body {
           <div class="hub-arrow">›</div>
         </div>
 
-        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#60a5fa,#2563eb)" onclick="goSub('ssr')">
+        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#2997ff,#0071e3)" onclick="goSub('ssr')">
           <div class="hub-icon"><i class="bi bi-tag-fill"></i></div>
           <div class="hub-info">
             <div class="hub-name">SSR 代碼</div>
@@ -519,7 +520,7 @@ body {
           <div class="hub-arrow">›</div>
         </div>
 
-        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#a78bfa,#7c3aed)" onclick="goSub('codes')">
+        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#2997ff,#0071e3)" onclick="goSub('codes')">
           <div class="hub-icon"><i class="bi bi-folder2-open"></i></div>
           <div class="hub-info">
             <div class="hub-name">代碼字典</div>
@@ -528,7 +529,7 @@ body {
           <div class="hub-arrow">›</div>
         </div>
 
-        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#f472b6,#be185d)" onclick="goSub('preg')">
+        <div class="hub-card" style="--card-grad:linear-gradient(135deg,#2997ff,#0071e3)" onclick="goSub('preg')">
           <div class="hub-icon"><i class="bi bi-heart-pulse-fill"></i></div>
           <div class="hub-info">
             <div class="hub-name">孕婦查驗</div>

@@ -32,7 +32,7 @@ html,body{overscroll-behavior:none;overflow-x:hidden;height:100%}
   --divider:rgba(0,0,0,0.09);
   --text:#1d1d1f;
   --sub:#86868b;
-  --accent:#3b82f6;
+  --accent:#0071e3;
   --danger:#ef4444;
   --radius-l:24px;
   --radius-m:18px;
@@ -48,7 +48,7 @@ html,body{overscroll-behavior:none;overflow-x:hidden;height:100%}
     --divider:rgba(255,255,255,0.12);
     --text:#f5f5f7;
     --sub:#86868b;
-    --accent:#60a5fa;
+    --accent:#2997ff;
     --danger:#ff453a;
     --glass-bg:rgba(255,255,255,.07);
     --glass-border:rgba(255,255,255,.12);
@@ -108,7 +108,7 @@ body::before{
 .room-pill{
   display:none;align-items:center;gap:5px;
   padding:5px 10px;border-radius:100px;
-  background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.22);
+  background:rgba(0,113,227,.1);border:1px solid rgba(0,113,227,.22);
   font-size:.72rem;font-weight:700;color:var(--accent);
   cursor:pointer;white-space:nowrap;flex-shrink:0;
   -webkit-tap-highlight-color:transparent;
@@ -150,7 +150,7 @@ body::before{
   background:var(--accent);border:none;cursor:pointer;
   font-family:inherit;-webkit-tap-highlight-color:transparent;
   text-align:left;
-  box-shadow:0 4px 24px rgba(59,130,246,.35);
+  box-shadow:0 4px 24px rgba(0,113,227,.35);
 }
 @media(prefers-color-scheme:dark){.create-btn{box-shadow:0 4px 24px rgba(96,165,250,.25)}}
 .c-icon{font-size:1.8rem;line-height:1;flex-shrink:0}
@@ -174,7 +174,7 @@ body::before{
   -webkit-appearance:none;
   transition:border-color .2s,box-shadow .2s;
 }
-.join-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.join-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,113,227,.12)}
 .join-input.error{border-color:var(--danger);animation:shake .4s}
 @media(prefers-color-scheme:dark){.join-input{background:rgba(44,44,46,.85);border-color:rgba(255,255,255,.1)}}
 .join-btn{
@@ -182,7 +182,7 @@ body::before{
   background:var(--accent);color:#fff;font-size:.9rem;font-weight:700;
   border:none;cursor:pointer;font-family:inherit;
   -webkit-tap-highlight-color:transparent;
-  box-shadow:0 2px 12px rgba(59,130,246,.3);
+  box-shadow:0 2px 12px rgba(0,113,227,.3);
 }
 .join-err{font-size:.75rem;color:var(--danger);display:none;font-weight:500;margin-top:6px}
 .join-err.show{display:block}
@@ -233,8 +233,8 @@ body::before{
 }
 .img-add{
   flex-shrink:0;width:72px;height:110px;border-radius:14px;
-  border:2px dashed rgba(59,130,246,.35);
-  background:rgba(59,130,246,.05);
+  border:2px dashed rgba(0,113,227,.35);
+  background:rgba(0,113,227,.05);
   color:var(--accent);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:4px;
   cursor:pointer;font-size:1.4rem;font-family:inherit;
@@ -314,7 +314,7 @@ body::before{
   -webkit-appearance:none;
   transition:border-color .2s,box-shadow .2s;
 }
-.sync-ta:focus{border-color:rgba(59,130,246,.4);box-shadow:0 0 0 3px rgba(59,130,246,.08)}
+.sync-ta:focus{border-color:rgba(0,113,227,.4);box-shadow:0 0 0 3px rgba(0,113,227,.08)}
 @media(prefers-color-scheme:dark){.sync-ta{background:rgba(28,28,30,.75);border-color:rgba(255,255,255,.1)}}
 
 /* ── File Card ── */
@@ -339,7 +339,7 @@ body::before{
   font-size:1.55rem;
   flex-shrink:0;
   color:#fff;
-  background:linear-gradient(135deg,#60a5fa,#2563eb) !important;
+  background:linear-gradient(135deg,#2997ff,#0071e3) !important;
   box-shadow:0 1px 2px rgba(0,0,0,.14),0 4px 10px rgba(0,0,0,.10);
 }
 .file-info{flex:1;min-width:0}
@@ -349,7 +349,7 @@ body::before{
   flex-shrink:0;padding:11px 18px;border-radius:100px;
   background:var(--accent);color:#fff;font-size:.82rem;font-weight:700;
   border:none;cursor:pointer;font-family:inherit;white-space:nowrap;
-  box-shadow:0 3px 12px rgba(59,130,246,.32);
+  box-shadow:0 3px 12px rgba(0,113,227,.32);
   -webkit-tap-highlight-color:transparent;
 }
 @media(prefers-color-scheme:dark){.file-dl-btn{box-shadow:0 3px 12px rgba(96,165,250,.22)}}
@@ -363,7 +363,7 @@ body::before{
   -webkit-tap-highlight-color:transparent;
   white-space:nowrap;
 }
-.btn-copy{background:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(59,130,246,.28)}
+.btn-copy{background:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(0,113,227,.28)}
 .btn-file{
   background:var(--glass-bg);
   border:1px solid var(--glass-border);
@@ -388,7 +388,7 @@ body::before{
 /* ── Drop overlay ── */
 .drop-overlay{
   display:none;position:fixed;inset:0;
-  background:rgba(59,130,246,.08);
+  background:rgba(0,113,227,.08);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   z-index:150;align-items:center;justify-content:center;
   pointer-events:none;animation:fadeIn .18s ease;
@@ -456,7 +456,7 @@ body::before{
   width:100%;padding:16px;border-radius:18px;
   background:var(--accent);color:#fff;
   font-size:1rem;font-weight:700;border:none;cursor:pointer;
-  font-family:inherit;box-shadow:0 4px 16px rgba(59,130,246,.32);
+  font-family:inherit;box-shadow:0 4px 16px rgba(0,113,227,.32);
 }
 
 .sp{

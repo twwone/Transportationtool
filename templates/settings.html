@@ -14,7 +14,7 @@ html, body { overscroll-behavior: none; background: var(--bg); }
   --surface: #ffffff;
   --text:    #1d1d1f;
   --sub:     #86868b;
-  --tint:    #007aff;
+  --tint:    #0071e3;
   --red:     #ff3b30;
   --border:  rgba(0,0,0,0.08);
   --divider: rgba(0,0,0,0.09);
@@ -74,7 +74,7 @@ body {
   transition: border-color 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
-.p-chip.active { border-color: var(--tint); color: var(--tint); background: rgba(0,122,255,0.08); }
+.p-chip.active { border-color: var(--tint); color: var(--tint); background: rgba(0,113,227,0.08); }
 .p-chip:active { opacity: 0.7; }
 
 /* ── Section ── */
@@ -92,11 +92,18 @@ body {
   color: #fff; font-size: 0.66rem; line-height: 1; flex-shrink: 0;
   box-shadow: 0 1px 2px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);
 }
-.cat-thsr { background: linear-gradient(135deg,#fb923c,#f97316); }
-.cat-mrt  { background: linear-gradient(135deg,#a78bfa,#7c3aed); }
-.cat-tg   { background: linear-gradient(135deg,#5ac8fa,#0088cc); }
-.cat-diet { background: linear-gradient(135deg,#4ade80,#16a34a); }
-.cat-wx   { background: linear-gradient(135deg,#38bdf8,#0284c7); }
+.cat-thsr,
+.cat-mrt,
+.cat-tg,
+.cat-diet,
+.cat-wx   { background: linear-gradient(135deg,#2997ff,#0071e3); }
+@media (prefers-color-scheme: dark) {
+  .cat-thsr,
+  .cat-mrt,
+  .cat-tg,
+  .cat-diet,
+  .cat-wx { background: linear-gradient(135deg,#4db3ff,#2997ff); }
+}
 .sec-card {
   background: var(--surface);
   border-radius: var(--radius);
@@ -148,7 +155,7 @@ body {
 /* ── Tags (weather / MRT favorites) ── */
 .tag-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px 12px; }
 .tag {
-  padding: 5px 12px; background: rgba(0,122,255,0.1);
+  padding: 5px 12px; background: rgba(0,113,227,0.1);
   color: var(--tint); border-radius: 100px;
   font-size: 0.8rem; font-weight: 600;
 }
@@ -175,9 +182,11 @@ body {
     --sub:     #86868b;
     --border:  rgba(255,255,255,0.09);
     --divider: rgba(255,255,255,0.12);
+    --tint:    #2997ff;
   }
   html, body { background: #000; }
   .top-bar { background: rgba(0,0,0,0.88); border-color: rgba(255,255,255,0.09); }
+  .p-chip.active { background: rgba(41,151,255,0.14); }
   /* 分類圖示色塊在淺色/深色模式下共用同一組漸層，不需個別覆寫 */
 }
 </style>
