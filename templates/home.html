@@ -987,6 +987,7 @@ const _MRT_NAMES = {
 };
 const _MRT_EXPRESS = new Set(['A1','A12','A13','A17','A18']);
 let _passportTimer = null;
+let _mrtStripTimer = null;
 
 function renderBento(order) {
   cardOrder = order;
@@ -1224,11 +1225,21 @@ window.addEventListener('pageshow', e => {
    ══════════════════════════════════════════ */
 /* ════════════════════════════════════════
    Strip 即時資料載入
-   （_MRT_NAMES / _MRT_EXPRESS 已提前宣告，見上方）
+   （_MRT_NAMES / _MRT_EXPRESS / _mrtStripTimer 已提前宣告，見上方）
    ════════════════════════════════════════ */
 async function loadMrtStrip() {
   const el = document.getElementById('strip-mrt');
   if (!el) return;
+
+  // 每 30 秒自動重抓一次（跟後端快取/ mrt.html 本頁的更新頻率一致），
+  // 避免使用者在首頁看到的分鐘數只是「載入當下」的一次性快照，
+  // 走到月台時數字早就跟實際不符。
+  if (_mrtStripTimer) clearInterval(_mrtStripTimer);
+  _mrtStripTimer = setInterval(() => {
+    if (document.getElementById('strip-mrt')) loadMrtStrip();
+    else clearInterval(_mrtStripTimer);
+  }, 30000);
+
   const starredId = Config.getActive().mrt?.starred || '';
   const sName = starredId ? (_MRT_NAMES[starredId] || starredId) : '';
 
