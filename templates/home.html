@@ -288,11 +288,14 @@ body {
 .strip-left { display: flex; flex-direction: column; gap: 3px; flex: 0 0 auto; min-width: 0; }
 .strip-tag  { font-size: .74rem; font-weight: 600; color: var(--sub); }
 .strip-name { font-size: .95rem; font-weight: 590; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-.strip-trains { display: flex; gap: 8px; margin-left: auto; }
-.tp { display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,.045); border-radius: 10px; padding: 6px 11px; }
-.tp-badge { font-size: .58rem; font-weight: 700; color: var(--sub); }
-.tp-mins { font-size: 1.05rem; font-weight: 700; color: var(--text); line-height: 1; }
-.tp-mins small { font-size: .58rem; opacity: .7; margin-left: 1px; }
+.strip-trains { display: flex; gap: 6px; margin-left: auto; }
+.tp { display: flex; flex-direction: column; gap: 3px; background: rgba(0,0,0,.045); border-radius: 10px; padding: 6px 9px; }
+.tp-badge { font-size: .56rem; font-weight: 700; color: var(--sub); }
+.tp-row { display: flex; align-items: baseline; gap: 5px; }
+.tp-type { font-size: .54rem; font-weight: 600; color: var(--sub); flex-shrink: 0; width: 12px; }
+.tp-mins { font-size: .88rem; font-weight: 700; color: var(--text); line-height: 1.3; }
+.tp-mins small { font-size: .54rem; opacity: .7; margin-left: 1px; }
+.tp-mins.none { color: var(--sub); opacity: .5; }
 .strip-wx { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .wx-emoji-lg { font-size: 1.6rem; line-height: 1; color: #0284c7; }
 .wx-info { display: flex; flex-direction: column; }
@@ -1238,19 +1241,20 @@ async function loadMrtStrip() {
     const json = await resp.json();
     if (!json.configured || !json.data) throw new Error('no data');
 
-    const pill = (t, label) => {
-      if (!t) return '';
+    const typeRow = (t, typeLabel) => {
+      if (!t) return `<div class="tp-row"><span class="tp-type">${typeLabel}</span><span class="tp-mins none">—</span></div>`;
       const mins = t._mins;
       const col  = mins < 3 ? '#dc2626' : mins <= 8 ? '#d97706' : 'var(--text)';
-      return `<div class="tp"><span class="tp-badge">${label}</span><span class="tp-mins" style="color:${col}">${mins}<small>分</small></span></div>`;
+      return `<div class="tp-row"><span class="tp-type">${typeLabel}</span><span class="tp-mins" style="color:${col}">${mins}<small>分</small></span></div>`;
     };
 
-    // 顯示往台北（DestinationStationID === A1）和往環北兩個方向各最近一班
+    // 顯示往台北（DestinationStationID === A1）和往環北兩個方向，各方向直達車+普通車都顯示
     const dirs = [
-      { label:'→台北', filter: t => t.DestinationStationID === 'A1' },
-      { label:'→環北', filter: t => t.DestinationStationID !== 'A1' },
+      { label:'台北', filter: t => t.DestinationStationID === 'A1' },
+      { label:'環北', filter: t => t.DestinationStationID !== 'A1' },
     ];
     let pillsHtml = '';
+    let hasAny = false;
     for (const d of dirs) {
       const trains = json.data
         .filter(t => t.StationID === starredId && d.filter(t))
@@ -1262,8 +1266,10 @@ async function loadMrtStrip() {
         .sort((a,b) => a._mins - b._mins);
       const express = trains.find(t => t.tt === 1);
       const local   = trains.find(t => t.tt === 2);
-      if (express || local) pillsHtml += pill(express||local, d.label.replace('→',''));
+      if (express || local) hasAny = true;
+      pillsHtml += `<div class="tp"><span class="tp-badge">${d.label}</span>${typeRow(express,'直')}${typeRow(local,'普')}</div>`;
     }
+    if (!hasAny) pillsHtml = '';
 
     el.innerHTML = `
       <div class="strip-left">
