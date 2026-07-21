@@ -76,7 +76,9 @@ body {
   display: flex;
   align-items: center;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s cubic-bezier(0.25,1,0.5,1), opacity 0.15s ease;
 }
+.back-btn:active { transform: scale(0.93); opacity: 0.6; }
 .topbar-title {
   font-size: 1.08rem;
   font-weight: 700;

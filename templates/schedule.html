@@ -63,8 +63,10 @@ body {
   font-size: 0.88rem; font-weight: 600;
   color: var(--accent); text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+  display: inline-block;
+  transition: transform 0.15s cubic-bezier(0.25,1,0.5,1), opacity 0.15s ease;
 }
-.back-link:active { opacity: 0.55; }
+.back-link:active { transform: scale(0.93); opacity: 0.6; }
 .topbar-title { font-size: 1rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
 
 /* ── Main ── */

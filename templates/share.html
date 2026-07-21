@@ -102,7 +102,9 @@ body::before{
   text-decoration:none;min-width:44px;height:44px;
   display:flex;align-items:center;flex-shrink:0;
   -webkit-tap-highlight-color:transparent;
+  transition:transform .15s cubic-bezier(.25,1,.5,1),opacity .15s ease;
 }
+.back-btn:active{transform:scale(.93);opacity:.6}
 .topbar-title{font-size:1.05rem;font-weight:700;letter-spacing:-0.02em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .room-pill{
