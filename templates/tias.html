@@ -1831,41 +1831,18 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 /* 等 layout 完成後定位指示線 */
 requestAnimationFrame(() => updateTabIndicator('arr'));
 
-/* ── bfcache 恢復：重播 body 入場動畫 + 重排卡片動畫 ── */
+/* ── bfcache 恢復：畫面維持原樣，不重播入場動畫（避免閃爍），只做必要的資料/版位更新 ── */
 window.addEventListener('pageshow', e => {
   if (!e.persisted) return;
 
-  /* 清除任何殘留的 inline opacity / transform / transition */
+  /* 清除任何殘留的 inline opacity / transform / transition（例如切頁當下的淡出）*/
   document.body.style.opacity    = '';
   document.body.style.transform  = '';
   document.body.style.transition = '';
 
-  /* 重播 body 入場動畫 */
-  document.body.style.animationName = 'none';
-  void document.body.offsetWidth;
-  document.body.style.animationName = '';
-
-  /* bfcache 恢復：重啟自動輪詢並立即更新一次 */
+  /* 重啟自動輪詢並立即更新一次資料（純資料刷新，不影響現有畫面動畫）*/
   load();
   _startAutoLoad();
-
-  /* 重播現有卡片錯排 */
-  const arrEl = document.getElementById('listArr');
-  const depEl = document.getElementById('listDep');
-  const allCards = [
-    ...arrEl.querySelectorAll('.card'),
-    ...depEl.querySelectorAll('.card'),
-  ];
-  allCards.forEach(c => { c.classList.remove('card-anim'); c.style.animationDelay = ''; });
-  void arrEl.offsetWidth; /* 單次 reflow */
-  arrEl.querySelectorAll('.card').forEach((c, i) => {
-    c.style.animationDelay = Math.min(i * 42, 360) + 'ms';
-    c.classList.add('card-anim');
-  });
-  depEl.querySelectorAll('.card').forEach((c, i) => {
-    c.style.animationDelay = Math.min(i * 42, 360) + 'ms';
-    c.classList.add('card-anim');
-  });
 
   /* 指示線重新定位 */
   requestAnimationFrame(() => updateTabIndicator(_tab));

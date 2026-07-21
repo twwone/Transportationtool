@@ -1198,25 +1198,17 @@ function _saveOrder() {
   } catch {}
 })();
 
-/* ── bfcache 恢復 ── */
+/* ── bfcache 恢復：畫面直接維持離開時的樣子，不重播入場動畫（避免閃爍）── */
 window.addEventListener('pageshow', e => {
   if (!e.persisted) return;
   const bento  = document.getElementById('bento');
   const header = document.querySelector('.header');
   const footer = document.querySelector('.footer');
-  const cards  = bento.querySelectorAll('.card');
   [bento, header, footer].forEach(el => {
+    if (!el) return;
     el.style.opacity = ''; el.style.transform = ''; el.style.transition = '';
   });
-  header.style.animationName = 'none';
-  footer.style.animationName = 'none';
-  cards.forEach(c => { c.style.animationName = 'none'; });
-  void document.body.offsetWidth;
-  header.style.animationName = '';
-  footer.style.animationName = '';
-  cards.forEach((c, i) => {
-    c.style.animation = `fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) ${80 + i * 60}ms both`;
-  });
+  bento.querySelectorAll('.card').forEach(c => { c.style.opacity = ''; c.style.transform = ''; });
   _updateChip();
 });
 
