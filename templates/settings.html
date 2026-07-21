@@ -196,7 +196,7 @@ body {
 
 <!-- Top Bar -->
 <div class="top-bar">
-  <a href="/" class="back-btn">‹ 返回</a>
+  <a href="/" class="back-btn" onclick="return _goHomeClick(event)">‹ 返回</a>
   <div class="top-title">設定</div>
   <button class="save-btn" onclick="saveAll()">儲存</button>
 </div>
@@ -330,6 +330,15 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
+function _goHomeClick(e) {
+  if (document.referrer && new URL(document.referrer).origin === location.origin) {
+    e.preventDefault();
+    history.back();
+    return false;
+  }
+  return true;
+}
+
 const MRT_NAMES = {
   A1:'台北車站',A2:'三重站',A3:'新北產業園區站',A4:'新莊副都心站',
   A5:'泰山站',A6:'泰山貴和站',A7:'體育大學站',A8:'長庚醫院站',

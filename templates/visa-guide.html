@@ -911,7 +911,10 @@ function clearSearch() {
 
 function goBack() {
   document.body.classList.add('exit');
-  setTimeout(() => { location.href = '/'; }, 155);
+  const useHistory = document.referrer && new URL(document.referrer).origin === location.origin;
+  setTimeout(() => {
+    if (useHistory) history.back(); else location.href = '/';
+  }, 155);
 }
 
 /* Search input listener */

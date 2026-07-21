@@ -513,7 +513,7 @@ body::before{
 <body>
 
 <div class="topbar">
-  <a href="/" class="back-btn">‹ 返回</a>
+  <a href="/" class="back-btn" onclick="return _goHomeClick(event)">‹ 返回</a>
   <div class="topbar-title" id="topTitle">跨裝置剪貼簿</div>
   <div class="room-pill" id="roomPill" onclick="copyCode()" title="點擊複製房間碼">
     <span class="sync-dot" id="syncDot"></span>
@@ -632,6 +632,15 @@ body::before{
 </div>
 
 <script>
+function _goHomeClick(e) {
+  if (document.referrer && new URL(document.referrer).origin === location.origin) {
+    e.preventDefault();
+    history.back();
+    return false;
+  }
+  return true;
+}
+
 const IK_PUBLIC_KEY     = 'public_TdqV/g8SxhEZMC6bl23MoGM3nwY=';
 const MAX_DIRECT        = 8 * 1024 * 1024;
 const MAX_COMPRESS_TGT  = 5 * 1024 * 1024;

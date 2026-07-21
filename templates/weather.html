@@ -453,7 +453,7 @@ body::before{
 <body>
 
 <div class="topbar">
-  <a href="/" class="back-btn">‹ 返回</a>
+  <a href="/" class="back-btn" onclick="return _goHomeClick(event)">‹ 返回</a>
   <div class="topbar-title"><span class="topbar-icon-chip"><i class="bi bi-cloud-fill"></i></span> 天氣防禦面板</div>
   <button class="refresh-btn" id="refreshBtn" onclick="loadWeather()" title="重新整理">↻</button>
 </div>
@@ -491,6 +491,15 @@ body::before{
 </div>
 
 <script>
+function _goHomeClick(e) {
+  if (document.referrer && new URL(document.referrer).origin === location.origin) {
+    e.preventDefault();
+    history.back();
+    return false;
+  }
+  return true;
+}
+
 const DISTRICTS = {{ districts | tojson }};
 // each entry: {l, n, c, lat, lon}  (label, name, county, lat, lon)
 

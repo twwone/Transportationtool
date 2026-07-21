@@ -423,7 +423,7 @@ body {
 
 <div class="header">
   <div class="header-row">
-    <a href="/" class="back-btn" id="backBtn">
+    <a href="/" class="back-btn" id="backBtn" onclick="return _goHomeClick(event)">
       <span class="back-arrow">‹</span> 返回
     </a>
     <div class="header-title">
@@ -485,6 +485,15 @@ body {
 </div>
 
 <script>
+function _goHomeClick(e) {
+  if (document.referrer && new URL(document.referrer).origin === location.origin) {
+    e.preventDefault();
+    history.back();
+    return false;
+  }
+  return true;
+}
+
 let _allData       = [];
 let _categories    = {};
 let _activeCat     = 'all';

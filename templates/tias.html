@@ -601,7 +601,7 @@ body {
 
 <div class="topbar">
   <div class="topbar-row">
-    <a href="/" class="back-btn">‹ 返回</a>
+    <a href="/" class="back-btn" onclick="return _goHomeClick(event)">‹ 返回</a>
     <span class="topbar-title"><i class="bi bi-airplane-fill"></i> 航空資訊看板</span>
     <button class="refresh-btn" onclick="openAirlinePicker()">航空公司 ▾</button>
     <button class="refresh-btn" id="refreshBtn" onclick="load(true)">↻ 重新整理</button>
@@ -681,6 +681,17 @@ body {
 
 
 <script>
+/* 返回按鈕：本站內部進來的用 history.back()（命中 bfcache，回首頁不重載不閃爍），
+   否則 fallback 成一般連結導頁。 */
+function _goHomeClick(e) {
+  if (document.referrer && new URL(document.referrer).origin === location.origin) {
+    e.preventDefault();
+    history.back();
+    return false;
+  }
+  return true;
+}
+
 /* ── 動態元資料對照（由 /api/tias/flights 的 airline_map / airport_map 填入） ── */
 /* airline_map: { "AK": {zh:"亞洲航空", en:"AirAsia"}, ... }                       */
 /* airport_map: { "KUL": {zh:"吉隆坡", en:"Kuala Lumpur", ap_zh:"..."}, ... }       */
