@@ -103,9 +103,13 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
   animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) 0.05s both;
 }
 .plane-wrap { position: relative; width: 100%; }
-.plane-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.plane-svg { width: 100%; height: auto; display: block; }
+@media (prefers-color-scheme: dark) {
+  .plane-svg { filter: invert(1); }
+}
+.leader-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .fwd-tag {
-  position: absolute; right: 2px; top: -22px;
+  position: absolute; left: 2px; top: -22px;
   display: flex; align-items: center; gap: 4px;
   font-size: 0.64rem; font-weight: 700; color: var(--sub);
   letter-spacing: 0.06em; text-transform: uppercase;
@@ -113,6 +117,10 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .ac-name {
   text-align: center; font-size: 0.78rem; color: var(--sub);
   font-weight: 600; margin-top: 10px; letter-spacing: -0.01em;
+}
+.img-credit {
+  text-align: center; font-size: 0.6rem; color: var(--sub);
+  opacity: 0.6; margin-top: 8px; letter-spacing: 0.01em;
 }
 
 /* ── 貨艙定位 pin（疊加在飛機圖上）── */
@@ -254,15 +262,17 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
   <!-- 飛機側視圖 + 貨艙定位 -->
   <div class="plane-card">
     <div class="plane-wrap" id="planeWrap">
-      <span class="fwd-tag">FWD <i class="bi bi-arrow-right"></i></span>
-      <svg id="planeSvg" class="plane-svg" viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg"></svg>
-      <!-- pin / tag 由 JS 動態疊加 -->
+      <span class="fwd-tag"><i class="bi bi-arrow-left"></i> FWD</span>
+      <img id="planeImg" class="plane-svg" src="" alt="">
+      <svg id="leaderSvg" class="leader-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+      <!-- pin 由 JS 動態疊加 -->
     </div>
     <div class="ac-name" id="acName">Airbus A320</div>
     <div class="legend">
       <div class="legend-item"><span class="legend-dot"></span>有艙門（FWD / AFT DOOR）</div>
       <div class="legend-item"><span class="legend-dot nodoor"></span>無獨立艙門</div>
     </div>
+    <div class="img-credit">側視圖：Wikimedia Commons（Julien.scavini，CC BY-SA 3.0）</div>
   </div>
 
   <!-- 貨艙狀態列 -->
@@ -304,38 +314,41 @@ document.addEventListener('touchend', e => {
 
 /* ════════════════════════════════════════
    機型資料
-   viewBox 為 0 0 1000 300，機頭朝右（FWD →）
-   HOLD1 / HOLD4 為真實艙門（AirAsia A320 Loading Instruction
-   and Break-up Form 印刷固定值）；HOLD3 / HOLD5 共用艙門或為
-   散裝艙，無獨立艙門，畫面上以灰色虛線標示區分。
+   側視圖採用 Wikimedia Commons「Airbus A32X family」線稿
+   （Julien.scavini 繪製，CC BY-SA 3.0，已裁切出 A320 / A321 單機列）。
+   圖中機頭朝左，cx/cy 為艙門在原圖中的實際像素座標，
+   pin 直接對齊圖上畫好的艙門方框。
+   HOLD1 / HOLD4 為真實艙門（AirAsia A320 Loading Instruction and
+   Break-up Form 印刷固定值）；HOLD3 / HOLD5 共用艙門或為散裝艙，
+   無獨立艙門，畫面上以灰色標示區分。
    A321 貨艙上限尚未取得正式表單，先留待確認。
    ════════════════════════════════════════ */
 const AIRCRAFT = {
   A320: {
     name: 'Airbus A320',
-    fuselage: { noseTip: 930, noseStart: 760, tailStart: 130, tailTip: 40 },
-    wing: { x1: 430, x2: 560 },
+    img: '/static/aircraft/a320-side.png',
+    imgW: 792, imgH: 264,
     holds: [
-      { id: 'HOLD5', label: 'HOLD 5', door: false, doorLabel: '',              max: null, maxNote: 'MAX 1497 KGS (180Y) / 500 KGS (186Y)',         cx: 130 },
-      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: 2110, maxNote: 'MAX 2110 KGS',                                   cx: 255 },
-      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: 2426, maxNote: 'MAX 2426 KGS',                                   cx: 390 },
-      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE', max: 3402, maxNote: 'MAX 3402 KGS',                                   cx: 650 },
+      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE', max: 3402, maxNote: 'MAX 3402 KGS',                           cx: 202, cy: 197 },
+      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: 2426, maxNote: 'MAX 2426 KGS',                           cx: 420, cy: 197 },
+      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: 2110, maxNote: 'MAX 2110 KGS',                            cx: 485, cy: 197 },
+      { id: 'HOLD5', label: 'HOLD 5', door: false, doorLabel: '',              max: null, maxNote: 'MAX 1497 KGS (180Y) / 500 KGS (186Y)',    cx: 650, cy: 190 },
     ]
   },
   A321: {
     name: 'Airbus A321',
-    fuselage: { noseTip: 970, noseStart: 800, tailStart: 100, tailTip: 30 },
-    wing: { x1: 470, x2: 600 },
+    img: '/static/aircraft/a321-side.png',
+    imgW: 935, imgH: 263,
     holds: [
-      { id: 'HOLD5', label: 'HOLD 5', door: false, doorLabel: '',              max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 110 },
-      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 250 },
-      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 400 },
-      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE', max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 690 },
+      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE', max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 200, cy: 197 },
+      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 640, cy: 197 },
+      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 725, cy: 197 },
+      { id: 'HOLD5', label: 'HOLD 5', door: false, doorLabel: '',              max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 790, cy: 190 },
     ]
   }
 };
 
-const VB_W = 1000, VB_H = 300;
+const PIN_Y = 40; /* pin 疊加在機身上方的固定像素高度（原圖座標系） */
 const STORE_KEY = 'loadsheet_state_v1';
 let curAc = 'A320';
 let curHoldId = null;
@@ -346,112 +359,37 @@ function loadState() {
 }
 function saveState(state) { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
-/* ── 飛機側視圖（線稿，僅外框＋細部線條，不填色）── */
+/* ── 飛機側視圖：套用真實側視線稿圖，疊加艙位定位虛線 ── */
 function drawPlane(ac) {
-  const cfg  = AIRCRAFT[ac].fuselage;
-  const wing = AIRCRAFT[ac].wing;
-  const holds = AIRCRAFT[ac].holds;
-  const svg = document.getElementById('planeSvg');
-  const midY = 176, half = 34;
-  const top = midY - half, bottom = midY + half;
+  const a = AIRCRAFT[ac];
+  const img = document.getElementById('planeImg');
+  img.src = a.img;
+  img.alt = a.name + ' 側視圖';
 
-  const winCount = Math.floor((cfg.noseStart - cfg.tailStart - 30) / 24);
-  const windows = Array.from({length: winCount}, (_, i) => {
-    const x = cfg.tailStart + 24 + i * 24;
-    return `<rect x="${x}" y="${top+10}" width="10" height="12" rx="2" fill="none" stroke="var(--line)" stroke-width="1.4"/>`;
-  }).join('');
-
-  const doorRects = holds.map(h => {
-    const rw = h.door ? 30 : 22;
-    const rh = h.door ? 22 : 16;
-    const dash = h.door ? '' : 'stroke-dasharray="3 3"';
-    return `<rect x="${h.cx - rw/2}" y="${bottom - rh - 4}" width="${rw}" height="${rh}" rx="3"
-              fill="none" stroke="var(--line)" stroke-width="1.6" ${dash}/>`;
-  }).join('');
-
-  const leaderLines = holds.map(h => {
-    const py = 46;
-    return `<line x1="${h.cx}" y1="${py}" x2="${h.cx}" y2="${bottom - 26}" stroke="#0071e3" stroke-width="1.2" stroke-dasharray="2 3" opacity="0.55"/>`;
-  }).join('');
-
-  svg.innerHTML = `
-    <!-- 機身外框 -->
-    <path d="M ${cfg.tailTip} ${midY}
-             Q ${cfg.tailStart - 40} ${top} ${cfg.tailStart} ${top}
-             L ${cfg.noseStart} ${top}
-             Q ${cfg.noseTip} ${top} ${cfg.noseTip} ${midY}
-             Q ${cfg.noseTip} ${bottom} ${cfg.noseStart} ${bottom}
-             L ${cfg.tailStart} ${bottom}
-             Q ${cfg.tailStart - 40} ${bottom} ${cfg.tailTip} ${midY}
-             Z"
-          fill="none" stroke="var(--line)" stroke-width="1.8"/>
-
-    <!-- 機身腰線 -->
-    <line x1="${cfg.tailStart - 10}" y1="${midY}" x2="${cfg.noseStart + 8}" y2="${midY}"
-          stroke="var(--line)" stroke-width="1" opacity="0.35"/>
-
-    <!-- 駕駛艙窗 -->
-    <path d="M ${cfg.noseStart - 4} ${top + 6} L ${cfg.noseTip - 30} ${midY - 8} L ${cfg.noseStart - 4} ${midY - 8} Z"
-          fill="none" stroke="var(--line)" stroke-width="1.4"/>
-    <line x1="${cfg.noseStart + 16}" y1="${top+4}" x2="${cfg.noseStart + 16}" y2="${midY-6}" stroke="var(--line)" stroke-width="1"/>
-
-    <!-- 機艙窗列 -->
-    ${windows}
-
-    <!-- 垂直尾翼 -->
-    <path d="M ${cfg.tailStart + 4} ${top + 6}
-             L ${cfg.tailStart + 44} ${top - 60}
-             L ${cfg.tailStart + 78} ${top - 60}
-             L ${cfg.tailStart + 66} ${top + 6} Z"
-          fill="none" stroke="var(--line)" stroke-width="1.6"/>
-    <!-- 水平尾翼 -->
-    <path d="M ${cfg.tailStart + 8} ${midY}
-             L ${cfg.tailStart - 6} ${midY - 16}
-             L ${cfg.tailStart + 34} ${midY - 6}
-             Z"
-          fill="none" stroke="var(--line)" stroke-width="1.3" opacity="0.85"/>
-
-    <!-- 主翼 -->
-    <path d="M ${wing.x1} ${bottom - 8}
-             L ${(wing.x1+wing.x2)/2 - 34} ${bottom + 58}
-             L ${(wing.x1+wing.x2)/2 + 50} ${bottom + 58}
-             L ${wing.x2} ${bottom - 8} Z"
-          fill="none" stroke="var(--line)" stroke-width="1.6"/>
-
-    <!-- 引擎（艙吊掛）-->
-    <rect x="${(wing.x1+wing.x2)/2 - 26}" y="${bottom + 6}" width="52" height="30" rx="14"
-          fill="none" stroke="var(--line)" stroke-width="1.6"/>
-    <circle cx="${(wing.x1+wing.x2)/2 - 26}" cy="${bottom + 21}" r="3" fill="none" stroke="var(--line)" stroke-width="1.2"/>
-    <line x1="${(wing.x1+wing.x2)/2}" y1="${bottom - 4}" x2="${(wing.x1+wing.x2)/2}" y2="${bottom + 8}" stroke="var(--line)" stroke-width="1.4"/>
-
-    <!-- 起落架（簡化）-->
-    <line x1="${(wing.x1+wing.x2)/2 + 10}" y1="${bottom + 36}" x2="${(wing.x1+wing.x2)/2 + 10}" y2="${bottom + 56}" stroke="var(--line)" stroke-width="1.3"/>
-    <circle cx="${(wing.x1+wing.x2)/2 + 10}" cy="${bottom + 60}" r="6" fill="none" stroke="var(--line)" stroke-width="1.4"/>
-    <line x1="${cfg.noseStart - 30}" y1="${bottom}" x2="${cfg.noseStart - 30}" y2="${bottom + 30}" stroke="var(--line)" stroke-width="1.2"/>
-    <circle cx="${cfg.noseStart - 30}" cy="${bottom + 34}" r="5" fill="none" stroke="var(--line)" stroke-width="1.3"/>
-
-    <!-- 貨艙門定位虛線 + 艙門外框 -->
-    ${leaderLines}
-    ${doorRects}
-  `;
+  const svg = document.getElementById('leaderSvg');
+  svg.setAttribute('viewBox', `0 0 ${a.imgW} ${a.imgH}`);
+  svg.innerHTML = a.holds.map(h => `
+    <line x1="${h.cx}" y1="${PIN_Y}" x2="${h.cx}" y2="${h.cy - 14}"
+          stroke="#0071e3" stroke-width="1.2" stroke-dasharray="2 3" opacity="0.55"/>
+  `).join('');
 }
 
 /* ── Pin / 標籤疊加渲染 ── */
 function renderPins() {
   const wrap = document.getElementById('planeWrap');
-  wrap.querySelectorAll('.hold-pin, .hold-tag').forEach(el => el.remove());
+  wrap.querySelectorAll('.hold-pin').forEach(el => el.remove());
+  const a = AIRCRAFT[curAc];
   const state = loadState();
   const acState = state[curAc] || {};
 
-  AIRCRAFT[curAc].holds.forEach(h => {
+  a.holds.forEach(h => {
     const entry = acState[h.id];
     const filled = entry && (entry.pcs || entry.wgt);
-    const leftPct = (h.cx / VB_W) * 100;
 
     const pin = document.createElement('div');
     pin.className = 'hold-pin' + (h.door ? '' : ' nodoor') + (filled ? ' filled' : '');
-    pin.style.left = leftPct + '%';
-    pin.style.top  = (46 / VB_H) * 100 + '%';
+    pin.style.left = (h.cx / a.imgW) * 100 + '%';
+    pin.style.top  = (PIN_Y / a.imgH) * 100 + '%';
     pin.textContent = h.label.replace('HOLD ', '');
     pin.title = h.label + (h.doorLabel ? ' · ' + h.doorLabel : '');
     pin.addEventListener('click', () => openHoldModal(h.id));
