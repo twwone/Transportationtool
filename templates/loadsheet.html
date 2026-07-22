@@ -125,6 +125,13 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
   line-height: 1.5;
 }
 .avg-hint b { color: var(--accent); font-weight: 800; }
+.cat-block { padding: 14px 0; border-top: 1px solid var(--divider); }
+.cat-block:first-child { padding-top: 0; border-top: none; }
+.cat-block-title {
+  font-size: 0.84rem; font-weight: 700; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.cat-block-title .bi { color: var(--accent); }
 
 /* ── 飛機側視圖（外框線稿）── */
 .plane-card {
@@ -200,6 +207,7 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .hold-max  { font-size: 0.64rem; color: var(--sub); margin-top: 5px; }
 .hold-val  { font-size: 0.76rem; font-weight: 700; color: #059669; margin-top: 4px; min-height: 16px; }
 .hold-val.empty { color: var(--sub); font-weight: 500; }
+.hold-toolbox { font-size: 0.62rem; color: var(--accent); font-weight: 700; margin-top: 2px; }
 
 /* ── 彈窗（置中 modal，非跳頁／非底部全螢幕）── */
 .modal-overlay {
@@ -213,13 +221,15 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .modal-card {
   background: var(--card); border-radius: 24px;
   padding: 22px 20px 20px; width: 100%; max-width: 340px;
+  max-height: 86vh; overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.25);
 }
 .modal-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .modal-title .bi { color: var(--accent); }
-.field-group { margin-bottom: 16px; }
+.field-group { margin-bottom: 14px; }
 .field-group label {
-  display: block; font-size: 0.72rem; font-weight: 700; color: var(--sub);
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; font-weight: 700; color: var(--sub);
   text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
 }
 .field-group input {
@@ -229,6 +239,9 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
   font-family: inherit; -webkit-appearance: none;
 }
 .field-group input:focus { border-color: var(--accent); }
+.cat-calc { font-size: 0.72rem; color: var(--sub); margin-top: 5px; line-height: 1.4; }
+.cat-calc b { color: var(--text); }
+.toolbox-group { border-top: 1px dashed var(--border); padding-top: 14px; margin-top: 2px; }
 .max-hint {
   font-size: 0.78rem; color: var(--sub); background: rgba(0,0,0,0.03);
   border-radius: 12px; padding: 10px 12px; line-height: 1.5; margin-bottom: 16px;
@@ -290,20 +303,36 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
     <button class="seg-btn" data-ac="A321">A321</button>
   </div>
 
-  <!-- 行李總計 -->
+  <!-- 行李總計（B 行李／C 貨物／D 組員行李，各自獨立算平均重量） -->
   <div class="total-card">
     <div class="total-card-title"><i class="bi bi-luggage-fill"></i> 行李總計</div>
-    <div class="total-row">
-      <div class="total-field">
-        <label>總件數 PCS</label>
-        <input type="number" inputmode="numeric" pattern="[0-9]*" id="totalPcsInput" placeholder="0">
+
+    <div class="cat-block" data-cat="B">
+      <div class="cat-block-title"><i class="bi bi-bag-fill"></i> B · 行李</div>
+      <div class="total-row">
+        <div class="total-field"><label>總件數 PCS</label><input type="number" inputmode="numeric" pattern="[0-9]*" id="totalPcs_B" placeholder="0"></div>
+        <div class="total-field"><label>總重量 KG</label><input type="number" inputmode="decimal" id="totalWgt_B" placeholder="0"></div>
       </div>
-      <div class="total-field">
-        <label>總重量 KG</label>
-        <input type="number" inputmode="decimal" id="totalWgtInput" placeholder="0">
-      </div>
+      <div class="avg-hint" id="avgHint_B"></div>
     </div>
-    <div class="avg-hint" id="avgHint"></div>
+
+    <div class="cat-block" data-cat="C">
+      <div class="cat-block-title"><i class="bi bi-box-seam-fill"></i> C · 貨物</div>
+      <div class="total-row">
+        <div class="total-field"><label>總件數 PCS</label><input type="number" inputmode="numeric" pattern="[0-9]*" id="totalPcs_C" placeholder="0"></div>
+        <div class="total-field"><label>總重量 KG</label><input type="number" inputmode="decimal" id="totalWgt_C" placeholder="0"></div>
+      </div>
+      <div class="avg-hint" id="avgHint_C"></div>
+    </div>
+
+    <div class="cat-block" data-cat="D">
+      <div class="cat-block-title"><i class="bi bi-briefcase-fill"></i> D · 組員行李</div>
+      <div class="total-row">
+        <div class="total-field"><label>總件數 PCS</label><input type="number" inputmode="numeric" pattern="[0-9]*" id="totalPcs_D" placeholder="0"></div>
+        <div class="total-field"><label>總重量 KG</label><input type="number" inputmode="decimal" id="totalWgt_D" placeholder="0"></div>
+      </div>
+      <div class="avg-hint" id="avgHint_D"></div>
+    </div>
   </div>
 
   <!-- 飛機側視圖 + 貨艙定位 -->
@@ -332,10 +361,27 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 <div class="modal-overlay" id="holdModalOverlay" onclick="handleOverlayClick(event)">
   <div class="modal-card">
     <div class="modal-title"><i class="bi bi-box-seam-fill"></i> <span id="modalTitle">HOLD 1</span></div>
+
     <div class="field-group">
-      <label>件數 PCS</label>
-      <input type="number" inputmode="numeric" pattern="[0-9]*" id="pcsInput" placeholder="0">
+      <label><i class="bi bi-bag-fill"></i> B · 行李（PCS）</label>
+      <input type="number" inputmode="numeric" pattern="[0-9]*" id="catPcs_B" placeholder="0">
+      <div class="cat-calc" id="catCalc_B"></div>
     </div>
+    <div class="field-group">
+      <label><i class="bi bi-box-seam-fill"></i> C · 貨物（PCS）</label>
+      <input type="number" inputmode="numeric" pattern="[0-9]*" id="catPcs_C" placeholder="0">
+      <div class="cat-calc" id="catCalc_C"></div>
+    </div>
+    <div class="field-group">
+      <label><i class="bi bi-briefcase-fill"></i> D · 組員行李（PCS）</label>
+      <input type="number" inputmode="numeric" pattern="[0-9]*" id="catPcs_D" placeholder="0">
+      <div class="cat-calc" id="catCalc_D"></div>
+    </div>
+    <div class="field-group toolbox-group">
+      <label><i class="bi bi-tools"></i> Toolbox（直接輸入 KG，無件數）</label>
+      <input type="number" inputmode="decimal" id="toolboxInput" placeholder="0">
+    </div>
+
     <div class="max-hint" id="maxHint"></div>
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeHoldModal()">取消</button>
@@ -392,7 +438,13 @@ const AIRCRAFT = {
 };
 
 const PIN_Y = 40; /* pin 疊加在機身上方的固定像素高度（原圖座標系） */
-const STORE_KEY = 'loadsheet_state_v2';
+const STORE_KEY = 'loadsheet_state_v3';
+const CAT_ORDER = ['B', 'C', 'D'];
+const CATEGORIES = {
+  B: { label: '行李',     icon: 'bi-bag-fill' },
+  C: { label: '貨物',     icon: 'bi-box-seam-fill' },
+  D: { label: '組員行李', icon: 'bi-briefcase-fill' },
+};
 let curAc = 'A320';
 let curHoldId = null;
 
@@ -403,55 +455,74 @@ function loadState() {
 function saveState(state) { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
 /* ── 資料模型
-   state[ac] = { total: {pcs, wgt}, holds: { HOLD1: {pcs}, ... } }
-   每艙只存件數，重量一律用「總重 ÷ 總件數（四捨五入到小數點第1位）」
-   即時反推計算，總量一改，所有貨艙重量自動跟著重算，不會有舊資料殘留。
+   state[ac] = {
+     totals: { B:{pcs,wgt}, C:{pcs,wgt}, D:{pcs,wgt} },   // B/C/D 各自獨立的總量池
+     holds:  { HOLD1: { B:{pcs}, C:{pcs}, D:{pcs}, TOOLBOX:{wgt} }, ... }
+   }
+   B/C/D 各自用「自己的總重 ÷ 自己的總件數」反推每件平均重量（四捨五入到小數點第1位），
+   彼此不共用。Toolbox 沒有件數、沒有總量池，直接輸入 KG，只算進貨艙總重（比對 MAX 用），
+   不算進任何「剩餘可分配」的扣除。
    ── */
 function round1(n) { return Math.round(n * 10) / 10; }
 
 function getAcState(ac) {
   const s = loadState()[ac] || {};
-  return { total: s.total || { pcs: 0, wgt: 0 }, holds: s.holds || {} };
+  const totals = {};
+  CAT_ORDER.forEach(c => { totals[c] = (s.totals && s.totals[c]) || { pcs: 0, wgt: 0 }; });
+  return { totals, holds: s.holds || {} };
 }
 function updateAcState(ac, fn) {
   const state = loadState();
-  if (!state[ac]) state[ac] = { total: { pcs: 0, wgt: 0 }, holds: {} };
-  if (!state[ac].total) state[ac].total = { pcs: 0, wgt: 0 };
+  if (!state[ac]) state[ac] = { totals: {}, holds: {} };
+  CAT_ORDER.forEach(c => { if (!state[ac].totals[c]) state[ac].totals[c] = { pcs: 0, wgt: 0 }; });
   if (!state[ac].holds) state[ac].holds = {};
   fn(state[ac]);
   saveState(state);
 }
 
-/* 每件平均重量：總重 ÷ 總件數，四捨五入到小數點第 1 位 */
-function avgWeight(ac) {
-  const t = getAcState(ac).total;
+/* 每件平均重量（該類別自己的總重 ÷ 總件數，四捨五入到小數點第 1 位）*/
+function avgWeight(ac, cat) {
+  const t = getAcState(ac).totals[cat];
   if (!t.pcs) return null;
   return round1(t.wgt / t.pcs);
 }
-function holdPcs(ac, holdId) {
-  return getAcState(ac).holds[holdId]?.pcs || 0;
+function holdCatPcs(ac, holdId, cat) {
+  return getAcState(ac).holds[holdId]?.[cat]?.pcs || 0;
 }
-/* 該艙重量：件數 × 每件平均重量 */
-function holdWeight(ac, holdId) {
-  const avg = avgWeight(ac);
-  const pcs = holdPcs(ac, holdId);
+/* 該艙、該類別的重量：件數 × 該類別平均重量 */
+function holdCatWeight(ac, holdId, cat) {
+  const avg = avgWeight(ac, cat);
+  const pcs = holdCatPcs(ac, holdId, cat);
   if (avg == null || !pcs) return 0;
   return round1(pcs * avg);
 }
-/* 排除某一艙之後，其餘已填貨艙的件數／重量加總 */
-function sumOtherHolds(ac, excludeId) {
+function holdToolboxWgt(ac, holdId) {
+  return getAcState(ac).holds[holdId]?.TOOLBOX?.wgt || 0;
+}
+/* 該艙件數合計（B+C+D，toolbox 沒有件數不計入）*/
+function holdTotalPcs(ac, holdId) {
+  return CAT_ORDER.reduce((sum, c) => sum + holdCatPcs(ac, holdId, c), 0);
+}
+/* 該艙總重量（B+C+D 計算重量 + toolbox 直接輸入的 KG）*/
+function holdTotalWeight(ac, holdId) {
+  let w = holdToolboxWgt(ac, holdId);
+  CAT_ORDER.forEach(c => { w += holdCatWeight(ac, holdId, c); });
+  return round1(w);
+}
+/* 排除某一艙之後，其餘已填貨艙、該類別的件數／重量加總 */
+function sumOtherHoldsCat(ac, cat, excludeId) {
   let pcs = 0, wgt = 0;
   AIRCRAFT[ac].holds.forEach(h => {
     if (h.id === excludeId) return;
-    const p = holdPcs(ac, h.id);
-    if (p) { pcs += p; wgt += holdWeight(ac, h.id); }
+    const p = holdCatPcs(ac, h.id, cat);
+    if (p) { pcs += p; wgt += holdCatWeight(ac, h.id, cat); }
   });
   return { pcs, wgt: round1(wgt) };
 }
-/* 剩餘可分配 = 總計 - 其餘所有已填貨艙（不含目前正在看的這一艙）*/
-function remaining(ac, excludeId) {
-  const t = getAcState(ac).total;
-  const other = sumOtherHolds(ac, excludeId);
+/* 該類別剩餘可分配 = 該類別總計 - 其餘所有已填貨艙的該類別加總（不含目前正在看的這一艙）*/
+function remainingCat(ac, cat, excludeId) {
+  const t = getAcState(ac).totals[cat];
+  const other = sumOtherHoldsCat(ac, cat, excludeId);
   return { pcs: t.pcs - other.pcs, wgt: round1(t.wgt - other.wgt) };
 }
 
@@ -470,15 +541,17 @@ function drawPlane(ac) {
   `).join('');
 }
 
-/* ── 行李總計卡片 ── */
+/* ── 行李總計卡片（B/C/D 各自一組）── */
 function renderTotalCard() {
-  const t = getAcState(curAc).total;
-  document.getElementById('totalPcsInput').value = t.pcs || '';
-  document.getElementById('totalWgtInput').value = t.wgt || '';
-  const avg = avgWeight(curAc);
-  document.getElementById('avgHint').innerHTML = avg != null
-    ? `每件平均重量：<b>${avg} KG</b>／件（${t.wgt} ÷ ${t.pcs} 件，四捨五入到小數點第 1 位）`
-    : '請先輸入總件數與總重量，才能自動算出每件平均重量';
+  CAT_ORDER.forEach(cat => {
+    const t = getAcState(curAc).totals[cat];
+    document.getElementById(`totalPcs_${cat}`).value = t.pcs || '';
+    document.getElementById(`totalWgt_${cat}`).value = t.wgt || '';
+    const avg = avgWeight(curAc, cat);
+    document.getElementById(`avgHint_${cat}`).innerHTML = avg != null
+      ? `每件平均重量：<b>${avg} KG</b>／件（${t.wgt} ÷ ${t.pcs} 件，四捨五入到小數點第 1 位）`
+      : '請先輸入總件數與總重量，才能自動算出每件平均重量';
+  });
 }
 
 /* ── Pin 疊加渲染 ── */
@@ -488,7 +561,7 @@ function renderPins() {
   const a = AIRCRAFT[curAc];
 
   a.holds.forEach(h => {
-    const filled = holdPcs(curAc, h.id) > 0;
+    const filled = holdTotalPcs(curAc, h.id) > 0 || holdToolboxWgt(curAc, h.id) > 0;
 
     const pin = document.createElement('div');
     pin.className = 'hold-pin' + (h.door ? '' : ' nodoor') + (filled ? ' filled' : '');
@@ -506,9 +579,10 @@ function renderHolds() {
   const row = document.getElementById('holdRow');
   row.innerHTML = '';
   AIRCRAFT[curAc].holds.forEach((h, i) => {
-    const pcs = holdPcs(curAc, h.id);
-    const filled = pcs > 0;
-    const wgt = filled ? holdWeight(curAc, h.id) : 0;
+    const pcs = holdTotalPcs(curAc, h.id);
+    const tlb = holdToolboxWgt(curAc, h.id);
+    const filled = pcs > 0 || tlb > 0;
+    const wgt = filled ? holdTotalWeight(curAc, h.id) : 0;
     const card = document.createElement('div');
     card.className = 'hold-card' + (filled ? ' filled' : '');
     card.style.animation = `cardIn 0.4s cubic-bezier(0.22,1,0.36,1) ${i * 60}ms both`;
@@ -517,6 +591,7 @@ function renderHolds() {
       <div class="hold-door">${h.doorLabel || (h.door ? '' : '無獨立艙門')}</div>
       <div class="hold-max">${h.max ? 'MAX ' + h.max + ' KG' : '上限待確認'}</div>
       <div class="hold-val ${filled ? '' : 'empty'}">${filled ? pcs + ' PCS / ' + wgt + ' KG' : '尚未輸入'}</div>
+      ${tlb > 0 ? `<div class="hold-toolbox">+ Toolbox ${tlb} KG</div>` : ''}
     `;
     card.addEventListener('click', () => openHoldModal(h.id));
     row.appendChild(card);
@@ -527,10 +602,13 @@ function renderHolds() {
 function openHoldModal(holdId) {
   curHoldId = holdId;
   document.getElementById('modalTitle').textContent = `${AIRCRAFT[curAc].name} · ${AIRCRAFT[curAc].holds.find(x => x.id === holdId).label}`;
-  document.getElementById('pcsInput').value = holdPcs(curAc, holdId) || '';
+  CAT_ORDER.forEach(cat => {
+    document.getElementById(`catPcs_${cat}`).value = holdCatPcs(curAc, holdId, cat) || '';
+  });
+  document.getElementById('toolboxInput').value = holdToolboxWgt(curAc, holdId) || '';
   refreshModalCalc();
   document.getElementById('holdModalOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('pcsInput').focus(), 50);
+  setTimeout(() => document.getElementById('catPcs_B').focus(), 50);
 }
 function closeHoldModal() {
   document.getElementById('holdModalOverlay').classList.remove('open');
@@ -540,28 +618,44 @@ function handleOverlayClick(e) {
   if (e.target.id === 'holdModalOverlay') closeHoldModal();
 }
 
-/* 彈窗內即時計算：件數輸入時同步更新該艙重量與剩餘可分配 */
+/* 彈窗內即時計算：每個類別輸入件數時，同步更新該類別的重量與剩餘可分配 */
 function refreshModalCalc() {
   if (!curHoldId) return;
   const h = AIRCRAFT[curAc].holds.find(x => x.id === curHoldId);
-  const pcs = parseFloat(document.getElementById('pcsInput').value) || 0;
-  const avg = avgWeight(curAc);
-  const rem = remaining(curAc, curHoldId);
 
-  const calcLine = avg != null
-    ? `此艙重量：<b>${round1(pcs * avg)} KG</b>（${pcs} 件 × ${avg} KG/件）`
-    : `尚未輸入整台飛機總件數／總重量，無法自動算出重量`;
-  const remLine = `剩餘可分配：<b>${rem.pcs} 件 / ${rem.wgt} KG</b>`;
+  let grandTotal = 0;
+  CAT_ORDER.forEach(cat => {
+    const pcs = parseFloat(document.getElementById(`catPcs_${cat}`).value) || 0;
+    const avg = avgWeight(curAc, cat);
+    const rem = remainingCat(curAc, cat, curHoldId);
+    const wgt = avg != null ? round1(pcs * avg) : 0;
+    grandTotal += wgt;
+
+    document.getElementById(`catCalc_${cat}`).innerHTML = avg != null
+      ? `${CATEGORIES[cat].label}重量：<b>${wgt} KG</b>（${pcs} 件 × ${avg} KG/件）・剩餘可分配：<b>${rem.pcs} 件 / ${rem.wgt} KG</b>`
+      : `尚未輸入「${CATEGORIES[cat].label}」總件數／總重量，無法自動算出重量`;
+  });
+
+  const toolboxWgt = parseFloat(document.getElementById('toolboxInput').value) || 0;
+  grandTotal = round1(grandTotal + toolboxWgt);
 
   document.getElementById('maxHint').innerHTML =
-    `<b>${h.label}</b>${h.doorLabel ? ' · ' + h.doorLabel : ' · 無獨立艙門'}<br>${calcLine}<br>${remLine}<br>${h.maxNote}`;
+    `<b>${h.label}</b>${h.doorLabel ? ' · ' + h.doorLabel : ' · 無獨立艙門'}<br>` +
+    `此艙總重量：<b>${grandTotal} KG</b>${toolboxWgt ? '（含 Toolbox ' + toolboxWgt + ' KG）' : ''}<br>${h.maxNote}`;
 }
-document.getElementById('pcsInput').addEventListener('input', refreshModalCalc);
+CAT_ORDER.forEach(cat => document.getElementById(`catPcs_${cat}`).addEventListener('input', refreshModalCalc));
+document.getElementById('toolboxInput').addEventListener('input', refreshModalCalc);
 
 function saveHoldModal() {
   if (!curHoldId) return;
-  const pcs = parseFloat(document.getElementById('pcsInput').value) || 0;
-  updateAcState(curAc, s => { s.holds[curHoldId] = { pcs }; });
+  const catValues = {};
+  CAT_ORDER.forEach(cat => { catValues[cat] = parseFloat(document.getElementById(`catPcs_${cat}`).value) || 0; });
+  const toolboxWgt = parseFloat(document.getElementById('toolboxInput').value) || 0;
+  updateAcState(curAc, s => {
+    s.holds[curHoldId] = {};
+    CAT_ORDER.forEach(cat => { s.holds[curHoldId][cat] = { pcs: catValues[cat] }; });
+    s.holds[curHoldId].TOOLBOX = { wgt: toolboxWgt };
+  });
   closeHoldModal();
   renderHolds();
   renderPins();
@@ -577,16 +671,20 @@ function clearHoldModal() {
 /* ── 行李總計輸入 ── */
 function onTotalInput() {
   updateAcState(curAc, s => {
-    s.total.pcs = parseFloat(document.getElementById('totalPcsInput').value) || 0;
-    s.total.wgt = parseFloat(document.getElementById('totalWgtInput').value) || 0;
+    CAT_ORDER.forEach(cat => {
+      s.totals[cat].pcs = parseFloat(document.getElementById(`totalPcs_${cat}`).value) || 0;
+      s.totals[cat].wgt = parseFloat(document.getElementById(`totalWgt_${cat}`).value) || 0;
+    });
   });
   renderTotalCard();
   renderHolds();
   renderPins();
   if (document.getElementById('holdModalOverlay').classList.contains('open')) refreshModalCalc();
 }
-document.getElementById('totalPcsInput').addEventListener('input', onTotalInput);
-document.getElementById('totalWgtInput').addEventListener('input', onTotalInput);
+CAT_ORDER.forEach(cat => {
+  document.getElementById(`totalPcs_${cat}`).addEventListener('input', onTotalInput);
+  document.getElementById(`totalWgt_${cat}`).addEventListener('input', onTotalInput);
+});
 
 /* ── 機型切換 ── */
 document.getElementById('acSwitch').addEventListener('click', e => {
