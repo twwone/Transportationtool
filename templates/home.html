@@ -260,6 +260,7 @@ body {
 .card-diet      .sm-icon,
 .card-memo      .sm-icon,
 .card-sop       .sm-icon,
+.card-loadsheet .sm-icon,
 .card-settings  .sm-icon { background: linear-gradient(135deg,#2997ff,#0071e3); }
 .card-memo      .sm-icon { font-family: Georgia, serif; font-weight: 600; }
 @media (prefers-color-scheme: dark) {
@@ -273,6 +274,7 @@ body {
   .card-diet      .sm-icon,
   .card-memo      .sm-icon,
   .card-sop       .sm-icon,
+  .card-loadsheet .sm-icon,
   .card-settings  .sm-icon { background: linear-gradient(135deg,#4db3ff,#2997ff); }
 }
 
@@ -968,9 +970,10 @@ const CARDS = {
   diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          desc:'飲食紀錄',              url:'/diet',                                         cls:'card-diet' },
   memo:      { icon:'記',                                        title:'備忘錄',             desc:'隨手筆記',              url:'/memo',                                         cls:'card-memo' },
   sop:       { icon:'<i class="bi bi-megaphone-fill"></i>',     title:'TIAS',               desc:'廣播 SOP 與廣播詞',       url:'/sop',                                          cls:'card-sop' },
+  loadsheet: { icon:'<i class="bi bi-boxes"></i>',              title:'貨艙裝載計算',        desc:'A320 / A321 Load & Trim', url:'/loadsheet',                                    cls:'card-loadsheet' },
   passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照查驗',            desc:'有效期限計算',           url:'#', strip:true, stripCls:'card-passport-strip', stripTag:'<i class="bi bi-person-badge-fill"></i> 旅客護照查驗' },
 };
-const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop','passport'];
+const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop','loadsheet','passport'];
 const _STRIP_FIXED = ['tias','mrt','weather','passport']; // 這四張固定位置，不參與排序
 let cardOrder = [...DEFAULT_ORDER];
 let editMode  = false;
@@ -1182,6 +1185,7 @@ function _saveOrder() {
   try {
     let order = cached ? JSON.parse(cached) : DEFAULT_ORDER;
     order = order.filter(k => k !== 'codes');
+    if (!order.includes('loadsheet')) order.push('loadsheet');
     if (!order.includes('passport')) order.push('passport');
     renderBento(order);
   } catch { renderBento(DEFAULT_ORDER); }
@@ -1191,6 +1195,7 @@ function _saveOrder() {
     const r = await fetch('/api/card-order');
     const d = await r.json();
     let order = d.order || DEFAULT_ORDER;
+    if (!order.includes('loadsheet')) order.push('loadsheet');
     if (!order.includes('passport')) order.push('passport');
     localStorage.setItem('card_order_cache', JSON.stringify(order));
     if (JSON.stringify(order) !== JSON.stringify(cardOrder))

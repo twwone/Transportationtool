@@ -1000,6 +1000,11 @@ def amenities():
     return render_template("amenities.html")
 
 
+@app.route("/loadsheet")
+def loadsheet():
+    return render_template("loadsheet.html")
+
+
 @app.route("/api/amenities")
 def amenities_api():
     data, source = _fetch_amenities()
