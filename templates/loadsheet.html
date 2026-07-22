@@ -185,7 +185,7 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
   margin: 4px 0 10px 2px;
 }
 .hold-row {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 8px;
 }
 .hold-card {
   background: var(--card); border: 1px solid var(--border);
@@ -425,10 +425,13 @@ document.addEventListener('touchend', e => {
    （Julien.scavini 繪製，CC BY-SA 3.0，已裁切出 A320 / A321 單機列）。
    圖中機頭朝左，cx/cy 為艙門在原圖中的實際像素座標，
    pin 直接對齊圖上畫好的艙門方框。
-   HOLD1 / HOLD4 為真實艙門（AirAsia A320 Loading Instruction and
-   Break-up Form 印刷固定值）；HOLD3 / HOLD5 共用艙門或為散裝艙，
-   無獨立艙門，畫面上以灰色標示區分。
-   A321 貨艙上限尚未取得正式表單，先留待確認。
+
+   MAX 上限與艙門位置依 Thai AirAsia LOADING INSTRUCTION/REPORT (LIR)
+   TAA/RGE/F/003 Rev.04 印刷固定值：
+   HOLD1（FWD）／HOLD4（AFT）／HOLD5（BULK）都有獨立艙門；
+   HOLD3（AFT 內側）與 HOLD2（FWD 內側，只有 A321 才有）沒有獨立艙門，
+   要從旁邊的艙門推進去。A321 比 A320 多一個 HOLD2（COMPARTMENT 2 FOR
+   A321 ONLY），A320 該位置是 NOT APPLICABLE。
    ════════════════════════════════════════ */
 const AIRCRAFT = {
   A320: {
@@ -436,10 +439,10 @@ const AIRCRAFT = {
     img: '/static/aircraft/a320-side.png',
     imgW: 792, imgH: 264,
     holds: [
-      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE', max: 3402, maxNote: 'MAX 3402 KGS',                           cx: 202, cy: 197 },
-      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: 2426, maxNote: 'MAX 2426 KGS',                           cx: 420, cy: 197 },
-      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: 2110, maxNote: 'MAX 2110 KGS',                            cx: 485, cy: 197 },
-      { id: 'HOLD5', label: 'HOLD 5', door: false, doorLabel: '',              max: null, maxNote: 'MAX 1497 KGS (180Y) / 500 KGS (186Y)',    cx: 650, cy: 190 },
+      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE',  max: 3402, maxNote: 'MAX 3402 KGS',                        cx: 202, cy: 197 },
+      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: 2426, maxNote: 'MAX 2426 KGS',                        cx: 420, cy: 197 },
+      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: 2110, maxNote: 'MAX 2110 KGS',                         cx: 485, cy: 197 },
+      { id: 'HOLD5', label: 'HOLD 5', door: true,  doorLabel: 'BULK DOOR',     max: null, maxNote: 'MAX 1497 KGS (180Y) / 500 KGS (186Y)', cx: 650, cy: 190 },
     ]
   },
   A321: {
@@ -447,10 +450,11 @@ const AIRCRAFT = {
     img: '/static/aircraft/a321-side.png',
     imgW: 935, imgH: 263,
     holds: [
-      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE', max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 200, cy: 197 },
-      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 640, cy: 197 },
-      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 725, cy: 197 },
-      { id: 'HOLD5', label: 'HOLD 5', door: false, doorLabel: '',              max: null, maxNote: '上限待確認（A321 表單尚未提供）', cx: 790, cy: 190 },
+      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE',  max: 2202, maxNote: 'MAX 2202 KGS',              cx: 200, cy: 197 },
+      { id: 'HOLD2', label: 'HOLD 2', door: false, doorLabel: '',              max: 3468, maxNote: 'MAX 3468 KGS（僅 A321）',    cx: 400, cy: 197 },
+      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: 3587, maxNote: 'MAX 3587 KGS',               cx: 640, cy: 197 },
+      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: 2083, maxNote: 'MAX 2083 KGS',              cx: 725, cy: 197 },
+      { id: 'HOLD5', label: 'HOLD 5', door: true,  doorLabel: 'BULK DOOR',     max: 800,  maxNote: 'MAX 800 KGS',               cx: 790, cy: 190 },
     ]
   }
 };
