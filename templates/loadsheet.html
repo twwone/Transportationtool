@@ -178,12 +178,6 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .hold-pin.filled { box-shadow: 0 2px 8px rgba(52,199,89,0.45), 0 0 0 3px var(--card); background: linear-gradient(135deg,#34d399,#059669); }
 .hold-pin:active { transform: translate(-50%, -50%) scale(0.88); }
 
-/* ── 圖例 ── */
-.legend { display: flex; gap: 16px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--sub); font-weight: 600; }
-.legend-dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg,#2997ff,#0071e3); flex-shrink: 0; }
-.legend-dot.nodoor { background: linear-gradient(135deg,#98a2ad,#6e7680); }
-
 /* ── 貨艙區（下方清單，僅顯示狀態，點擊同步開彈窗）── */
 .hold-section-title {
   font-size: 0.72rem; font-weight: 700; color: var(--sub);
@@ -203,7 +197,6 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .hold-card:active { transform: scale(0.965); background: rgba(0,0,0,0.02); }
 .hold-card.filled { border-color: rgba(52,199,89,0.4); background: rgba(52,199,89,0.06); }
 .hold-name { font-size: 0.84rem; font-weight: 700; color: var(--text); }
-.hold-door { font-size: 0.58rem; color: var(--sub); margin-top: 2px; min-height: 12px; }
 .hold-max  { font-size: 0.64rem; color: var(--sub); margin-top: 5px; }
 .hold-val  { font-size: 0.76rem; font-weight: 700; color: #059669; margin-top: 4px; min-height: 16px; }
 .hold-val.empty { color: var(--sub); font-weight: 500; }
@@ -370,11 +363,7 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
       <!-- pin 由 JS 動態疊加 -->
     </div>
     <div class="ac-name" id="acName">Airbus A320</div>
-    <div class="legend">
-      <div class="legend-item"><span class="legend-dot"></span>有艙門（FWD / AFT DOOR）</div>
-      <div class="legend-item"><span class="legend-dot nodoor"></span>無獨立艙門</div>
-    </div>
-    <div class="img-credit">側視圖：Wikimedia Commons（Julien.scavini，CC BY-SA 3.0）</div>
+    <div class="img-credit">Wikimedia Commons（Julien.scavini，CC BY-SA 3.0）</div>
   </div>
 
   <!-- 貨艙狀態列 -->
@@ -395,7 +384,7 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
     </div>
 
     <div class="items-section">
-      <div class="items-title">其他項目（貨物／組員行李／Toolbox）</div>
+      <div class="items-title">其他項目</div>
       <div id="itemsList"></div>
       <div class="add-item-row">
         <select id="newItemType" onchange="onNewItemTypeChange()">
@@ -579,8 +568,8 @@ function renderTotalCard() {
   document.getElementById('totalWgt_B').value = t.wgt || '';
   const avg = avgWeightB(curAc);
   document.getElementById('avgHint_B').innerHTML = avg != null
-    ? `每件平均重量：<b>${avg} KG</b>／件（${t.wgt} ÷ ${t.pcs} 件，四捨五入到小數點第 1 位）`
-    : '請先輸入總件數與總重量，才能自動算出每件平均重量';
+    ? `每件平均重量：<b>${avg} KG</b>`
+    : '請先輸入總件數與總重量';
 }
 
 /* ── Pin 疊加渲染 ── */
@@ -618,7 +607,6 @@ function renderHolds() {
     card.style.animation = `cardIn 0.4s cubic-bezier(0.22,1,0.36,1) ${i * 60}ms both`;
     card.innerHTML = `
       <div class="hold-name">${h.label}</div>
-      <div class="hold-door">${h.doorLabel || (h.door ? '' : '無獨立艙門')}</div>
       <div class="hold-max">${h.max ? 'MAX ' + h.max + ' KG' : '上限待確認'}</div>
       <div class="hold-val ${filled ? '' : 'empty'}">${filled ? pcs + ' PCS / ' + wgt + ' KG' : '尚未輸入'}</div>
       ${typeTags.length ? `<div class="hold-items-tags">${typeTags.map(t => `<i class="bi ${ITEM_TYPES[t].icon}" title="${ITEM_TYPES[t].label}"></i>`).join('')}</div>` : ''}
@@ -705,15 +693,14 @@ function refreshModalCalc() {
   const bWgt = avg != null ? round1(bPcs * avg) : 0;
 
   document.getElementById('bCalc').innerHTML = avg != null
-    ? `行李重量：<b>${bWgt} KG</b>（${bPcs} 件 × ${avg} KG/件）・剩餘可分配：<b>${rem.pcs} 件 / ${rem.wgt} KG</b>`
-    : `尚未輸入「行李」總件數／總重量，無法自動算出重量`;
+    ? `行李：<b>${bWgt} KG</b> ・ 剩餘：<b>${rem.pcs} 件 / ${rem.wgt} KG</b>`
+    : `尚未輸入行李總件數／總重量`;
 
   const itemsWgt = round1(modalItems.reduce((s, it) => s + (it.wgt || 0), 0));
   const grandTotal = round1(bWgt + itemsWgt);
 
   document.getElementById('maxHint').innerHTML =
-    `<b>${h.label}</b>${h.doorLabel ? ' · ' + h.doorLabel : ' · 無獨立艙門'}<br>` +
-    `此艙總重量：<b>${grandTotal} KG</b>${itemsWgt ? '（含其他項目 ' + itemsWgt + ' KG）' : ''}<br>${h.maxNote}`;
+    `此艙總重量：<b>${grandTotal} KG</b><br>${h.maxNote}`;
 }
 document.getElementById('bPcsInput').addEventListener('input', refreshModalCalc);
 
