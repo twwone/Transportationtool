@@ -553,6 +553,7 @@ let refreshTick  = 30;
 let refreshTimer = null;
 let ttTimer      = null; // 時刻表每分鐘自動重繪 timer
 let _demoStart   = 0;
+let mode         = 'live'; // 需在 init() 之前宣告，_updateModePill() 在 init() 內會立即用到
 
 function generateDemoData() {
   _demoStart = Date.now();
@@ -764,7 +765,6 @@ function renderError(msg) {
 }
 
 // ── Timetable ────────────────────────────────
-let mode      = 'live';
 let ttStation = starredId || STATIONS[0].id;
 let ttData    = null;   // null = demo mode
 let ttShowAll = false;
