@@ -249,36 +249,54 @@ body {
   opacity: 0.6;
 }
 
-/* 全站統一單一品牌色 icon 色塊（Apple.com 官網藍），不再依功能分色 */
-.card-thsr      .sm-icon,
-.card-mrt       .sm-icon,
-.card-schedule  .sm-icon,
-.card-amenities .sm-icon,
-.card-visa      .sm-icon,
-.card-share     .sm-icon,
-.card-weather   .sm-icon,
-.card-diet      .sm-icon,
-.card-memo      .sm-icon,
-.card-sop       .sm-icon,
-.card-loadsheet .sm-icon,
-.card-settings  .sm-icon { background: linear-gradient(135deg,#2997ff,#0071e3); }
-.card-memo      .sm-icon { font-family: Georgia, serif; font-weight: 600; }
+/* 每個功能各自識別色，讓清單能靠顏色快速掃視定位，不再全部統一單一藍 */
+.card-thsr      .sm-icon { background: linear-gradient(135deg,#7a79ea,#5856d6); }
+.card-schedule  .sm-icon { background: linear-gradient(135deg,#5cd279,#34c759); }
+.card-amenities .sm-icon { background: linear-gradient(135deg,#4dc0d4,#30b0c7); }
+.card-visa      .sm-icon { background: linear-gradient(135deg,#ffd60a,#ffcc00); color:#1d1d1f; }
+.card-share     .sm-icon { background: linear-gradient(135deg,#5cc2ee,#32ade6); }
+.card-diet      .sm-icon { background: linear-gradient(135deg,#26d6cd,#00c7be); }
+.card-memo      .sm-icon { background: linear-gradient(135deg,#b89877,#a2845e); font-family: Georgia, serif; font-weight: 600; }
+.card-sop       .sm-icon { background: linear-gradient(135deg,#ff6259,#ff3b30); }
+.card-loadsheet .sm-icon { background: linear-gradient(135deg,#ffab40,#ff9500); }
+.card-settings  .sm-icon { background: linear-gradient(135deg,#a3a3a8,#8e8e93); }
 @media (prefers-color-scheme: dark) {
-  .card-thsr      .sm-icon,
-  .card-mrt       .sm-icon,
-  .card-schedule  .sm-icon,
-  .card-amenities .sm-icon,
-  .card-visa      .sm-icon,
-  .card-share     .sm-icon,
-  .card-weather   .sm-icon,
-  .card-diet      .sm-icon,
-  .card-memo      .sm-icon,
-  .card-sop       .sm-icon,
-  .card-loadsheet .sm-icon,
-  .card-settings  .sm-icon { background: linear-gradient(135deg,#4db3ff,#2997ff); }
+  .card-thsr      .sm-icon { background: linear-gradient(135deg,#8b8af0,#6f6ee0); }
+  .card-schedule  .sm-icon { background: linear-gradient(135deg,#6adf8c,#43d16a); }
+  .card-amenities .sm-icon { background: linear-gradient(135deg,#5fd0e3,#3fc3db); }
+  .card-visa      .sm-icon { background: linear-gradient(135deg,#ffe066,#ffd60a); color:#1d1d1f; }
+  .card-share     .sm-icon { background: linear-gradient(135deg,#77cdf1,#48bdee); }
+  .card-diet      .sm-icon { background: linear-gradient(135deg,#3fe6dd,#1adfd4); }
+  .card-memo      .sm-icon { background: linear-gradient(135deg,#c7a985,#b3936d); }
+  .card-sop       .sm-icon { background: linear-gradient(135deg,#ff8079,#ff5449); }
+  .card-loadsheet .sm-icon { background: linear-gradient(135deg,#ffbc63,#ffa733); }
+  .card-settings  .sm-icon { background: linear-gradient(135deg,#b8b8bd,#9d9da3); }
 }
 
-/* ── Strip 列（機捷 / 天氣 / 護照，融入同一份清單，僅數字保留識別色）── */
+/* strip 列（機捷 / 天氣 / 護照）也套用同一套色塊圖示，跟其餘清單項目視覺一致 */
+.strip-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.14), 0 4px 10px rgba(0,0,0,0.10);
+}
+.card-mrt-strip      .strip-icon { background: linear-gradient(135deg,#c771e8,#af52de); }
+.card-weather-strip  .strip-icon { background: linear-gradient(135deg,#409cff,#0a84ff); }
+.card-passport-strip .strip-icon { background: linear-gradient(135deg,#ff6482,#ff2d55); }
+@media (prefers-color-scheme: dark) {
+  .card-mrt-strip      .strip-icon { background: linear-gradient(135deg,#d497ee,#bd6ce6); }
+  .card-weather-strip  .strip-icon { background: linear-gradient(135deg,#6ab4ff,#3f9dff); }
+  .card-passport-strip .strip-icon { background: linear-gradient(135deg,#ff8ba0,#ff5473); }
+}
+
+/* ── Strip 列（機捷 / 天氣 / 護照，融入同一份清單，圖示與其餘項目同款色塊）── */
 .card-strip {
   position: relative;
   padding: 14px 4px;
@@ -961,17 +979,17 @@ document.addEventListener('touchend', e => {
 const CARDS = {
   tias:      { icon:'<i class="bi bi-airplane-fill"></i>',      title:'航空資訊看板',     desc:'即時航班動態',           url:'/tias',                                         hero:true },
   thsr:      { icon:'<i class="bi bi-train-front-fill"></i>',   title:'THSR Ticket',     desc:'高鐵訂票查詢',           url:'https://thsr-ticket-bot-j7qr.onrender.com',    cls:'card-thsr', ext:true },
-  mrt:       { icon:'<i class="bi bi-train-front"></i>',        title:'MRT Train',       desc:'機場捷運即時班次',        url:'/mrt',     strip:true, stripCls:'card-mrt-strip',     stripTag:'<i class="bi bi-train-front"></i> 機場捷運' },
+  mrt:       { icon:'<i class="bi bi-train-front"></i>',        title:'MRT Train',       desc:'機場捷運即時班次',        url:'/mrt',     strip:true, stripCls:'card-mrt-strip',     stripTag:'機場捷運' },
   schedule:  { icon:'<i class="bi bi-calendar3"></i>',          title:'我的班表',         desc:'排班一覽',               url:'/schedule',                                     cls:'card-schedule' },
   amenities: { icon:'<i class="bi bi-map-fill"></i>',           title:'Airport Map',     desc:'航廈設施地圖',           url:'/amenities',                                    cls:'card-amenities' },
   visa:      { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'Visa Guide',      desc:'簽證資訊查詢',           url:'/visa-guide',                                   cls:'card-visa' },
   share:     { icon:'<i class="bi bi-clipboard-fill"></i>',     title:'Clipboard',       desc:'跨裝置剪貼簿',           url:'/share',                                        cls:'card-share' },
-  weather:   { icon:'<i class="bi bi-cloud-fill"></i>',         title:'天氣防禦',          desc:'即時天氣與預報',         url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'<i class="bi bi-cloud-fill"></i> 天氣防禦' },
+  weather:   { icon:'<i class="bi bi-cloud-fill"></i>',         title:'天氣防禦',          desc:'即時天氣與預報',         url:'/weather', strip:true, stripCls:'card-weather-strip', stripTag:'天氣防禦' },
   diet:      { icon:'<i class="bi bi-egg-fried"></i>',          title:'熱量追蹤',          desc:'飲食紀錄',              url:'/diet',                                         cls:'card-diet' },
   memo:      { icon:'記',                                        title:'備忘錄',             desc:'隨手筆記',              url:'/memo',                                         cls:'card-memo' },
   sop:       { icon:'<i class="bi bi-megaphone-fill"></i>',     title:'TIAS',               desc:'廣播 SOP 與廣播詞',       url:'/sop',                                          cls:'card-sop' },
   loadsheet: { icon:'<i class="bi bi-boxes"></i>',              title:'貨艙裝載計算',        desc:'A320 / A321 Load & Trim', url:'/loadsheet',                                    cls:'card-loadsheet' },
-  passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照查驗',            desc:'有效期限計算',           url:'#', strip:true, stripCls:'card-passport-strip', stripTag:'<i class="bi bi-person-badge-fill"></i> 旅客護照查驗' },
+  passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照查驗',            desc:'有效期限計算',           url:'#', strip:true, stripCls:'card-passport-strip', stripTag:'旅客護照查驗' },
 };
 const DEFAULT_ORDER = ['tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop','loadsheet','passport'];
 const _STRIP_FIXED = ['tias','mrt','weather','passport']; // 這四張固定位置，不參與排序
@@ -1019,6 +1037,7 @@ function renderBento(order) {
     el.className = `card card-strip ${c.stripCls}`;
     el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay}ms both`;
     el.innerHTML = `<div class="strip-inner" id="strip-${id}">
+      <div class="strip-icon">${c.icon}</div>
       <div class="strip-left">
         <div class="strip-tag">${c.stripTag}</div>
         <div class="strip-skel" style="width:90px;height:14px;margin-top:4px"></div>
@@ -1241,7 +1260,7 @@ async function loadMrtStrip() {
   const sName = starredId ? (_MRT_NAMES[starredId] || starredId) : '';
 
   if (!starredId) {
-    el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-train-front"></i> 機場捷運</div><div class="strip-name" style="opacity:.6">未設定常用站</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    el.innerHTML = `<div class="strip-icon"><i class="bi bi-train-front"></i></div><div class="strip-left"><div class="strip-tag">機場捷運</div><div class="strip-name" style="opacity:.6">未設定常用站</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
     return;
   }
   try {
@@ -1280,14 +1299,15 @@ async function loadMrtStrip() {
     if (!hasAny) pillsHtml = '';
 
     el.innerHTML = `
+      <div class="strip-icon"><i class="bi bi-train-front"></i></div>
       <div class="strip-left">
-        <div class="strip-tag"><i class="bi bi-train-front"></i> 機場捷運</div>
+        <div class="strip-tag">機場捷運</div>
         <div class="strip-name">${sName}</div>
       </div>
       <div class="strip-trains">${pillsHtml || '<span style="font-size:.72rem;color:var(--sub)">無班次</span>'}</div>
       <div class="strip-arr">›</div>`;
   } catch {
-    el.innerHTML = `<div class="strip-left"><div class="strip-tag">🚇 機場捷運</div><div class="strip-name">${sName}</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    el.innerHTML = `<div class="strip-icon"><i class="bi bi-train-front"></i></div><div class="strip-left"><div class="strip-tag">機場捷運</div><div class="strip-name">${sName}</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
   }
 }
 
@@ -1328,7 +1348,7 @@ async function loadWeatherStrip() {
     if (cache) { lat = cache.lat; lon = cache.lon; }
   }
   if (lat === null) {
-    el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-cloud-fill"></i> 天氣防禦</div><div class="strip-name" style="opacity:.6">未設定地點</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    el.innerHTML = `<div class="strip-icon"><i class="bi bi-cloud-fill"></i></div><div class="strip-left"><div class="strip-tag">天氣防禦</div><div class="strip-name" style="opacity:.6">未設定地點</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
     return;
   }
   try {
@@ -1344,8 +1364,9 @@ async function loadWeatherStrip() {
         <span class="fc-mini-temp">${f.hi!==undefined&&f.hi!=='—'?f.hi:'—'}°</span>
       </div>`).join('');
     el.innerHTML = `
+      <div class="strip-icon"><i class="bi bi-cloud-fill"></i></div>
       <div class="strip-left">
-        <div class="strip-tag"><i class="bi bi-cloud-fill"></i> 天氣防禦</div>
+        <div class="strip-tag">天氣防禦</div>
         <div class="strip-name">${loc}</div>
       </div>
       <div class="strip-wx">
@@ -1358,7 +1379,7 @@ async function loadWeatherStrip() {
       </div>
       <div class="strip-arr">›</div>`;
   } catch {
-    el.innerHTML = `<div class="strip-left"><div class="strip-tag"><i class="bi bi-cloud-fill"></i> 天氣防禦</div><div class="strip-name" style="opacity:.6">載入失敗</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
+    el.innerHTML = `<div class="strip-icon"><i class="bi bi-cloud-fill"></i></div><div class="strip-left"><div class="strip-tag">天氣防禦</div><div class="strip-name" style="opacity:.6">載入失敗</div></div><div class="strip-arr" style="margin-left:auto">›</div>`;
   }
 }
 
@@ -1391,8 +1412,9 @@ function loadPassportStrip() {
   const statusColor = isCrossDay ? '#2563eb' : '#059669';
 
   el.innerHTML = `
+    <div class="strip-icon"><i class="bi bi-person-badge-fill"></i></div>
     <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
-      <div class="strip-tag"><i class="bi bi-person-badge-fill"></i> 旅客護照查驗</div>
+      <div class="strip-tag">旅客護照查驗</div>
       <div style="font-size:.7rem;color:var(--sub);margin-top:1px">護照有效期限不得早於</div>
       <div style="font-size:1.1rem;font-weight:700;color:var(--text);letter-spacing:.01em;line-height:1.2">${minExpiryStr}</div>
     </div>
