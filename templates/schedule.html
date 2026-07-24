@@ -108,14 +108,16 @@ main {
 }
 
 .cal-cell {
-  aspect-ratio: 1 / 1.08;
+  aspect-ratio: 1 / 1.22;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px 4px 7px;
+  /* 上下留多一點呼吸空間，左右盡量窄——7 欄擠在窄螢幕上，
+     橫向才是真正吃緊的地方（班別代碼要塞 4 個字元）。 */
+  padding: 8px 2px 8px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   position: relative;
@@ -141,9 +143,9 @@ main {
 }
 
 .cal-day-num {
-  font-size: 0.88rem; font-weight: 700;
+  font-size: 0.98rem; font-weight: 700;
   color: var(--text); align-self: flex-start;
-  padding-left: 4px; line-height: 1;
+  padding-left: 3px; line-height: 1;
 }
 .cal-day-num.wknd { color: var(--accent); }
 
@@ -151,21 +153,21 @@ main {
   margin-top: auto;
   text-align: center;
   width: 100%;
-  padding: 0 2px;
+  padding: 0;
 }
 .cal-badge {
   font-family: "SF Mono","Menlo","Courier New", monospace;
-  font-size: 0.66rem; font-weight: 800;
+  font-size: 0.6rem; font-weight: 800;
   color: var(--accent); background: var(--acc2);
-  padding: 2px 4px; border-radius: 5px;
-  letter-spacing: 0.02em;
+  padding: 2px 1px; border-radius: 5px;
+  letter-spacing: -0.02em;
   display: block;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cal-time {
-  font-size: 0.64rem; font-weight: 600;
+  font-size: 0.62rem; font-weight: 600;
   color: var(--sub); margin-top: 2px;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
 }
 .cal-off-label {
   font-size: 0.74rem; font-weight: 600;
