@@ -70,12 +70,18 @@ const Config = (() => {
       if (d.profiles[id]) { d.active = id; _write(d); }
     },
 
-    /* patch: { thsr?: {…}, mrt?: {…}, schedule?: {…}, tg?: {…} } */
+    /* patch: { thsr?: {…}, mrt?: {…}, schedule?: {…}, tg?: {…}, homeOrder?: [...] }
+     * 物件值走淺層合併（保留其他子欄位），陣列/字串等非物件值直接覆蓋
+     * （不能對陣列做 {...} 展開，那會把它拆成 {0:.., 1:..} 變成物件）。 */
     save(patch) {
       const d = _bootstrap();
       const p = d.profiles[d.active];
       if (!p) return;
-      for (const k of Object.keys(patch)) p[k] = { ...p[k], ...patch[k] };
+      for (const k of Object.keys(patch)) {
+        const v = patch[k];
+        const isPlainObj = v && typeof v === 'object' && !Array.isArray(v);
+        p[k] = isPlainObj ? { ...p[k], ...v } : v;
+      }
       p.updatedAt = new Date().toISOString();
       _write(d);
     },

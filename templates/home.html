@@ -1195,6 +1195,19 @@ function _saveOrder() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ order }),
   }).catch(() => {});
+
+  // 登入帳號的話，排版也存進帳號設定，換裝置登入同一組號碼會跟著走
+  Config.save({ homeOrder: order });
+  const sk = Config.getActive().syncKey;
+  if (sk) Config.push().catch(() => {});
+}
+
+/* ── 排版順序清理：只留目前存在的卡片，並補上新加的卡片 ── */
+function _normalizeOrder(order) {
+  order = (Array.isArray(order) ? order : []).filter(k => CARDS[k]);
+  if (!order.includes('loadsheet')) order.push('loadsheet');
+  if (!order.includes('passport')) order.push('passport');
+  return order;
 }
 
 /* ── 初始載入 ── */
@@ -1202,20 +1215,24 @@ function _saveOrder() {
   // 先用 localStorage 快取立即渲染，消除空白等待
   let cached = localStorage.getItem('card_order_cache');
   try {
-    let order = cached ? JSON.parse(cached) : DEFAULT_ORDER;
-    order = order.filter(k => k !== 'codes');
-    if (!order.includes('loadsheet')) order.push('loadsheet');
-    if (!order.includes('passport')) order.push('passport');
-    renderBento(order);
+    renderBento(_normalizeOrder(cached ? JSON.parse(cached) : DEFAULT_ORDER));
   } catch { renderBento(DEFAULT_ORDER); }
 
-  // 背景同步伺服器順序
+  // 已登入帳號的話，帳號裡存的排版優先於裝置本機/全站預設順序
+  const activeProfile = Config.getActive();
+  const accountOrder  = activeProfile?.syncKey ? activeProfile.homeOrder : null;
+  if (Array.isArray(accountOrder) && accountOrder.length) {
+    const order = _normalizeOrder(accountOrder);
+    localStorage.setItem('card_order_cache', JSON.stringify(order));
+    if (JSON.stringify(order) !== JSON.stringify(cardOrder)) renderBento(order);
+    return;
+  }
+
+  // 未登入／帳號還沒存過排版：背景同步全站順序（沿用既有行為）
   try {
     const r = await fetch('/api/card-order');
     const d = await r.json();
-    let order = d.order || DEFAULT_ORDER;
-    if (!order.includes('loadsheet')) order.push('loadsheet');
-    if (!order.includes('passport')) order.push('passport');
+    const order = _normalizeOrder(d.order || DEFAULT_ORDER);
     localStorage.setItem('card_order_cache', JSON.stringify(order));
     if (JSON.stringify(order) !== JSON.stringify(cardOrder))
       renderBento(order);
@@ -1487,7 +1504,13 @@ async function doLogin() {
     const data = await r.json();
     if (data.ok) {
       _setSession({code: data.code, name: data.name, dietSyncId: data.dietSyncId});
-      Config.connectAccount(data.code).catch(() => {});
+      await Config.connectAccount(data.code).catch(() => {});
+      const accountOrder = Config.getActive()?.homeOrder;
+      if (Array.isArray(accountOrder) && accountOrder.length) {
+        const order = _normalizeOrder(accountOrder);
+        localStorage.setItem('card_order_cache', JSON.stringify(order));
+        renderBento(order);
+      }
       _updateChip(); closeSheet();
       document.getElementById('loginCode').value = '';
       if (navigator.vibrate) navigator.vibrate([30,30,60]);
