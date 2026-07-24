@@ -2423,7 +2423,8 @@ def admin_users():
             return jsonify({"ok": True, "rows": r.json()})
         return jsonify({"ok": False, "status": r.status_code, "detail": r.text[:300]}), 502
     except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 503
+        app.logger.error(f"admin_users: {e}")
+        return jsonify({"ok": False, "error": "連線資料庫失敗，請稍後再試"}), 503
 
 
 # ──────────────────────────────────────────────
@@ -2449,7 +2450,8 @@ def auth_register():
         if chk.status_code == 200 and chk.json():
             return jsonify({"error": "code_taken", "message": "此號碼已被使用，請換一個"}), 409
     except Exception as e:
-        return jsonify({"error": "network_error", "message": str(e)}), 503
+        app.logger.error(f"auth_register (check): {e}")
+        return jsonify({"error": "network_error", "message": "連線資料庫失敗，請稍後再試"}), 503
     diet_sync_id = str(data.get("dietSyncId", "")).strip() or None
     cfg = {
         "name": name,
@@ -2472,7 +2474,8 @@ def auth_register():
             return jsonify({"ok": True, "code": code, "name": name, "dietSyncId": diet_sync_id})
         return jsonify({"error": "create_failed", "message": f"建立失敗 ({r.status_code})"}), 500
     except Exception as e:
-        return jsonify({"error": "network_error", "message": str(e)}), 503
+        app.logger.error(f"auth_register (create): {e}")
+        return jsonify({"error": "network_error", "message": "連線資料庫失敗，請稍後再試"}), 503
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -2500,7 +2503,8 @@ def auth_login():
             "dietSyncId": cfg.get("dietSyncId"),
         })
     except Exception as e:
-        return jsonify({"error": "network_error", "message": str(e)}), 503
+        app.logger.error(f"auth_login: {e}")
+        return jsonify({"error": "network_error", "message": "連線資料庫失敗，請稍後再試"}), 503
 
 
 # ──────────────────────────────────────────────
