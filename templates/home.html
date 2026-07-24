@@ -359,10 +359,12 @@ body {
   z-index: 2; touch-action: none; user-select: none;
   line-height: 1;
   margin-left: auto;
+  cursor: grab;
 }
 .bento.edit-mode .card-sm:not(.card-settings) .sm-chevron { display: none; }
 .bento.edit-mode .card-sm:not(.card-settings) .drag-handle { display: flex; }
-.bento.edit-mode .card-sm:not(.card-settings) { touch-action: none; user-select: none; cursor: grab; }
+/* 只有拖曳把手需要 touch-action:none，卡片本身要保留可以上下滑動捲頁 */
+.bento.edit-mode .card-sm:not(.card-settings) { user-select: none; }
 .bento.edit-mode .card-sm:not(.card-settings):active { transform: none !important; }
 
 /* ── 拖曳狀態 ── */
@@ -375,11 +377,11 @@ body {
   transform: scale(1.05) rotate(1.5deg);
 }
 .drag-placeholder {
-  background: rgba(13,148,136,0.07);
-  border: 2px dashed rgba(13,148,136,0.28);
-  border-radius: 22px;
-  min-height: 148px;
+  background: rgba(13,148,136,0.1);
+  border: 2px dashed rgba(13,148,136,0.4);
+  border-radius: 18px;
   pointer-events: none;
+  transition: height 0.12s cubic-bezier(0.22,1,0.36,1);
 }
 
 /* ── 底部 ── */
@@ -1120,20 +1122,28 @@ function toggleEditMode() {
 /* ── 拖曳排序 ── */
 let _dEl = null, _ghost = null, _ph = null, _dragging = false;
 let _ox = 0, _oy = 0, _gox = 0, _goy = 0;
+let _lastClientY = 0, _autoScrollRAF = null, _phNeighbor = null;
+
+const _AUTOSCROLL_EDGE = 90;   // 距離螢幕上/下邊緣多近開始自動捲動
+const _AUTOSCROLL_MAX  = 14;   // 每個 frame 最多捲動的 px 數
 
 function _setupDrag() {
+  // 只從拖曳把手（⠿）啟動拖曳，卡片其他地方留給上下滑動捲頁用
   document.getElementById('bento')
-    .querySelectorAll('.card-sm:not(.card-settings)')
-    .forEach(card => card.addEventListener('pointerdown', _dStart, { passive: false }));
+    .querySelectorAll('.card-sm:not(.card-settings) .drag-handle')
+    .forEach(handle => handle.addEventListener('pointerdown', _dStart, { passive: false }));
 }
 
 function _dStart(e) {
   if (!editMode) return;
-  _dEl = this;
+  _dEl = this.closest('.card-sm');
+  if (!_dEl) return;
   _ox = e.clientX; _oy = e.clientY;
+  _lastClientY = e.clientY;
   const r = _dEl.getBoundingClientRect();
   _gox = e.clientX - r.left; _goy = e.clientY - r.top;
   _dragging = false;
+  _phNeighbor = null;
   document.addEventListener('pointermove', _dMove, { passive: false });
   document.addEventListener('pointerup',     _dEnd);
   document.addEventListener('pointercancel', _dEnd);
@@ -1142,6 +1152,7 @@ function _dStart(e) {
 
 function _dMove(e) {
   if (!_dEl) return;
+  _lastClientY = e.clientY;
   const dx = e.clientX - _ox, dy = e.clientY - _oy;
   if (!_dragging) {
     if (Math.sqrt(dx*dx + dy*dy) < 8) return;
@@ -1155,35 +1166,71 @@ function _dMove(e) {
     _ph.className = 'drag-placeholder';
     _ph.style.height = _dEl.offsetHeight + 'px';
     _dEl.before(_ph);
+    _startAutoScroll();
   }
   _ghost.style.left = (e.clientX - _gox) + 'px';
   _ghost.style.top  = (e.clientY - _goy) + 'px';
+  _updateDropTarget(e.clientY);
+  e.preventDefault();
+}
+
+/* 把插入位置換算成最近的卡片，並在真的換位置時給一個小震動確認
+ * 用「卡片 id + before/after」當比對用的 key，不要直接比 DOM 節點——
+ * near.nextElementSibling 在 _ph 已經卡在那個位置時會變成 _ph 本身，
+ * 拿它跟上一輪的節點比較會一直誤判成「換了新位置」。 */
+function _updateDropTarget(clientY) {
   const cards = [...document.getElementById('bento')
     .querySelectorAll('.card-sm:not(.card-settings):not(.is-dragging)')];
   let near = null, nearD = Infinity;
   for (const c of cards) {
     const r = c.getBoundingClientRect();
-    const d = Math.abs(e.clientY - (r.top + r.height / 2));
+    const d = Math.abs(clientY - (r.top + r.height / 2));
     if (d < nearD) { nearD = d; near = c; }
   }
-  if (near) {
-    const r = near.getBoundingClientRect();
-    if (e.clientY < r.top + r.height / 2) near.before(_ph); else near.after(_ph);
-  }
-  e.preventDefault();
+  if (!near) return;
+  const r = near.getBoundingClientRect();
+  const before = clientY < r.top + r.height / 2;
+  const key = near.dataset.id + (before ? ':before' : ':after');
+  if (key === _phNeighbor) return; // 位置沒變，不用重排也不用震動
+  _phNeighbor = key;
+  if (before) near.before(_ph); else near.after(_ph);
+  if (navigator.vibrate) navigator.vibrate(8);
+}
+
+/* 拖到螢幕上緣/下緣附近時自動捲頁，這樣才搬得到目前畫面外的卡片位置 */
+function _startAutoScroll() {
+  if (_autoScrollRAF) return;
+  const step = () => {
+    if (!_dragging) { _autoScrollRAF = null; return; }
+    const h = window.innerHeight;
+    let speed = 0;
+    if (_lastClientY < _AUTOSCROLL_EDGE) {
+      speed = -_AUTOSCROLL_MAX * (1 - _lastClientY / _AUTOSCROLL_EDGE);
+    } else if (_lastClientY > h - _AUTOSCROLL_EDGE) {
+      speed = _AUTOSCROLL_MAX * (1 - (h - _lastClientY) / _AUTOSCROLL_EDGE);
+    }
+    if (speed !== 0) {
+      window.scrollBy(0, speed);
+      _updateDropTarget(_lastClientY);
+    }
+    _autoScrollRAF = requestAnimationFrame(step);
+  };
+  _autoScrollRAF = requestAnimationFrame(step);
 }
 
 function _dEnd() {
   document.removeEventListener('pointermove', _dMove);
   document.removeEventListener('pointerup',     _dEnd);
   document.removeEventListener('pointercancel', _dEnd);
+  if (_autoScrollRAF) { cancelAnimationFrame(_autoScrollRAF); _autoScrollRAF = null; }
   if (_dragging && _ph && _dEl) {
     _ph.before(_dEl); _ph.remove();
     _dEl.classList.remove('is-dragging');
+    if (navigator.vibrate) navigator.vibrate([12, 30, 12]);
     _saveOrder();
   }
   if (_ghost) { _ghost.remove(); _ghost = null; }
-  _dEl = null; _ph = null; _dragging = false;
+  _dEl = null; _ph = null; _dragging = false; _phNeighbor = null;
 }
 
 function _saveOrder() {
