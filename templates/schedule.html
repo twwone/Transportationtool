@@ -104,18 +104,18 @@ main {
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 5px;
 }
 
 .cal-cell {
-  aspect-ratio: 1 / 0.92;
+  aspect-ratio: 1 / 1.08;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 5px 3px 6px;
+  padding: 6px 4px 7px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   position: relative;
@@ -141,7 +141,7 @@ main {
 }
 
 .cal-day-num {
-  font-size: 0.78rem; font-weight: 700;
+  font-size: 0.88rem; font-weight: 700;
   color: var(--text); align-self: flex-start;
   padding-left: 4px; line-height: 1;
 }
@@ -155,24 +155,24 @@ main {
 }
 .cal-badge {
   font-family: "SF Mono","Menlo","Courier New", monospace;
-  font-size: 0.56rem; font-weight: 800;
+  font-size: 0.66rem; font-weight: 800;
   color: var(--accent); background: var(--acc2);
-  padding: 1px 3px; border-radius: 4px;
+  padding: 2px 4px; border-radius: 5px;
   letter-spacing: 0.02em;
   display: block;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cal-time {
-  font-size: 0.57rem; font-weight: 600;
-  color: var(--sub); margin-top: 1px;
+  font-size: 0.64rem; font-weight: 600;
+  color: var(--sub); margin-top: 2px;
   letter-spacing: -0.2px;
 }
 .cal-off-label {
-  font-size: 0.65rem; font-weight: 600;
+  font-size: 0.74rem; font-weight: 600;
   color: var(--sub);
 }
 .cal-class-label {
-  font-size: 0.65rem; font-weight: 700;
+  font-size: 0.74rem; font-weight: 700;
   color: #2563eb;
 }
 @media (prefers-color-scheme: dark) {
