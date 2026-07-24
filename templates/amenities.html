@@ -41,7 +41,7 @@ html, body { overscroll-behavior: none; }
 }
 
 html, body {
-  height: 100%;
+  min-height: 100%;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -181,50 +181,43 @@ body {
 .term-btn.active .t-en { opacity: 0.85; }
 .term-btn:active:not(.active) { transform: scale(0.96); }
 
-/* ── 分類按鈕格 ── */
+/* ── 分類篩選（橫向滑動標籤列，取代原本佔滿版面的 4 欄格子）── */
 .cats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 7px;
-  padding: 6px 0 12px;
-}
-.cat-btn {
   display: flex;
-  flex-direction: column;
+  gap: 8px;
+  padding: 6px 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cats-grid::-webkit-scrollbar { display: none; }
+.cat-btn {
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
-  background: var(--card);
-  border: 1.5px solid var(--border);
-  border-radius: 16px;
-  padding: 12px 4px 10px;
+  gap: 6px;
+  background: rgba(0,0,0,0.045);
+  border: 1.5px solid transparent;
+  border-radius: 100px;
+  padding: 7px 14px 7px 12px;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  position: relative;
+  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .cat-btn:active { transform: scale(0.93); }
 .cat-btn.active {
-  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-  transform: translateY(-2px) scale(1.02);
   border-color: var(--cat-color, var(--accent));
-  background: color-mix(in srgb, var(--cat-color, var(--accent)) 10%, var(--card));
+  background: color-mix(in srgb, var(--cat-color, var(--accent)) 12%, var(--card));
 }
-.cat-emoji { font-size: 1.45rem; line-height: 1; }
+.cat-emoji { font-size: 0.95rem; line-height: 1; color: var(--sub); }
+.cat-btn.active .cat-emoji { color: var(--cat-color, var(--accent)); }
 .cat-label-zh {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--sub);
-  text-align: center;
-  line-height: 1.2;
+  white-space: nowrap;
   transition: color 0.2s;
 }
-.cat-label-en {
-  font-size: 0.58rem;
-  font-weight: 400;
-  color: #b0b0b5;
-  text-align: center;
-  line-height: 1.1;
-}
+.cat-btn.active .cat-label-zh { color: var(--cat-color, var(--accent)); }
+.cat-label-en { display: none; }
 .cat-btn.active .cat-emoji    { color: var(--cat-color, var(--accent)); }
 .cat-btn.active .cat-label-zh { color: var(--cat-color, var(--accent)); }
 .cat-btn.active .cat-label-en { color: var(--cat-color, var(--accent)); opacity: 0.7; }
@@ -412,7 +405,7 @@ body {
     color: #fff;
     box-shadow: 0 3px 10px rgba(0,0,0,0.4);
   }
-  .cat-label-en { color: #48484a; }
+  .cat-btn { background: rgba(255,255,255,0.08); }
   .amenity-card:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.4); }
   .footer-note { color: #3a3a3c; }
   .loading { color: #48484a; }
