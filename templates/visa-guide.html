@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overscroll-behavior: none; height: 100%; }
+html, body { overscroll-behavior: none; min-height: 100%; }
 
 :root {
   --bg:       #fbfbfd;
@@ -174,11 +174,18 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 }
 .clear-btn.hidden { display: none; }
 
-/* ── Filter chips ── */
+/* ── Filter chips（滑動時固定在 topbar 下緣，跟機場設施指南同一套修法）── */
 .chips {
   display: flex; gap: 8px;
   padding: 6px 16px 10px;
   overflow-x: auto; scrollbar-width: none;
+  position: sticky;
+  top: var(--topbar-h, 52px);
+  z-index: 55;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--divider);
 }
 .chips::-webkit-scrollbar { display: none; }
 .chip {
@@ -464,6 +471,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
     --accent:  #2997ff;
   }
   .topbar { background: rgba(28,28,30,0.88); }
+  .chips { background: rgba(28,28,30,0.88); }
   .back-btn { color: #0a84ff; }
   .pin-btn { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,0.3), 0 4px 14px rgba(0,0,0,0.24); }
   .pin-btn::after { background: linear-gradient(155deg, rgba(255,255,255,0.08) 0%, transparent 60%); }
@@ -933,6 +941,14 @@ document.addEventListener('touchend', function(e) {
   if (now - _lastTap < 300) e.preventDefault();
   _lastTap = now;
 }, { passive: false });
+
+function _setTopbarHeightVar() {
+  const topbar = document.querySelector('.topbar');
+  if (!topbar) return;
+  document.documentElement.style.setProperty('--topbar-h', topbar.offsetHeight + 'px');
+}
+_setTopbarHeightVar();
+window.addEventListener('resize', _setTopbarHeightVar);
 
 init();
 </script>
