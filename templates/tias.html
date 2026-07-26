@@ -315,37 +315,6 @@ body {
 .res-new     { font-size: 1.5rem; font-weight: 800; color: #c2410c; letter-spacing: -0.5px; line-height: 1; }
 .card-updated { font-size: 0.6rem; color: var(--sub); text-align: right; margin-top: 8px; }
 
-/* ── TAT Section ── */
-.tat-wrap { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--divider); }
-.tat-headline { margin-bottom: 9px; }
-.tat-next { font-size: 0.82rem; font-weight: 600; color: var(--text); }
-.tat-next.phase-urgent { color: #b91c1c; }
-.tat-next.phase-soon   { color: #92400e; }
-.tat-next.phase-ok     { color: #065f46; }
-.ms-list { display: flex; flex-direction: column; gap: 5px; }
-.ms-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 5px 8px; border-radius: 8px;
-  transition: background 0.2s;
-}
-.ms-row.ms-done   { opacity: 0.38; }
-.ms-row.ms-now    { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.35); }
-.ms-row.ms-next   { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.35); }
-.ms-row.ms-urgent { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); }
-.ms-row.ms-future { opacity: 0.5; }
-.ms-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.ms-done   .ms-dot { background: #9ca3af; }
-.ms-now    .ms-dot { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
-.ms-next   .ms-dot { background: #f59e0b; }
-.ms-urgent .ms-dot { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.2); animation: pulse 1.2s ease-in-out infinite; }
-.ms-future .ms-dot { background: #d1d5db; }
-.ms-time      { font-size: 0.78rem; font-weight: 700; color: var(--text); min-width: 38px; }
-.ms-label     { font-size: 0.78rem; color: var(--text); flex: 1; }
-.ms-countdown { font-size: 0.7rem; font-weight: 600; color: var(--sub); white-space: nowrap; }
-.ms-now    .ms-countdown { color: #1d4ed8; }
-.ms-next   .ms-countdown { color: #92400e; }
-.ms-urgent .ms-countdown { color: #b91c1c; }
-
 /* ── Empty / Error / Loading ── */
 .empty { text-align: center; padding: 60px 20px; color: var(--sub); font-size: 0.9rem; }
 .empty-icon { font-size: 2.8rem; display: block; margin-bottom: 14px; }
@@ -741,15 +710,6 @@ const ST_MAP = [
   [/(轉降|Divert)/i,                  'diverted', '備降'],
 ];
 
-/* ── 出港 TAT 里程碑 ── */
-const MILESTONES = [
-  { key:'open',  label:'報到開始', offset:-180 },
-  { key:'close', label:'報到截止', offset:-45  },
-  { key:'board', label:'登機開始', offset:-40  },
-  { key:'gate',  label:'關閉艙門', offset:-15  },
-  { key:'std',   label:'起飛',     offset:0    },
-];
-
 /* ── Tab 順序（用於判斷滑動方向） ── */
 const TAB_ORDER  = { arr: 0, dep: 1, all: 2 };
 const TAB_PANELS = { arr: 'listArr', dep: 'listDep', all: 'panelAll' };
@@ -1093,56 +1053,6 @@ function buildResBlock(icon, label, value, highlight, prevValue) {
   </div>`;
 }
 
-/* ── TAT 里程碑 ── */
-function buildTAT(stdIso, etdIso) {
-  const ref = etdIso || stdIso;
-  if (!ref) return '';
-  const std = new Date(ref);
-  const now = new Date();
-  const nowMins = (now - std) / 60000;
-  const ms = MILESTONES.map(m => ({
-    ...m, time: new Date(std.getTime() + m.offset * 60000),
-    isPast: m.offset <= nowMins,
-  }));
-  const nextMs = ms.find(m => m.offset > nowMins);
-
-  let headTxt = '', headCls = '';
-  if (!nextMs) {
-    headTxt = `已出發 ${Math.round(nowMins)} 分鐘前`;
-  } else {
-    const remain = Math.round(nextMs.offset - nowMins);
-    if (remain <= 5)       { headTxt = `${nextMs.label} 即將到達！剩 ${remain} 分`; headCls = 'phase-urgent'; }
-    else if (remain <= 20) { headTxt = `距${nextMs.label} ${remain} 分鐘`; headCls = 'phase-soon'; }
-    else if (remain < 60)  { headTxt = `距${nextMs.label} ${remain} 分鐘`; headCls = 'phase-ok'; }
-    else {
-      const h = Math.floor(remain / 60), m = remain % 60;
-      headTxt = `距${nextMs.label} ${h}h${m ? ' ' + m + 'm' : ''}`;
-      headCls = 'phase-ok';
-    }
-  }
-
-  const rows = ms.map(m => {
-    const remain = Math.round(m.offset - nowMins);
-    let rowCls = 'ms-future', countdown = '';
-    if (m.isPast) rowCls = 'ms-done';
-    else if (m === nextMs) {
-      rowCls = remain <= 5 ? 'ms-urgent' : remain <= 20 ? 'ms-next' : 'ms-now';
-      countdown = remain <= 0 ? '時間到' : remain < 60 ? `${remain}m` : `${Math.floor(remain/60)}h${remain % 60 || ''}`;
-    }
-    return `<div class="ms-row ${rowCls}">
-      <div class="ms-dot"></div>
-      <div class="ms-time">${fmtHHMM(m.time.toISOString())}</div>
-      <div class="ms-label">${m.label}</div>
-      ${countdown ? `<div class="ms-countdown">${countdown}</div>` : ''}
-    </div>`;
-  }).join('');
-
-  return `<div class="tat-wrap">
-    <div class="tat-headline"><div class="tat-next ${headCls}">${headTxt}</div></div>
-    <div class="ms-list">${rows}</div>
-  </div>`;
-}
-
 /* ── 航班卡片 ── */
 function renderCard(f, mode, showDirBadge) {
   const isArr = mode === 'arr';
@@ -1220,7 +1130,6 @@ function renderCard(f, mode, showDirBadge) {
        </div>`;
 
   const timeHtml  = buildTimeHtml(isArr ? 'STA' : 'STD', sch, est, act);
-  const tatHtml   = !isArr ? buildTAT(sch, est) : '';
   const updatedAt = f.UpdateTime ? fmtHHMM(f.UpdateTime) : '';
 
   return `<div class="${cardCls}" data-fltkey="${_detailKey}">
@@ -1248,7 +1157,6 @@ function renderCard(f, mode, showDirBadge) {
     </div>
     ${timeHtml}
     ${resGrid}
-    ${tatHtml}
     ${updatedAt ? `<div class="card-updated">資料更新 ${updatedAt}</div>` : ''}
   </div>`;
 }
