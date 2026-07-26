@@ -841,7 +841,7 @@ function mergeCodeshares(flights, dir) {
   flights.forEach(f => {
     const sch  = (dir === 'arr' ? f.ScheduleArrivalTime    : f.ScheduleDepartureTime) || '';
     const gate = (f.Gate || (dir === 'arr' ? f.ArrivalGate : f.DepartureGate) || '').trim();
-    const ap   = (dir === 'arr' ? f.DepartureAirportID     : f.ArrivalAirportID    || '').trim();
+    const ap   = (dir === 'arr' ? (f.DepartureAirportID || '') : (f.ArrivalAirportID || '')).trim();
     if (!gate) { order.push([null, f]); return; }          // 無登機門 → 不合併
     const key = `${sch}|${gate}|${ap}`;
     if (!groups.has(key)) { groups.set(key, []); order.push([key, null]); }
