@@ -277,6 +277,40 @@ main {
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .btn-confirm:active { opacity: 0.8; }
+.btn-confirm:disabled { opacity: 0.35; pointer-events: none; }
+.btn-danger {
+  flex: 1; padding: 14px;
+  background: #dc2626; color: #fff;
+  border: none; border-radius: 16px;
+  font-size: 1rem; font-weight: 700;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.btn-danger:active { opacity: 0.8; }
+.btn-danger:disabled { opacity: 0.35; pointer-events: none; }
+.del-warning {
+  font-size: 0.82rem; font-weight: 600; color: #dc2626;
+  margin-bottom: 16px; line-height: 1.5;
+}
+.del-keyword {
+  font-family: "SF Mono","Menlo","Courier New", monospace;
+  font-size: 0.95rem; font-weight: 700; color: var(--text);
+  background: var(--bg); border: 1px dashed var(--border);
+  border-radius: 10px; padding: 8px 12px;
+  margin-bottom: 10px; user-select: all;
+}
+.month-delete-btn {
+  display: block; margin: 6px auto 0;
+  background: none; border: none;
+  font-size: 0.72rem; font-weight: 600;
+  color: #dc2626; opacity: 0.55;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  padding: 4px 8px;
+}
+.month-delete-btn:active { opacity: 0.9; }
+@media (prefers-color-scheme: dark) {
+  .del-warning { color: #f87171; }
+  .month-delete-btn { color: #f87171; }
+}
 .btn-reset {
   padding: 14px 18px;
   background: var(--bg);
@@ -341,6 +375,7 @@ main {
     <div class="month-title">
       <div class="month-header" id="month-hdr"></div>
       <div class="month-sub"   id="month-sub"></div>
+      <button class="month-delete-btn" onclick="openDeleteSheet()">刪除本月班表</button>
     </div>
     <button class="month-nav-btn" id="btn-next-month" onclick="navMonth(1)" aria-label="下個月">›</button>
   </div>
@@ -389,6 +424,21 @@ main {
   </div>
 </div>
 
+<!-- Delete-month sheet -->
+<div class="sheet-overlay" id="del-overlay"></div>
+<div class="sheet" id="del-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="del-title"></div>
+  <div class="del-warning">此操作會清除本月所有班表資料與已調整紀錄，且無法復原（僅影響這台裝置）。</div>
+  <div class="input-label">請完整輸入下方文字以確認刪除</div>
+  <div class="del-keyword" id="del-keyword-display"></div>
+  <input class="sheet-input" id="del-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="text-transform:none;">
+  <div class="sheet-actions">
+    <button class="btn-reset show" onclick="closeDeleteSheet()">取消</button>
+    <button class="btn-danger" id="del-confirm-btn" disabled onclick="confirmDeleteMonth()">刪除</button>
+  </div>
+</div>
+
 <script>
 function _goHomeClick(e) {
   if (document.referrer && new URL(document.referrer).origin === location.origin) {
@@ -408,19 +458,32 @@ const MONTHS = {
   '2026-8': ['@','R7C','B10A','R10A','H12A','@','B9S','R10A','B10T','R10A','@','@','B10A','R10A','R9A','@','@','B10A','B10T','B10A','B10A','@','B9S','R10A','@','H7C','@','R9A','@','R7C','R7A']
 };
 
+/* ── 已刪除的月份（僅這台裝置隱藏，不動到原始資料） ── */
+const DELETED_KEY = 'sched_deleted_months';
+let deletedMonths;
+try { deletedMonths = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]')); }
+catch (e) { deletedMonths = new Set(); }
+
 function monthKeys() {
   return Object.keys(MONTHS)
+    .filter(k => !deletedMonths.has(k))
     .map(k => { const [y, m] = k.split('-').map(Number); return { y, m, key: k }; })
     .sort((a, b) => a.y - b.y || a.m - b.m);
 }
-function getCodes(y, m) { return MONTHS[`${y}-${m}`] || null; }
+function getCodes(y, m) {
+  const key = `${y}-${m}`;
+  if (deletedMonths.has(key)) return null;
+  return MONTHS[key] || null;
+}
 
 /* ── 目前檢視的月份：預設今天所在月，若無資料則退到最後一筆 ── */
 let viewYear, viewMonth;
 (function initView() {
   const today = new Date(), ty = today.getFullYear(), tm = today.getMonth() + 1;
-  if (getCodes(ty, tm)) { viewYear = ty; viewMonth = tm; }
-  else { const keys = monthKeys(); const last = keys[keys.length - 1]; viewYear = last.y; viewMonth = last.m; }
+  if (getCodes(ty, tm)) { viewYear = ty; viewMonth = tm; return; }
+  const keys = monthKeys();
+  if (keys.length) { const last = keys[keys.length - 1]; viewYear = last.y; viewMonth = last.m; }
+  else { viewYear = ty; viewMonth = tm; }
 })();
 
 /* ── 手動調整存 localStorage（每月各自一組） ── */
@@ -612,12 +675,65 @@ function resetDay() {
   render();
 }
 
+/* ── 刪除本月班表（需輸入關鍵字確認，僅影響這台裝置） ── */
+let deleteKeyword = '';
+
+function openDeleteSheet() {
+  const year = viewYear, month = viewMonth;
+  deleteKeyword = `刪除${year}年${month}月`;
+  document.getElementById('del-title').textContent = `刪除 ${year}年${month}月 班表`;
+  document.getElementById('del-keyword-display').textContent = deleteKeyword;
+  const inp = document.getElementById('del-input');
+  inp.value = '';
+  document.getElementById('del-confirm-btn').disabled = true;
+  document.getElementById('del-overlay').classList.add('open');
+  document.getElementById('del-sheet').classList.add('open');
+  setTimeout(() => inp.focus(), 300);
+}
+
+function closeDeleteSheet() {
+  document.getElementById('del-overlay').classList.remove('open');
+  document.getElementById('del-sheet').classList.remove('open');
+}
+
+function onDeleteInput() {
+  const match = document.getElementById('del-input').value.trim() === deleteKeyword;
+  document.getElementById('del-confirm-btn').disabled = !match;
+}
+
+function confirmDeleteMonth() {
+  if (document.getElementById('del-input').value.trim() !== deleteKeyword) return;
+  const y = viewYear, m = viewMonth;
+  const key = `${y}-${m}`;
+
+  deletedMonths.add(key);
+  localStorage.setItem(DELETED_KEY, JSON.stringify([...deletedMonths]));
+  localStorage.removeItem(`sched_overrides_${y}_${m}`);
+
+  const keys = monthKeys();
+  if (keys.length) {
+    const next = keys.find(k => k.y > y || (k.y === y && k.m > m));
+    const target = next || keys[keys.length - 1];
+    viewYear = target.y; viewMonth = target.m;
+  }
+  loadOverrides();
+  closeDeleteSheet();
+  render();
+}
+
 document.getElementById('overlay').addEventListener('click', closeSheet);
 document.getElementById('time-start').addEventListener('change', onTimeChange);
 document.getElementById('time-end').addEventListener('change', onTimeChange);
 document.getElementById('sheet-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmEdit();
   if (e.key === 'Escape') closeSheet();
+});
+
+document.getElementById('del-overlay').addEventListener('click', closeDeleteSheet);
+document.getElementById('del-input').addEventListener('input', onDeleteInput);
+document.getElementById('del-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmDeleteMonth();
+  if (e.key === 'Escape') closeDeleteSheet();
 });
 
 render();
