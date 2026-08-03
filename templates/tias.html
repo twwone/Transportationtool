@@ -32,6 +32,12 @@ html, body { overscroll-behavior: none; }
   --accent-border: rgba(0,113,227,0.28);
   --radius-l:      20px;
   --radius-m:      14px;
+
+  /* transitions.dev motion token: text-states-swap */
+  --text-swap-dur: 150ms;
+  --text-swap-translate-y: 4px;
+  --text-swap-blur: 2px;
+  --text-swap-ease: ease-in-out;
 }
 
 /* ── 關鍵影格 ── */
@@ -528,6 +534,33 @@ body {
 .flt-info-cell { display: flex; flex-direction: column; gap: 2px; }
 .flt-info-label { font-size: 0.7rem; font-weight: 590; color: var(--sub); }
 .flt-info-val   { font-size: 0.92rem; font-weight: 600; color: var(--text); }
+
+/* 即時航班數值更新（transitions.dev: text-states-swap） */
+.t-text-swap {
+  display: inline-block;
+  transform: translateY(0);
+  filter: blur(0);
+  opacity: 1;
+  transition:
+    transform var(--text-swap-dur) var(--text-swap-ease),
+    filter    var(--text-swap-dur) var(--text-swap-ease),
+    opacity   var(--text-swap-dur) var(--text-swap-ease);
+  will-change: transform, filter, opacity;
+}
+.t-text-swap.is-exit {
+  transform: translateY(calc(var(--text-swap-translate-y) * -1));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+}
+.t-text-swap.is-enter-start {
+  transform: translateY(var(--text-swap-translate-y));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-text-swap { transition: none !important; }
+}
 
 .flt-live-section { padding: 10px 16px 6px; border-top: 1px solid var(--divider); }
 .flt-live-header {
@@ -1273,6 +1306,22 @@ async function openFlightDetail(key) {
         className: '', iconSize: [34, 34], iconAnchor: [17, 17],
       });
 
+      /* ── 數值文字換手（transitions.dev: text-states-swap） ── */
+      const _swapTextDur = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--text-swap-dur')
+      ) || 150;
+      const _swapText = (el, next) => {
+        if (!el || el.textContent === next) return;
+        el.classList.add('is-exit');
+        setTimeout(() => {
+          el.textContent = next;
+          el.classList.remove('is-exit');
+          el.classList.add('is-enter-start');
+          void el.offsetHeight; // force reflow so the next change transitions
+          el.classList.remove('is-enter-start');
+        }, _swapTextDur);
+      };
+
       /* ── 更新 info grid 的 helper ── */
       const _updateGrid = d => {
         const speed = d.ground_speed   != null ? Math.round(d.ground_speed) + ' kt'    : '—';
@@ -1285,17 +1334,30 @@ async function openFlightDetail(key) {
         const reg   = d.registration || d.aircraft_code || d.icao24 || '—';
         const now   = new Date();
         const ts    = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-        document.getElementById('fltLiveGrid').innerHTML = `
-          <div class="flt-info-cell"><div class="flt-info-label">狀態</div><div class="flt-info-val">${state}</div></div>
-          <div class="flt-info-cell"><div class="flt-info-label">速度</div><div class="flt-info-val">${speed}</div></div>
-          <div class="flt-info-cell"><div class="flt-info-label">高度</div><div class="flt-info-val">${alt}</div></div>
-          <div class="flt-info-cell"><div class="flt-info-label">航向</div><div class="flt-info-val">${hdg}</div></div>
-          <div class="flt-info-cell"><div class="flt-info-label">垂直速率</div><div class="flt-info-val">${vs}</div></div>
-          <div class="flt-info-cell"><div class="flt-info-label">機號/呼號</div><div class="flt-info-val">${reg}</div></div>
-          <div class="flt-info-cell" style="grid-column:1/-1">
-            <div class="flt-info-label">資料時間</div>
-            <div class="flt-info-val" style="font-size:0.8rem;color:#8e8e93"><span id="fltLiveTs">剛剛更新 (${ts})</span></div>
-          </div>`;
+        const tsText = `剛剛更新 (${ts})`;
+
+        if (!document.getElementById('tv-state')) {
+          document.getElementById('fltLiveGrid').innerHTML = `
+            <div class="flt-info-cell"><div class="flt-info-label">狀態</div><div class="flt-info-val"><span class="t-text-swap" id="tv-state">${state}</span></div></div>
+            <div class="flt-info-cell"><div class="flt-info-label">速度</div><div class="flt-info-val"><span class="t-text-swap" id="tv-speed">${speed}</span></div></div>
+            <div class="flt-info-cell"><div class="flt-info-label">高度</div><div class="flt-info-val"><span class="t-text-swap" id="tv-alt">${alt}</span></div></div>
+            <div class="flt-info-cell"><div class="flt-info-label">航向</div><div class="flt-info-val"><span class="t-text-swap" id="tv-hdg">${hdg}</span></div></div>
+            <div class="flt-info-cell"><div class="flt-info-label">垂直速率</div><div class="flt-info-val"><span class="t-text-swap" id="tv-vs">${vs}</span></div></div>
+            <div class="flt-info-cell"><div class="flt-info-label">機號/呼號</div><div class="flt-info-val"><span class="t-text-swap" id="tv-reg">${reg}</span></div></div>
+            <div class="flt-info-cell" style="grid-column:1/-1">
+              <div class="flt-info-label">資料時間</div>
+              <div class="flt-info-val" style="font-size:0.8rem;color:#8e8e93"><span class="t-text-swap" id="fltLiveTs">${tsText}</span></div>
+            </div>`;
+          return;
+        }
+
+        _swapText(document.getElementById('tv-state'), state);
+        _swapText(document.getElementById('tv-speed'), speed);
+        _swapText(document.getElementById('tv-alt'), alt);
+        _swapText(document.getElementById('tv-hdg'), hdg);
+        _swapText(document.getElementById('tv-vs'), vs);
+        _swapText(document.getElementById('tv-reg'), reg);
+        _swapText(document.getElementById('fltLiveTs'), tsText);
       };
 
       requestAnimationFrame(() => {
