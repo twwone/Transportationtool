@@ -5,3 +5,6 @@ __pycache__/
 .vercel
 .env*.local
 *.egg-info/
+.agents/
+.claude/
+skills-lock.json

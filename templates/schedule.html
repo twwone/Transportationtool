@@ -26,6 +26,24 @@ html, body { height: 100%; overscroll-behavior: none; }
   --acc2:    rgba(0,113,227,0.08);
   --radius-l: 20px;
   --radius-m: 14px;
+
+  /* transitions.dev motion tokens: error-shake + success-check */
+  --shake-distance: 6px;
+  --shake-overshoot: 4px;
+  --shake-dur-a: 80ms;
+  --shake-dur-b: 60ms;
+  --shake-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --revert-hold: 900ms;
+  --check-opacity-dur: 500ms;
+  --check-rotate-dur: 500ms;
+  --check-rotate-from: 80deg;
+  --check-bob-dur: 500ms;
+  --check-y-amount: 24px;
+  --check-blur-dur: 500ms;
+  --check-blur-from: 10px;
+  --check-path-dur: 400ms;
+  --check-path-delay: 80ms;
+  --check-ease-bob: cubic-bezier(0.34, 1.35, 0.64, 1);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -298,6 +316,68 @@ main {
   border-radius: 10px; padding: 8px 12px;
   margin-bottom: 10px; user-select: all;
 }
+
+/* 輸入錯誤關鍵字時的 shake 回饋（transitions.dev: error-state-shake） */
+#del-input { transition: border-color 150ms ease-out; will-change: transform; }
+#del-input.is-error { border-color: #dc2626 !important; transition: border-color 280ms ease-out; }
+#del-input.is-shaking {
+  animation: t-input-shake calc(var(--shake-dur-a) * 2 + var(--shake-dur-b) * 2) linear;
+}
+@keyframes t-input-shake {
+  0%     { transform: translateX(0);                                animation-timing-function: var(--shake-ease); }
+  28.57% { transform: translateX(var(--shake-distance));            animation-timing-function: var(--shake-ease); }
+  57.14% { transform: translateX(calc(var(--shake-distance) * -1)); animation-timing-function: var(--shake-ease); }
+  78.57% { transform: translateX(var(--shake-overshoot));           animation-timing-function: var(--shake-ease); }
+  100%   { transform: translateX(0); }
+}
+@media (prefers-color-scheme: dark) {
+  #del-input.is-error { border-color: #f87171 !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #del-input { animation: none !important; transform: none !important; }
+}
+
+/* 刪除成功打勾動畫（transitions.dev: success-check） */
+.del-success {
+  display: none; flex-direction: column; align-items: center; gap: 10px;
+  padding: 18px 0 8px; color: #16a34a;
+}
+#del-sheet.deleting .del-warning,
+#del-sheet.deleting .input-label,
+#del-sheet.deleting .del-keyword,
+#del-sheet.deleting #del-input,
+#del-sheet.deleting .sheet-actions { display: none; }
+#del-sheet.deleting .del-success { display: flex; }
+.del-success-text { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+@media (prefers-color-scheme: dark) { .del-success { color: #4ade80; } }
+
+.t-success-check {
+  display: inline-block; width: 46px; height: 46px;
+  transform-origin: center; opacity: 0;
+  will-change: transform, opacity, filter;
+}
+.t-success-check svg { display: block; overflow: visible; }
+.t-success-check svg path { stroke-dasharray: 24; stroke-dashoffset: 24; }
+.t-success-check[data-state="in"] {
+  animation:
+    t-check-fade   var(--check-opacity-dur) cubic-bezier(0.22,1,0.36,1) forwards,
+    t-check-rotate var(--check-rotate-dur)  cubic-bezier(0.22,1,0.36,1) forwards,
+    t-check-blur   var(--check-blur-dur)    cubic-bezier(0.22,1,0.36,1) forwards,
+    t-check-bob    var(--check-bob-dur)     var(--check-ease-bob) forwards;
+}
+.t-success-check[data-state="in"] svg path {
+  animation: t-check-draw var(--check-path-dur) cubic-bezier(0.22,1,0.36,1) var(--check-path-delay) forwards;
+}
+@keyframes t-check-fade   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes t-check-rotate { from { transform: rotate(var(--check-rotate-from)); } to { transform: rotate(0deg); } }
+@keyframes t-check-blur   { from { filter: blur(var(--check-blur-from)); } to { filter: blur(0); } }
+@keyframes t-check-bob    { from { translate: 0 var(--check-y-amount); } to { translate: 0 0; } }
+@keyframes t-check-draw   { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .t-success-check { animation: none !important; opacity: 1; }
+  .t-success-check svg path { animation: none !important; stroke-dashoffset: 0 !important; }
+}
+
 .month-delete-btn {
   display: block; margin: 6px auto 0;
   background: none; border: none;
@@ -436,6 +516,14 @@ main {
   <div class="sheet-actions">
     <button class="btn-reset show" onclick="closeDeleteSheet()">取消</button>
     <button class="btn-danger" id="del-confirm-btn" disabled onclick="confirmDeleteMonth()">刪除</button>
+  </div>
+  <div class="del-success" id="del-success">
+    <span class="t-success-check" id="del-success-check" data-state="out" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 12.5l4.5 4.5L20 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <div class="del-success-text">已刪除本月班表</div>
   </div>
 </div>
 
@@ -685,7 +773,11 @@ function openDeleteSheet() {
   document.getElementById('del-keyword-display').textContent = deleteKeyword;
   const inp = document.getElementById('del-input');
   inp.value = '';
+  inp.classList.remove('is-error', 'is-shaking');
+  if (inp._revertTimer) { clearTimeout(inp._revertTimer); inp._revertTimer = null; }
   document.getElementById('del-confirm-btn').disabled = true;
+  document.getElementById('del-sheet').classList.remove('deleting');
+  document.getElementById('del-success-check').setAttribute('data-state', 'out');
   document.getElementById('del-overlay').classList.add('open');
   document.getElementById('del-sheet').classList.add('open');
   setTimeout(() => inp.focus(), 300);
@@ -697,12 +789,37 @@ function closeDeleteSheet() {
 }
 
 function onDeleteInput() {
-  const match = document.getElementById('del-input').value.trim() === deleteKeyword;
+  const inp = document.getElementById('del-input');
+  const match = inp.value.trim() === deleteKeyword;
   document.getElementById('del-confirm-btn').disabled = !match;
+  if (inp.classList.contains('is-error')) {
+    if (inp._revertTimer) { clearTimeout(inp._revertTimer); inp._revertTimer = null; }
+    inp.classList.remove('is-error');
+  }
+}
+
+function shakeDeleteInput() {
+  const inp = document.getElementById('del-input');
+  inp.classList.add('is-error');
+  inp.classList.remove('is-shaking');
+  void inp.offsetWidth;
+  inp.classList.add('is-shaking');
+  const cs = getComputedStyle(document.documentElement);
+  const msVar = (name, fb) => { const v = parseFloat(cs.getPropertyValue(name)); return Number.isFinite(v) ? v : fb; };
+  const shakeMs = msVar('--shake-dur-a', 80) * 2 + msVar('--shake-dur-b', 60) * 2;
+  setTimeout(() => inp.classList.remove('is-shaking'), shakeMs + 20);
+  if (inp._revertTimer) clearTimeout(inp._revertTimer);
+  inp._revertTimer = setTimeout(() => {
+    inp._revertTimer = null;
+    inp.classList.remove('is-error');
+  }, shakeMs + msVar('--revert-hold', 900));
 }
 
 function confirmDeleteMonth() {
-  if (document.getElementById('del-input').value.trim() !== deleteKeyword) return;
+  if (document.getElementById('del-input').value.trim() !== deleteKeyword) {
+    shakeDeleteInput();
+    return;
+  }
   const y = viewYear, m = viewMonth;
   const key = `${y}-${m}`;
 
@@ -717,8 +834,18 @@ function confirmDeleteMonth() {
     viewYear = target.y; viewMonth = target.m;
   }
   loadOverrides();
-  closeDeleteSheet();
   render();
+
+  const sheet = document.getElementById('del-sheet');
+  const check = document.getElementById('del-success-check');
+  sheet.classList.add('deleting');
+  check.setAttribute('data-state', 'out');
+  void check.offsetWidth;
+  check.setAttribute('data-state', 'in');
+  setTimeout(() => {
+    closeDeleteSheet();
+    sheet.classList.remove('deleting');
+  }, 900);
 }
 
 document.getElementById('overlay').addEventListener('click', closeSheet);
