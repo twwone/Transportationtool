@@ -862,20 +862,24 @@ body {
 .tr-result-tag { font-size: 0.86rem; font-weight: 700; color: #86868b; text-align: center; }
 .tr-result-orig { font-size: 1.15rem; color: #6e6e73; text-align: center; line-height: 1.4; }
 .tr-result-trans {
-  display: flex; align-items: center; justify-content: center; gap: 14px;
-  padding: 30px 22px; border-radius: 26px;
+  position: relative;
+  padding: 42px 22px 30px;
+  border-radius: 26px;
   font-size: 2.3rem; font-weight: 700; line-height: 1.35; text-align: center;
   background: rgba(118,118,128,0.12); color: #1c1c1e;
 }
 .tr-result-trans.tr-side-me { background: #059669; color: #fff; }
 .tr-trans-text { display: inline-block; }
 .translate-sheet.tr-flipped .tr-result-trans.tr-side-me .tr-trans-text { transform: rotate(180deg); }
+.tr-result-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
 .tr-play-btn {
-  background: none; border: none; font-size: 1.5rem; color: inherit;
-  opacity: 0.85; cursor: pointer; padding: 2px; flex-shrink: 0;
+  background: rgba(0,0,0,0.12); border: none; width: 28px; height: 28px;
+  border-radius: 50%; font-size: 0.9rem; color: inherit;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.9; cursor: pointer; flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
 }
-.tr-play-btn.disabled { opacity: 0.25; cursor: not-allowed; }
+.tr-play-btn.disabled { opacity: 0.3; cursor: not-allowed; }
 
 .tr-error { color: #ff3b30; font-size: 0.9rem; padding: 0 16px 6px; display: none; }
 
@@ -915,6 +919,7 @@ body {
   .tr-result-orig { color: #98989d; }
   .tr-result-trans { background: rgba(255,255,255,0.1); color: #f2f2f7; }
   .tr-result-trans.tr-side-me { background: #059669; color: #fff; }
+  .tr-play-btn { background: rgba(255,255,255,0.18); }
   .tr-text-input { background: rgba(58,58,60,0.9); border-color: rgba(255,255,255,0.1); color: #f2f2f7; }
   .tr-mic-btn, .tr-send-btn { background: rgba(255,255,255,0.1); color: #98989d; }
   .tr-send-btn { background: #059669; color: #fff; }
@@ -2241,10 +2246,12 @@ function _trShowResult(side, original, translation, langCode) {
     <div class="tr-result-tag">${tag}</div>
     <div class="tr-result-orig">${_trEsc(original)}</div>
     <div class="tr-result-trans tr-side-${side}">
+      <div class="tr-result-actions">
+        <button class="tr-play-btn${canPlay ? '' : ' disabled'}" ${canPlay ? '' : 'disabled title="此語言瀏覽器不支援語音播放"'}
+                onclick="_trPlay()"><i class="bi bi-volume-up-fill"></i></button>
+        <button class="tr-play-btn" id="trCopyBtn" title="複製翻譯結果" onclick="_trCopy()"><i class="bi bi-clipboard-fill"></i></button>
+      </div>
       <span class="tr-trans-text">${_trEsc(translation)}</span>
-      <button class="tr-play-btn${canPlay ? '' : ' disabled'}" ${canPlay ? '' : 'disabled title="此語言瀏覽器不支援語音播放"'}
-              onclick="_trPlay()"><i class="bi bi-volume-up-fill"></i></button>
-      <button class="tr-play-btn" id="trCopyBtn" title="複製翻譯結果" onclick="_trCopy()"><i class="bi bi-clipboard-fill"></i></button>
     </div>`;
   _trFitResult();
 }
