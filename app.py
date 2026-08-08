@@ -2390,6 +2390,151 @@ def analyze_food():
 
 
 # ──────────────────────────────────────────────
+#  旅客即時翻譯
+# ──────────────────────────────────────────────
+_TRANSLATE_LANGS = {
+    "en":    "英文",
+    "ja":    "日文",
+    "ko":    "韓文",
+    "vi":    "越南文",
+    "th":    "泰文",
+    "id":    "印尼文",
+    "tl":    "菲律賓文（Tagalog）",
+    "zh-CN": "簡體中文",
+    "fr":    "法文",
+    "de":    "德文",
+    "es":    "西班牙文",
+    "ru":    "俄文",
+    "hi":    "印度文（Hindi）",
+    "ar":    "阿拉伯文",
+    "it":    "義大利文",
+    "nl":    "荷蘭文",
+    "pt":    "葡萄牙文",
+    "my":    "緬甸文",
+    "km":    "高棉文（柬埔寨）",
+}
+_TRANSLATE_ZH_NAME = "繁體中文"
+
+_TRANSLATE_MODELS = (
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+)
+
+_TRANSLATE_SYSTEM_CONTEXT = (
+    "你正在協助一位台灣機場地勤人員，與外籍旅客進行面對面的即時溝通翻譯。"
+    "內容通常涉及登機、行李、轉機、證件、班機資訊等機場實務情境。"
+    "翻譯時請優先採用機場/航空業界慣用說法，語氣保持禮貌、直接、口語化，"
+    "避免過度文謅謅或字面直譯，務求旅客能立刻聽懂。"
+)
+
+
+def _translate_lang_name(code: str) -> str:
+    if code == "zh":
+        return _TRANSLATE_ZH_NAME
+    return _TRANSLATE_LANGS.get(code, code)
+
+
+def _call_gemini_translate(api_key: str, parts: list):
+    last_status  = None
+    last_err_msg = ""
+    for model in _TRANSLATE_MODELS:
+        try:
+            resp = _requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                json={
+                    "contents": [{"parts": parts}],
+                    "generationConfig": {"response_mime_type": "application/json"},
+                },
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                return resp, None, None
+            last_status  = resp.status_code
+            last_err_msg = (resp.json().get("error") or {}).get("message", resp.text[:300])
+        except Exception as e:
+            last_status  = 503
+            last_err_msg = str(e)
+    return None, last_status, last_err_msg
+
+
+@app.route("/api/translate", methods=["POST"])
+def translate():
+    import base64 as _b64
+
+    user_key   = request.form.get("ai_key", "").strip()
+    server_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key    = user_key or server_key
+    key_source = "user" if user_key else "server"
+
+    if not api_key:
+        return jsonify({"error": "請在 ⚙ 設定中輸入 Gemini API 金鑰"}), 503
+
+    source_lang = request.form.get("source_lang", "").strip()
+    target_lang = request.form.get("target_lang", "").strip()
+    if not source_lang or not target_lang:
+        return jsonify({"error": "缺少 source_lang / target_lang"}), 400
+
+    source_name = _translate_lang_name(source_lang)
+    target_name = _translate_lang_name(target_lang)
+
+    text  = request.form.get("text", "").strip()
+    audio = request.files.get("audio")
+
+    if audio:
+        audio_bytes = audio.read()
+        if not audio_bytes:
+            return jsonify({"error": "音訊內容為空"}), 400
+        mime_type = audio.mimetype or "audio/webm"
+        b64_str   = _b64.b64encode(audio_bytes).decode("utf-8")
+        prompt = (
+            f"{_TRANSLATE_SYSTEM_CONTEXT}\n"
+            f"以下音訊內容是{source_name}，請先聽寫出原文，再翻譯成{target_name}。"
+            "嚴格以 JSON 格式回傳，不得輸出任何其他內容。\n"
+            '回傳格式：{"transcript":"聽寫出的原文","translation":"翻譯後的文字"}'
+        )
+        parts = [
+            {"text": prompt},
+            {"inline_data": {"mime_type": mime_type, "data": b64_str}},
+        ]
+    elif text:
+        prompt = (
+            f"{_TRANSLATE_SYSTEM_CONTEXT}\n"
+            f"請將以下{source_name}文字翻譯成{target_name}：「{text}」\n"
+            "嚴格以 JSON 格式回傳，不得輸出任何其他內容。\n"
+            '回傳格式：{"transcript":"原文（原樣照抄）","translation":"翻譯後的文字"}'
+        )
+        parts = [{"text": prompt}]
+    else:
+        return jsonify({"error": "缺少 text 或 audio"}), 400
+
+    r, last_status, last_err_msg = _call_gemini_translate(api_key, parts)
+
+    if r is None:
+        if last_status == 429:
+            err_code = "user_quota_exceeded" if key_source == "user" else "quota_exceeded"
+            return jsonify({"error": err_code, "detail": last_err_msg}), 429
+        return jsonify({"error": f"翻譯失敗：{last_err_msg}"}), 500
+
+    try:
+        raw_text = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if raw_text.startswith("```"):
+            lines = raw_text.splitlines()
+            raw_text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        result = _json.loads(raw_text)
+        return jsonify({
+            "transcript":  str(result.get("transcript", text)),
+            "translation": str(result.get("translation", "")),
+        })
+    except _json.JSONDecodeError:
+        return jsonify({"error": "AI 回傳格式異常，請再試一次"}), 500
+    except Exception as e:
+        return jsonify({"error": f"翻譯失敗：{str(e)}"}), 500
+
+
+# ──────────────────────────────────────────────
 #  設定頁
 # ──────────────────────────────────────────────
 @app.route("/settings")
