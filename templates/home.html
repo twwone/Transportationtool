@@ -2244,6 +2244,7 @@ function _trShowResult(side, original, translation, langCode) {
       <span class="tr-trans-text">${_trEsc(translation)}</span>
       <button class="tr-play-btn${canPlay ? '' : ' disabled'}" ${canPlay ? '' : 'disabled title="此語言瀏覽器不支援語音播放"'}
               onclick="_trPlay()"><i class="bi bi-volume-up-fill"></i></button>
+      <button class="tr-play-btn" id="trCopyBtn" title="複製翻譯結果" onclick="_trCopy()"><i class="bi bi-clipboard-fill"></i></button>
     </div>`;
 }
 
@@ -2257,6 +2258,16 @@ function _trPlay() {
   if (voice) utter.voice = voice;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utter);
+}
+
+function _trCopy() {
+  if (!_trCurrent) return;
+  navigator.clipboard.writeText(_trCurrent.translation).then(() => {
+    const btn = document.getElementById('trCopyBtn');
+    if (!btn) return;
+    btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+    setTimeout(() => { if (btn.isConnected) btn.innerHTML = '<i class="bi bi-clipboard-fill"></i>'; }, 1500);
+  }).catch(() => _trShowError('複製失敗，請手動選取文字'));
 }
 
 async function _trSendText(side) {
