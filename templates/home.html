@@ -2246,6 +2246,21 @@ function _trShowResult(side, original, translation, langCode) {
               onclick="_trPlay()"><i class="bi bi-volume-up-fill"></i></button>
       <button class="tr-play-btn" id="trCopyBtn" title="複製翻譯結果" onclick="_trCopy()"><i class="bi bi-clipboard-fill"></i></button>
     </div>`;
+  _trFitResult();
+}
+
+const TR_MAX_FONT_REM = 2.3;
+const TR_MIN_FONT_REM = 1.05;
+function _trFitResult() {
+  const container = document.getElementById('trResult');
+  const textEl     = container.querySelector('.tr-trans-text');
+  if (!textEl) return;
+  let size = TR_MAX_FONT_REM;
+  textEl.style.fontSize = size + 'rem';
+  while (container.scrollHeight > container.clientHeight && size > TR_MIN_FONT_REM) {
+    size = Math.max(TR_MIN_FONT_REM, size - 0.15);
+    textEl.style.fontSize = size + 'rem';
+  }
 }
 
 function _trPlay() {
