@@ -186,6 +186,14 @@ body {
   color:#c2410c; background:rgba(249,115,22,0.14); border-radius:10px; padding:8px 10px; margin-bottom:8px;
 }
 .ai-summary-alert i { margin-top:2px; flex-shrink:0; }
+.ai-summary-positions-head {
+  display:flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700;
+  color:var(--accent); margin-bottom:4px;
+}
+.ai-summary-positions {
+  margin:0 0 8px; padding-left:18px; font-size:0.82rem; font-weight:600; line-height:1.7; color:var(--text);
+}
+.ai-summary-positions li { margin-bottom:2px; }
 .ai-summary-points { margin:0; padding-left:18px; font-size:0.82rem; line-height:1.7; color:var(--text); }
 .ai-summary-points li { margin-bottom:2px; }
 
@@ -437,10 +445,13 @@ async function openDetail(flightNo, notionId) {
     if (!res.ok) { box.remove(); return; }
     const alertHtml = data.alert
       ? `<div class="ai-summary-alert"><i class="bi bi-exclamation-triangle-fill"></i> ${data.alert}</div>` : '';
+    const positionsHtml = (data.positions || []).length
+      ? `<div class="ai-summary-positions-head"><i class="bi bi-geo-alt-fill"></i> 貨艙位置</div>
+         <ul class="ai-summary-positions">${data.positions.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
     const pointsHtml = (data.points || []).length
       ? `<ul class="ai-summary-points">${data.points.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
-    if (!alertHtml && !pointsHtml) { box.remove(); return; }
-    box.innerHTML = `<div class="ai-summary-head"><i class="bi bi-stars"></i> AI 重點摘要</div>${alertHtml}${pointsHtml}`;
+    if (!alertHtml && !positionsHtml && !pointsHtml) { box.remove(); return; }
+    box.innerHTML = `<div class="ai-summary-head"><i class="bi bi-stars"></i> AI 重點摘要</div>${alertHtml}${positionsHtml}${pointsHtml}`;
   } catch (e) {
     const box = document.getElementById('aiSummary');
     if (box) box.remove();

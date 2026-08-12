@@ -2587,11 +2587,19 @@ _ASIAAIR_SUMMARY_MODELS = (
 
 _ASIAAIR_SUMMARY_PROMPT = (
     "你是機場地勤主管的助理。以下是某一班航班在系統裡附加的圖片／檔案，"
-    "內容可能包含維修/機況限制通知、LDM 裝載電報、特殊旅客交接訊息、APIS/PNRGOV 資料、"
-    "同事間的即時交接對話等。請幫忙整理成地勤人員能快速掌握的工作提要，用繁體中文。\n"
-    "嚴格以 JSON 格式回傳，不得輸出其他內容：\n"
-    '{"alert":"最需要注意的交接事項（例如需要特別協助的旅客、禁止觸碰的規定、班機時刻異動、機況限制），'
-    '沒有的話留空字串","points":["其餘重點，每項一句話，例如裝載數字、貨物、一般提醒"]}'
+    "內容可能包含維修/機況限制通知、LDM 裝載電報、CPM 貨艙位置電報（Container/Pallet Message，"
+    "記錄每個貨櫃/貨盤/散貨艙位的裝載位置代號，如 11P、32L/32R、41L、BULK POS 52/53 等）、"
+    "特殊旅客交接訊息、APIS/PNRGOV 資料、同事間的即時交接對話等。"
+    "請幫忙整理成地勤人員能快速掌握的工作提要，用繁體中文。\n"
+    "地勤人員最在意「行李/貨物實際裝在飛機哪個貨艙位置」，這樣才知道要去哪個艙門卸貨。"
+    "如果內容中出現 CPM 或任何貨艙/貨櫃/貨盤位置代號，請務必逐項列出："
+    "「什麼東西（行李／貨物／散客貨／組員行李／轉機行李，含目的地）裝在哪個位置代號」，"
+    "位置代號請照電報原文寫出（例如 Bulk Position 52、32L/32R、41L 等），不要自己翻譯或簡化掉代號。\n"
+    "嚴格以 JSON 格式回傳，不得輸出其他內容，範例：\n"
+    '{"alert":"最需要注意的交接事項（例如需要特別協助的旅客、禁止觸碰的規定、班機時刻異動、機況限制），沒有的話留空字串",'
+    '"positions":["旅客行李（TPE）裝在 Bulk Position 52","轉機行李與組員行李（往 KUL）裝在 Bulk Position 53"],'
+    '"points":["其餘重點，每項一句話，例如裝載總重、貨物件數、一般提醒（不要重複 positions 已經講過的位置細節）"]}\n'
+    "內容中完全沒有貨艙位置資訊時，positions 回傳空陣列。"
 )
 
 
@@ -2633,7 +2641,7 @@ def _asiaair_call_gemini(api_key: str, parts: list):
 def _asiaair_build_summary(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"asiaair:summary:{notion_id}"
+    cache_key = f"asiaair:summary:v2:{notion_id}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and ("alert" in cached or "points" in cached):
         return cached, None
@@ -2644,7 +2652,7 @@ def _asiaair_build_summary(notion_id: str):
 
     items = _asiaair_fetch_detail(notion_id)
     if not items:
-        return {"alert": "", "points": []}, None
+        return {"alert": "", "positions": [], "points": []}, None
 
     parts = [{"text": _ASIAAIR_SUMMARY_PROMPT}]
     for it in items[:8]:  # 上限 8 個附件，避免單次請求過大
@@ -2658,7 +2666,7 @@ def _asiaair_build_summary(notion_id: str):
         parts.append({"inline_data": {"mime_type": mime, "data": _base64.b64encode(data).decode("utf-8")}})
 
     if len(parts) <= 1:
-        return {"alert": "", "points": []}, None
+        return {"alert": "", "positions": [], "points": []}, None
 
     resp, status, err_msg = _asiaair_call_gemini(api_key, parts)
     if resp is None:
@@ -2671,8 +2679,9 @@ def _asiaair_build_summary(notion_id: str):
             text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
         result = _json.loads(text)
         summary = {
-            "alert":  str(result.get("alert", "") or ""),
-            "points": [str(p) for p in (result.get("points") or []) if str(p).strip()][:12],
+            "alert":     str(result.get("alert", "") or ""),
+            "positions": [str(p) for p in (result.get("positions") or []) if str(p).strip()][:12],
+            "points":    [str(p) for p in (result.get("points") or []) if str(p).strip()][:12],
         }
     except Exception as e:
         return None, f"AI 回應解析失敗：{e}"
