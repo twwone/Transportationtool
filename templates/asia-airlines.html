@@ -172,6 +172,23 @@ body {
 .detail-text { font-size:0.85rem; line-height:1.6; padding:10px 12px; background:var(--surface-soft); border-radius:12px; color:var(--text); }
 .detail-loading, .detail-empty { text-align:center; color:var(--sub); font-size:0.8rem; padding:30px 0; }
 
+.ai-summary {
+  border:1.5px solid var(--accent-soft); background:var(--accent-soft);
+  border-radius:16px; padding:12px 14px;
+}
+.ai-summary-loading { display:flex; align-items:center; gap:8px; font-size:0.8rem; color:var(--sub); }
+.ai-summary-head {
+  display:flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700;
+  color:var(--accent); margin-bottom:8px;
+}
+.ai-summary-alert {
+  display:flex; align-items:flex-start; gap:6px; font-size:0.82rem; font-weight:600; line-height:1.6;
+  color:#c2410c; background:rgba(249,115,22,0.14); border-radius:10px; padding:8px 10px; margin-bottom:8px;
+}
+.ai-summary-alert i { margin-top:2px; flex-shrink:0; }
+.ai-summary-points { margin:0; padding-left:18px; font-size:0.82rem; line-height:1.7; color:var(--text); }
+.ai-summary-points li { margin-bottom:2px; }
+
 .lightbox-overlay {
   position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:300;
   display:flex; align-items:center; justify-content:center;
@@ -212,6 +229,7 @@ body {
   .card-rmk { background: rgba(255,159,10,0.14); color:#ffb454; }
   .gate-new, .gate-changed i { color:#ffb454; }
   .badge-gate-chg { background: rgba(255,159,10,0.18); color:#ffb454; }
+  .ai-summary-alert { background: rgba(255,159,10,0.16); color:#ffb454; }
 }
 </style>
 </head>
@@ -389,6 +407,7 @@ async function openDetail(flightNo, notionId) {
   body.innerHTML = `<div class="detail-loading"><span class="spin">↻</span> 載入中…</div>`;
   overlay.classList.add('show');
 
+  let itemsHtml = '';
   try {
     const res  = await fetch(`/api/asia-airlines/detail/${notionId}`);
     const data = await res.json();
@@ -398,13 +417,33 @@ async function openDetail(flightNo, notionId) {
       body.innerHTML = `<div class="detail-empty">沒有附加內容</div>`;
       return;
     }
-    body.innerHTML = items.map(it => {
+    itemsHtml = items.map(it => {
       if (it.type === 'image') return `<img class="detail-img" src="${it.url}" alt="${it.title || ''}" loading="lazy" onclick="openLightbox(this.src)">`;
       if (it.type === 'file')  return `<a class="detail-file" href="${it.url}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-arrow-down"></i> ${it.title}</a>`;
       return `<div class="detail-text">${it.text}</div>`;
     }).join('');
+    body.innerHTML = `<div class="ai-summary" id="aiSummary"><div class="ai-summary-loading"><span class="spin">↻</span> AI 讀取附件重點中…</div></div>` + itemsHtml;
   } catch (e) {
     body.innerHTML = `<div class="detail-empty"><i class="bi bi-wifi-off"></i><br>${e.message}</div>`;
+    return;
+  }
+
+  // AI 摘要非同步載入，失敗就悄悄隱藏，不擋原始附件內容
+  try {
+    const res  = await fetch(`/api/asia-airlines/summary/${notionId}`);
+    const data = await res.json();
+    const box  = document.getElementById('aiSummary');
+    if (!box) return;
+    if (!res.ok) { box.remove(); return; }
+    const alertHtml = data.alert
+      ? `<div class="ai-summary-alert"><i class="bi bi-exclamation-triangle-fill"></i> ${data.alert}</div>` : '';
+    const pointsHtml = (data.points || []).length
+      ? `<ul class="ai-summary-points">${data.points.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
+    if (!alertHtml && !pointsHtml) { box.remove(); return; }
+    box.innerHTML = `<div class="ai-summary-head"><i class="bi bi-stars"></i> AI 重點摘要</div>${alertHtml}${pointsHtml}`;
+  } catch (e) {
+    const box = document.getElementById('aiSummary');
+    if (box) box.remove();
   }
 }
 

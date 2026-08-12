@@ -2574,6 +2574,123 @@ def asia_airlines_detail_api(notion_id):
     return jsonify({"items": items})
 
 
+# ──────────────────────────────────────────────
+#  亞洲航空航班資訊：AI 摘要附件（圖片/檔案讀給你看）
+# ──────────────────────────────────────────────
+_ASIAAIR_SUMMARY_MODELS = (
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+)
+
+_ASIAAIR_SUMMARY_PROMPT = (
+    "你是機場地勤主管的助理。以下是某一班航班在系統裡附加的圖片／檔案，"
+    "內容可能包含維修/機況限制通知、LDM 裝載電報、特殊旅客交接訊息、APIS/PNRGOV 資料、"
+    "同事間的即時交接對話等。請幫忙整理成地勤人員能快速掌握的工作提要，用繁體中文。\n"
+    "嚴格以 JSON 格式回傳，不得輸出其他內容：\n"
+    '{"alert":"最需要注意的交接事項（例如需要特別協助的旅客、禁止觸碰的規定、班機時刻異動、機況限制），'
+    '沒有的話留空字串","points":["其餘重點，每項一句話，例如裝載數字、貨物、一般提醒"]}'
+)
+
+
+def _asiaair_download_bytes(url: str, max_bytes: int = 15 * 1024 * 1024):
+    try:
+        r = _requests.get(url, timeout=15)
+        r.raise_for_status()
+        if len(r.content) > max_bytes:
+            return None, None
+        mime = r.headers.get("Content-Type", "").split(";")[0].strip()
+        return r.content, mime or None
+    except Exception as e:
+        app.logger.error(f"_asiaair_download_bytes: {e}")
+        return None, None
+
+
+def _asiaair_call_gemini(api_key: str, parts: list):
+    last_status, last_err_msg = None, ""
+    for model in _ASIAAIR_SUMMARY_MODELS:
+        try:
+            resp = _requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                json={
+                    "contents": [{"parts": parts}],
+                    "generationConfig": {"response_mime_type": "application/json"},
+                },
+                timeout=45,
+            )
+            if resp.status_code == 200:
+                return resp, None, None
+            last_status  = resp.status_code
+            last_err_msg = (resp.json().get("error") or {}).get("message", resp.text[:300])
+        except Exception as e:
+            last_status  = 503
+            last_err_msg = str(e)
+    return None, last_status, last_err_msg
+
+
+def _asiaair_build_summary(notion_id: str):
+    import base64 as _base64
+
+    cache_key = f"asiaair:summary:{notion_id}"
+    cached = _kv_get(cache_key)
+    if isinstance(cached, dict) and ("alert" in cached or "points" in cached):
+        return cached, None
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return None, "伺服器未設定 Gemini API 金鑰"
+
+    items = _asiaair_fetch_detail(notion_id)
+    if not items:
+        return {"alert": "", "points": []}, None
+
+    parts = [{"text": _ASIAAIR_SUMMARY_PROMPT}]
+    for it in items[:8]:  # 上限 8 個附件，避免單次請求過大
+        if it["type"] not in ("image", "file"):
+            continue
+        data, mime = _asiaair_download_bytes(it["url"])
+        if not data or not mime:
+            continue
+        if it["type"] == "file" and "pdf" not in mime:
+            continue
+        parts.append({"inline_data": {"mime_type": mime, "data": _base64.b64encode(data).decode("utf-8")}})
+
+    if len(parts) <= 1:
+        return {"alert": "", "points": []}, None
+
+    resp, status, err_msg = _asiaair_call_gemini(api_key, parts)
+    if resp is None:
+        return None, err_msg or "AI 摘要失敗"
+
+    try:
+        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        result = _json.loads(text)
+        summary = {
+            "alert":  str(result.get("alert", "") or ""),
+            "points": [str(p) for p in (result.get("points") or []) if str(p).strip()][:12],
+        }
+    except Exception as e:
+        return None, f"AI 回應解析失敗：{e}"
+
+    _kv_set(cache_key, summary)
+    return summary, None
+
+
+@app.route("/api/asia-airlines/summary/<notion_id>")
+def asia_airlines_summary_api(notion_id):
+    if not _NOTION_ID_RE.match(notion_id):
+        return jsonify({"error": "invalid id"}), 400
+    summary, err = _asiaair_build_summary(notion_id)
+    if summary is None:
+        return jsonify({"error": err or "AI 摘要暫時無法使用"}), 503
+    return jsonify(summary)
+
+
 @app.route("/api/asia-airlines/pins/<sync_id>")
 def asia_airlines_pins_get(sync_id):
     if not _valid_sync_id(sync_id):
