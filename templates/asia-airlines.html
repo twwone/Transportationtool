@@ -113,6 +113,12 @@ body {
 .hero-gate-label { font-size:0.65rem; color:var(--sub); }
 .hero-gate-val { font-size:1.1rem; font-weight:700; }
 
+.route-row {
+  display:flex; align-items:center; gap:6px; margin-bottom:11px;
+  font-size:0.78rem; font-weight:600; color:var(--sub); flex-wrap:wrap;
+}
+.route-row i { font-size:0.7rem; color:var(--accent); }
+
 .time-row { display:flex; gap:8px; margin-bottom: 10px; }
 .time-block { flex:1; background:var(--surface-soft); border-radius:12px; padding:8px 10px; text-align:center; }
 .time-label { font-size:0.62rem; color:var(--sub); font-weight:600; letter-spacing:0.4px; margin-bottom:2px; }
@@ -135,27 +141,41 @@ body {
 .detail-overlay.show { opacity:1; pointer-events:auto; }
 .detail-sheet {
   position:fixed; left:0; right:0; bottom:0; max-height:82vh;
-  background:var(--surface); border-radius:22px 22px 0 0;
+  background:var(--surface); color:var(--text); border-radius:22px 22px 0 0;
   padding:14px 16px max(16px, env(safe-area-inset-bottom));
   transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.22,1,0.36,1);
   overflow-y:auto; z-index:201;
 }
 .detail-overlay.show .detail-sheet { transform:translateY(0); }
 .detail-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.detail-title { font-size:1rem; font-weight:800; }
+.detail-title { font-size:1rem; font-weight:800; color:var(--text); }
 .detail-close {
   background:var(--surface-soft); border:none; color:var(--sub);
   width:30px; height:30px; border-radius:50%; font-size:0.9rem; cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
 .detail-body { display:flex; flex-direction:column; gap:12px; }
-.detail-img { width:100%; border-radius:14px; display:block; background:var(--surface-soft); }
+.detail-img { width:100%; border-radius:14px; display:block; background:var(--surface-soft); cursor:zoom-in; }
 .detail-file {
   display:flex; align-items:center; gap:8px; padding:12px; border-radius:14px;
   background:var(--surface-soft); color:var(--text); text-decoration:none; font-size:0.85rem; font-weight:600;
 }
-.detail-text { font-size:0.85rem; line-height:1.6; padding:10px 12px; background:var(--surface-soft); border-radius:12px; }
+.detail-text { font-size:0.85rem; line-height:1.6; padding:10px 12px; background:var(--surface-soft); border-radius:12px; color:var(--text); }
 .detail-loading, .detail-empty { text-align:center; color:var(--sub); font-size:0.8rem; padding:30px 0; }
+
+.lightbox-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:300;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.22s ease;
+}
+.lightbox-overlay.show { opacity:1; pointer-events:auto; }
+.lightbox-overlay img { max-width:94vw; max-height:88vh; border-radius:8px; object-fit:contain; }
+.lightbox-close {
+  position:absolute; top:max(16px, env(safe-area-inset-top)); right:16px;
+  background:rgba(255,255,255,0.15); border:none; color:#fff;
+  width:36px; height:36px; border-radius:50%; font-size:1rem; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
 
 .empty-hint, .err-hint { text-align:center; padding:48px 20px 0; color:var(--sub); font-size:0.82rem; line-height:1.8; }
 .empty-hint .hint-icon, .err-hint .hint-icon { font-size:2.2rem; display:block; margin-bottom:10px; }
@@ -206,6 +226,11 @@ body {
     </div>
     <div class="detail-body" id="detailBody"></div>
   </div>
+</div>
+
+<div class="lightbox-overlay" id="lightboxOverlay" onclick="if(event.target===this) closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()"><i class="bi bi-x-lg"></i></button>
+  <img id="lightboxImg" src="" alt="">
 </div>
 
 <script>
@@ -311,6 +336,13 @@ function renderCard(f) {
         <div class="hero-gate-val">${f.gate || '—'}</div>
       </div>
     </div>
+    ${(f.origin || f.destination) ? `<div class="route-row">
+        <span>${f.origin || '—'}</span>
+        <i class="bi bi-airplane"></i>
+        <span>TPE</span>
+        <i class="bi bi-airplane"></i>
+        <span>${f.destination || '—'}</span>
+      </div>` : ''}
     <div class="time-row">
       <div class="time-block"><div class="time-label">STD</div><div class="time-val">${fmtTime(f.std)}</div></div>
       <div class="time-block"><div class="time-label">ETA</div><div class="time-val">${fmtTime(f.eta)}</div></div>
@@ -341,7 +373,7 @@ async function openDetail(flightNo, notionId) {
       return;
     }
     body.innerHTML = items.map(it => {
-      if (it.type === 'image') return `<img class="detail-img" src="${it.url}" alt="${it.title || ''}" loading="lazy">`;
+      if (it.type === 'image') return `<img class="detail-img" src="${it.url}" alt="${it.title || ''}" loading="lazy" onclick="openLightbox(this.src)">`;
       if (it.type === 'file')  return `<a class="detail-file" href="${it.url}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-arrow-down"></i> ${it.title}</a>`;
       return `<div class="detail-text">${it.text}</div>`;
     }).join('');
@@ -352,6 +384,15 @@ async function openDetail(flightNo, notionId) {
 
 function closeDetail() {
   document.getElementById('detailOverlay').classList.remove('show');
+}
+
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightboxOverlay').classList.add('show');
+}
+
+function closeLightbox() {
+  document.getElementById('lightboxOverlay').classList.remove('show');
 }
 
 function render() {
@@ -404,8 +445,9 @@ async function loadFlights(manual, dateStr) {
 
 (async function init() {
   // body 有進場動畫殘留的 transform，會讓內部的 position:fixed 元素定位錯亂，
-  // 把詳情面板搬到 <html> 底下脫離這個 containing block
+  // 把詳情面板／放大圖片面板搬到 <html> 底下脫離這個 containing block
   document.documentElement.appendChild(document.getElementById('detailOverlay'));
+  document.documentElement.appendChild(document.getElementById('lightboxOverlay'));
 
   await loadPins();
   await loadFlights(false, null);

@@ -2402,6 +2402,39 @@ def _asiaair_fetch_raw():
     return rows
 
 
+_ASIAAIR_FLIGHT_RE = _re.compile(r"^([A-Z0-9]{2})(\d+)/(\d+)$")
+
+
+def _asiaair_enrich_routes(flights: list, date_str: str) -> None:
+    """用機場即時航班資料（TDX FIDS）比對出每班的起訖點，寫進 origin/destination。
+    Notion 那份 OIC 資料本身沒有航點欄位，這裡借用 TIAS 已經在用的同一份資料源，
+    比自己亂編可靠；TDX 只保留今天/昨天的資料，查更久以前的日期就沒有航點可補。"""
+    arr_all, dep_all, ok = _fetch_tias()
+    if not ok or not arr_all:
+        return
+    _, airport_map = _fetch_metadata()
+
+    def _city(code):
+        if not code:
+            return None
+        return (airport_map.get(code) or {}).get("ap_zh") or code
+
+    arr_by_key = {(f.get("AirlineID"), f.get("FlightNumber"), f.get("FlightDate")): f.get("DepartureAirportID") for f in arr_all}
+    dep_by_key = {(f.get("AirlineID"), f.get("FlightNumber"), f.get("FlightDate")): f.get("ArrivalAirportID") for f in dep_all}
+
+    for f in flights:
+        m = _ASIAAIR_FLIGHT_RE.match(f.get("flight", ""))
+        if not m:
+            continue
+        code, arr_num, dep_num = m.groups()
+        origin = _city(arr_by_key.get((code, arr_num, date_str)))
+        dest   = _city(dep_by_key.get((code, dep_num, date_str)))
+        if origin:
+            f["origin"] = origin
+        if dest:
+            f["destination"] = dest
+
+
 def _asiaair_fetch(date_str: str):
     with _asiaair_lock:
         cached = _asiaair_cache.get(date_str)
@@ -2435,6 +2468,7 @@ def _asiaair_fetch(date_str: str):
         flights.append(clean)
 
     flights.sort(key=lambda f: (f.get("date", ""), f.get("std", "")))
+    _asiaair_enrich_routes(flights, date_str)
 
     with _asiaair_lock:
         _asiaair_cache[date_str] = {"data": flights, "expires_at": time.time() + _ASIAAIR_TTL}
