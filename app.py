@@ -2420,6 +2420,10 @@ def _asiaair_fetch():
         # 資料庫累積了兩年多的歷史列，只保留今天的航班，避免把舊資料也撈出來
         if row.get("DATE") != today:
             continue
+        # 資料庫裡混雜著從沒被地勤實際處理過的空殼列（沒有機號、沒有登機門、
+        # Notion 頁面也沒有內容），這些不是真正的 OIC 資料，排除掉
+        if not row.get("ACFT REG"):
+            continue
         clean = {_ASIAAIR_FIELD_MAP[k]: v for k, v in row.items() if k in _ASIAAIR_FIELD_MAP}
         clean.setdefault("status", "Not started")  # Notion 未設定狀態時不會存屬性，預設等同「未開始」
         clean["notion_id"]  = row["notion_id"]
