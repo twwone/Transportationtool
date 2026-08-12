@@ -2134,7 +2134,7 @@ def _valid_sync_id(sid: str) -> bool:
 # ──────────────────────────────────────────────
 #  主頁卡片排序
 # ──────────────────────────────────────────────
-_DEFAULT_CARD_ORDER = ["tias", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "diet", "memo", "sop"]
+_DEFAULT_CARD_ORDER = ["tias", "asiaairlines", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "diet", "memo", "sop"]
 _VALID_CARD_IDS     = set(_DEFAULT_CARD_ORDER)
 
 
@@ -2271,6 +2271,207 @@ def diet_day_clear(sync_id, date_str):
         bank[date_str]["records"] = []
         bank[date_str].pop("_cheat_spread", None)
     _diet_save(sync_id, bank)
+    return jsonify({"ok": True})
+
+
+# ──────────────────────────────────────────────
+#  亞洲航空航班資訊（讀取共用 Notion OIC 看板，僅檢視權限）
+# ──────────────────────────────────────────────
+_ASIAAIR_NOTION_DOMAIN = "ripe-echidna-ddd.notion.site"
+_ASIAAIR_PAGE_ID       = "bf93e323-3397-4fef-979e-0db8c214088e"
+_ASIAAIR_COLLECTION_ID = "0c9a2cfd-a0aa-4072-b34d-c434df70ecc3"
+_ASIAAIR_VIEW_ID       = "e70f3f14-5af7-450e-ae79-803dd4f63b14"
+_ASIAAIR_CODES         = {"FD", "AK", "Z2", "D7"}  # 亞洲航空集團機隊代碼
+_ASIAAIR_TTL           = 60  # 秒，避免太頻繁打 Notion 非官方 API
+
+_ASIAAIR_FIELD_MAP = {
+    "flight": "flight", "ACFT REG": "acft_reg", "GATE": "gate", "DATE": "date",
+    "STA": "sta", "STD": "std", "ETA": "eta", "CGO": "cgo", "SPCL": "spcl",
+    "GSE": "gse", "ALS": "als", "RMK": "rmk", "Status": "status",
+}
+
+_asiaair_cache    = {"data": None, "expires_at": 0.0}
+_asiaair_lock     = threading.Lock()
+_asiaair_space_id = {"value": None, "expires_at": 0.0}
+
+
+def _asiaair_get_space_id() -> "str | None":
+    now = time.time()
+    if _asiaair_space_id["value"] and now < _asiaair_space_id["expires_at"]:
+        return _asiaair_space_id["value"]
+    try:
+        r = _requests.post(
+            f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/getPublicPageData",
+            json={
+                "type": "block-space", "name": "page", "blockId": _ASIAAIR_PAGE_ID,
+                "spaceDomain": _ASIAAIR_NOTION_DOMAIN.split(".")[0],
+            },
+            timeout=8,
+        )
+        r.raise_for_status()
+        space_id = r.json().get("spaceId")
+        if space_id:
+            _asiaair_space_id["value"] = space_id
+            _asiaair_space_id["expires_at"] = now + 3600
+        return space_id
+    except Exception as e:
+        app.logger.error(f"_asiaair_get_space_id: {e}")
+        return _asiaair_space_id["value"]
+
+
+def _asiaair_plain_text(prop_value) -> str:
+    """把 Notion 屬性值（spans 陣列）轉成純文字；日期屬性另外拆出 start_date。"""
+    if not prop_value:
+        return ""
+    parts = []
+    for span in prop_value:
+        if not span:
+            continue
+        text = span[0]
+        if text == "‣" and len(span) > 1:
+            for ann in span[1]:
+                if isinstance(ann, list) and ann and ann[0] == "d" and len(ann) > 1:
+                    parts.append(ann[1].get("start_date", ""))
+        else:
+            parts.append(str(text))
+    return "".join(parts)
+
+
+def _asiaair_fetch_raw():
+    space_id = _asiaair_get_space_id()
+    if not space_id:
+        return None
+    try:
+        r = _requests.post(
+            f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/queryCollection",
+            headers={"x-notion-space-id": space_id},
+            json={
+                "collectionId":     _ASIAAIR_COLLECTION_ID,
+                "collectionViewId": _ASIAAIR_VIEW_ID,
+                "query":  {"filter": {"operator": "and", "filters": []}, "sort": []},
+                "loader": {
+                    "type":         "reducer",
+                    # 公開唯讀存取下，Notion 會忽略自訂 sort/filter，一律回傳固定順序的資料，
+                    # 所以這裡直接拉到伺服器允許的上限，篩選與排序都改在 Python 這邊做。
+                    "reducers":     {"collection_group_results": {"type": "results", "limit": 5000}},
+                    "userTimeZone": "Asia/Taipei",
+                    "searchQuery":  "",
+                },
+            },
+            timeout=10,
+        )
+        r.raise_for_status()
+        payload = r.json()
+    except Exception as e:
+        app.logger.error(f"_asiaair_fetch_raw: {e}")
+        return None
+
+    record_map = payload.get("recordMap", {})
+    blocks      = record_map.get("block", {})
+    collections = record_map.get("collection", {})
+
+    schema = {}
+    for c in collections.values():
+        schema = c.get("value", {}).get("value", {}).get("schema", {})
+        if schema:
+            break
+    id_to_name = {pid: pdef.get("name", pid) for pid, pdef in schema.items()}
+
+    block_ids = (
+        payload.get("result", {})
+        .get("reducerResults", {})
+        .get("collection_group_results", {})
+        .get("blockIds", [])
+    )
+
+    rows = []
+    for bid in block_ids:
+        entry = blocks.get(bid, {}).get("value", {}).get("value", {})
+        if not entry or entry.get("type") != "page":
+            continue
+        row = {"notion_id": bid, "has_detail": bool(entry.get("content"))}
+        for pid, val in entry.get("properties", {}).items():
+            name = "flight" if pid == "title" else id_to_name.get(pid, pid)
+            row[name] = _asiaair_plain_text(val)
+        rows.append(row)
+    return rows
+
+
+def _asiaair_fetch():
+    with _asiaair_lock:
+        if _asiaair_cache["data"] is not None and time.time() < _asiaair_cache["expires_at"]:
+            return _asiaair_cache["data"], True
+        stale = _asiaair_cache["data"]
+
+    raw = _asiaair_fetch_raw()
+    if raw is None:
+        if stale is not None:
+            return stale, True
+        return None, False
+
+    today = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
+
+    flights = []
+    for row in raw:
+        flight_no = row.get("flight", "")
+        m = _re.match(r"^[A-Z0-9]{2}", flight_no)
+        if not m or m.group(0) not in _ASIAAIR_CODES:
+            continue
+        # OIC 檢視本身只顯示「未開始／進行中」，隱藏「已完成」，這裡比照同樣邏輯
+        if row.get("Status") == "Done":
+            continue
+        # 資料庫累積了兩年多的歷史列，只保留今天的航班，避免把舊資料也撈出來
+        if row.get("DATE") != today:
+            continue
+        clean = {_ASIAAIR_FIELD_MAP[k]: v for k, v in row.items() if k in _ASIAAIR_FIELD_MAP}
+        clean.setdefault("status", "Not started")  # Notion 未設定狀態時不會存屬性，預設等同「未開始」
+        clean["notion_id"]  = row["notion_id"]
+        clean["has_detail"] = row["has_detail"]
+        flights.append(clean)
+
+    flights.sort(key=lambda f: (f.get("date", ""), f.get("std", "")))
+
+    with _asiaair_lock:
+        _asiaair_cache["data"]       = flights
+        _asiaair_cache["expires_at"] = time.time() + _ASIAAIR_TTL
+    return flights, True
+
+
+@app.route("/asia-airlines")
+def asia_airlines_page():
+    return render_template("asia-airlines.html")
+
+
+@app.route("/api/asia-airlines/flights")
+def asia_airlines_flights_api():
+    flights, ok = _asiaair_fetch()
+    if not ok:
+        return jsonify({"error": "Notion 資料暫時無法連線，請稍後再試", "retry": True}), 503
+    return jsonify({"flights": flights, "updated_at": time.strftime("%H:%M:%S")})
+
+
+@app.route("/api/asia-airlines/pins/<sync_id>")
+def asia_airlines_pins_get(sync_id):
+    if not _valid_sync_id(sync_id):
+        return jsonify({"error": "invalid sync_id"}), 400
+    today = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
+    data  = _kv_get(f"asiaair:pins:{sync_id}")
+    if isinstance(data, dict) and data.get("date") == today:
+        return jsonify({"date": today, "flights": data.get("flights", [])})
+    return jsonify({"date": today, "flights": []})
+
+
+@app.route("/api/asia-airlines/pins", methods=["POST"])
+def asia_airlines_pins_set():
+    data    = request.get_json(force=True) or {}
+    sync_id = str(data.get("sync_id", "")).strip()
+    if not _valid_sync_id(sync_id):
+        return jsonify({"error": "invalid sync_id"}), 400
+    flights = data.get("flights", [])
+    if not isinstance(flights, list):
+        return jsonify({"error": "invalid flights"}), 400
+    today = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
+    _kv_set(f"asiaair:pins:{sync_id}", {"date": today, "flights": [str(f)[:32] for f in flights[:10]]})
     return jsonify({"ok": True})
 
 
