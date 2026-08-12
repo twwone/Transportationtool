@@ -167,9 +167,16 @@ body {
   position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:300;
   display:flex; align-items:center; justify-content:center;
   opacity:0; pointer-events:none; transition:opacity 0.22s ease;
+  overflow:hidden; touch-action:none;
 }
 .lightbox-overlay.show { opacity:1; pointer-events:auto; }
-.lightbox-overlay img { max-width:94vw; max-height:88vh; border-radius:8px; object-fit:contain; }
+.lightbox-overlay img {
+  max-width:94vw; max-height:88vh; border-radius:8px; object-fit:contain;
+  touch-action:none; -webkit-user-select:none; user-select:none;
+  will-change:transform; transform-origin:center center;
+}
+.lightbox-overlay img.zooming { transition:none; }
+.lightbox-overlay img:not(.zooming) { transition:transform 0.2s cubic-bezier(0.22,1,0.36,1); }
 .lightbox-close {
   position:absolute; top:max(16px, env(safe-area-inset-top)); right:16px;
   background:rgba(255,255,255,0.15); border:none; color:#fff;
@@ -387,13 +394,103 @@ function closeDetail() {
 }
 
 function openLightbox(url) {
-  document.getElementById('lightboxImg').src = url;
+  const img = document.getElementById('lightboxImg');
+  img.src = url;
+  _zResetTransform(img);
   document.getElementById('lightboxOverlay').classList.add('show');
 }
 
 function closeLightbox() {
   document.getElementById('lightboxOverlay').classList.remove('show');
 }
+
+/* ── 兩指縮放 / 拖曳（lightbox 放大檢視）── */
+let _zScale = 1, _zTx = 0, _zTy = 0;
+let _zPinchStartDist = 0, _zPinchStartScale = 1;
+let _zPanStart = null, _zPanStartT = null;
+const _Z_MIN = 1, _Z_MAX = 4;
+
+function _zApplyTransform(img) {
+  img.style.transform = `translate(${_zTx}px, ${_zTy}px) scale(${_zScale})`;
+}
+
+function _zResetTransform(img) {
+  _zScale = 1; _zTx = 0; _zTy = 0;
+  img.classList.remove('zooming');
+  img.style.transform = '';
+}
+
+function _zClampPan(img) {
+  // 放大後限制拖曳範圍，避免圖片整個被拖出畫面外
+  const r = img.getBoundingClientRect();
+  const overX = Math.max(0, (r.width  * _zScale - r.width)  / 2);
+  const overY = Math.max(0, (r.height * _zScale - r.height) / 2);
+  _zTx = Math.min(overX, Math.max(-overX, _zTx));
+  _zTy = Math.min(overY, Math.max(-overY, _zTy));
+}
+
+function _zDist(t0, t1) {
+  return Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+}
+
+(function initLightboxGestures() {
+  const img = document.getElementById('lightboxImg');
+
+  img.addEventListener('touchstart', e => {
+    img.classList.add('zooming');
+    if (e.touches.length === 2) {
+      _zPinchStartDist  = _zDist(e.touches[0], e.touches[1]);
+      _zPinchStartScale = _zScale;
+      _zPanStart = null;
+    } else if (e.touches.length === 1 && _zScale > 1) {
+      _zPanStart  = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      _zPanStartT = { x: _zTx, y: _zTy };
+    }
+  }, { passive: true });
+
+  img.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && _zPinchStartDist) {
+      e.preventDefault();
+      const dist = _zDist(e.touches[0], e.touches[1]);
+      _zScale = Math.min(_Z_MAX, Math.max(_Z_MIN, _zPinchStartScale * (dist / _zPinchStartDist)));
+      _zClampPan(img);
+      _zApplyTransform(img);
+    } else if (e.touches.length === 1 && _zPanStart) {
+      e.preventDefault();
+      _zTx = _zPanStartT.x + (e.touches[0].clientX - _zPanStart.x);
+      _zTy = _zPanStartT.y + (e.touches[0].clientY - _zPanStart.y);
+      _zClampPan(img);
+      _zApplyTransform(img);
+    }
+  }, { passive: false });
+
+  img.addEventListener('touchend', e => {
+    if (e.touches.length === 0) {
+      img.classList.remove('zooming');
+      _zPanStart = null;
+      if (_zScale <= 1.02) { _zScale = 1; _zTx = 0; _zTy = 0; }
+      _zApplyTransform(img);
+    }
+  });
+
+  // 桌機：滑鼠滾輪 / 觸控板雙指縮放
+  img.addEventListener('wheel', e => {
+    e.preventDefault();
+    _zScale = Math.min(_Z_MAX, Math.max(_Z_MIN, _zScale - e.deltaY * 0.01));
+    if (_zScale <= 1.02) { _zScale = 1; _zTx = 0; _zTy = 0; }
+    _zClampPan(img);
+    img.classList.add('zooming');
+    _zApplyTransform(img);
+  }, { passive: false });
+
+  // 雙擊 / 雙點快速切換 1x ↔ 2.5x
+  img.addEventListener('dblclick', () => {
+    _zScale = _zScale > 1 ? 1 : 2.5;
+    _zTx = 0; _zTy = 0;
+    img.classList.remove('zooming');
+    _zApplyTransform(img);
+  });
+})();
 
 function render() {
   const listEl = document.getElementById('list');
