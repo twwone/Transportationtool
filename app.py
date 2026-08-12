@@ -2412,12 +2412,6 @@ def _asiaair_enrich_routes(flights: list, date_str: str) -> None:
     arr_all, dep_all, ok = _fetch_tias()
     if not ok or not arr_all:
         return
-    _, airport_map = _fetch_metadata()
-
-    def _city(code):
-        if not code:
-            return None
-        return (airport_map.get(code) or {}).get("ap_zh") or code
 
     arr_by_key = {(f.get("AirlineID"), f.get("FlightNumber"), f.get("FlightDate")): f.get("DepartureAirportID") for f in arr_all}
     dep_by_key = {(f.get("AirlineID"), f.get("FlightNumber"), f.get("FlightDate")): f.get("ArrivalAirportID") for f in dep_all}
@@ -2427,8 +2421,8 @@ def _asiaair_enrich_routes(flights: list, date_str: str) -> None:
         if not m:
             continue
         code, arr_num, dep_num = m.groups()
-        origin = _city(arr_by_key.get((code, arr_num, date_str)))
-        dest   = _city(dep_by_key.get((code, dep_num, date_str)))
+        origin = arr_by_key.get((code, arr_num, date_str))
+        dest   = dep_by_key.get((code, dep_num, date_str))
         if origin:
             f["origin"] = origin
         if dest:
