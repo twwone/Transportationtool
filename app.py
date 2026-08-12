@@ -9,6 +9,7 @@ import secrets
 import math
 import re  as _re
 import json as _json
+import urllib.parse as _urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
@@ -2460,6 +2461,89 @@ def asia_airlines_flights_api():
         "is_today":    date_str == today,
         "updated_at":  time.strftime("%H:%M:%S"),
     })
+
+
+_NOTION_ID_RE = _re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def _asiaair_image_url(source: str, block_id: str, space_id: str) -> str:
+    encoded = _urlparse.quote(source, safe="")
+    return (
+        f"https://{_ASIAAIR_NOTION_DOMAIN}/image/{encoded}"
+        f"?table=block&id={block_id}&spaceId={space_id}&cache=v2"
+    )
+
+
+def _asiaair_signed_file_url(source: str, block_id: str, space_id: str) -> "str | None":
+    try:
+        r = _requests.post(
+            f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/getSignedFileUrls",
+            headers={"x-notion-space-id": space_id},
+            json={"urls": [{"url": source, "permissionRecord": {"table": "block", "id": block_id}}]},
+            timeout=8,
+        )
+        r.raise_for_status()
+        urls = r.json().get("signedUrls", [])
+        return urls[0] if urls else None
+    except Exception as e:
+        app.logger.error(f"_asiaair_signed_file_url: {e}")
+        return None
+
+
+def _asiaair_fetch_detail(notion_id: str):
+    space_id = _asiaair_get_space_id()
+    if not space_id:
+        return None
+    try:
+        r = _requests.post(
+            f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/loadPageChunk",
+            headers={"x-notion-space-id": space_id},
+            json={
+                "pageId": notion_id, "limit": 100,
+                "cursor": {"stack": []}, "chunkNumber": 0, "verticalColumns": False,
+            },
+            timeout=10,
+        )
+        r.raise_for_status()
+        payload = r.json()
+    except Exception as e:
+        app.logger.error(f"_asiaair_fetch_detail: {e}")
+        return None
+
+    blocks = payload.get("recordMap", {}).get("block", {})
+    root   = blocks.get(notion_id, {}).get("value", {}).get("value", {})
+    if not root:
+        return None
+
+    items = []
+    for bid in root.get("content", []):
+        b = blocks.get(bid, {}).get("value", {}).get("value", {})
+        btype = b.get("type")
+        props = b.get("properties", {})
+        source = _asiaair_plain_text(props.get("source", []))
+        title  = _asiaair_plain_text(props.get("title", []))
+
+        if btype == "image" and source:
+            items.append({"type": "image", "url": _asiaair_image_url(source, bid, space_id), "title": title})
+        elif btype == "file" and source:
+            url = _asiaair_signed_file_url(source, bid, space_id)
+            if url:
+                items.append({"type": "file", "url": url, "title": title or "檔案"})
+        elif btype in ("text", "bulleted_list", "numbered_list", "to_do", "callout"):
+            text = _asiaair_plain_text(props.get("title", []))
+            if text.strip():
+                items.append({"type": "text", "text": text})
+    return items
+
+
+@app.route("/api/asia-airlines/detail/<notion_id>")
+def asia_airlines_detail_api(notion_id):
+    if not _NOTION_ID_RE.match(notion_id):
+        return jsonify({"error": "invalid id"}), 400
+    items = _asiaair_fetch_detail(notion_id)
+    if items is None:
+        return jsonify({"error": "Notion 資料暫時無法連線，請稍後再試", "retry": True}), 503
+    return jsonify({"items": items})
 
 
 @app.route("/api/asia-airlines/pins/<sync_id>")

@@ -122,6 +122,41 @@ body {
 .meta-grid span { background:var(--surface-soft); padding:3px 8px; border-radius:6px; }
 .card-rmk { margin-top:8px; font-size:0.75rem; color:#9a3412; background:#fff7ed; padding:6px 10px; border-radius:10px; }
 
+.detail-link {
+  margin-top:10px; display:flex; align-items:center; gap:4px;
+  font-size:0.75rem; font-weight:600; color:var(--accent);
+  background:none; border:none; padding:0; cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+
+.detail-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:200;
+  opacity:0; pointer-events:none; transition:opacity 0.22s ease;
+}
+.detail-overlay.show { opacity:1; pointer-events:auto; }
+.detail-sheet {
+  position:fixed; left:0; right:0; bottom:0; max-height:82vh;
+  background:var(--surface); border-radius:22px 22px 0 0;
+  padding:14px 16px max(16px, env(safe-area-inset-bottom));
+  transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.22,1,0.36,1);
+  overflow-y:auto; z-index:201;
+}
+.detail-overlay.show .detail-sheet { transform:translateY(0); }
+.detail-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.detail-title { font-size:1rem; font-weight:800; }
+.detail-close {
+  background:var(--surface-soft); border:none; color:var(--sub);
+  width:30px; height:30px; border-radius:50%; font-size:0.9rem; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.detail-body { display:flex; flex-direction:column; gap:12px; }
+.detail-img { width:100%; border-radius:14px; display:block; background:var(--surface-soft); }
+.detail-file {
+  display:flex; align-items:center; gap:8px; padding:12px; border-radius:14px;
+  background:var(--surface-soft); color:var(--text); text-decoration:none; font-size:0.85rem; font-weight:600;
+}
+.detail-text { font-size:0.85rem; line-height:1.6; padding:10px 12px; background:var(--surface-soft); border-radius:12px; }
+.detail-loading, .detail-empty { text-align:center; color:var(--sub); font-size:0.8rem; padding:30px 0; }
+
 .empty-hint, .err-hint { text-align:center; padding:48px 20px 0; color:var(--sub); font-size:0.82rem; line-height:1.8; }
 .empty-hint .hint-icon, .err-hint .hint-icon { font-size:2.2rem; display:block; margin-bottom:10px; }
 
@@ -162,6 +197,16 @@ body {
 <div class="list" id="list"></div>
 
 <div class="sync-note" id="syncNote"></div>
+
+<div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this) closeDetail()">
+  <div class="detail-sheet">
+    <div class="detail-head">
+      <div class="detail-title" id="detailTitle"></div>
+      <button class="detail-close" onclick="closeDetail()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
 
 <script>
 const STATUS_MAP = {
@@ -273,7 +318,40 @@ function renderCard(f) {
     </div>
     <div class="meta-grid">${tags.join('')}</div>
     ${showRmk ? `<div class="card-rmk">${rmk}</div>` : ''}
+    ${f.has_detail ? `<button class="detail-link" onclick="openDetail('${f.flight}','${f.notion_id}')">
+        <i class="bi bi-paperclip"></i> 查看附件與詳情 <i class="bi bi-chevron-right"></i>
+      </button>` : ''}
   </div>`;
+}
+
+async function openDetail(flightNo, notionId) {
+  const overlay = document.getElementById('detailOverlay');
+  const body    = document.getElementById('detailBody');
+  document.getElementById('detailTitle').textContent = flightNo;
+  body.innerHTML = `<div class="detail-loading"><span class="spin">↻</span> 載入中…</div>`;
+  overlay.classList.add('show');
+
+  try {
+    const res  = await fetch(`/api/asia-airlines/detail/${notionId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '載入失敗');
+    const items = data.items || [];
+    if (!items.length) {
+      body.innerHTML = `<div class="detail-empty">沒有附加內容</div>`;
+      return;
+    }
+    body.innerHTML = items.map(it => {
+      if (it.type === 'image') return `<img class="detail-img" src="${it.url}" alt="${it.title || ''}" loading="lazy">`;
+      if (it.type === 'file')  return `<a class="detail-file" href="${it.url}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-arrow-down"></i> ${it.title}</a>`;
+      return `<div class="detail-text">${it.text}</div>`;
+    }).join('');
+  } catch (e) {
+    body.innerHTML = `<div class="detail-empty"><i class="bi bi-wifi-off"></i><br>${e.message}</div>`;
+  }
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('show');
 }
 
 function render() {
@@ -325,6 +403,10 @@ async function loadFlights(manual, dateStr) {
 }
 
 (async function init() {
+  // body 有進場動畫殘留的 transform，會讓內部的 position:fixed 元素定位錯亂，
+  // 把詳情面板搬到 <html> 底下脫離這個 containing block
+  document.documentElement.appendChild(document.getElementById('detailOverlay'));
+
   await loadPins();
   await loadFlights(false, null);
 
