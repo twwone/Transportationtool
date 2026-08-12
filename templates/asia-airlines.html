@@ -178,9 +178,14 @@ body {
 }
 .ai-summary-loading { display:flex; align-items:center; gap:8px; font-size:0.8rem; color:var(--sub); }
 .ai-summary-head {
-  display:flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700;
-  color:var(--accent); margin-bottom:8px;
+  width:100%; display:flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700;
+  color:var(--accent); background:none; border:none; padding:0; margin:0;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
 }
+.ai-summary-dot { width:7px; height:7px; border-radius:50%; background:#f97316; }
+.ai-summary-chevron { margin-left:auto; font-size:0.7rem; transition:transform 0.2s cubic-bezier(0.22,1,0.36,1); }
+.ai-summary-chevron.rotated { transform:rotate(180deg); }
+.ai-summary-content { margin-top:10px; }
 .ai-summary-alert {
   display:flex; align-items:flex-start; gap:6px; font-size:0.82rem; font-weight:600; line-height:1.6;
   color:#c2410c; background:rgba(249,115,22,0.14); border-radius:10px; padding:8px 10px; margin-bottom:8px;
@@ -430,7 +435,16 @@ async function openDetail(flightNo, notionId) {
       if (it.type === 'file')  return `<a class="detail-file" href="${it.url}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-arrow-down"></i> ${it.title}</a>`;
       return `<div class="detail-text">${it.text}</div>`;
     }).join('');
-    body.innerHTML = `<div class="ai-summary" id="aiSummary"><div class="ai-summary-loading"><span class="spin">↻</span> AI 讀取附件重點中…</div></div>` + itemsHtml;
+    body.innerHTML = `<div class="ai-summary" id="aiSummary">
+      <button class="ai-summary-head" onclick="toggleAiSummary()">
+        <i class="bi bi-stars"></i> AI 重點摘要
+        <span class="ai-summary-dot" id="aiSummaryDot" style="display:none"></span>
+        <i class="bi bi-chevron-down ai-summary-chevron" id="aiSummaryChevron"></i>
+      </button>
+      <div class="ai-summary-content" id="aiSummaryContent" style="display:none">
+        <div class="ai-summary-loading"><span class="spin">↻</span> AI 讀取附件重點中…</div>
+      </div>
+    </div>` + itemsHtml;
   } catch (e) {
     body.innerHTML = `<div class="detail-empty"><i class="bi bi-wifi-off"></i><br>${e.message}</div>`;
     return;
@@ -451,11 +465,24 @@ async function openDetail(flightNo, notionId) {
     const pointsHtml = (data.points || []).length
       ? `<ul class="ai-summary-points">${data.points.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
     if (!alertHtml && !positionsHtml && !pointsHtml) { box.remove(); return; }
-    box.innerHTML = `<div class="ai-summary-head"><i class="bi bi-stars"></i> AI 重點摘要</div>${alertHtml}${positionsHtml}${pointsHtml}`;
+    const content = document.getElementById('aiSummaryContent');
+    if (content) content.innerHTML = `${alertHtml}${positionsHtml}${pointsHtml}`;
+    // 有需要特別注意的事項時，收起狀態也顯示一個小紅點提醒
+    const dot = document.getElementById('aiSummaryDot');
+    if (dot && data.alert) dot.style.display = 'inline-block';
   } catch (e) {
     const box = document.getElementById('aiSummary');
     if (box) box.remove();
   }
+}
+
+function toggleAiSummary() {
+  const content  = document.getElementById('aiSummaryContent');
+  const chevron  = document.getElementById('aiSummaryChevron');
+  if (!content) return;
+  const isOpen = content.style.display !== 'none';
+  content.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.classList.toggle('rotated', !isOpen);
 }
 
 function closeDetail() {
