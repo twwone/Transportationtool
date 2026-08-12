@@ -2417,9 +2417,6 @@ def _asiaair_fetch():
         m = _re.match(r"^[A-Z0-9]{2}", flight_no)
         if not m or m.group(0) not in _ASIAAIR_CODES:
             continue
-        # OIC 檢視本身只顯示「未開始／進行中」，隱藏「已完成」，這裡比照同樣邏輯
-        if row.get("Status") == "Done":
-            continue
         # 資料庫累積了兩年多的歷史列，只保留今天的航班，避免把舊資料也撈出來
         if row.get("DATE") != today:
             continue
