@@ -112,6 +112,15 @@ body {
 .hero-gate { text-align:right; }
 .hero-gate-label { font-size:0.65rem; color:var(--sub); }
 .hero-gate-val { font-size:1.1rem; font-weight:700; }
+.gate-changed { display:flex; align-items:center; gap:4px; }
+.gate-prev { font-size:0.9rem; font-weight:700; color:var(--sub); text-decoration:line-through; }
+.gate-changed i { font-size:0.75rem; color:#f97316; }
+.gate-new { font-size:1.25rem; font-weight:800; color:#f97316; }
+.badge-gate-chg {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:0.68rem; font-weight:700; color:#c2410c;
+  background:rgba(249,115,22,0.14); padding:3px 9px; border-radius:20px;
+}
 
 .route-row {
   display:flex; align-items:center; gap:6px; margin-bottom:11px;
@@ -201,6 +210,8 @@ body {
   .st-doing { background: rgba(10,132,255,0.18); color:#60a5fa; }
   .st-wait  { background: rgba(255,255,255,0.08); color:#98989d; }
   .card-rmk { background: rgba(255,159,10,0.14); color:#ffb454; }
+  .gate-new, .gate-changed i { color:#ffb454; }
+  .badge-gate-chg { background: rgba(255,159,10,0.18); color:#ffb454; }
 }
 </style>
 </head>
@@ -266,6 +277,8 @@ let _pinned    = new Set();
 let _loadTimer = null;
 let _viewDate  = null;   // null = 今天（由伺服器判斷），否則是 YYYY-MM-DD
 let _isToday   = true;
+let _prevGates   = {};   // flight -> 上一次刷新的登機門
+let _gateChanges = {};   // flight -> { from, to }，只在偵測到變更那次刷新有效
 
 function _fmtDayLabel(dateStr, isToday) {
   if (!dateStr) return '';
@@ -330,17 +343,23 @@ function renderCard(f) {
       </button>`
     : '';
 
+  const gateChg = _gateChanges[f.flight];
+  const gateHtml = gateChg
+    ? `<div class="hero-gate-val gate-changed"><span class="gate-prev">${gateChg.from}</span><i class="bi bi-arrow-right"></i><span class="gate-new">${gateChg.to}</span></div>`
+    : `<div class="hero-gate-val">${f.gate || '—'}</div>`;
+
   return `<div class="card card-anim ${isPinned ? 'card-pinned' : ''} ${isDone ? 'card-done' : ''}">
     <div class="card-meta">
       <span class="badge-airline">${(f.flight || '').slice(0,2)}</span>
       <span class="badge-status ${status.cls}">${status.label}</span>
+      ${gateChg ? '<span class="badge-gate-chg"><i class="bi bi-exclamation-triangle-fill"></i> 登機門異動</span>' : ''}
       ${pinHtml}
     </div>
     <div class="card-hero">
       <div class="hero-flt">${f.flight || '—'}</div>
       <div class="hero-gate">
         <div class="hero-gate-label">GATE</div>
-        <div class="hero-gate-val">${f.gate || '—'}</div>
+        ${gateHtml}
       </div>
     </div>
     ${(f.origin || f.destination) ? `<div class="route-row">
@@ -522,6 +541,22 @@ async function loadFlights(manual, dateStr) {
     _flights  = data.flights || [];
     _isToday  = data.is_today !== false;
     _viewDate = _isToday ? null : data.date;
+
+    // 登機門異動追蹤：只在看「今天」時比對，跟上次刷新的登機門不同就標記出來
+    _gateChanges = {};
+    if (_isToday) {
+      const newGates = {};
+      _flights.forEach(f => { if (f.gate) newGates[f.flight] = f.gate; });
+      if (Object.keys(_prevGates).length) {
+        Object.keys(newGates).forEach(flt => {
+          const prev = _prevGates[flt];
+          if (prev && prev !== newGates[flt]) _gateChanges[flt] = { from: prev, to: newGates[flt] };
+        });
+      }
+      _prevGates = newGates;
+    } else {
+      _prevGates = {};
+    }
 
     document.getElementById('updatedAt').textContent = data.updated_at ? `更新於 ${data.updated_at}` : '';
     document.getElementById('dayLabel').textContent = _fmtDayLabel(data.date, _isToday);
