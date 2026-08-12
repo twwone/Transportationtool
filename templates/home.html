@@ -1442,8 +1442,11 @@ function _saveOrder() {
 /* ── 排版順序清理：只留目前存在的卡片，並補上新加的卡片 ── */
 function _normalizeOrder(order) {
   order = (Array.isArray(order) ? order : []).filter(k => CARDS[k]);
-  if (!order.includes('loadsheet')) order.push('loadsheet');
-  if (!order.includes('passport')) order.push('passport');
+  // 舊排版（不論存在本機或帳號）不會有後來才新增的卡片，這裡自動補到最後，
+  // 避免新卡片被舊排版吃掉、變成永遠不會顯示
+  for (const id of Object.keys(CARDS)) {
+    if (!order.includes(id)) order.push(id);
+  }
   return order;
 }
 
