@@ -68,6 +68,15 @@ body {
 
 .meta-bar { display:flex; justify-content:space-between; align-items:center; padding:6px 16px; font-size:0.7rem; color:var(--sub); }
 
+.day-nav { display:flex; align-items:center; justify-content:space-between; padding:2px 12px 6px; gap:6px; }
+.day-btn {
+  background:none; border:none; color:var(--accent); font-size:0.75rem; font-weight:600;
+  padding:5px 8px; border-radius:10px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:opacity 0.15s, transform 0.15s;
+}
+.day-btn:active { transform:scale(0.93); opacity:0.6; }
+.day-label { font-size:0.72rem; color:var(--sub); font-weight:600; }
+
 .list { padding: 8px 12px 0; }
 .card-anim { animation: cardIn 0.42s cubic-bezier(0.22,1,0.36,1) both; }
 
@@ -144,6 +153,11 @@ body {
   <span>FD / AK / Z2 / D7</span>
   <span id="updatedAt"></span>
 </div>
+<div class="day-nav">
+  <button class="day-btn" onclick="shiftDay(-1)"><i class="bi bi-chevron-left"></i> 前一天</button>
+  <span class="day-label" id="dayLabel"></span>
+  <button class="day-btn" id="todayBtn" onclick="goToday()" style="visibility:hidden">回到今天 <i class="bi bi-chevron-right"></i></button>
+</div>
 
 <div class="list" id="list"></div>
 
@@ -170,9 +184,28 @@ function getSyncId() {
   return id;
 }
 
-let _flights = [];
-let _pinned  = new Set();
+let _flights   = [];
+let _pinned    = new Set();
 let _loadTimer = null;
+let _viewDate  = null;   // null = 今天（由伺服器判斷），否則是 YYYY-MM-DD
+let _isToday   = true;
+
+function _fmtDayLabel(dateStr, isToday) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return isToday ? `今天 ${m}/${d}` : `${m}/${d}`;
+}
+
+function shiftDay(delta) {
+  const base = _viewDate ? new Date(`${_viewDate}T00:00:00`) : new Date();
+  base.setDate(base.getDate() + delta);
+  const y = base.getFullYear();
+  const m = String(base.getMonth() + 1).padStart(2, '0');
+  const d = String(base.getDate()).padStart(2, '0');
+  loadFlights(false, `${y}-${m}-${d}`);
+}
+
+function goToday() { loadFlights(false, null); }
 
 async function loadPins() {
   try {
@@ -202,7 +235,7 @@ function togglePin(flightNo) {
 function fmtTime(t) { return t && t.trim() ? t : '—'; }
 
 function renderCard(f) {
-  const isPinned = _pinned.has(f.flight);
+  const isPinned = _isToday && _pinned.has(f.flight);
   const status = STATUS_MAP[f.status] || { cls: 'st-wait', label: f.status || '—' };
   const isDone = f.status === 'Done';
   const rmk = (f.rmk || '').trim();
@@ -214,13 +247,17 @@ function renderCard(f) {
   if (f.cgo && f.cgo.toUpperCase() === 'YES') tags.push('<span>貨運</span>');
   if (f.spcl && f.spcl.toUpperCase() === 'YES') tags.push('<span>特殊需求</span>');
 
+  const pinHtml = _isToday
+    ? `<button class="pin-btn ${isPinned ? 'pinned' : ''}" onclick="togglePin('${f.flight}')">
+        <i class="bi ${isPinned ? 'bi-pin-fill' : 'bi-pin'}"></i>
+      </button>`
+    : '';
+
   return `<div class="card card-anim ${isPinned ? 'card-pinned' : ''} ${isDone ? 'card-done' : ''}">
     <div class="card-meta">
       <span class="badge-airline">${(f.flight || '').slice(0,2)}</span>
       <span class="badge-status ${status.cls}">${status.label}</span>
-      <button class="pin-btn ${isPinned ? 'pinned' : ''}" onclick="togglePin('${f.flight}')">
-        <i class="bi ${isPinned ? 'bi-pin-fill' : 'bi-pin'}"></i>
-      </button>
+      ${pinHtml}
     </div>
     <div class="card-hero">
       <div class="hero-flt">${f.flight || '—'}</div>
@@ -242,27 +279,42 @@ function renderCard(f) {
 function render() {
   const listEl = document.getElementById('list');
   if (!_flights.length) {
-    listEl.innerHTML = `<div class="empty-hint"><i class="bi bi-airplane hint-icon"></i>目前沒有亞洲航空集團的航班資料</div>`;
+    const hint = _isToday ? '目前沒有亞洲航空集團的航班資料' : '這天沒有亞洲航空集團的航班資料';
+    listEl.innerHTML = `<div class="empty-hint"><i class="bi bi-airplane hint-icon"></i>${hint}</div>`;
     return;
   }
   const sorted = [..._flights].sort((a, b) => {
-    const ap = _pinned.has(a.flight) ? 0 : 1;
-    const bp = _pinned.has(b.flight) ? 0 : 1;
-    if (ap !== bp) return ap - bp;
+    if (_isToday) {
+      const ap = _pinned.has(a.flight) ? 0 : 1;
+      const bp = _pinned.has(b.flight) ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+    }
     return (a.date + a.std).localeCompare(b.date + b.std);
   });
   listEl.innerHTML = sorted.map(renderCard).join('');
 }
 
-async function loadFlights(manual) {
+async function loadFlights(manual, dateStr) {
   const btn = document.getElementById('refreshBtn');
   if (manual) btn.innerHTML = '<span class="spin">↻</span>';
+  const queryDate = dateStr !== undefined ? dateStr : _viewDate;
   try {
-    const res = await fetch('/api/asia-airlines/flights');
+    const url = queryDate ? `/api/asia-airlines/flights?date=${queryDate}` : '/api/asia-airlines/flights';
+    const res = await fetch(url);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '載入失敗');
-    _flights = data.flights || [];
+    _flights  = data.flights || [];
+    _isToday  = data.is_today !== false;
+    _viewDate = _isToday ? null : data.date;
+
     document.getElementById('updatedAt').textContent = data.updated_at ? `更新於 ${data.updated_at}` : '';
+    document.getElementById('dayLabel').textContent = _fmtDayLabel(data.date, _isToday);
+    document.getElementById('todayBtn').style.visibility = _isToday ? 'hidden' : 'visible';
+
+    // 只在看「今天」時才需要每 30 秒自動刷新，看歷史資料沒有必要一直打 API
+    if (_isToday && !_loadTimer) _loadTimer = setInterval(() => loadFlights(false), 30000);
+    if (!_isToday && _loadTimer) { clearInterval(_loadTimer); _loadTimer = null; }
+
     render();
   } catch (e) {
     document.getElementById('list').innerHTML =
@@ -274,8 +326,7 @@ async function loadFlights(manual) {
 
 (async function init() {
   await loadPins();
-  await loadFlights(false);
-  _loadTimer = setInterval(() => loadFlights(false), 30000);
+  await loadFlights(false, null);
 
   const syncEl = document.getElementById('syncNote');
   syncEl.textContent = `裝置同步碼：${getSyncId().slice(0, 8)}…（釘選狀態依此碼跨裝置同步，每日自動清空）`;

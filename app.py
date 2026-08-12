@@ -2290,9 +2290,13 @@ _ASIAAIR_FIELD_MAP = {
     "GSE": "gse", "ALS": "als", "RMK": "rmk", "Status": "status",
 }
 
-_asiaair_cache    = {"data": None, "expires_at": 0.0}
+_asiaair_cache    = {}  # date_str -> {"data": [...], "expires_at": float}
 _asiaair_lock     = threading.Lock()
 _asiaair_space_id = {"value": None, "expires_at": 0.0}
+
+
+def _asiaair_today() -> str:
+    return _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
 
 
 def _asiaair_get_space_id() -> "str | None":
@@ -2397,11 +2401,12 @@ def _asiaair_fetch_raw():
     return rows
 
 
-def _asiaair_fetch():
+def _asiaair_fetch(date_str: str):
     with _asiaair_lock:
-        if _asiaair_cache["data"] is not None and time.time() < _asiaair_cache["expires_at"]:
-            return _asiaair_cache["data"], True
-        stale = _asiaair_cache["data"]
+        cached = _asiaair_cache.get(date_str)
+        if cached and time.time() < cached["expires_at"]:
+            return cached["data"], True
+        stale = cached["data"] if cached else None
 
     raw = _asiaair_fetch_raw()
     if raw is None:
@@ -2409,16 +2414,14 @@ def _asiaair_fetch():
             return stale, True
         return None, False
 
-    today = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
-
     flights = []
     for row in raw:
         flight_no = row.get("flight", "")
         m = _re.match(r"^[A-Z0-9]{2}", flight_no)
         if not m or m.group(0) not in _ASIAAIR_CODES:
             continue
-        # 資料庫累積了兩年多的歷史列，只保留今天的航班，避免把舊資料也撈出來
-        if row.get("DATE") != today:
+        # 資料庫累積了兩年多的歷史列，只保留查詢當天的航班，避免把舊資料也撈出來
+        if row.get("DATE") != date_str:
             continue
         # 資料庫裡混雜著從沒被地勤實際處理過的空殼列（沒有機號、沒有登機門、
         # Notion 頁面也沒有內容），這些不是真正的 OIC 資料，排除掉
@@ -2433,8 +2436,7 @@ def _asiaair_fetch():
     flights.sort(key=lambda f: (f.get("date", ""), f.get("std", "")))
 
     with _asiaair_lock:
-        _asiaair_cache["data"]       = flights
-        _asiaair_cache["expires_at"] = time.time() + _ASIAAIR_TTL
+        _asiaair_cache[date_str] = {"data": flights, "expires_at": time.time() + _ASIAAIR_TTL}
     return flights, True
 
 
@@ -2445,10 +2447,19 @@ def asia_airlines_page():
 
 @app.route("/api/asia-airlines/flights")
 def asia_airlines_flights_api():
-    flights, ok = _asiaair_fetch()
+    today    = _asiaair_today()
+    date_str = request.args.get("date", "").strip() or today
+    if not _re.match(r"^\d{4}-\d{2}-\d{2}$", date_str) or date_str > today:
+        date_str = today
+    flights, ok = _asiaair_fetch(date_str)
     if not ok:
         return jsonify({"error": "Notion 資料暫時無法連線，請稍後再試", "retry": True}), 503
-    return jsonify({"flights": flights, "updated_at": time.strftime("%H:%M:%S")})
+    return jsonify({
+        "flights":     flights,
+        "date":        date_str,
+        "is_today":    date_str == today,
+        "updated_at":  time.strftime("%H:%M:%S"),
+    })
 
 
 @app.route("/api/asia-airlines/pins/<sync_id>")
