@@ -261,6 +261,7 @@ body {
 .card-loadsheet .sm-icon { background: linear-gradient(135deg,#ffab40,#ff9500); }
 .card-settings  .sm-icon { background: linear-gradient(135deg,#a3a3a8,#8e8e93); }
 .card-asiaairlines .sm-icon { background: linear-gradient(135deg,#ff5f52,#e0261f); }
+.card-tias      .sm-icon { background: linear-gradient(135deg,#4da3ff,#0071e3); }
 @media (prefers-color-scheme: dark) {
   .card-thsr      .sm-icon { background: linear-gradient(135deg,#8b8af0,#6f6ee0); }
   .card-schedule  .sm-icon { background: linear-gradient(135deg,#6adf8c,#43d16a); }
@@ -273,6 +274,7 @@ body {
   .card-loadsheet .sm-icon { background: linear-gradient(135deg,#ffbc63,#ffa733); }
   .card-settings  .sm-icon { background: linear-gradient(135deg,#b8b8bd,#9d9da3); }
   .card-asiaairlines .sm-icon { background: linear-gradient(135deg,#ff8078,#ff453a); }
+  .card-tias      .sm-icon { background: linear-gradient(135deg,#6ab7ff,#3f96f0); }
 }
 
 /* strip 列（機捷 / 天氣 / 護照）也套用同一套色塊圖示，跟其餘清單項目視覺一致 */
@@ -1168,8 +1170,8 @@ document.addEventListener('touchend', e => {
    卡片資料 & 動態渲染
    ════════════════════════════════════════ */
 const CARDS = {
-  tias:      { icon:'<i class="bi bi-airplane-fill"></i>',      title:'航空資訊看板',     desc:'即時航班動態',           url:'/tias',                                         hero:true },
-  asiaairlines: { icon:'<i class="bi bi-airplane-engines-fill"></i>', title:'亞洲航空航班資訊', desc:'AirAsia Group 即時航班', url:'/asia-airlines',                              cls:'card-asiaairlines' },
+  tias:      { icon:'<i class="bi bi-airplane-fill"></i>',      title:'航空資訊看板',     desc:'即時航班動態',           url:'/tias',                                         cls:'card-tias' },
+  asiaairlines: { icon:'<i class="bi bi-airplane-engines-fill"></i>', title:'亞洲航空航班資訊', desc:'AirAsia Group 即時航班', url:'/asia-airlines',                              hero:true },
   thsr:      { icon:'<i class="bi bi-train-front-fill"></i>',   title:'THSR Ticket',     desc:'高鐵訂票查詢',           url:'https://thsr-ticket-bot-j7qr.onrender.com',    cls:'card-thsr', ext:true },
   mrt:       { icon:'<i class="bi bi-train-front"></i>',        title:'MRT Train',       desc:'機場捷運即時班次',        url:'/mrt',     strip:true, stripCls:'card-mrt-strip',     stripTag:'機場捷運' },
   schedule:  { icon:'<i class="bi bi-calendar3"></i>',          title:'我的班表',         desc:'排班一覽',               url:'/schedule',                                     cls:'card-schedule' },
@@ -1183,8 +1185,8 @@ const CARDS = {
   loadsheet: { icon:'<i class="bi bi-boxes"></i>',              title:'貨艙裝載計算',        desc:'A320 / A321 Load & Trim', url:'/loadsheet',                                    cls:'card-loadsheet' },
   passport:  { icon:'<i class="bi bi-person-badge-fill"></i>',  title:'護照查驗',            desc:'有效期限計算',           url:'#', strip:true, stripCls:'card-passport-strip', stripTag:'旅客護照查驗' },
 };
-const DEFAULT_ORDER = ['tias','asiaairlines','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop','loadsheet','passport'];
-const _STRIP_FIXED = ['tias','mrt','weather','passport']; // 這四張固定位置，不參與排序
+const DEFAULT_ORDER = ['asiaairlines','tias','thsr','mrt','schedule','amenities','visa','share','weather','diet','memo','sop','loadsheet','passport'];
+const _STRIP_FIXED = ['asiaairlines','mrt','weather','passport']; // 這四張固定位置，不參與排序
 let cardOrder = [...DEFAULT_ORDER];
 let editMode  = false;
 
@@ -1209,10 +1211,10 @@ function renderBento(order) {
   let delay = 50;
 
   // 1. Hero (航班)
-  if (order.includes('tias')) {
-    const c = CARDS.tias;
+  if (order.includes('asiaairlines')) {
+    const c = CARDS.asiaairlines;
     const el = document.createElement('a');
-    el.href = c.url; el.dataset.id = 'tias';
+    el.href = c.url; el.dataset.id = 'asiaairlines';
     el.className = 'card card-hero';
     el.style.animation = `fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) ${delay}ms both`;
     el.innerHTML = `<div class="hero-inner"><div class="hero-top"><span class="hero-icon">${c.icon}</span><div class="live-badge"><div class="live-dot"></div>LIVE</div></div><div class="hero-bottom"><div class="hero-title">${c.title}</div><div class="hero-desc">${c.desc || ''}</div></div></div>`;
