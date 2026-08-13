@@ -2342,10 +2342,62 @@ def _asiaair_plain_text(prop_value) -> str:
     return "".join(parts)
 
 
+_asiaair_schema_cache = {"value": None, "expires_at": 0.0}
+
+
+def _asiaair_get_schema() -> dict:
+    """欄位 ID → 名稱的對照表（如 e_ay -> DATE）。獨立用小請求拿，
+    不能跟抓大量資料的請求共用——Notion 在 limit 拉很大時常常不會把
+    schema 一起回傳，混在一起拿會導致欄位名稱全部對不到、資料整批消失。"""
+    now = time.time()
+    if _asiaair_schema_cache["value"] and now < _asiaair_schema_cache["expires_at"]:
+        return _asiaair_schema_cache["value"]
+
+    space_id = _asiaair_get_space_id()
+    if not space_id:
+        return _asiaair_schema_cache["value"] or {}
+    try:
+        r = _requests.post(
+            f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/queryCollection",
+            headers={"x-notion-space-id": space_id},
+            json={
+                "collectionId":     _ASIAAIR_COLLECTION_ID,
+                "collectionViewId": _ASIAAIR_VIEW_ID,
+                "query":  {"filter": {"operator": "and", "filters": []}, "sort": []},
+                "loader": {
+                    "type":         "reducer",
+                    "reducers":     {"collection_group_results": {"type": "results", "limit": 1}},
+                    "userTimeZone": "Asia/Taipei",
+                    "searchQuery":  "",
+                },
+            },
+            timeout=10,
+        )
+        r.raise_for_status()
+        collections = r.json().get("recordMap", {}).get("collection", {})
+    except Exception as e:
+        app.logger.error(f"_asiaair_get_schema: {e}")
+        return _asiaair_schema_cache["value"] or {}
+
+    schema = {}
+    for c in collections.values():
+        schema = c.get("value", {}).get("value", {}).get("schema", {})
+        if schema:
+            break
+    if not schema:
+        return _asiaair_schema_cache["value"] or {}
+
+    id_to_name = {pid: pdef.get("name", pid) for pid, pdef in schema.items()}
+    _asiaair_schema_cache["value"]       = id_to_name
+    _asiaair_schema_cache["expires_at"]  = now + 3600
+    return id_to_name
+
+
 def _asiaair_fetch_raw():
     space_id = _asiaair_get_space_id()
     if not space_id:
         return None
+    id_to_name = _asiaair_get_schema()
     try:
         r = _requests.post(
             f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/queryCollection",
@@ -2373,14 +2425,6 @@ def _asiaair_fetch_raw():
 
     record_map = payload.get("recordMap", {})
     blocks      = record_map.get("block", {})
-    collections = record_map.get("collection", {})
-
-    schema = {}
-    for c in collections.values():
-        schema = c.get("value", {}).get("value", {}).get("schema", {})
-        if schema:
-            break
-    id_to_name = {pid: pdef.get("name", pid) for pid, pdef in schema.items()}
 
     block_ids = (
         payload.get("result", {})
