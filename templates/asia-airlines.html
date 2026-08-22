@@ -184,8 +184,10 @@ body {
 .detail-text { font-size:0.85rem; line-height:1.6; padding:10px 12px; background:var(--surface-soft); border-radius:12px; color:var(--text); }
 .detail-loading, .detail-empty { text-align:center; color:var(--sub); font-size:0.8rem; padding:30px 0; }
 
-/* 迷你播放器顯示時，把清單底部空間讓出來，最後一項才不會被浮動播放器擋住點不到 */
-html.has-miniplayer .detail-body { padding-bottom: 92px; }
+/* 迷你播放器顯示時，把清單底部空間讓出來，最後一項才不會被浮動播放器擋住點不到。
+   實際保留高度用 JS 量測播放器真實高度（含 iOS Home 指示條的安全區）寫進這個變數，
+   固定寫死的數字在不同機型的安全區高度下會不夠，所以這裡只當作 JS 還沒量測時的保守預設。 */
+html.has-miniplayer .detail-body { padding-bottom: calc(var(--miniplayer-space, 160px) + 20px); }
 
 .ai-summary {
   border:1.5px solid var(--accent-soft); background:var(--accent-soft);
@@ -924,6 +926,7 @@ function bcPlay(i) {
   document.getElementById('miniPlayer').classList.add('show');
   document.getElementById('announceBtn').classList.add('is-live');
   document.documentElement.classList.add('has-miniplayer');
+  bcSyncMiniplayerSpace();
   bcSeekEl.value = 0;
   bcSeekFill(0);
   document.getElementById('miniPlayerCurTime').textContent = '0:00';
@@ -940,6 +943,18 @@ function bcPlay(i) {
     navigator.mediaSession.setActionHandler('stop',  () => stopMiniPlayer());
   }
 }
+
+function bcSyncMiniplayerSpace() {
+  // 量測播放器實際渲染高度 + 它離視窗底部的安全區間距（含 iOS Home 指示條），
+  // 讓被它蓋住的清單底部留白抓得準，不同機型/安全區高度都不會抓太少而擋到最後一項。
+  const mp = document.getElementById('miniPlayer');
+  const h  = mp.offsetHeight;
+  const bottomOffset = parseFloat(getComputedStyle(mp).bottom) || 0;
+  document.documentElement.style.setProperty('--miniplayer-space', `${h + bottomOffset}px`);
+}
+window.addEventListener('resize', () => {
+  if (document.documentElement.classList.contains('has-miniplayer')) bcSyncMiniplayerSpace();
+});
 
 function toggleMiniPlayer() {
   if (bcAudio.paused) bcAudio.play().catch(() => {});
