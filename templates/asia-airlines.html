@@ -184,6 +184,9 @@ body {
 .detail-text { font-size:0.85rem; line-height:1.6; padding:10px 12px; background:var(--surface-soft); border-radius:12px; color:var(--text); }
 .detail-loading, .detail-empty { text-align:center; color:var(--sub); font-size:0.8rem; padding:30px 0; }
 
+/* 迷你播放器顯示時，把清單底部空間讓出來，最後一項才不會被浮動播放器擋住點不到 */
+html.has-miniplayer .detail-body { padding-bottom: 92px; }
+
 .ai-summary {
   border:1.5px solid var(--accent-soft); background:var(--accent-soft);
   border-radius:16px; padding:12px 14px;
@@ -920,6 +923,7 @@ function bcPlay(i) {
   document.getElementById('miniPlayerTitle').textContent = it.title;
   document.getElementById('miniPlayer').classList.add('show');
   document.getElementById('announceBtn').classList.add('is-live');
+  document.documentElement.classList.add('has-miniplayer');
   bcSeekEl.value = 0;
   bcSeekFill(0);
   document.getElementById('miniPlayerCurTime').textContent = '0:00';
@@ -948,6 +952,7 @@ function stopMiniPlayer() {
   bcAudio.load();
   document.getElementById('miniPlayer').classList.remove('show');
   document.getElementById('announceBtn').classList.remove('is-live');
+  document.documentElement.classList.remove('has-miniplayer');
   document.querySelectorAll('.announce-row').forEach(el => el.classList.remove('is-playing'));
   bcSeekEl.value = 0;
   bcSeekFill(0);
