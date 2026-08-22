@@ -447,7 +447,7 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
   background: var(--surface); outline: none; color: var(--text);
   border: 1px solid var(--border);
 }
-.nat-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 12px 8px; }
+.nat-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 4px 12px 8px; }
 .nat-item {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 12px; border-radius: 12px; cursor: pointer;
@@ -564,6 +564,29 @@ body.exit { animation: pageIn 0.16s cubic-bezier(0.4, 0, 1, 1) reverse both; }
 <div class="list" id="cardList"></div>
 
 <script>
+/* ── 背景頁面捲動鎖定：面板開著時，拖拉只捲動面板本身，不會穿透到底下的頁面 ── */
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 let _rich   = [];     // visa-data.json：台灣手作詳細卡
 let _matrix = {};     // visa-matrix.json：國籍→目的地→狀態
 let _countries = [];  // visa-countries.json：代碼→中文名→國旗
@@ -606,6 +629,7 @@ function renderNatList(q = '') {
 }
 
 function openNatPicker() {
+  lockBodyScroll();
   renderNatList('');
   document.getElementById('natSearch').value = '';
   document.getElementById('natBackdrop').classList.add('open');
@@ -614,6 +638,7 @@ function openNatPicker() {
 function closeNatPicker() {
   document.getElementById('natBackdrop').classList.remove('open');
   document.getElementById('natSheet').classList.remove('open');
+  unlockBodyScroll();
 }
 function pickNat(code) {
   _nat = code;

@@ -214,7 +214,7 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .modal-card {
   background: var(--card); border-radius: 24px;
   padding: 22px 20px 20px; width: 100%; max-width: 340px;
-  max-height: 86vh; overflow-y: auto;
+  max-height: 86vh; overflow-y: auto; overscroll-behavior: contain;
   box-shadow: 0 20px 60px rgba(0,0,0,0.25);
 }
 .modal-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -410,6 +410,30 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 </div>
 
 <script>
+/* ── 背景頁面捲動鎖定：面板開著時，拖拉只捲動最上層那個面板，
+   不會穿透帶動底下的頁面／上一層面板一起動。計數器處理疊面板的巢狀情況。 */
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 let _lastTap = 0;
@@ -622,6 +646,7 @@ function renderHolds() {
 
 /* ── 彈窗控制 ── */
 function openHoldModal(holdId) {
+  lockBodyScroll();
   curHoldId = holdId;
   document.getElementById('modalTitle').textContent = `${AIRCRAFT[curAc].name} · ${AIRCRAFT[curAc].holds.find(x => x.id === holdId).label}`;
   document.getElementById('bPcsInput').value = holdBPcs(curAc, holdId) || '';
@@ -638,6 +663,7 @@ function openHoldModal(holdId) {
 function closeHoldModal() {
   document.getElementById('holdModalOverlay').classList.remove('open');
   curHoldId = null;
+  unlockBodyScroll();
 }
 function handleOverlayClick(e) {
   if (e.target.id === 'holdModalOverlay') closeHoldModal();

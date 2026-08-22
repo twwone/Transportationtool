@@ -780,6 +780,29 @@ body{
 </div>
 
 <script>
+// ── 背景頁面捲動鎖定：面板開著時，拖拉只捲動面板本身，不會穿透到底下的頁面 ──
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 // ── State ──
 let _currentResult = null;
 let _compressedBlob = null;
@@ -830,6 +853,7 @@ function copySyncId() {
 }
 
 function openSettings(highlightKey) {
+  lockBodyScroll();
   const s = getSettings();
   document.getElementById('setLimit').value = s.dailyLimit || 2500;
   document.getElementById('setGeminiKey').value = s.geminiKey || '';
@@ -841,6 +865,7 @@ function openSettings(highlightKey) {
 }
 function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
+  unlockBodyScroll();
 }
 function handleOverlayClick(e) {
   if (e.target === e.currentTarget) closeSettings();

@@ -286,6 +286,7 @@ body {
   transition: transform 0.38s cubic-bezier(0.25,1,0.5,1);
   max-height: 80vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .detail-sheet.open { transform: translateY(0); }
 
@@ -434,6 +435,30 @@ body {
 </div>
 
 <script>
+/* ── 背景頁面捲動鎖定：面板開著時，拖拉只捲動最上層那個面板，
+   不會穿透帶動底下的頁面／上一層面板一起動。計數器處理疊面板的巢狀情況。 */
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 let _data = { todos: [], likes: [], dates: [] };
 let _tab  = 'todos';
 let _saveTimer = null;
@@ -516,6 +541,7 @@ function render() {
 function openDetail(id) {
   const item = (_data[_tab] || []).find(x => x.id === id);
   if (!item) return;
+  lockBodyScroll();
   _editingId = id;
 
   document.getElementById('shTitle').textContent  = _CFG[_tab].shTitle;
@@ -534,6 +560,7 @@ function closeDetail() {
   _editingId = null;
   document.getElementById('sheetOverlay').classList.remove('open');
   document.getElementById('detailSheet').classList.remove('open');
+  unlockBodyScroll();
 }
 
 function saveDetail() {

@@ -209,7 +209,7 @@ body {
 .panel-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
 .panel-note { font-size: 0.72rem; color: var(--accent); margin-top: 3px; font-weight: 600; }
 .panel-body {
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   padding: 16px 20px max(24px, env(safe-area-inset-bottom) + 16px);
   flex: 1;
 }
@@ -717,6 +717,29 @@ body {
 </div>
 
 <script>
+/* ── 背景頁面捲動鎖定：面板開著時，拖拉只捲動面板本身，不會穿透到底下的頁面 ── */
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 /* ── 廣播詞資料 ── */
 const S = {
   mdac: {
@@ -962,6 +985,7 @@ function fmt(t) {
   return t.replace(/_{2,}/g, m => `<span class="blank">${m}</span>`);
 }
 function openPanel(id, note, enFirst) {
+  lockBodyScroll();
   const s = S[id];
   document.getElementById('p-title').textContent = s.title;
   const noteEl = document.getElementById('p-note');
@@ -979,6 +1003,7 @@ function openPanel(id, note, enFirst) {
 function closePanel() {
   document.getElementById('backdrop').classList.remove('open');
   document.getElementById('panel').classList.remove('open');
+  unlockBodyScroll();
 }
 
 /* ══════════════════════════════════════════

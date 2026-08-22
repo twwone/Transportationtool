@@ -420,6 +420,7 @@ body {
   transition: transform 0.4s cubic-bezier(0.25,1,0.5,1);
   max-height: 72vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   box-shadow: 0 -4px 32px rgba(0,0,0,0.1);
 }
 .profile-sheet.open { transform: translateY(0); }
@@ -694,7 +695,7 @@ body {
   border-radius: 28px 28px 0 0;
   padding: 0 0 max(24px, env(safe-area-inset-bottom));
   width: 100%; max-width: 480px;
-  max-height: 88vh; overflow-y: auto;
+  max-height: 88vh; overflow-y: auto; overscroll-behavior: contain;
   transform: translateY(100%);
   transition: transform 0.4s cubic-bezier(0.25,1,0.5,1);
   box-shadow: 0 -4px 40px rgba(0,0,0,0.18);
@@ -858,7 +859,7 @@ body {
 .tr-mode-btn.active { background: #fff; color: #1c1c1e; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 
 .tr-result {
-  flex: 1; overflow-y: auto; padding: 20px 18px;
+  flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 20px 18px;
   display: flex; flex-direction: column; justify-content: center; gap: 14px;
   min-height: 0;
 }
@@ -1144,6 +1145,33 @@ body {
 
 <script src="/static/config.js"></script>
 <script>
+/* ── 背景頁面捲動鎖定 ──
+   面板/彈窗（profile sheet、admin panel、翻譯面板等）疊在頁面上時，往上下拖拉捲動拖到
+   面板邊界會「穿透」繼續帶動底下那層（上一個面板或整個頁面）一起動。面板開啟時把 body
+   用 position:fixed 釘住並記住原本捲動位置，面板疊面板用計數器，全部關閉才真正解鎖、
+   恢復原本捲動位置。 */
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
 /* ── 防縮放 ── */
@@ -1701,6 +1729,7 @@ function _updateChip() {
 }
 
 function openSheet() {
+  lockBodyScroll();
   const sess = _getSession();
   document.getElementById('authLoggedIn').style.display   = sess ? '' : 'none';
   document.getElementById('authNotLoggedIn').style.display = sess ? 'none' : '';
@@ -1714,6 +1743,7 @@ function openSheet() {
 function closeSheet() {
   document.getElementById('authSheet').classList.remove('open');
   document.getElementById('sheetOverlay').classList.remove('open');
+  unlockBodyScroll();
 }
 
 function switchAuthTab(tab) {
@@ -1922,11 +1952,13 @@ function _verifyPin() {
 
 /* ── Admin Panel ── */
 function _openAdminPanel() {
+  lockBodyScroll();
   _renderAdminPanel();
   document.getElementById('adminOverlay').classList.add('open');
 }
 function _closeAdminPanel() {
   document.getElementById('adminOverlay').classList.remove('open');
+  unlockBodyScroll();
 }
 document.getElementById('adminOverlay').addEventListener('click', function(e) {
   if (e.target === this) _closeAdminPanel();
@@ -2186,6 +2218,7 @@ function _trOnLangChange() {
 function _trTargetLang() { return document.getElementById('trTargetLang').value; }
 
 function openTranslate() {
+  lockBodyScroll();
   _trInitLangSelect();
   document.getElementById('translateOverlay').classList.add('open');
   document.getElementById('translateSheet').classList.add('open');
@@ -2193,6 +2226,7 @@ function openTranslate() {
 function closeTranslate() {
   document.getElementById('translateOverlay').classList.remove('open');
   document.getElementById('translateSheet').classList.remove('open');
+  unlockBodyScroll();
 }
 
 function _trToggleFlip() {

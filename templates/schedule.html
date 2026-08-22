@@ -528,6 +528,29 @@ main {
 </div>
 
 <script>
+/* ── 背景頁面捲動鎖定：面板/彈窗開著時避免拖拉穿透到底下那一層 ── */
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 function _goHomeClick(e) {
   if (document.referrer && new URL(document.referrer).origin === location.origin) {
     e.preventDefault();
@@ -702,6 +725,7 @@ function onTimeChange() {
 let editDay = null;
 
 function openEdit(day) {
+  lockBodyScroll();
   editDay = day;
   const year = viewYear, month = viewMonth;
   const dow      = new Date(year, month - 1, day).getDay();
@@ -738,6 +762,7 @@ function closeSheet() {
   document.getElementById('overlay').classList.remove('open');
   document.getElementById('sheet').classList.remove('open');
   editDay = null;
+  unlockBodyScroll();
 }
 
 function quickSet(code) {
@@ -767,6 +792,7 @@ function resetDay() {
 let deleteKeyword = '';
 
 function openDeleteSheet() {
+  lockBodyScroll();
   const year = viewYear, month = viewMonth;
   deleteKeyword = `刪除${year}年${month}月`;
   document.getElementById('del-title').textContent = `刪除 ${year}年${month}月 班表`;
@@ -786,6 +812,7 @@ function openDeleteSheet() {
 function closeDeleteSheet() {
   document.getElementById('del-overlay').classList.remove('open');
   document.getElementById('del-sheet').classList.remove('open');
+  unlockBodyScroll();
 }
 
 function onDeleteInput() {

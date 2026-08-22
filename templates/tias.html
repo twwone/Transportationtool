@@ -373,7 +373,7 @@ body {
   font-size: 0.85rem; font-weight: 700; padding: 6px 16px;
   border-radius: 20px; cursor: pointer;
 }
-.picker-list { overflow-y: auto; padding: 8px 12px 8px; }
+.picker-list { overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px 8px; }
 .picker-item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; border-radius: 12px; margin-bottom: 6px;
@@ -961,6 +961,7 @@ function renderWatchTabs() {
 
 /* ── 選擇器 ── */
 function openAirlinePicker() {
+  _lockBodyScroll();
   const sheet = document.getElementById('airlinePicker');
   sheet.style.display = '';
   renderPickerList();
@@ -970,6 +971,7 @@ function openAirlinePicker() {
 function closeAirlinePicker() {
   const sheet = document.getElementById('airlinePicker');
   sheet.classList.remove('picker-open');
+  _unlockBodyScroll();
   setTimeout(() => { sheet.style.display = 'none'; }, 320);
   _saveWatchCodes();
   applyWatchFilter();
@@ -1194,10 +1196,13 @@ function renderCard(f, mode, showDirBadge) {
   </div>`;
 }
 
-/* ── 航班詳細資訊：開啟 / 關閉 ── */
+/* ── 背景頁面捲動鎖定（航班詳細資訊 sheet、機隊代碼選擇器共用）──
+   面板疊面板用計數器，只有全部關閉、回到最底層時才真正解鎖、恢復原本捲動位置。 */
 let _sheetScrollY = 0;
+let _scrollLockCount = 0;
 
 function _lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
   _sheetScrollY = window.scrollY;
   document.body.style.position  = 'fixed';
   document.body.style.top       = `-${_sheetScrollY}px`;
@@ -1205,6 +1210,8 @@ function _lockBodyScroll() {
   document.body.style.overflow  = 'hidden';
 }
 function _unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
   document.body.style.position  = '';
   document.body.style.top       = '';
   document.body.style.width     = '';

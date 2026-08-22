@@ -326,6 +326,30 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
+/* ── 背景頁面捲動鎖定：Modal 開著時，拖拉只作用在最上層那個 Modal，
+   不會穿透帶動底下的頁面／上一層面板一起動。計數器處理疊面板的巢狀情況。 */
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 let _pin = '';
 let _delMode = false;
 let _longPressTimer = null;
@@ -488,6 +512,7 @@ async function delItem(e, id) {
 
 // ── 新增 Modal ───────────────────────────────
 function openAddModal() {
+  lockBodyScroll();
   document.getElementById('addUrl').value = '';
   document.getElementById('addTitle').value = '';
   document.getElementById('addImg').value = '';
@@ -505,6 +530,7 @@ function openAddModal() {
 }
 function closeAddModal() {
   document.getElementById('addModal').classList.remove('show');
+  unlockBodyScroll();
 }
 
 async function submitAdd() {
@@ -560,6 +586,7 @@ function getUsername() {
 
 function ensureUsername(cb) {
   if (getUsername()) return cb();
+  lockBodyScroll();
   document.getElementById('nameModal').classList.add('show');
   document.getElementById('nameInput').focus();
   _pendingNameCb = cb;
@@ -567,11 +594,15 @@ function ensureUsername(cb) {
 let _pendingNameCb = null;
 
 function openNameModal() {
+  lockBodyScroll();
   document.getElementById('nameInput').value = getUsername();
   document.getElementById('nameModal').classList.add('show');
   setTimeout(() => document.getElementById('nameInput').focus(), 200);
 }
-function closeNameModal() { document.getElementById('nameModal').classList.remove('show'); }
+function closeNameModal() {
+  document.getElementById('nameModal').classList.remove('show');
+  unlockBodyScroll();
+}
 function saveName() {
   const n = document.getElementById('nameInput').value.trim();
   if (!n) return;
