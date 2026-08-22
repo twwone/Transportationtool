@@ -2619,6 +2619,110 @@ def asia_airlines_detail_api(notion_id):
 
 
 # ──────────────────────────────────────────────
+#  亞洲航空廣播詞（Notion 上的錄音檔，依機隊代碼 / 目的地 / 情境分類）
+# ──────────────────────────────────────────────
+_ASIAAIR_BC_ROOT   = "1a939b74-cba7-80a4-bca5-d6cee7d7ccd3"
+_ASIAAIR_BC_TTL    = 3600  # 秒：錄音檔幾乎不變動，快取久一點省得一直打 Notion
+_asiaair_bc_cache  = {}    # page_id -> {"data": {...}, "expires_at": float}
+_asiaair_bc_lock   = threading.Lock()
+
+
+def _asiaair_bc_fetch_node(page_id: str):
+    """抓某個廣播詞 Notion 頁面底下的內容：
+    - 底下是子頁面（機隊代碼 → 目的地資料夾）就回傳 {"type":"folder","items":[...]}
+    - 底下是「情境標題 + 錄音檔」交錯排列（實際廣播詞清單）就回傳 {"type":"tracks","items":[...]}，
+      每筆已經換好可直接播放的 signed URL。"""
+    space_id = _asiaair_get_space_id()
+    if not space_id:
+        return None
+    try:
+        r = _requests.post(
+            f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/loadPageChunk",
+            headers={"x-notion-space-id": space_id},
+            json={
+                "pageId": page_id, "limit": 100,
+                "cursor": {"stack": []}, "chunkNumber": 0, "verticalColumns": False,
+            },
+            timeout=10,
+        )
+        r.raise_for_status()
+        payload = r.json()
+    except Exception as e:
+        app.logger.error(f"_asiaair_bc_fetch_node: {e}")
+        return None
+
+    blocks = payload.get("recordMap", {}).get("block", {})
+    root   = blocks.get(page_id, {}).get("value", {}).get("value", {})
+    if not root:
+        return None
+
+    pages, tracks = [], []
+    pending_label = None
+    for cid in root.get("content", []):
+        b     = blocks.get(cid, {}).get("value", {}).get("value", {})
+        btype = b.get("type")
+        props = b.get("properties", {})
+
+        if btype == "page":
+            title = _asiaair_plain_text(props.get("title", []))
+            icon  = (b.get("format", {}) or {}).get("page_icon", "")
+            pages.append({"id": cid, "title": title, "icon": icon})
+        elif btype in ("header", "sub_header", "sub_sub_header"):
+            pending_label = _asiaair_plain_text(props.get("title", []))
+        elif btype == "audio":
+            source = _asiaair_plain_text(props.get("source", []))
+            title  = _asiaair_plain_text(props.get("title", []))
+            if source:
+                tracks.append({"label": pending_label or title, "title": title, "block_id": cid, "source": source})
+            pending_label = None
+
+    if pages:
+        return {"type": "folder", "items": pages}
+
+    if not tracks:
+        return {"type": "tracks", "items": []}
+
+    try:
+        r = _requests.post(
+            f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/getSignedFileUrls",
+            headers={"x-notion-space-id": space_id},
+            json={"urls": [{"url": t["source"], "permissionRecord": {"table": "block", "id": t["block_id"]}} for t in tracks]},
+            timeout=10,
+        )
+        r.raise_for_status()
+        signed_urls = r.json().get("signedUrls", [])
+    except Exception as e:
+        app.logger.error(f"_asiaair_bc_fetch_node signed urls: {e}")
+        signed_urls = []
+
+    items = []
+    for t, url in zip(tracks, signed_urls):
+        items.append({"label": t["label"], "title": t["title"], "url": url})
+    return {"type": "tracks", "items": items}
+
+
+@app.route("/api/asia-airlines/announcements")
+@app.route("/api/asia-airlines/announcements/<page_id>")
+def asia_airlines_announcements_api(page_id=None):
+    pid = page_id or _ASIAAIR_BC_ROOT
+    if not _NOTION_ID_RE.match(pid):
+        return jsonify({"error": "invalid id"}), 400
+
+    with _asiaair_bc_lock:
+        cached = _asiaair_bc_cache.get(pid)
+        if cached and time.time() < cached["expires_at"]:
+            return jsonify(cached["data"])
+
+    node = _asiaair_bc_fetch_node(pid)
+    if node is None:
+        return jsonify({"error": "Notion 資料暫時無法連線，請稍後再試", "retry": True}), 503
+
+    with _asiaair_bc_lock:
+        _asiaair_bc_cache[pid] = {"data": node, "expires_at": time.time() + _ASIAAIR_BC_TTL}
+    return jsonify(node)
+
+
+# ──────────────────────────────────────────────
 #  亞洲航空航班資訊：AI 摘要附件（圖片/檔案讀給你看）
 # ──────────────────────────────────────────────
 _ASIAAIR_SUMMARY_MODELS = (

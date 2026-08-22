@@ -256,6 +256,65 @@ body {
   .badge-gate-chg { background: rgba(255,159,10,0.18); color:#ffb454; }
   .ai-summary-alert { background: rgba(255,159,10,0.16); color:#ffb454; }
 }
+
+.announce-btn {
+  background:var(--accent-soft); border:none; color:var(--accent);
+  width:34px; height:34px; border-radius:50%; font-size:1rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative;
+  -webkit-tap-highlight-color:transparent; transition:transform 0.18s cubic-bezier(0.22,1,0.36,1);
+}
+.announce-btn:active { transform:scale(0.88); }
+.announce-btn.is-live::after {
+  content:''; position:absolute; top:1px; right:1px; width:8px; height:8px;
+  border-radius:50%; background:#34c759; border:1.5px solid var(--bg);
+}
+
+.announce-breadcrumb { display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--sub); font-weight:600; margin-bottom:12px; }
+.announce-back {
+  background:none; border:none; color:var(--accent); font-size:0.8rem; font-weight:700; padding:0;
+  cursor:pointer; display:flex; align-items:center; gap:1px; -webkit-tap-highlight-color:transparent;
+}
+
+.announce-list { display:flex; flex-direction:column; gap:8px; }
+.announce-row {
+  display:flex; align-items:center; gap:12px; padding:13px 14px; background:var(--surface-soft);
+  border-radius:14px; cursor:pointer; -webkit-tap-highlight-color:transparent; border:none; width:100%;
+  text-align:left; font-family:inherit; transition:background 0.15s, transform 0.15s;
+}
+.announce-row:active { transform:scale(0.98); }
+.announce-row.is-playing { background:var(--accent-soft); }
+.announce-icon-sq {
+  width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+  font-size:1.05rem; flex-shrink:0; background:var(--surface); color:var(--sub);
+}
+.announce-row.is-playing .announce-icon-sq { color:var(--accent); }
+.announce-row-title { font-size:0.88rem; font-weight:700; color:var(--text); flex:1; }
+.announce-row.is-playing .announce-row-title { color:var(--accent); }
+.announce-row-chevron { color:var(--sub); font-size:0.9rem; flex-shrink:0; }
+.announce-row.is-playing .announce-row-chevron { color:var(--accent); }
+
+.miniplayer {
+  position:fixed; left:12px; right:12px; bottom:max(12px, env(safe-area-inset-bottom) + 8px);
+  background:var(--surface); border:1.5px solid var(--border); border-radius:18px;
+  box-shadow:0 6px 22px rgba(0,0,0,0.16); padding:10px 12px 10px 10px;
+  display:flex; align-items:center; gap:10px; z-index:250;
+  transform:translateY(140%); transition:transform 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+.miniplayer.show { transform:translateY(0); }
+.miniplayer-play {
+  background:var(--accent); color:#fff; border:none; width:38px; height:38px; border-radius:50%;
+  font-size:1.05rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  flex-shrink:0; -webkit-tap-highlight-color:transparent;
+}
+.miniplayer-info { flex:1; min-width:0; }
+.miniplayer-label { font-size:0.65rem; color:var(--sub); font-weight:700; letter-spacing:0.3px; }
+.miniplayer-title { font-size:0.85rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.miniplayer-progress { height:3px; background:var(--surface-soft); border-radius:2px; margin-top:6px; overflow:hidden; }
+.miniplayer-progress-bar { height:100%; background:var(--accent); width:0%; }
+.miniplayer-close {
+  background:none; border:none; color:var(--sub); font-size:1rem; padding:6px; cursor:pointer;
+  flex-shrink:0; -webkit-tap-highlight-color:transparent;
+}
 </style>
 </head>
 <body>
@@ -263,6 +322,7 @@ body {
 <div class="topbar">
   <a href="/" class="back-btn"><i class="bi bi-chevron-left"></i> 返回</a>
   <div class="topbar-title">亞洲航空航班資訊</div>
+  <button class="announce-btn" id="announceBtn" onclick="openAnnounce()" title="廣播詞"><i class="bi bi-megaphone-fill"></i></button>
   <button class="refresh-btn" id="refreshBtn" onclick="loadFlights(true)">↻ 更新</button>
 </div>
 <div class="meta-bar">
@@ -293,6 +353,29 @@ body {
   <button class="lightbox-close" onclick="closeLightbox()"><i class="bi bi-x-lg"></i></button>
   <img id="lightboxImg" src="" alt="">
 </div>
+
+<div class="detail-overlay" id="announceOverlay" onclick="if(event.target===this) closeAnnounce()">
+  <div class="detail-sheet" style="max-height:88vh">
+    <div class="detail-head">
+      <div class="detail-title"><i class="bi bi-megaphone-fill"></i> 廣播詞</div>
+      <button class="detail-close" onclick="closeAnnounce()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="announce-breadcrumb" id="announceBreadcrumb"></div>
+    <div class="detail-body" id="announceBody"></div>
+  </div>
+</div>
+
+<div class="miniplayer" id="miniPlayer">
+  <button class="miniplayer-play" onclick="toggleMiniPlayer()"><i class="bi bi-pause-fill" id="miniPlayerIcon"></i></button>
+  <div class="miniplayer-info">
+    <div class="miniplayer-label" id="miniPlayerLabel"></div>
+    <div class="miniplayer-title" id="miniPlayerTitle"></div>
+    <div class="miniplayer-progress"><div class="miniplayer-progress-bar" id="miniPlayerProgress"></div></div>
+  </div>
+  <button class="miniplayer-close" onclick="stopMiniPlayer()"><i class="bi bi-x-lg"></i></button>
+</div>
+
+<audio id="bcAudio" preload="none" playsinline style="display:none"></audio>
 
 <script>
 const STATUS_MAP = {
@@ -720,11 +803,156 @@ async function loadFlights(manual, dateStr) {
   }
 }
 
+/* ── 廣播詞：Notion 錄音檔瀏覽 + 背景播放（Media Session）── */
+let _bcStack         = [];   // [{id: null|string, title}]　瀏覽路徑，null id = 根目錄
+let _bcCurrentFolders = [];  // 目前這層若是資料夾清單
+let _bcCurrentTracks  = [];  // 目前這層若是廣播詞清單
+let _bcNowPlaying     = null;
+
+const bcAudio = document.getElementById('bcAudio');
+
+async function openAnnounce() {
+  document.getElementById('announceOverlay').classList.add('show');
+  if (!_bcStack.length) _bcStack = [{ id: null, title: '廣播詞' }];
+  await bcRender();
+}
+
+function closeAnnounce() {
+  document.getElementById('announceOverlay').classList.remove('show');
+}
+
+function bcOpenIndex(i) {
+  const it = _bcCurrentFolders[i];
+  if (!it) return;
+  _bcStack.push({ id: it.id, title: it.title });
+  bcRender();
+}
+
+function bcBack() {
+  if (_bcStack.length <= 1) return;
+  _bcStack.pop();
+  bcRender();
+}
+
+async function bcRender() {
+  const body  = document.getElementById('announceBody');
+  const crumb = document.getElementById('announceBreadcrumb');
+  const cur   = _bcStack[_bcStack.length - 1];
+
+  crumb.innerHTML = _bcStack.length > 1
+    ? `<button class="announce-back" onclick="bcBack()"><i class="bi bi-chevron-left"></i> 上一層</button><span>${_bcStack.map(s => s.title).join(' / ')}</span>`
+    : `<span>選擇機隊代碼</span>`;
+
+  body.innerHTML = `<div class="detail-loading"><span class="spin">↻</span> 載入中…</div>`;
+
+  try {
+    const url  = cur.id ? `/api/asia-airlines/announcements/${cur.id}` : '/api/asia-airlines/announcements';
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '載入失敗');
+
+    if (data.type === 'folder') {
+      _bcCurrentFolders = data.items || [];
+      _bcCurrentTracks  = [];
+      if (!_bcCurrentFolders.length) { body.innerHTML = `<div class="detail-empty">這裡還沒有內容</div>`; return; }
+      body.innerHTML = `<div class="announce-list">${_bcCurrentFolders.map((it, i) => `
+        <button class="announce-row" onclick="bcOpenIndex(${i})">
+          <span class="announce-icon-sq">${it.icon || '📁'}</span>
+          <span class="announce-row-title">${it.title}</span>
+          <i class="bi bi-chevron-right announce-row-chevron"></i>
+        </button>`).join('')}</div>`;
+    } else {
+      _bcCurrentFolders = [];
+      _bcCurrentTracks  = data.items || [];
+      if (!_bcCurrentTracks.length) { body.innerHTML = `<div class="detail-empty">這裡還沒有廣播詞錄音</div>`; return; }
+      body.innerHTML = `<div class="announce-list">${_bcCurrentTracks.map((it, i) => `
+        <button class="announce-row" id="bcRow${i}" onclick="bcPlay(${i})">
+          <span class="announce-icon-sq"><i class="bi bi-mic-fill"></i></span>
+          <span class="announce-row-title">${it.label}</span>
+          <i class="bi bi-play-circle-fill announce-row-chevron"></i>
+        </button>`).join('')}</div>`;
+      // 回到同一層時，把目前正在播放的那筆重新標成播放中
+      if (_bcNowPlaying) {
+        const idx = _bcCurrentTracks.findIndex(t => t.url === _bcNowPlaying.url);
+        if (idx >= 0) bcHighlightPlaying(idx);
+      }
+    }
+  } catch (e) {
+    body.innerHTML = `<div class="detail-empty"><i class="bi bi-wifi-off"></i><br>${e.message}</div>`;
+  }
+}
+
+function bcHighlightPlaying(i) {
+  document.querySelectorAll('.announce-row').forEach(el => el.classList.remove('is-playing'));
+  const row = document.getElementById(`bcRow${i}`);
+  if (row) row.classList.add('is-playing');
+}
+
+function bcPlay(i) {
+  const it = _bcCurrentTracks[i];
+  if (!it) return;
+  _bcNowPlaying = it;
+  bcAudio.src = it.url;
+  bcAudio.play().catch(() => {});
+  bcHighlightPlaying(i);
+
+  document.getElementById('miniPlayerLabel').textContent = it.label;
+  document.getElementById('miniPlayerTitle').textContent = it.title;
+  document.getElementById('miniPlayer').classList.add('show');
+  document.getElementById('announceBtn').classList.add('is-live');
+
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title:  it.title,
+      artist: it.label,
+      album:  '亞洲航空廣播詞',
+    });
+    navigator.mediaSession.setActionHandler('play',  () => bcAudio.play().catch(() => {}));
+    navigator.mediaSession.setActionHandler('pause', () => bcAudio.pause());
+    navigator.mediaSession.setActionHandler('stop',  () => stopMiniPlayer());
+  }
+}
+
+function toggleMiniPlayer() {
+  if (bcAudio.paused) bcAudio.play().catch(() => {});
+  else bcAudio.pause();
+}
+
+function stopMiniPlayer() {
+  bcAudio.pause();
+  bcAudio.removeAttribute('src');
+  bcAudio.load();
+  document.getElementById('miniPlayer').classList.remove('show');
+  document.getElementById('announceBtn').classList.remove('is-live');
+  document.querySelectorAll('.announce-row').forEach(el => el.classList.remove('is-playing'));
+  _bcNowPlaying = null;
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
+}
+
+bcAudio.addEventListener('play', () => {
+  document.getElementById('miniPlayerIcon').className = 'bi bi-pause-fill';
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+});
+bcAudio.addEventListener('pause', () => {
+  document.getElementById('miniPlayerIcon').className = 'bi bi-play-fill';
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+});
+bcAudio.addEventListener('ended', () => {
+  document.getElementById('miniPlayerIcon').className = 'bi bi-play-fill';
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+});
+bcAudio.addEventListener('timeupdate', () => {
+  const bar = document.getElementById('miniPlayerProgress');
+  if (bar && bcAudio.duration) bar.style.width = `${(bcAudio.currentTime / bcAudio.duration) * 100}%`;
+});
+
 (async function init() {
   // body 有進場動畫殘留的 transform，會讓內部的 position:fixed 元素定位錯亂，
   // 把詳情面板／放大圖片面板搬到 <html> 底下脫離這個 containing block
   document.documentElement.appendChild(document.getElementById('detailOverlay'));
   document.documentElement.appendChild(document.getElementById('lightboxOverlay'));
+  document.documentElement.appendChild(document.getElementById('announceOverlay'));
+  document.documentElement.appendChild(document.getElementById('miniPlayer'));
 
   await loadPins();
   await loadFlights(false, null);
