@@ -153,7 +153,7 @@ body {
   background:var(--surface); color:var(--text); border-radius:22px 22px 0 0;
   padding:14px 16px max(16px, env(safe-area-inset-bottom));
   transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.22,1,0.36,1);
-  overflow-y:auto; z-index:201;
+  overflow-y:auto; overscroll-behavior:contain; z-index:201;
 }
 .detail-overlay.show .detail-sheet { transform:translateY(0); }
 .detail-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
@@ -403,6 +403,33 @@ html.has-miniplayer .detail-body { padding-bottom: calc(var(--miniplayer-space, 
 <audio id="bcAudio" preload="none" playsinline style="display:none"></audio>
 
 <script>
+/* ── 背景頁面捲動鎖定 ──
+   問題：面板/彈窗（detail sheet、lightbox、廣播詞面板）疊在頁面上時，往上下拖拉拖到面板
+   邊界，捲動會「穿透」繼續帶動底下那層（上一個面板或整個頁面）一起動。
+   解法：面板開啟時把 body 用 position:fixed 釘住（並記住原本捲動位置），面板疊面板
+   時用計數器，只有全部關閉、回到最底層時才真正解鎖、恢復原本捲動位置。 */
+let _scrollLockCount = 0;
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (_scrollLockCount++ > 0) return;
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  if (_scrollLockCount <= 0) return;
+  if (--_scrollLockCount > 0) return;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 const STATUS_MAP = {
   'Done':         { cls: 'st-done',  label: '已完成' },
   'In progress':  { cls: 'st-doing', label: '進行中' },
@@ -580,6 +607,7 @@ function renderNeeds(f) {
 }
 
 async function openDetail(flightNo, notionId) {
+  lockBodyScroll();
   const overlay = document.getElementById('detailOverlay');
   const body    = document.getElementById('detailBody');
   document.getElementById('detailTitle').textContent = flightNo;
@@ -663,9 +691,11 @@ function toggleAiSummary() {
 
 function closeDetail() {
   document.getElementById('detailOverlay').classList.remove('show');
+  unlockBodyScroll();
 }
 
 function openLightbox(url) {
+  lockBodyScroll();
   const img = document.getElementById('lightboxImg');
   img.src = url;
   _zResetTransform(img);
@@ -674,6 +704,7 @@ function openLightbox(url) {
 
 function closeLightbox() {
   document.getElementById('lightboxOverlay').classList.remove('show');
+  unlockBodyScroll();
 }
 
 /* ── 兩指縮放 / 拖曳（lightbox 放大檢視）── */
@@ -837,6 +868,7 @@ let _bcNowPlaying     = null;
 const bcAudio = document.getElementById('bcAudio');
 
 async function openAnnounce() {
+  lockBodyScroll();
   document.getElementById('announceOverlay').classList.add('show');
   if (!_bcStack.length) _bcStack = [{ id: null, title: '廣播詞' }];
   await bcRender();
@@ -844,6 +876,7 @@ async function openAnnounce() {
 
 function closeAnnounce() {
   document.getElementById('announceOverlay').classList.remove('show');
+  unlockBodyScroll();
 }
 
 function bcOpenIndex(i) {
