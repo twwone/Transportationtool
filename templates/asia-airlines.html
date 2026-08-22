@@ -309,12 +309,31 @@ body {
 .miniplayer-info { flex:1; min-width:0; }
 .miniplayer-label { font-size:0.65rem; color:var(--sub); font-weight:700; letter-spacing:0.3px; }
 .miniplayer-title { font-size:0.85rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.miniplayer-progress { height:3px; background:var(--surface-soft); border-radius:2px; margin-top:6px; overflow:hidden; }
-.miniplayer-progress-bar { height:100%; background:var(--accent); width:0%; }
 .miniplayer-close {
   background:none; border:none; color:var(--sub); font-size:1rem; padding:6px; cursor:pointer;
   flex-shrink:0; -webkit-tap-highlight-color:transparent;
 }
+
+/* 拖拉進度條：用原生 range input 拿現成的手勢/觸控/鍵盤支援，
+   軌道視覺上做細，但整個 input 保留較高的高度當作大範圍拖拉熱區。 */
+.miniplayer-seek {
+  -webkit-appearance:none; appearance:none; width:100%; height:24px; margin:3px 0 -2px;
+  background:transparent; cursor:pointer; touch-action:none; display:block; padding:0;
+}
+.miniplayer-seek::-webkit-slider-runnable-track { height:4px; border-radius:2px; background:transparent; }
+.miniplayer-seek::-webkit-slider-thumb {
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%; margin-top:-6px;
+  background:var(--accent); border:2px solid var(--surface); box-shadow:0 1px 4px rgba(0,0,0,0.35);
+}
+.miniplayer-seek::-moz-range-track { height:4px; border-radius:2px; background:var(--surface-soft); }
+.miniplayer-seek::-moz-range-progress { height:4px; border-radius:2px; background:var(--accent); }
+.miniplayer-seek::-moz-range-thumb {
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--surface); box-shadow:0 1px 4px rgba(0,0,0,0.35);
+}
+.miniplayer-seek:active::-webkit-slider-thumb { transform:scale(1.2); }
+.miniplayer-seek:active::-moz-range-thumb { transform:scale(1.2); }
+.miniplayer-times { display:flex; justify-content:space-between; font-size:0.62rem; color:var(--sub); font-weight:600; margin-top:-3px; }
 </style>
 </head>
 <body>
@@ -370,7 +389,8 @@ body {
   <div class="miniplayer-info">
     <div class="miniplayer-label" id="miniPlayerLabel"></div>
     <div class="miniplayer-title" id="miniPlayerTitle"></div>
-    <div class="miniplayer-progress"><div class="miniplayer-progress-bar" id="miniPlayerProgress"></div></div>
+    <input type="range" class="miniplayer-seek" id="miniPlayerSeek" min="0" max="1000" value="0" step="1">
+    <div class="miniplayer-times"><span id="miniPlayerCurTime">0:00</span><span id="miniPlayerDurTime">0:00</span></div>
   </div>
   <button class="miniplayer-close" onclick="stopMiniPlayer()"><i class="bi bi-x-lg"></i></button>
 </div>
@@ -900,6 +920,10 @@ function bcPlay(i) {
   document.getElementById('miniPlayerTitle').textContent = it.title;
   document.getElementById('miniPlayer').classList.add('show');
   document.getElementById('announceBtn').classList.add('is-live');
+  bcSeekEl.value = 0;
+  bcSeekFill(0);
+  document.getElementById('miniPlayerCurTime').textContent = '0:00';
+  document.getElementById('miniPlayerDurTime').textContent = '0:00';
 
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -925,6 +949,8 @@ function stopMiniPlayer() {
   document.getElementById('miniPlayer').classList.remove('show');
   document.getElementById('announceBtn').classList.remove('is-live');
   document.querySelectorAll('.announce-row').forEach(el => el.classList.remove('is-playing'));
+  bcSeekEl.value = 0;
+  bcSeekFill(0);
   _bcNowPlaying = null;
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
 }
@@ -941,9 +967,46 @@ bcAudio.addEventListener('ended', () => {
   document.getElementById('miniPlayerIcon').className = 'bi bi-play-fill';
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
 });
+
+/* ── 拖拉進度條 ── */
+let _bcSeeking = false;
+const bcSeekEl = document.getElementById('miniPlayerSeek');
+
+function bcFmtTime(s) {
+  if (!isFinite(s) || s < 0) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60).toString().padStart(2, '0');
+  return `${m}:${sec}`;
+}
+
+function bcSeekFill(pct) {
+  bcSeekEl.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--surface-soft) ${pct}%)`;
+}
+
+function bcBeginSeek() { _bcSeeking = true; }
+['pointerdown', 'touchstart', 'mousedown'].forEach(ev => bcSeekEl.addEventListener(ev, bcBeginSeek));
+
+bcSeekEl.addEventListener('input', () => {
+  _bcSeeking = true;
+  const pct = Number(bcSeekEl.value) / 10;  // 0–1000 對應 0–100%
+  bcSeekFill(pct);
+  if (bcAudio.duration) {
+    bcAudio.currentTime = (pct / 100) * bcAudio.duration;
+    document.getElementById('miniPlayerCurTime').textContent = bcFmtTime(bcAudio.currentTime);
+  }
+});
+['change', 'pointerup', 'touchend', 'mouseup'].forEach(ev => bcSeekEl.addEventListener(ev, () => { _bcSeeking = false; }));
+
+bcAudio.addEventListener('loadedmetadata', () => {
+  document.getElementById('miniPlayerDurTime').textContent = bcFmtTime(bcAudio.duration);
+});
 bcAudio.addEventListener('timeupdate', () => {
-  const bar = document.getElementById('miniPlayerProgress');
-  if (bar && bcAudio.duration) bar.style.width = `${(bcAudio.currentTime / bcAudio.duration) * 100}%`;
+  if (_bcSeeking || !bcAudio.duration) return;
+  const pct = (bcAudio.currentTime / bcAudio.duration) * 100;
+  bcSeekEl.value = pct * 10;
+  bcSeekFill(pct);
+  document.getElementById('miniPlayerCurTime').textContent = bcFmtTime(bcAudio.currentTime);
+  document.getElementById('miniPlayerDurTime').textContent = bcFmtTime(bcAudio.duration);
 });
 
 (async function init() {
