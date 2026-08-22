@@ -165,16 +165,17 @@ body {
 }
 .detail-body { display:flex; flex-direction:column; gap:12px; }
 
-.needs-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.need-item { display:flex; align-items:center; gap:9px; padding:10px 11px; border-radius:14px; background:var(--surface-soft); }
-.need-item.is-need { background:var(--accent-soft); }
-.need-icon { font-size:1rem; color:var(--sub); width:20px; text-align:center; flex-shrink:0; }
-.need-item.is-need .need-icon { color:var(--accent); }
-.need-label { font-size:0.66rem; color:var(--sub); font-weight:600; margin-bottom:1px; }
-.need-val { font-size:0.83rem; font-weight:700; color:var(--sub); display:flex; align-items:center; gap:3px; }
-.need-item.is-need .need-val { color:var(--accent); }
-.needs-rmk { margin-top:2px; display:flex; gap:6px; align-items:flex-start; font-size:0.8rem; color:#9a3412; background:#fff7ed; padding:9px 11px; border-radius:12px; }
-.needs-rmk i { margin-top:2px; flex-shrink:0; }
+.props-list { display:flex; flex-direction:column; background:var(--surface-soft); border-radius:14px; padding:2px 12px; }
+.prop-row { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:10px 0; border-bottom:1px solid var(--divider); }
+.prop-row:last-child { border-bottom:none; }
+.prop-row.is-rmk { flex-direction:column; align-items:flex-start; gap:3px; }
+.prop-label { display:flex; align-items:center; gap:7px; font-size:0.76rem; color:var(--sub); font-weight:600; flex-shrink:0; }
+.prop-label i { width:14px; text-align:center; }
+.prop-val { font-size:0.85rem; font-weight:700; color:var(--text); text-align:right; }
+.prop-row.is-rmk .prop-val { text-align:left; font-weight:600; white-space:pre-wrap; }
+.prop-val.is-empty { color:var(--sub); font-weight:500; }
+.prop-row.is-active .prop-label,
+.prop-row.is-active .prop-val { color:var(--accent); }
 .detail-img { width:100%; border-radius:14px; display:block; background:var(--surface-soft); cursor:zoom-in; }
 .detail-file {
   display:flex; align-items:center; gap:8px; padding:12px; border-radius:14px;
@@ -251,7 +252,6 @@ body {
   .st-doing { background: rgba(10,132,255,0.18); color:#60a5fa; }
   .st-wait  { background: rgba(255,255,255,0.08); color:#98989d; }
   .card-rmk { background: rgba(255,159,10,0.14); color:#ffb454; }
-  .needs-rmk { background: rgba(255,159,10,0.14); color:#ffb454; }
   .gate-new, .gate-changed i { color:#ffb454; }
   .badge-gate-chg { background: rgba(255,159,10,0.18); color:#ffb454; }
   .ai-summary-alert { background: rgba(255,159,10,0.16); color:#ffb454; }
@@ -425,34 +425,50 @@ function renderCard(f) {
   </div>`;
 }
 
-function needState(val) {
-  const v = (val || '').trim();
-  const up = v.toUpperCase();
-  if (!v || up === 'NIL' || up === 'NO') return { need: false, label: '不需要' };
-  if (up === 'YES') return { need: true, label: '需要' };
-  return { need: true, label: v };  // 例如 GSE 的 FULL 這類非 YES/NO 的實際值，原樣顯示
+// 屬性原封不動照 Notion 抄出來，不翻譯也不改寫文字，只有空值統一顯示 "Empty"
+// （跟你在 Notion 卡片頁面看到的一樣），視覺上用 accent 色標出非 NIL/NO 的實際值方便掃視。
+const PROP_ROWS = [
+  { key: 'status',   label: 'Status',   icon: 'bi-record-circle' },
+  { key: 'date',     label: 'DATE',     icon: 'bi-calendar3' },
+  { key: 'acft_reg', label: 'ACFT REG', icon: 'bi-airplane' },
+  { key: 'sta',      label: 'STA',      icon: 'bi-arrow-down-left' },
+  { key: 'gate',     label: 'GATE',     icon: 'bi-door-open' },
+  { key: 'eta',      label: 'ETA',      icon: 'bi-clock-history' },
+  { key: 'std',      label: 'STD',      icon: 'bi-arrow-up-right' },
+  { key: 'spcl',     label: 'SPCL',     icon: 'bi-person-wheelchair' },
+  { key: 'gse',      label: 'GSE',      icon: 'bi-tools' },
+  { key: 'cgo',      label: 'CGO',      icon: 'bi-box-seam' },
+  { key: 'rmk',      label: 'RMK',      icon: 'bi-info-circle' },
+  { key: 'als',      label: 'ALS',      icon: 'bi-person-walking' },
+];
+const PROP_ACTIVE_KEYS = new Set(['spcl', 'gse', 'cgo', 'als']);
+
+function fmtProp(v) {
+  const t = (v || '').trim();
+  return t || 'Empty';
+}
+
+function isActiveProp(key, v) {
+  if (!PROP_ACTIVE_KEYS.has(key)) return false;
+  const up = (v || '').trim().toUpperCase();
+  return up && up !== 'NIL' && up !== 'NO';
 }
 
 function renderNeeds(f) {
-  const items = [
-    { key: 'cgo',  icon: 'bi-box-seam',            label: '貨運' },
-    { key: 'spcl', icon: 'bi-person-wheelchair',   label: '特殊需求' },
-    { key: 'gse',  icon: 'bi-tools',               label: '地勤裝備' },
-    { key: 'als',  icon: 'bi-person-walking',      label: '後送協助' },
-  ];
-  const rows = items.map(it => {
-    const st = needState(f[it.key]);
-    return `<div class="need-item ${st.need ? 'is-need' : 'is-no'}">
-      <div class="need-icon"><i class="bi ${it.icon}"></i></div>
-      <div>
-        <div class="need-label">${it.label}</div>
-        <div class="need-val"><i class="bi ${st.need ? 'bi-check-circle-fill' : 'bi-dash-circle'}"></i> ${st.label}</div>
-      </div>
+  const rows = PROP_ROWS.map(({ key, label, icon }) => {
+    const raw     = f[key];
+    const display = fmtProp(raw);
+    const active  = isActiveProp(key, raw);
+    const isRmk   = key === 'rmk';
+    return `<div class="prop-row ${active ? 'is-active' : ''} ${isRmk ? 'is-rmk' : ''}">
+      <span class="prop-label"><i class="bi ${icon}"></i> ${label}</span>
+      <span class="prop-val ${display === 'Empty' ? 'is-empty' : ''}">${display}</span>
     </div>`;
-  }).join('');
-  const rmk = (f.rmk || '').trim();
-  const showRmk = rmk && rmk.toUpperCase() !== 'NIL';
-  return `<div class="needs-grid">${rows}</div>${showRmk ? `<div class="needs-rmk"><i class="bi bi-sticky-fill"></i> ${rmk}</div>` : ''}`;
+  }).join('') + `<div class="prop-row">
+      <span class="prop-label"><i class="bi bi-arrow-up-right-square"></i> To Do List</span>
+      <span class="prop-val is-empty">Empty</span>
+    </div>`;
+  return `<div class="props-list">${rows}</div>`;
 }
 
 async function openDetail(flightNo, notionId) {
