@@ -589,6 +589,7 @@ body::before{
     <!-- Main actions -->
     <div class="act-row">
       <button class="act-btn btn-copy" id="copyBtn" onclick="doCopy()"><i class="bi bi-clipboard-fill"></i> 複製</button>
+      <button class="act-btn btn-file" id="pasteBtn" onclick="doPaste()"><i class="bi bi-clipboard2-check"></i> 貼上</button>
       <button class="act-btn btn-file" id="fileBtn" onclick="pickFile()"><i class="bi bi-paperclip"></i> 檔案</button>
       <button class="act-btn btn-clear" onclick="doClear()"><i class="bi bi-trash3-fill"></i> 清空</button>
     </div>
@@ -982,6 +983,31 @@ async function doCopy() {
   const orig = btn.textContent;
   btn.innerHTML = '<i class="bi bi-check-lg"></i> 已複製';
   setTimeout(() => btn.textContent = orig, 1800);
+}
+
+// ── Paste ──────────────────────────────────────────────────────
+async function doPaste() {
+  if (!room) return;
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const imgType = item.types.find(t => t.startsWith('image/'));
+      if (imgType) {
+        const blob = await item.getType(imgType);
+        await uploadImages([blob]);
+        return;
+      }
+    }
+    const text = await navigator.clipboard.readText();
+    if (!text) return;
+    $id('ta').value = text;
+    detectUrl(text);
+    if ($id('fileCard').classList.contains('show')) hideFileCard();
+    if (currentImages.length > 0) hideImgGallery();
+    await pushRoom('text', text);
+  } catch (err) {
+    showAlert('貼上失敗', '請允許剪貼簿權限後再試一次', [{label:'確認',style:'primary',action:null}]);
+  }
 }
 
 async function copyCode() {
