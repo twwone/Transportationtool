@@ -1135,7 +1135,9 @@ async function uploadRawFile(file, ext) {
   $id('fileBtn').disabled = true;
   try {
     const safeName = 'share-' + Date.now() + '-' + file.name.replace(/[^\w.\-]/g, '_');
-    const url = await ikUpload(file, safeName);
+    // 瀏覽器對 .py 等副檔名常抓不到 MIME type，空白 type 會被 ImageKit 誤判為 HTML 內容而擋下載，這裡強制標成純文字
+    const uploadBlob = file.type ? file : new Blob([file], {type: 'text/plain'});
+    const url = await ikUpload(uploadBlob, safeName);
     showFileCard(url, file.name);
     hideImgGallery();
     $id('ta').value = '';
@@ -1304,15 +1306,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $id('lbPrev').onclick  = () => { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; _lbRender(); };
   $id('lbNext').onclick  = () => { lbIdx = (lbIdx + 1) % currentImages.length; _lbRender(); };
   $id('lightbox').addEventListener('click', e => { if (e.target === lb()) closeLightbox(); });
-});
-document.addEventListener('keydown', e => {
-  if (!lb().classList.contains('open')) return;
-  if (e.key === 'Escape') closeLightbox();
-  if (e.key === 'ArrowLeft')  { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; _lbRender(); }
-  if (e.key === 'ArrowRight') { lbIdx = (lbIdx + 1) % currentImages.length; _lbRender(); }
-});
-// 觸控滑動切換
-(function(){
+  // 觸控滑動切換
   let sx = 0;
   $id('lightbox').addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, {passive:true});
   $id('lightbox').addEventListener('touchend', e => {
@@ -1322,7 +1316,13 @@ document.addEventListener('keydown', e => {
     else        { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; }
     _lbRender();
   });
-})();
+});
+document.addEventListener('keydown', e => {
+  if (!lb().classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft')  { lbIdx = (lbIdx - 1 + currentImages.length) % currentImages.length; _lbRender(); }
+  if (e.key === 'ArrowRight') { lbIdx = (lbIdx + 1) % currentImages.length; _lbRender(); }
+});
 
 async function downloadFile() {
   if (!currentFileUrl) return;
