@@ -597,7 +597,7 @@ body::before{
     <button class="destroy-btn" onclick="doDestroy()"><i class="bi bi-x-octagon-fill"></i> 銷毀房間（雙方同步清除）</button>
 
     <input type="file" id="fileIn" multiple
-      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.mp3,.mp4"
+      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.mp3,.mp4,.py"
       style="display:none">
     <input type="file" id="imgIn" accept="image/*" multiple style="display:none">
   </div>
@@ -648,7 +648,7 @@ const POLL_INTERVAL     = 1500;
 const HISTORY_POLL_MS   = 30000;
 
 const IMG_EXTS  = new Set(['jpg','jpeg','png','gif','webp','heic','heif','bmp']);
-const FILE_EXTS = new Set(['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','md','zip','rar','mp3','mp4']);
+const FILE_EXTS = new Set(['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','md','zip','rar','mp3','mp4','py']);
 
 let room              = null;
 let pollTid           = null;
@@ -1253,6 +1253,7 @@ function getFileIcon(name) {
     ppt:  {icon:'<i class="bi bi-file-earmark-ppt-fill"></i>', bg:'#ffedd5'}, pptx: {icon:'<i class="bi bi-file-earmark-ppt-fill"></i>', bg:'#ffedd5'},
     txt:  {icon:'<i class="bi bi-file-earmark-text-fill"></i>', bg:'#f3f4f6'},
     md:   {icon:'<i class="bi bi-file-earmark-code-fill"></i>', bg:'#e0f2fe'},
+    py:   {icon:'<i class="bi bi-file-earmark-code-fill"></i>', bg:'#e0f2fe'},
     zip:  {icon:'<i class="bi bi-file-earmark-zip-fill"></i>', bg:'#fef3c7'}, rar: {icon:'<i class="bi bi-file-earmark-zip-fill"></i>', bg:'#fef3c7'},
     mp3:  {icon:'<i class="bi bi-file-earmark-music-fill"></i>', bg:'#f3e8ff'},
     mp4:  {icon:'<i class="bi bi-file-earmark-play-fill"></i>', bg:'#fff7ed'},
