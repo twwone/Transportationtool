@@ -7,7 +7,6 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<script src="/static/config.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
@@ -599,21 +598,65 @@ let viewYear, viewMonth;
   else { viewYear = ty; viewMonth = tm; }
 })();
 
-/* ── 手動調整存 Config（跨裝置同步） ── */
-let OVERRIDE_KEY, overrides;
-function allOverrides() {
-  return (Config.getActive().schedule && Config.getActive().schedule.overrides) || {};
+/* ── 手動調整存 localStorage（每月各自一組）＋雲端同步 ──
+ * 這頁不要求登入，所以用固定同步碼（非帳號系統），任何裝置打開就自動同步。 */
+const SCHED_SUPA_URL = 'https://bqapzqdfgnoghtgdakdw.supabase.co';
+const SCHED_SUPA_KEY = 'sb_publishable_5Gw7rYaKnI3_fzcNpLbmwA_h0CgB7Fv';
+const SCHED_SYNC_KEY = 'schedule_default_v1';
+const SCHED_HDR = {
+  'Content-Type': 'application/json',
+  'apikey': SCHED_SUPA_KEY,
+  'Authorization': `Bearer ${SCHED_SUPA_KEY}`
+};
+
+function collectAllOverrides() {
+  const all = {};
+  for (const k of Object.keys(localStorage)) {
+    if (!k.startsWith('sched_overrides_')) continue;
+    try { all[k] = JSON.parse(localStorage.getItem(k)); } catch {}
+  }
+  return all;
 }
+
+async function schedPush() {
+  try {
+    await fetch(`${SCHED_SUPA_URL}/rest/v1/user_configs`, {
+      method: 'POST',
+      headers: { ...SCHED_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({
+        sync_key: SCHED_SYNC_KEY,
+        config: { overrides: collectAllOverrides() },
+        updated_at: new Date().toISOString()
+      })
+    });
+  } catch {}
+}
+
+async function schedPull() {
+  try {
+    const r = await fetch(
+      `${SCHED_SUPA_URL}/rest/v1/user_configs?sync_key=eq.${SCHED_SYNC_KEY}&select=config`,
+      { headers: SCHED_HDR }
+    );
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (!rows.length) return;
+    const remote = rows[0].config && rows[0].config.overrides;
+    if (!remote) return;
+    for (const [k, v] of Object.entries(remote)) {
+      localStorage.setItem(k, JSON.stringify(v));
+    }
+  } catch {}
+}
+
+let OVERRIDE_KEY, overrides;
 function loadOverrides() {
-  OVERRIDE_KEY = `${viewYear}-${viewMonth}`;
-  overrides = allOverrides()[OVERRIDE_KEY] || {};
+  OVERRIDE_KEY = `sched_overrides_${viewYear}_${viewMonth}`;
+  overrides = JSON.parse(localStorage.getItem(OVERRIDE_KEY) || '{}');
 }
 function saveOverrides() {
-  const all = allOverrides();
-  all[OVERRIDE_KEY] = overrides;
-  Config.save({ schedule: { overrides: all } });
-  const sk = Config.getActive().syncKey;
-  if (sk) Config.push().catch(() => {});
+  localStorage.setItem(OVERRIDE_KEY, JSON.stringify(overrides));
+  schedPush();
 }
 loadOverrides();
 
@@ -864,11 +907,8 @@ function confirmDeleteMonth() {
 
   deletedMonths.add(key);
   localStorage.setItem(DELETED_KEY, JSON.stringify([...deletedMonths]));
-  const all = allOverrides();
-  delete all[key];
-  Config.save({ schedule: { overrides: all } });
-  const sk = Config.getActive().syncKey;
-  if (sk) Config.push().catch(() => {});
+  localStorage.removeItem(`sched_overrides_${y}_${m}`);
+  schedPush();
 
   const keys = monthKeys();
   if (keys.length) {
@@ -907,10 +947,8 @@ document.getElementById('del-input').addEventListener('keydown', e => {
 });
 
 (async function initSync() {
-  const sk = Config.getActive().syncKey;
-  if (sk) {
-    try { await Config.pull(sk); loadOverrides(); } catch {}
-  }
+  await schedPull();
+  loadOverrides();
   render();
 })();
 </script>
