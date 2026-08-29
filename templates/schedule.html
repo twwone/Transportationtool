@@ -632,21 +632,23 @@ async function schedPush() {
   } catch {}
 }
 
+/* 回傳 true = 雲端已有資料並套用完畢；false = 雲端目前是空的（呼叫端可視情況把本機資料傳上去） */
 async function schedPull() {
   try {
     const r = await fetch(
       `${SCHED_SUPA_URL}/rest/v1/user_configs?sync_key=eq.${SCHED_SYNC_KEY}&select=config`,
       { headers: SCHED_HDR }
     );
-    if (!r.ok) return;
+    if (!r.ok) return false;
     const rows = await r.json();
-    if (!rows.length) return;
+    if (!rows.length) return false;
     const remote = rows[0].config && rows[0].config.overrides;
-    if (!remote) return;
+    if (!remote) return false;
     for (const [k, v] of Object.entries(remote)) {
       localStorage.setItem(k, JSON.stringify(v));
     }
-  } catch {}
+    return true;
+  } catch { return false; }
 }
 
 let OVERRIDE_KEY, overrides;
@@ -947,7 +949,9 @@ document.getElementById('del-input').addEventListener('keydown', e => {
 });
 
 (async function initSync() {
-  await schedPull();
+  const hadRemote = await schedPull();
+  // 雲端是空的（第一次同步）：把這台裝置現有的本機資料當成初始資料傳上去
+  if (!hadRemote && Object.keys(collectAllOverrides()).length) await schedPush();
   loadOverrides();
   render();
 })();
