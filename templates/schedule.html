@@ -632,23 +632,21 @@ async function schedPush() {
   } catch {}
 }
 
-/* 回傳 true = 雲端已有資料並套用完畢；false = 雲端目前是空的（呼叫端可視情況把本機資料傳上去） */
 async function schedPull() {
   try {
     const r = await fetch(
       `${SCHED_SUPA_URL}/rest/v1/user_configs?sync_key=eq.${SCHED_SYNC_KEY}&select=config`,
       { headers: SCHED_HDR }
     );
-    if (!r.ok) return false;
+    if (!r.ok) return;
     const rows = await r.json();
-    if (!rows.length) return false;
+    if (!rows.length) return;
     const remote = rows[0].config && rows[0].config.overrides;
-    if (!remote) return false;
+    if (!remote) return;
     for (const [k, v] of Object.entries(remote)) {
       localStorage.setItem(k, JSON.stringify(v));
     }
-    return true;
-  } catch { return false; }
+  } catch {}
 }
 
 let OVERRIDE_KEY, overrides;
@@ -949,11 +947,11 @@ document.getElementById('del-input').addEventListener('keydown', e => {
 });
 
 (async function initSync() {
-  const hadRemote = await schedPull();
-  // 雲端是空的（第一次同步）：把這台裝置現有的本機資料當成初始資料傳上去
-  if (!hadRemote && Object.keys(collectAllOverrides()).length) await schedPush();
+  await schedPull();
   loadOverrides();
   render();
+  // 每次打開頁面都把本機（含剛才拉回來的）資料完整推上雲端，不判斷雲端是否已有資料
+  schedPush();
 })();
 </script>
 </body>
