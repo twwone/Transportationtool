@@ -7,6 +7,7 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="/static/config.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
@@ -598,11 +599,21 @@ let viewYear, viewMonth;
   else { viewYear = ty; viewMonth = tm; }
 })();
 
-/* ── 手動調整存 localStorage（每月各自一組） ── */
+/* ── 手動調整存 Config（跨裝置同步） ── */
 let OVERRIDE_KEY, overrides;
+function allOverrides() {
+  return (Config.getActive().schedule && Config.getActive().schedule.overrides) || {};
+}
 function loadOverrides() {
-  OVERRIDE_KEY = `sched_overrides_${viewYear}_${viewMonth}`;
-  overrides = JSON.parse(localStorage.getItem(OVERRIDE_KEY) || '{}');
+  OVERRIDE_KEY = `${viewYear}-${viewMonth}`;
+  overrides = allOverrides()[OVERRIDE_KEY] || {};
+}
+function saveOverrides() {
+  const all = allOverrides();
+  all[OVERRIDE_KEY] = overrides;
+  Config.save({ schedule: { overrides: all } });
+  const sk = Config.getActive().syncKey;
+  if (sk) Config.push().catch(() => {});
 }
 loadOverrides();
 
@@ -776,7 +787,7 @@ function confirmEdit() {
   const raw = document.getElementById('sheet-input').value.trim().toUpperCase();
   if (!raw) return;
   overrides[editDay] = raw;
-  localStorage.setItem(OVERRIDE_KEY, JSON.stringify(overrides));
+  saveOverrides();
   closeSheet();
   render();
 }
@@ -784,7 +795,7 @@ function confirmEdit() {
 function resetDay() {
   if (editDay === null) return;
   delete overrides[editDay];
-  localStorage.setItem(OVERRIDE_KEY, JSON.stringify(overrides));
+  saveOverrides();
   closeSheet();
   render();
 }
@@ -853,7 +864,11 @@ function confirmDeleteMonth() {
 
   deletedMonths.add(key);
   localStorage.setItem(DELETED_KEY, JSON.stringify([...deletedMonths]));
-  localStorage.removeItem(`sched_overrides_${y}_${m}`);
+  const all = allOverrides();
+  delete all[key];
+  Config.save({ schedule: { overrides: all } });
+  const sk = Config.getActive().syncKey;
+  if (sk) Config.push().catch(() => {});
 
   const keys = monthKeys();
   if (keys.length) {
@@ -891,7 +906,13 @@ document.getElementById('del-input').addEventListener('keydown', e => {
   if (e.key === 'Escape') closeDeleteSheet();
 });
 
-render();
+(async function initSync() {
+  const sk = Config.getActive().syncKey;
+  if (sk) {
+    try { await Config.pull(sk); loadOverrides(); } catch {}
+  }
+  render();
+})();
 </script>
 </body>
 </html>
