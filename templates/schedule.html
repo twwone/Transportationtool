@@ -404,6 +404,30 @@ main {
 .btn-reset.show { display: block; }
 .btn-reset:active { opacity: 0.65; }
 
+/* ── Anniversary dot ── */
+.cal-cell.anniversary::before {
+  content: '';
+  position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #f472b6;
+  z-index: 1;
+}
+
+/* ── Anniversary banner in edit sheet ── */
+.anniversary-banner {
+  background: rgba(244,114,182,0.12);
+  border: 1px solid rgba(244,114,182,0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 0.85rem; font-weight: 700;
+  color: #db2777; text-align: center;
+  letter-spacing: -0.01em;
+}
+@media (prefers-color-scheme: dark) {
+  .anniversary-banner { background: rgba(244,114,182,0.15); color: #f9a8d4; }
+}
+
 /* ── Time picker section ── */
 .time-sep {
   display: flex; align-items: center; gap: 10px;
@@ -477,6 +501,7 @@ main {
   <div class="sheet-handle"></div>
   <div class="sheet-title"   id="sheet-title"></div>
   <div class="sheet-current" id="sheet-current"></div>
+  <div class="anniversary-banner" id="anniversary-banner" style="display:none"></div>
   <div class="input-label">班別代碼</div>
   <input class="sheet-input" id="sheet-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
 
@@ -686,6 +711,23 @@ function lookup(code) {
   return { type: 'unknown', label: code };
 }
 
+/* ── 紀念日計算 ── */
+const COUPLE_START = new Date(2024, 9, 19); // 2024/10/19
+
+function getAnniversaryLabel(year, month, day) {
+  const labels = [];
+  if (month === 2 && day === 14) labels.push('情人節');
+  if (month === 10 && day === 19) {
+    const yrs = year - 2024;
+    if (yrs === 0) labels.push('在一起的日子');
+    else if (yrs > 0) labels.push(`${yrs} 週年紀念日`);
+  }
+  const target = new Date(year, month - 1, day);
+  const diffDays = Math.round((target - COUPLE_START) / (1000 * 60 * 60 * 24));
+  if (diffDays > 0 && diffDays % 100 === 0) labels.push(`${diffDays} 天紀念日`);
+  return labels.length ? labels.join(' · ') : null;
+}
+
 /* ── 渲染月曆 ── */
 function render() {
   const today = new Date();
@@ -737,10 +779,12 @@ function render() {
       shiftHtml = `<div class="cal-shift"><span class="cal-badge" style="color:#dc2626;background:rgba(220,38,38,.08)">${s.label||'?'}</span></div>`;
     }
 
+    const anniv = getAnniversaryLabel(year, month, d);
     const cls = ['cal-cell'];
     if (isToday)  cls.push('today');
     if (s.type === 'off') cls.push('is-off');
     if (modified) cls.push('modified');
+    if (anniv)    cls.push('anniversary');
 
     html += `<div class="${cls.join(' ')}" onclick="openEdit(${d})">
       <span class="cal-day-num${isWknd ? ' wknd' : ''}">${d}</span>
@@ -793,6 +837,15 @@ function openEdit(day) {
   document.getElementById('sheet-current').innerHTML = modified
     ? `原始：<b>${origCode}</b>　→　已調整為 <b>${code}</b>`
     : `目前班別：<b>${code}</b>`;
+
+  const annivLabel = getAnniversaryLabel(year, month, day);
+  const banner = document.getElementById('anniversary-banner');
+  if (annivLabel) {
+    banner.textContent = '♡  ' + annivLabel;
+    banner.style.display = '';
+  } else {
+    banner.style.display = 'none';
+  }
   document.getElementById('sheet-input').value = code;
 
   // 預填時間選擇器
