@@ -543,6 +543,9 @@ def tias_flights_api():
 
 @app.route("/api/tias/debug")
 def tias_debug():
+    auth = request.headers.get("Authorization", "")
+    if not _admin_pin_ok(auth.replace("Bearer ", "").strip()):
+        return jsonify({"error": "unauthorized"}), 401
     arr, dep, ok = _fetch_tias()
     return jsonify({
         "tdx_configured": ok,
@@ -707,6 +710,9 @@ def schedule_week_api():
 
 @app.route("/api/schedule/debug")
 def schedule_debug():
+    auth = request.headers.get("Authorization", "")
+    if not _admin_pin_ok(auth.replace("Bearer ", "").strip()):
+        return jsonify({"error": "unauthorized"}), 401
     dep, arr, ok = _fetch_schedule()
     return jsonify({
         "tdx_configured": ok,
@@ -1139,11 +1145,25 @@ def imagekit_auth():
     ).hexdigest()
     return _sc(jsonify({"token": token, "expire": expire, "signature": signature}))
 
+_SHARE_RATE: dict = {}   # ip -> [timestamps]
+_SHARE_RATE_LOCK = threading.Lock()
+_SHARE_RATE_WINDOW = 3600   # 1 小時
+_SHARE_RATE_LIMIT  = 20     # 每 IP 每小時最多建立 20 間
+
 @app.route("/api/share/room", methods=["POST", "OPTIONS"])
 def share_create():
     if request.method == "OPTIONS":
         return _sc(jsonify({}))
-    now  = time.time()
+    ip  = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    now = time.time()
+    with _SHARE_RATE_LOCK:
+        ts_list = _SHARE_RATE.get(ip, [])
+        ts_list = [t for t in ts_list if now - t < _SHARE_RATE_WINDOW]
+        if len(ts_list) >= _SHARE_RATE_LIMIT:
+            _SHARE_RATE[ip] = ts_list
+            return _sc(jsonify({"error": "rate_limit"})), 429
+        ts_list.append(now)
+        _SHARE_RATE[ip] = ts_list
     code = None
     for _ in range(10):
         c = str(random.randint(1000, 9999))
@@ -3147,11 +3167,16 @@ def settings_page():
 _SUPA_BASE = "https://bqapzqdfgnoghtgdakdw.supabase.co"
 _SUPA_ANON = os.environ.get("SUPABASE_ANON_KEY", "")
 
+def _admin_pin_ok(pin: str) -> bool:
+    correct = os.environ.get("ADMIN_PIN", "")
+    return bool(correct) and pin == correct
+
+
 @app.route("/api/admin/users")
 def admin_users():
     auth = request.headers.get("Authorization", "")
     pin  = auth.replace("Bearer ", "").strip()
-    if pin != os.environ.get("ADMIN_PIN", "0000"):
+    if not _admin_pin_ok(pin):
         return jsonify({"error": "unauthorized"}), 401
 
     supa_url = os.environ.get("SUPABASE_URL", _SUPA_BASE)
@@ -3346,8 +3371,7 @@ def v_thumb():
 def v_admin_bypass():
     data      = request.get_json(force=True) or {}
     admin_pin = str(data.get("admin_pin", ""))
-    correct   = os.environ.get("ADMIN_PIN", "0000")
-    if admin_pin != correct:
+    if not _admin_pin_ok(admin_pin):
         return jsonify({"error": "wrong_pin"}), 403
     v_pin = os.environ.get("V_PIN", "")
     raw   = _redis_get(_V_KEY)
