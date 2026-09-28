@@ -2215,6 +2215,282 @@ def memo_save():
     return jsonify({"ok": True})
 
 
+# ══════════════════════════════════════════════
+#  高鐵優惠監控（早鳥 / 大學生）
+#  cron-job.org 每分鐘打 /api/thsr/tick?key=... 查一輪，
+#  某班次優惠「沒有 → 有」時推 Telegram
+# ══════════════════════════════════════════════
+_THSR_BASE      = "https://www.thsrc.com.tw"
+_THSR_TIMETABLE = f"{_THSR_BASE}/ArticleContent/a3b630bb-1066-4352-a1ef-58c7b4e8ef7c"
+_THSR_HEADERS   = {
+    "User-Agent":       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128 Safari/537.36",
+    "Referer":          _THSR_TIMETABLE,
+    "Origin":           _THSR_BASE,
+    "X-Requested-With": "XMLHttpRequest",
+}
+_THSR_STATIONS = {
+    "南港": "NanGang", "台北": "TaiPei",   "板橋": "BanQiao", "桃園": "TaoYuan",
+    "新竹": "XinZhu",  "苗栗": "MiaoLi",   "台中": "TaiZhong", "彰化": "ZhangHua",
+    "雲林": "YunLin",  "嘉義": "JiaYi",    "台南": "TaiNan",  "左營": "ZuoYing",
+}
+_THSR_DISCOUNTS = {
+    "early":   {"name": "早鳥",   "id": "e1b4c4d9-98d7-4c8c-9834-e1d2528750f1"},
+    "student": {"name": "大學生", "id": "68d9fc7b-7330-44c2-962a-74bc47d2ee8a"},
+}
+_THSR_MAX_TASKS   = 5
+_THSR_FAIL_ALERT  = 10     # 連續失敗幾輪才推故障通知
+_THSR_TASKS_KEY   = "thsr:tasks"
+_THSR_SEEN_KEY    = "thsr:seen"
+_THSR_HEALTH_KEY  = "thsr:health"
+_THSR_AVAIL_KEY   = "thsr:avail"    # 最近一輪實際查到的班次（顯示用）
+_TW = _tz(_td(hours=8))
+
+
+def _thsr_task_end(task: dict) -> _dt:
+    """時段內最後一班的發車時間（台灣時間），過了就算任務結束。"""
+    y, m, d = (int(x) for x in task["date"].split("-"))
+    hh, mm = (int(x) for x in task["time_to"].split(":"))
+    return _dt(y, m, d, hh, mm, tzinfo=_TW)
+
+
+def _thsr_query(task: dict, disc_key: str) -> list:
+    """查某筆任務某種優惠目前有哪些班次；失敗直接 raise。"""
+    r = _requests.post(
+        f"{_THSR_BASE}/TimeTable/Search",
+        headers=_THSR_HEADERS,
+        data={
+            "SearchType":        "S",
+            "Lang":              "TW",
+            "StartStation":      _THSR_STATIONS[task["origin"]],
+            "EndStation":        _THSR_STATIONS[task["dest"]],
+            "OutWardSearchDate": task["date"].replace("-", "/"),
+            "OutWardSearchTime": task["time_from"],
+            "ReturnSearchDate":  "",
+            "ReturnSearchTime":  "",
+            "DiscountType":      _THSR_DISCOUNTS[disc_key]["id"],
+        },
+        timeout=12,
+    )
+    body = r.json()
+    if not body.get("success"):
+        raise RuntimeError(f"THSR success=false HTTP {r.status_code}")
+    items = body["data"]["DepartureTable"]["TrainItem"] or []
+    trains = []
+    for t in items:
+        dep, arr = t.get("DepartureTime", ""), t.get("DestinationTime", "")
+        if not (task["time_from"] <= dep <= task["time_to"]):
+            continue
+        if task.get("arrive_by") and arr > task["arrive_by"]:
+            continue
+        value = next((x.get("Value", "") for x in t.get("Discount") or []
+                      if x.get("Id") == _THSR_DISCOUNTS[disc_key]["id"]), "")
+        trains.append({"no": t.get("TrainNumber", "?"), "dep": dep, "arr": arr,
+                       "value": value, "free": t.get("NonReservedCar", "")})
+    return trains
+
+
+def _thsr_booking_url(task: dict, disc_key: str) -> str:
+    """官網時刻表查詢頁，已帶入站點 / 日期 / 時間 / 優惠；加密失敗就回未帶條件的時刻表。"""
+    plain = (
+        f"?startStation={_THSR_STATIONS[task['origin']]}"
+        f"&endStation={_THSR_STATIONS[task['dest']]}"
+        f"&typesofticket=tot-1"
+        f"&outWardDate={task['date'].replace('-', '/')}"
+        f"&outWardTime={task['time_from']}"
+        f"&returnDate=&returnTime="
+        f"&offer={_THSR_DISCOUNTS[disc_key]['id']}"
+    )
+    try:
+        r = _requests.post(f"{_THSR_BASE}/TimeTable/Encrypt", headers=_THSR_HEADERS,
+                           data={"plainText": plain}, timeout=8)
+        cipher = r.json().get("cipherText", "")
+        if cipher:
+            return f"{_THSR_TIMETABLE}?search={_urlparse.quote(cipher, safe='+/=')}"
+    except Exception as e:
+        app.logger.warning(f"thsr encrypt: {e}")
+    return _THSR_TIMETABLE
+
+
+def _thsr_tg(text: str) -> bool:
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    chat  = os.environ.get("TELEGRAM_CHAT_ID", "")
+    if not (token and chat):
+        app.logger.warning("thsr: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 未設定")
+        return False
+    try:
+        r = _requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                           json={"chat_id": chat, "text": text[:4000],
+                                 "disable_web_page_preview": True},
+                           timeout=8)
+        return r.ok
+    except Exception as e:
+        app.logger.warning(f"thsr tg: {e}")
+        return False
+
+
+def _thsr_tasks() -> list:
+    tasks = _kv_get(_THSR_TASKS_KEY)
+    return tasks if isinstance(tasks, list) else []
+
+
+@app.route("/thsr")
+def thsr_page():
+    return render_template("thsr.html", stations=list(_THSR_STATIONS.keys()))
+
+
+@app.route("/api/thsr/tasks", methods=["GET"])
+def thsr_list():
+    now  = _dt.now(_TW)
+    avail = _kv_get(_THSR_AVAIL_KEY) or {}
+    out   = []
+    for t in _thsr_tasks():
+        t = dict(t)
+        t["ended"] = now > _thsr_task_end(t)
+        t["current"] = avail.get(t["id"], {})
+        out.append(t)
+    return jsonify({"tasks": out, "health": _kv_get(_THSR_HEALTH_KEY) or {},
+                    "max": _THSR_MAX_TASKS})
+
+
+@app.route("/api/thsr/tasks", methods=["POST"])
+def thsr_add():
+    b = request.get_json(silent=True) or {}
+    origin, dest = b.get("origin"), b.get("dest")
+    date = str(b.get("date", ""))
+    time_from, time_to = str(b.get("time_from", "")), str(b.get("time_to", ""))
+    arrive_by = str(b.get("arrive_by") or "")
+    discounts = [d for d in (b.get("discounts") or []) if d in _THSR_DISCOUNTS]
+
+    if origin not in _THSR_STATIONS or dest not in _THSR_STATIONS:
+        return jsonify({"error": "請選擇起訖站"}), 400
+    if origin == dest:
+        return jsonify({"error": "出發站與到達站不能相同"}), 400
+    if not _re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        return jsonify({"error": "日期格式錯誤"}), 400
+    hhmm = r"([01]\d|2[0-3]):[0-5]\d"
+    if not (_re.fullmatch(hhmm, time_from) and _re.fullmatch(hhmm, time_to)):
+        return jsonify({"error": "時間格式錯誤"}), 400
+    if time_from > time_to:
+        return jsonify({"error": "開始時間不能晚於結束時間"}), 400
+    if arrive_by and not _re.fullmatch(hhmm, arrive_by):
+        return jsonify({"error": "最晚抵達時間格式錯誤"}), 400
+    if not discounts:
+        return jsonify({"error": "至少勾選一種優惠"}), 400
+
+    task = {"id": secrets.token_hex(4), "origin": origin, "dest": dest, "date": date,
+            "time_from": time_from, "time_to": time_to, "arrive_by": arrive_by,
+            "discounts": discounts, "paused": False,
+            "created": _dt.now(_TW).isoformat(timespec="seconds")}
+    if _dt.now(_TW) > _thsr_task_end(task):
+        return jsonify({"error": "這個時段已經過了"}), 400
+
+    tasks = _thsr_tasks()
+    if len(tasks) >= _THSR_MAX_TASKS:
+        return jsonify({"error": f"最多 {_THSR_MAX_TASKS} 筆任務，請先刪除舊的"}), 400
+    tasks.append(task)
+    _kv_set(_THSR_TASKS_KEY, tasks)
+    return jsonify({"ok": True, "task": task})
+
+
+@app.route("/api/thsr/tasks/<task_id>", methods=["PATCH", "DELETE"])
+def thsr_edit(task_id):
+    tasks = _thsr_tasks()
+    if not any(t["id"] == task_id for t in tasks):
+        return jsonify({"error": "找不到任務"}), 404
+    if request.method == "DELETE":
+        tasks = [t for t in tasks if t["id"] != task_id]
+    else:
+        paused = bool((request.get_json(silent=True) or {}).get("paused"))
+        for t in tasks:
+            if t["id"] == task_id:
+                t["paused"] = paused
+    # 刪除或暫停都清掉通知紀錄：恢復時會重新推一次目前有的班次
+    for key in (_THSR_SEEN_KEY, _THSR_AVAIL_KEY):
+        data = _kv_get(key) or {}
+        if data.pop(task_id, None) is not None:
+            _kv_set(key, data)
+    _kv_set(_THSR_TASKS_KEY, tasks)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/thsr/tick")
+def thsr_tick():
+    secret = os.environ.get("THSR_TICK_KEY", "")
+    if not secret or not hmac.compare_digest(request.args.get("key", ""), secret):
+        return jsonify({"error": "unauthorized"}), 401
+
+    now    = _dt.now(_TW)
+    tasks  = [t for t in _thsr_tasks() if not t.get("paused") and now <= _thsr_task_end(t)]
+    seen   = _kv_get(_THSR_SEEN_KEY) or {}
+    health = _kv_get(_THSR_HEALTH_KEY) or {}
+    jobs   = [(t, d) for t in tasks for d in t["discounts"]]
+
+    results, errors = {}, []
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        futs = {pool.submit(_thsr_query, t, d): (t, d) for t, d in jobs}
+        for f in as_completed(futs):
+            t, d = futs[f]
+            try:
+                results[(t["id"], d)] = f.result()
+            except Exception as e:
+                errors.append(f"{t['origin']}→{t['dest']} {_THSR_DISCOUNTS[d]['name']}: {str(e)[:120]}")
+
+    avail = _kv_get(_THSR_AVAIL_KEY) or {}
+    sent = 0
+    for (tid, d), trains in results.items():
+        avail.setdefault(tid, {})[d] = [tr["no"] for tr in trains]
+        t = next(x for x in tasks if x["id"] == tid)
+        prev = set(seen.get(tid, {}).get(d, []))
+        fresh = [tr for tr in trains if tr["no"] not in prev]
+        seen.setdefault(tid, {})[d] = [tr["no"] for tr in trains]
+        if not fresh:
+            continue
+        lines = "\n".join(
+            f"{tr['no']}  {tr['dep']} → {tr['arr']}  {tr['value']}"
+            + (f"  自由座 {tr['free']} 車" if tr["free"] else "")
+            for tr in fresh[:10]
+        )
+        if len(fresh) > 10:
+            lines += f"\n...另有 {len(fresh) - 10} 班"
+        msg = (f"高鐵{_THSR_DISCOUNTS[d]['name']}優惠出現！\n"
+               f"{t['origin']} → {t['dest']}｜{t['date']}｜{t['time_from']}–{t['time_to']}"
+               + (f"｜{t['arrive_by']} 前抵達" if t.get("arrive_by") else "")
+               + f"\n\n{lines}\n\n立即訂票：\n{_thsr_booking_url(t, d)}")
+        if _thsr_tg(msg):
+            sent += 1
+        else:
+            # 沒送出去就不要記成已通知，下一輪再試
+            seen[tid][d] = [n for n in seen[tid][d] if n in prev]
+
+    # 清掉已刪除任務的殘留紀錄
+    live_ids = {t["id"] for t in _thsr_tasks()}
+    seen  = {k: v for k, v in seen.items()  if k in live_ids}
+    avail = {k: v for k, v in avail.items() if k in live_ids}
+    _kv_set(_THSR_SEEN_KEY, seen)
+    _kv_set(_THSR_AVAIL_KEY, avail)
+
+    stamp = now.isoformat(timespec="seconds")
+    health["last_tick"] = stamp
+    if jobs and len(errors) == len(jobs):
+        health["fail_count"] = health.get("fail_count", 0) + 1
+        health["last_error"] = errors[0]
+        if health["fail_count"] >= _THSR_FAIL_ALERT and not health.get("alerted"):
+            if _thsr_tg(f"高鐵刷票故障：已連續 {health['fail_count']} 輪查詢失敗\n{errors[0]}"):
+                health["alerted"] = True
+    else:
+        if jobs:
+            health["last_ok"] = stamp
+        if health.get("alerted"):
+            _thsr_tg("高鐵刷票已恢復正常")
+        health.update({"fail_count": 0, "alerted": False})
+        if errors:
+            health["last_error"] = errors[0]
+    _kv_set(_THSR_HEALTH_KEY, health)
+
+    return jsonify({"ok": True, "tasks": len(tasks), "queries": len(jobs),
+                    "errors": errors, "sent": sent})
+
+
 @app.route("/diet")
 def diet():
     return render_template("diet.html")

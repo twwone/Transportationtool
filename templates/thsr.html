@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>高鐵優惠監控</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { overscroll-behavior: none; }
+
+:root {
+  --bg:       #fbfbfd;
+  --surface:  rgba(255, 255, 255, 0.72);
+  --field:    rgba(0, 0, 0, 0.04);
+  --border:   rgba(0, 0, 0, 0.08);
+  --text:     #1d1d1f;
+  --sub:      #86868b;
+  --accent:   #5856d6;
+  --accent-2: rgba(88, 86, 214, 0.10);
+  --ok:       #248a3d;
+  --ok-2:     rgba(52, 199, 89, 0.12);
+  --warn:     #c93400;
+  --warn-2:   rgba(255, 59, 48, 0.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:       #000;
+    --surface:  rgba(28, 28, 30, 0.72);
+    --field:    rgba(255, 255, 255, 0.06);
+    --border:   rgba(255, 255, 255, 0.09);
+    --text:     #f5f5f7;
+    --sub:      #98989d;
+    --accent:   #8b8af0;
+    --accent-2: rgba(139, 138, 240, 0.14);
+    --ok:       #30d158;
+    --ok-2:     rgba(48, 209, 88, 0.14);
+    --warn:     #ff6961;
+    --warn-2:   rgba(255, 69, 58, 0.14);
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  padding-bottom: max(32px, env(safe-area-inset-bottom) + 20px);
+}
+
+/* ── Header ── */
+.header { padding: max(20px, env(safe-area-inset-top) + 8px) 24px 0; }
+.back-btn {
+  background: none; border: none; font: inherit; font-size: 0.78rem;
+  color: var(--sub); cursor: pointer; padding: 0; letter-spacing: 0.06em;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s, transform 0.15s cubic-bezier(0.25,1,0.5,1), opacity 0.15s ease;
+}
+.back-btn:active { color: var(--accent); transform: scale(0.93); opacity: 0.6; }
+.header-title {
+  font-size: 2rem; font-weight: 700; letter-spacing: -0.03em;
+  margin-top: 10px; line-height: 1.15;
+}
+.header-sub { font-size: 0.85rem; color: var(--sub); margin-top: 6px; }
+
+/* ── Layout ── */
+.wrap { display: flex; flex-direction: column; gap: 24px; padding: 24px 16px 0; }
+.section-label {
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
+  color: var(--sub); padding: 0 8px 10px;
+  display: flex; justify-content: space-between;
+}
+.card {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 20px;
+}
+
+/* ── Health ── */
+.health { display: flex; align-items: center; gap: 12px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: var(--sub); }
+.health.ok   .dot { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-2); }
+.health.bad  .dot { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-2); }
+.health-main { font-size: 0.95rem; font-weight: 590; }
+.health-sub  { font-size: 0.8rem; color: var(--sub); margin-top: 2px; word-break: break-all; }
+
+/* ── Tasks ── */
+.tasks { display: flex; flex-direction: column; gap: 12px; }
+.task-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.route { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+.route i { font-size: 0.9rem; color: var(--sub); margin: 0 4px; }
+.meta { font-size: 0.85rem; color: var(--sub); margin-top: 4px; line-height: 1.5; }
+.badge {
+  font-size: 0.72rem; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  white-space: nowrap; background: var(--field); color: var(--sub);
+}
+.badge.live  { background: var(--ok-2); color: var(--ok); }
+.badge.wait  { background: var(--accent-2); color: var(--accent); }
+.avail { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chip {
+  font-size: 0.8rem; padding: 6px 12px; border-radius: 12px;
+  background: var(--field); color: var(--sub);
+}
+.chip.has { background: var(--ok-2); color: var(--ok); font-weight: 600; }
+.task-actions { display: flex; gap: 8px; margin-top: 16px; }
+.task.off { opacity: 0.55; }
+.nw { white-space: nowrap; }
+.empty { text-align: center; color: var(--sub); font-size: 0.9rem; padding: 12px 0; }
+
+/* ── Buttons ── */
+.btn {
+  flex: 1; border: none; border-radius: 14px; padding: 12px;
+  font: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+  background: var(--field); color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+}
+.btn:active { transform: scale(0.965); }
+.btn.danger { color: var(--warn); }
+.btn.danger.armed { background: var(--warn); color: #fff; }
+.btn.primary { background: var(--accent); color: #fff; padding: 15px; font-size: 0.95rem; }
+.btn:disabled { opacity: 0.4; }
+
+/* ── Form ── */
+.form { display: flex; flex-direction: column; gap: 16px; }
+.row { display: flex; gap: 10px; align-items: flex-end; }
+.field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.field > span { font-size: 0.75rem; color: var(--sub); padding-left: 4px; }
+select, input[type=date], input[type=time] {
+  width: 100%; border: none; border-radius: 14px; padding: 12px;
+  background: var(--field); color: var(--text);
+  font: inherit; font-size: 1rem; -webkit-appearance: none; appearance: none;
+  min-height: 46px;
+}
+.swap {
+  flex: none; width: 46px; height: 46px; border: none; border-radius: 14px;
+  background: var(--field); color: var(--accent); font-size: 1.1rem; cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.swap:active { transform: scale(0.9) rotate(180deg); }
+.checks { display: flex; gap: 10px; }
+.check {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px; border-radius: 14px; background: var(--field);
+  font-size: 0.92rem; font-weight: 590; cursor: pointer; color: var(--sub);
+  transition: background 0.2s, color 0.2s, transform 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.check:active { transform: scale(0.965); }
+.check input { display: none; }
+.check:has(input:checked) { background: var(--accent-2); color: var(--accent); }
+.hint { font-size: 0.78rem; color: var(--sub); line-height: 1.5; padding: 0 4px; }
+.msg { font-size: 0.85rem; color: var(--warn); min-height: 1em; padding: 0 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="history.length > 1 ? history.back() : location.href = '/'">← 返回</button>
+  <div class="header-title">高鐵優惠監控</div>
+  <div class="header-sub">早鳥、大學生優惠一出現就推 Telegram</div>
+</div>
+
+<div class="wrap">
+  <div class="card health" id="health">
+    <div class="dot"></div>
+    <div>
+      <div class="health-main" id="healthMain">讀取中…</div>
+      <div class="health-sub" id="healthSub"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label"><span>監控任務</span><span id="count"></span></div>
+    <div class="tasks" id="tasks"></div>
+  </div>
+
+  <div>
+    <div class="section-label"><span>新增任務</span></div>
+    <form class="card form" id="form">
+      <div class="row">
+        <label class="field"><span>出發</span>
+          <select id="origin">{% for s in stations %}<option{% if s == '台北' %} selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+        </label>
+        <button type="button" class="swap" id="swap" aria-label="對調起訖站"><i class="bi bi-arrow-left-right"></i></button>
+        <label class="field"><span>到達</span>
+          <select id="dest">{% for s in stations %}<option{% if s == '左營' %} selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+        </label>
+      </div>
+      <label class="field"><span>乘車日期</span><input type="date" id="date" required></label>
+      <div class="row">
+        <label class="field"><span>最早發車</span><input type="time" id="tFrom" value="06:00" required></label>
+        <label class="field"><span>最晚發車</span><input type="time" id="tTo" value="23:59" required></label>
+      </div>
+      <label class="field"><span>最晚抵達（可不填）</span><input type="time" id="arriveBy"></label>
+      <div class="checks">
+        <label class="check"><input type="checkbox" value="early" checked>早鳥</label>
+        <label class="check"><input type="checkbox" value="student" checked>大學生</label>
+      </div>
+      <div class="hint">高鐵只開放 28 天內的車票。日期更遠的任務會先等待，開賣後優惠一出現就通知。</div>
+      <div class="msg" id="msg"></div>
+      <button type="submit" class="btn primary" id="submit">開始監控</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const DISC = { early: '早鳥', student: '大學生' };
+const $ = id => document.getElementById(id);
+let maxTasks = 5;
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function todayTW() {
+  return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+}
+function daysBetween(a, b) {
+  return Math.round((Date.parse(b) - Date.parse(a)) / 86400e3);
+}
+function ago(iso) {
+  if (!iso) return null;
+  const m = Math.floor((Date.now() - Date.parse(iso)) / 60e3);
+  return m < 1 ? '剛剛' : m < 60 ? `${m} 分鐘前` : `${Math.floor(m / 60)} 小時前`;
+}
+
+function renderHealth(h, tasks) {
+  const box = $('health');
+  const active = tasks.some(t => !t.paused && !t.ended);
+  box.className = 'card health';
+  if (h.fail_count > 0) {
+    box.classList.add('bad');
+    $('healthMain').textContent = `查詢失敗（連續 ${h.fail_count} 輪）`;
+    $('healthSub').textContent = h.last_error || '';
+  } else if (h.last_ok && active) {
+    const stale = Date.now() - Date.parse(h.last_ok) > 5 * 60e3;
+    box.classList.add(stale ? 'bad' : 'ok');
+    $('healthMain').textContent = stale ? '排程可能停了' : '監控中';
+    $('healthSub').textContent = `最後成功查詢：${ago(h.last_ok)}`;
+  } else if (active) {
+    $('healthMain').textContent = '等待第一次查詢';
+    $('healthSub').textContent = '排程每分鐘執行一次';
+  } else {
+    $('healthMain').textContent = '沒有進行中的任務';
+    $('healthSub').textContent = h.last_ok ? `最後成功查詢：${ago(h.last_ok)}` : '';
+  }
+}
+
+function statusBadge(t) {
+  if (t.ended)  return '<span class="badge">已結束</span>';
+  if (t.paused) return '<span class="badge">已暫停</span>';
+  const wait = daysBetween(todayTW(), t.date) - 28;
+  if (wait > 0) return `<span class="badge wait">約 ${wait} 天後開賣</span>`;
+  return '<span class="badge live">監控中</span>';
+}
+
+function renderTasks(tasks) {
+  $('count').textContent = `${tasks.length} / ${maxTasks}`;
+  $('submit').disabled = tasks.length >= maxTasks;
+  if (!tasks.length) {
+    $('tasks').innerHTML = '<div class="card empty">還沒有任務，從下方新增</div>';
+    return;
+  }
+  $('tasks').innerHTML = tasks.map(t => {
+    const chips = t.discounts.map(d => {
+      const n = (t.current[d] || []).length;
+      return `<span class="chip${n ? ' has' : ''}">${DISC[d]} ${n ? n + ' 班' : '無'}</span>`;
+    }).join('');
+    const arrive = t.arrive_by ? `<span class="nw">・${esc(t.arrive_by)} 前抵達</span>` : '';
+    return `
+      <div class="card task${t.paused || t.ended ? ' off' : ''}">
+        <div class="task-top">
+          <div>
+            <div class="route">${esc(t.origin)}<i class="bi bi-arrow-right"></i>${esc(t.dest)}</div>
+            <div class="meta"><span class="nw">${esc(t.date)}</span><span class="nw">・${esc(t.time_from)}–${esc(t.time_to)} 發車</span>${arrive}</div>
+          </div>
+          ${statusBadge(t)}
+        </div>
+        <div class="avail">${chips}</div>
+        <div class="task-actions">
+          ${t.ended ? '' : `<button class="btn" data-act="pause" data-id="${t.id}" data-paused="${t.paused ? 1 : 0}">${t.paused ? '繼續' : '暫停'}</button>`}
+          <button class="btn danger" data-act="del" data-id="${t.id}">刪除</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/thsr/tasks', { cache: 'no-store' });
+    const d = await r.json();
+    maxTasks = d.max || 5;
+    renderTasks(d.tasks);
+    renderHealth(d.health || {}, d.tasks);
+  } catch (e) {
+    $('healthMain').textContent = '讀取失敗';
+    $('healthSub').textContent = '請檢查網路後重新整理';
+  }
+}
+
+$('tasks').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  if (b.dataset.act === 'del' && !b.classList.contains('armed')) {
+    b.classList.add('armed');
+    b.textContent = '再按一次刪除';
+    setTimeout(() => { b.classList.remove('armed'); b.textContent = '刪除'; }, 3000);
+    return;
+  }
+  b.disabled = true;
+  const id = b.dataset.id;
+  if (b.dataset.act === 'del') {
+    await fetch(`/api/thsr/tasks/${id}`, { method: 'DELETE' });
+  } else {
+    await fetch(`/api/thsr/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paused: b.dataset.paused !== '1' }),
+    });
+  }
+  load();
+});
+
+$('swap').addEventListener('click', () => {
+  const o = $('origin').value;
+  $('origin').value = $('dest').value;
+  $('dest').value = o;
+});
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('msg').textContent = '';
+  const discounts = [...document.querySelectorAll('.check input:checked')].map(i => i.value);
+  $('submit').disabled = true;
+  try {
+    const r = await fetch('/api/thsr/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origin: $('origin').value, dest: $('dest').value, date: $('date').value,
+        time_from: $('tFrom').value, time_to: $('tTo').value,
+        arrive_by: $('arriveBy').value, discounts,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) { $('msg').textContent = d.error || '新增失敗'; return; }
+    $('arriveBy').value = '';
+    load();
+  } catch (err) {
+    $('msg').textContent = '連線失敗，請再試一次';
+  } finally {
+    $('submit').disabled = false;
+  }
+});
+
+$('date').min = todayTW();
+$('date').value = todayTW();
+load();
+setInterval(load, 30e3);
+</script>
+</body>
+</html>
