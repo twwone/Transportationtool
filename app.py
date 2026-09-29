@@ -2282,6 +2282,8 @@ def _thsr_query(task: dict, disc_key: str) -> list:
             continue
         if task.get("arrive_by") and arr > task["arrive_by"]:
             continue
+        if task.get("trains") and t.get("TrainNumber") not in task["trains"]:
+            continue
         value = next((x.get("Value", "") for x in t.get("Discount") or []
                       if x.get("Id") == _THSR_DISCOUNTS[disc_key]["id"]), "")
         trains.append({"no": t.get("TrainNumber", "?"), "dep": dep, "arr": arr,
@@ -2367,6 +2369,9 @@ def thsr_add():
     date = str(b.get("date", ""))
     time_from, time_to = str(b.get("time_from", "")), str(b.get("time_to", ""))
     arrive_by = str(b.get("arrive_by") or "")
+    # 指定車次：可用空白、逗號、頓號分隔；補零成 4 碼（高鐵 API 的車次都是 4 碼）
+    raw_trains = _re.split(r"[\s,，、]+", str(b.get("trains") or "").strip())
+    trains = sorted({x.zfill(4) for x in raw_trains if x})
     discounts = [d for d in (b.get("discounts") or []) if d in _THSR_DISCOUNTS]
 
     if origin not in _THSR_STATIONS or dest not in _THSR_STATIONS:
@@ -2380,6 +2385,8 @@ def thsr_add():
         return jsonify({"error": "時間格式錯誤"}), 400
     if time_from > time_to:
         return jsonify({"error": "開始時間不能晚於結束時間"}), 400
+    if any(not _re.fullmatch(r"\d{4}", x) for x in trains):
+        return jsonify({"error": "車次只能填數字，例如 0809"}), 400
     if arrive_by and not _re.fullmatch(hhmm, arrive_by):
         return jsonify({"error": "最晚抵達時間格式錯誤"}), 400
     if not discounts:
@@ -2387,6 +2394,7 @@ def thsr_add():
 
     task = {"id": secrets.token_hex(4), "origin": origin, "dest": dest, "date": date,
             "time_from": time_from, "time_to": time_to, "arrive_by": arrive_by,
+            "trains": trains,
             "discounts": discounts, "paused": False,
             "created": _dt.now(_TW).isoformat(timespec="seconds")}
     if _dt.now(_TW) > _thsr_task_end(task):
@@ -2488,6 +2496,7 @@ def thsr_tick():
         msg = (f"高鐵{_THSR_DISCOUNTS[d]['name']}優惠出現！\n"
                f"{t['origin']} → {t['dest']}｜{t['date']}｜{t['time_from']}–{t['time_to']}"
                + (f"｜{t['arrive_by']} 前抵達" if t.get("arrive_by") else "")
+               + (f"｜指定車次 {'、'.join(t['trains'])}" if t.get("trains") else "")
                + f"\n\n{lines}\n\n立即訂票：\n{_thsr_booking_url(t, d)}")
         if _thsr_tg(msg):
             sent += 1
