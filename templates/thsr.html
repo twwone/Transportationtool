@@ -131,6 +131,7 @@ body {
 
 /* ── Form ── */
 .form { display: flex; flex-direction: column; gap: 16px; }
+.row[hidden] { display: none; }
 .row { display: flex; gap: 10px; align-items: flex-end; }
 .field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .field > span { font-size: 0.75rem; color: var(--sub); padding-left: 4px; }
@@ -230,7 +231,7 @@ select, input[type=date], input[type=time] {
         <span class="pick-head">指定車次（可不選，不選就盯整個時段）<button type="button" class="pick-clear" id="pickClear" hidden>清除</button></span>
         <div class="train-list" id="trainList"></div>
       </div>
-      <div class="row">
+      <div class="row" id="timeRow">
         <label class="field"><span>最早發車</span><input type="time" id="tFrom" value="06:00" required></label>
         <label class="field"><span>最晚發車</span><input type="time" id="tTo" value="23:59" required></label>
       </div>
@@ -239,7 +240,7 @@ select, input[type=date], input[type=time] {
         <label class="check"><input type="checkbox" value="early" checked>早鳥</label>
         <label class="check"><input type="checkbox" value="student" checked>大學生</label>
       </div>
-      <div class="hint">有選車次時，只會盯那幾班，發車時段不用改。車次旁的綠色標籤是目前還有的優惠和折數。高鐵只開放 28 天內的車票。日期更遠的任務會先等待，開賣後優惠一出現就通知。</div>
+      <div class="hint">有選車次時，只會盯那幾班，不用設發車時段。車次旁的綠色標籤是目前還有的優惠和折數。高鐵只開放 28 天內的車票。日期更遠的任務會先等待，開賣後優惠一出現就通知。</div>
       <div class="msg" id="msg"></div>
       <button type="submit" class="btn primary" id="submit">開始監控</button>
     </form>
@@ -312,13 +313,16 @@ function renderTasks(tasks) {
       return `<span class="chip${n ? ' has' : ''}">${DISC[d]} ${n ? n + ' 班' : '無'}</span>`;
     }).join('');
     const arrive = t.arrive_by ? `<span class="nw">・${esc(t.arrive_by)} 前抵達</span>` : '';
-    const only = (t.trains || []).length ? `<br>指定車次 ${t.trains.map(esc).join('、')}` : '';
+    const picks = t.trains || [];
+    const when = picks.length
+      ? `<span class="nw">・指定車次 ${picks.map(esc).join('、')}</span>`
+      : `<span class="nw">・${esc(t.time_from)}–${esc(t.time_to)} 發車</span>`;
     return `
       <div class="card task${t.paused || t.ended ? ' off' : ''}">
         <div class="task-top">
           <div>
             <div class="route">${esc(t.origin)}<i class="bi bi-arrow-right"></i>${esc(t.dest)}</div>
-            <div class="meta"><span class="nw">${esc(t.date)}</span><span class="nw">・${esc(t.time_from)}–${esc(t.time_to)} 發車</span>${arrive}${only}</div>
+            <div class="meta"><span class="nw">${esc(t.date)}</span>${when}${arrive}</div>
           </div>
           ${statusBadge(t)}
         </div>
@@ -372,9 +376,14 @@ const picked = new Set();
 let dayTrains = null;   // null = 載入中；{error} = 失敗；[] = 查不到
 let trainsReq = 0;
 
+function syncPickUI() {
+  $('pickClear').hidden = !picked.size;
+  $('timeRow').hidden = picked.size > 0;
+}
+
 function renderTrains() {
   const box = $('trainList');
-  $('pickClear').hidden = !picked.size;
+  syncPickUI();
   if (dayTrains === null) { box.innerHTML = '<div class="train-empty">查詢當天班次中…</div>'; return; }
   if (dayTrains.error) { box.innerHTML = `<div class="train-empty">${esc(dayTrains.error)}</div>`; return; }
   if (!dayTrains.length) {
@@ -421,7 +430,7 @@ $('trainList').addEventListener('click', e => {
   const no = b.dataset.no;
   picked.has(no) ? picked.delete(no) : picked.add(no);
   b.classList.toggle('on', picked.has(no));
-  $('pickClear').hidden = !picked.size;
+  syncPickUI();
 });
 $('pickClear').addEventListener('click', () => { picked.clear(); renderTrains(); });
 ['origin', 'dest', 'date'].forEach(id => $(id).addEventListener('change', loadTrains));

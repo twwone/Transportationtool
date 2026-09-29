@@ -2279,12 +2279,15 @@ def _thsr_search(origin: str, dest: str, date: str, time_from: str, disc_id: str
 
 def _thsr_query(task: dict, disc_key: str) -> list:
     """查某筆任務某種優惠目前有哪些班次；失敗直接 raise。"""
+    picked = task.get("trains") or []
     items = _thsr_search(task["origin"], task["dest"], task["date"],
-                         task["time_from"], _THSR_DISCOUNTS[disc_key]["id"])
+                         "00:00" if picked else task["time_from"],
+                         _THSR_DISCOUNTS[disc_key]["id"])
     trains = []
     for t in items:
         dep, arr = t.get("DepartureTime", ""), t.get("DestinationTime", "")
-        if not (task["time_from"] <= dep <= task["time_to"]):
+        # 有指定車次時只看車次，發車時段不適用
+        if not picked and not (task["time_from"] <= dep <= task["time_to"]):
             continue
         if task.get("arrive_by") and arr > task["arrive_by"]:
             continue
@@ -2424,6 +2427,8 @@ def thsr_add():
         return jsonify({"error": "時間格式錯誤"}), 400
     if time_from > time_to:
         return jsonify({"error": "開始時間不能晚於結束時間"}), 400
+    if trains:
+        time_from, time_to = "00:00", "23:59"
     if any(not _re.fullmatch(r"\d{4}", x) for x in trains):
         return jsonify({"error": "車次只能填數字，例如 0809"}), 400
     if arrive_by and not _re.fullmatch(hhmm, arrive_by):
@@ -2533,7 +2538,8 @@ def thsr_tick():
         if len(fresh) > 10:
             lines += f"\n...另有 {len(fresh) - 10} 班"
         msg = (f"高鐵{_THSR_DISCOUNTS[d]['name']}優惠出現！\n"
-               f"{t['origin']} → {t['dest']}｜{t['date']}｜{t['time_from']}–{t['time_to']}"
+               f"{t['origin']} → {t['dest']}｜{t['date']}"
+               + ("" if t.get("trains") else f"｜{t['time_from']}–{t['time_to']}")
                + (f"｜{t['arrive_by']} 前抵達" if t.get("arrive_by") else "")
                + (f"｜指定車次 {'、'.join(t['trains'])}" if t.get("trains") else "")
                + f"\n\n{lines}\n\n立即訂票：\n{_thsr_booking_url(t, d)}")
