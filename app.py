@@ -2311,21 +2311,29 @@ def _thsr_booking_url(task: dict, disc_key: str) -> str:
     return _THSR_TIMETABLE
 
 
+_thsr_tg_error = ""   # 最近一次 Telegram 送出失敗的原因，tick 會寫進 health 給頁面看
+
+
 def _thsr_tg(text: str) -> bool:
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    chat  = os.environ.get("TELEGRAM_CHAT_ID", "")
+    global _thsr_tg_error
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat  = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     if not (token and chat):
-        app.logger.warning("thsr: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 未設定")
-        return False
-    try:
-        r = _requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                           json={"chat_id": chat, "text": text[:4000],
-                                 "disable_web_page_preview": True},
-                           timeout=8)
-        return r.ok
-    except Exception as e:
-        app.logger.warning(f"thsr tg: {e}")
-        return False
+        _thsr_tg_error = "TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 未設定"
+    else:
+        try:
+            r = _requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                               json={"chat_id": chat, "text": text[:4000],
+                                     "disable_web_page_preview": True},
+                               timeout=8)
+            if r.ok:
+                _thsr_tg_error = ""
+                return True
+            _thsr_tg_error = f"HTTP {r.status_code}: {r.text[:200]}"
+        except Exception as e:
+            _thsr_tg_error = f"{type(e).__name__}: {str(e).replace(token, '***')[:200]}"
+    app.logger.warning(f"thsr tg: {_thsr_tg_error}")
+    return False
 
 
 def _thsr_tasks() -> list:
@@ -2419,6 +2427,8 @@ def thsr_tick():
     if not secret or not hmac.compare_digest(request.args.get("key", ""), secret):
         return jsonify({"error": "unauthorized"}), 401
 
+    global _thsr_tg_error
+    _thsr_tg_error = ""
     now    = _dt.now(_TW)
     tasks  = [t for t in _thsr_tasks() if not t.get("paused") and now <= _thsr_task_end(t)]
     seen   = _kv_get(_THSR_SEEN_KEY) or {}
@@ -2471,6 +2481,10 @@ def thsr_tick():
 
     stamp = now.isoformat(timespec="seconds")
     health["last_tick"] = stamp
+    if _thsr_tg_error:
+        health["tg_error"] = _thsr_tg_error
+    elif sent:
+        health.pop("tg_error", None)
     if jobs and len(errors) == len(jobs):
         health["fail_count"] = health.get("fail_count", 0) + 1
         health["last_error"] = errors[0]
@@ -2488,7 +2502,7 @@ def thsr_tick():
     _kv_set(_THSR_HEALTH_KEY, health)
 
     return jsonify({"ok": True, "tasks": len(tasks), "queries": len(jobs),
-                    "errors": errors, "sent": sent})
+                    "errors": errors, "sent": sent, "tg_error": _thsr_tg_error})
 
 
 @app.route("/diet")

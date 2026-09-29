@@ -239,6 +239,10 @@ function renderHealth(h, tasks) {
     box.classList.add('bad');
     $('healthMain').textContent = `查詢失敗（連續 ${h.fail_count} 輪）`;
     $('healthSub').textContent = h.last_error || '';
+  } else if (h.tg_error) {
+    box.classList.add('bad');
+    $('healthMain').textContent = 'Telegram 通知送不出去';
+    $('healthSub').textContent = h.tg_error;
   } else if (h.last_ok && active) {
     const stale = Date.now() - Date.parse(h.last_ok) > 5 * 60e3;
     box.classList.add(stale ? 'bad' : 'ok');
