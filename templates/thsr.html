@@ -134,7 +134,7 @@ body {
 .row { display: flex; gap: 10px; align-items: flex-end; }
 .field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .field > span { font-size: 0.75rem; color: var(--sub); padding-left: 4px; }
-select, input[type=date], input[type=time], input[type=text] {
+select, input[type=date], input[type=time] {
   width: 100%; border: none; border-radius: 14px; padding: 12px;
   background: var(--field); color: var(--text);
   font: inherit; font-size: 1rem; -webkit-appearance: none; appearance: none;
@@ -157,6 +157,35 @@ select, input[type=date], input[type=time], input[type=text] {
 .check:active { transform: scale(0.965); }
 .check input { display: none; }
 .check:has(input:checked) { background: var(--accent-2); color: var(--accent); }
+/* ── 車次清單 ── */
+.pick-head { display: flex; justify-content: space-between; align-items: center; }
+.pick-clear {
+  border: none; background: none; font: inherit; font-size: 0.75rem;
+  color: var(--accent); cursor: pointer; padding: 0 4px;
+}
+.train-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 360px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 6px; border-radius: 16px; background: var(--field);
+}
+.train-empty { font-size: 0.85rem; color: var(--sub); text-align: center; padding: 20px 8px; line-height: 1.5; }
+.train {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  border: none; border-radius: 12px; padding: 12px; min-height: 48px;
+  background: transparent; color: var(--text); font: inherit; text-align: left;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.train:active { transform: scale(0.965); }
+.train.on { background: var(--accent-2); }
+.train-no { font-weight: 700; font-variant-numeric: tabular-nums; width: 3.2em; }
+.train-time { flex: 1; min-width: 0; font-size: 0.88rem; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.train-tag {
+  font-size: 0.68rem; font-weight: 600; padding: 3px 7px; border-radius: 999px;
+  background: var(--ok-2); color: var(--ok); white-space: nowrap;
+}
+.train-check { width: 20px; text-align: center; color: var(--accent); visibility: hidden; }
+.train.on .train-check { visibility: visible; }
 .hint { font-size: 0.78rem; color: var(--sub); line-height: 1.5; padding: 0 4px; }
 .msg { font-size: 0.85rem; color: var(--warn); min-height: 1em; padding: 0 4px; }
 </style>
@@ -196,17 +225,20 @@ select, input[type=date], input[type=time], input[type=text] {
         </label>
       </div>
       <label class="field"><span>乘車日期</span><input type="date" id="date" required></label>
+      <div class="field">
+        <span class="pick-head">指定車次（可不選，不選就盯整個時段）<button type="button" class="pick-clear" id="pickClear" hidden>清除</button></span>
+        <div class="train-list" id="trainList"></div>
+      </div>
       <div class="row">
         <label class="field"><span>最早發車</span><input type="time" id="tFrom" value="06:00" required></label>
         <label class="field"><span>最晚發車</span><input type="time" id="tTo" value="23:59" required></label>
       </div>
       <label class="field"><span>最晚抵達（可不填）</span><input type="time" id="arriveBy"></label>
-      <label class="field"><span>指定車次（可不填，多班用空白隔開）</span><input type="text" id="trains" placeholder="例如 0809 0813" autocomplete="off"></label>
       <div class="checks">
         <label class="check"><input type="checkbox" value="early" checked>早鳥</label>
         <label class="check"><input type="checkbox" value="student" checked>大學生</label>
       </div>
-      <div class="hint">有填指定車次時，只會盯那幾班；發車時段不用改。高鐵只開放 28 天內的車票。日期更遠的任務會先等待，開賣後優惠一出現就通知。</div>
+      <div class="hint">有選車次時，只會盯那幾班，發車時段不用改。車次旁的「早鳥」「大學生」是目前還有的優惠。高鐵只開放 28 天內的車票。日期更遠的任務會先等待，開賣後優惠一出現就通知。</div>
       <div class="msg" id="msg"></div>
       <button type="submit" class="btn primary" id="submit">開始監控</button>
     </form>
@@ -334,10 +366,69 @@ $('tasks').addEventListener('click', async e => {
   load();
 });
 
+/* ── 車次清單：選好起訖站與日期後列出當天班次 ── */
+const picked = new Set();
+let dayTrains = null;   // null = 載入中；{error} = 失敗；[] = 查不到
+let trainsReq = 0;
+
+function renderTrains() {
+  const box = $('trainList');
+  $('pickClear').hidden = !picked.size;
+  if (dayTrains === null) { box.innerHTML = '<div class="train-empty">查詢當天班次中…</div>'; return; }
+  if (dayTrains.error) { box.innerHTML = `<div class="train-empty">${esc(dayTrains.error)}</div>`; return; }
+  if (!dayTrains.length) {
+    box.innerHTML = '<div class="train-empty">這天還查不到時刻表（可能尚未開賣）<br>可以先不指定車次</div>';
+    return;
+  }
+  box.innerHTML = dayTrains.map(t => `
+    <button type="button" class="train${picked.has(t.no) ? ' on' : ''}" data-no="${esc(t.no)}">
+      <span class="train-check"><i class="bi bi-check-lg"></i></span>
+      <span class="train-no">${esc(t.no)}</span>
+      <span class="train-time">${esc(t.dep)} → ${esc(t.arr)}</span>
+      ${t.discounts.map(d => `<span class="train-tag">${DISC[d]}</span>`).join('')}
+    </button>`).join('');
+}
+
+async function loadTrains() {
+  const origin = $('origin').value, dest = $('dest').value, date = $('date').value;
+  picked.clear();
+  if (!date || origin === dest) {
+    dayTrains = { error: origin === dest ? '出發站與到達站不能相同' : '請先選日期' };
+    renderTrains();
+    return;
+  }
+  const req = ++trainsReq;
+  dayTrains = null;
+  renderTrains();
+  try {
+    const q = new URLSearchParams({ origin, dest, date });
+    const r = await fetch(`/api/thsr/trains?${q}`, { cache: 'no-store' });
+    const d = await r.json();
+    if (req !== trainsReq) return;   // 使用者已經改了條件，丟掉舊結果
+    dayTrains = r.ok ? d.trains : { error: d.error || '查詢失敗' };
+  } catch (e) {
+    if (req !== trainsReq) return;
+    dayTrains = { error: '連線失敗，請稍後再試' };
+  }
+  renderTrains();
+}
+
+$('trainList').addEventListener('click', e => {
+  const b = e.target.closest('.train');
+  if (!b) return;
+  const no = b.dataset.no;
+  picked.has(no) ? picked.delete(no) : picked.add(no);
+  b.classList.toggle('on', picked.has(no));
+  $('pickClear').hidden = !picked.size;
+});
+$('pickClear').addEventListener('click', () => { picked.clear(); renderTrains(); });
+['origin', 'dest', 'date'].forEach(id => $(id).addEventListener('change', loadTrains));
+
 $('swap').addEventListener('click', () => {
   const o = $('origin').value;
   $('origin').value = $('dest').value;
   $('dest').value = o;
+  loadTrains();
 });
 
 $('form').addEventListener('submit', async e => {
@@ -352,13 +443,14 @@ $('form').addEventListener('submit', async e => {
       body: JSON.stringify({
         origin: $('origin').value, dest: $('dest').value, date: $('date').value,
         time_from: $('tFrom').value, time_to: $('tTo').value,
-        arrive_by: $('arriveBy').value, trains: $('trains').value, discounts,
+        arrive_by: $('arriveBy').value, trains: [...picked].join(' '), discounts,
       }),
     });
     const d = await r.json();
     if (!r.ok) { $('msg').textContent = d.error || '新增失敗'; return; }
     $('arriveBy').value = '';
-    $('trains').value = '';
+    picked.clear();
+    renderTrains();
     load();
   } catch (err) {
     $('msg').textContent = '連線失敗，請再試一次';
@@ -370,6 +462,7 @@ $('form').addEventListener('submit', async e => {
 $('date').min = todayTW();
 $('date').value = todayTW();
 load();
+loadTrains();
 setInterval(load, 30e3);
 </script>
 </body>

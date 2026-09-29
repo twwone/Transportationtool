@@ -2253,28 +2253,34 @@ def _thsr_task_end(task: dict) -> _dt:
     return _dt(y, m, d, hh, mm, tzinfo=_TW)
 
 
-def _thsr_query(task: dict, disc_key: str) -> list:
-    """查某筆任務某種優惠目前有哪些班次；失敗直接 raise。"""
+def _thsr_search(origin: str, dest: str, date: str, time_from: str, disc_id: str) -> list:
+    """呼叫高鐵時刻表查詢，回傳原始 TrainItem 清單；失敗直接 raise。"""
     r = _requests.post(
         f"{_THSR_BASE}/TimeTable/Search",
         headers=_THSR_HEADERS,
         data={
             "SearchType":        "S",
             "Lang":              "TW",
-            "StartStation":      _THSR_STATIONS[task["origin"]],
-            "EndStation":        _THSR_STATIONS[task["dest"]],
-            "OutWardSearchDate": task["date"].replace("-", "/"),
-            "OutWardSearchTime": task["time_from"],
+            "StartStation":      _THSR_STATIONS[origin],
+            "EndStation":        _THSR_STATIONS[dest],
+            "OutWardSearchDate": date.replace("-", "/"),
+            "OutWardSearchTime": time_from,
             "ReturnSearchDate":  "",
             "ReturnSearchTime":  "",
-            "DiscountType":      _THSR_DISCOUNTS[disc_key]["id"],
+            "DiscountType":      disc_id,
         },
         timeout=12,
     )
     body = r.json()
     if not body.get("success"):
         raise RuntimeError(f"THSR success=false HTTP {r.status_code}")
-    items = body["data"]["DepartureTable"]["TrainItem"] or []
+    return body["data"]["DepartureTable"]["TrainItem"] or []
+
+
+def _thsr_query(task: dict, disc_key: str) -> list:
+    """查某筆任務某種優惠目前有哪些班次；失敗直接 raise。"""
+    items = _thsr_search(task["origin"], task["dest"], task["date"],
+                         task["time_from"], _THSR_DISCOUNTS[disc_key]["id"])
     trains = []
     for t in items:
         dep, arr = t.get("DepartureTime", ""), t.get("DestinationTime", "")
@@ -2346,6 +2352,32 @@ def _thsr_tasks() -> list:
 @app.route("/thsr")
 def thsr_page():
     return render_template("thsr.html", stations=list(_THSR_STATIONS.keys()))
+
+
+@app.route("/api/thsr/trains")
+def thsr_trains():
+    """某天某區間的全部班次，並標出目前有早鳥 / 大學生優惠的班次（給表單選車次用）。"""
+    origin, dest = request.args.get("origin"), request.args.get("dest")
+    date = request.args.get("date", "")
+    if origin not in _THSR_STATIONS or dest not in _THSR_STATIONS or origin == dest:
+        return jsonify({"error": "請選擇不同的起訖站"}), 400
+    if not _re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        return jsonify({"error": "日期格式錯誤"}), 400
+    ids = {"all": ""} | {k: v["id"] for k, v in _THSR_DISCOUNTS.items()}
+    try:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            got = dict(zip(ids, pool.map(lambda i: _thsr_search(origin, dest, date, "00:00", i),
+                                         ids.values())))
+    except Exception as e:
+        app.logger.warning(f"thsr trains: {e}")
+        return jsonify({"error": "高鐵時刻表暫時查不到，請稍後再試"}), 502
+    has = {k: {t.get("TrainNumber") for t in got[k]} for k in _THSR_DISCOUNTS}
+    trains = [{"no": t.get("TrainNumber", ""), "dep": t.get("DepartureTime", ""),
+               "arr": t.get("DestinationTime", ""),
+               "discounts": [k for k in _THSR_DISCOUNTS if t.get("TrainNumber") in has[k]]}
+              for t in got["all"]]
+    trains.sort(key=lambda t: t["dep"])
+    return jsonify({"trains": trains})
 
 
 @app.route("/api/thsr/tasks", methods=["GET"])
