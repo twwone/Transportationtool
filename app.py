@@ -2421,6 +2421,29 @@ def thsr_edit(task_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/thsr/tg-test")
+def thsr_tg_test():
+    """送一則測試訊息，回報實際用的是哪個 bot、送到哪個聊天室（排查收不到通知用）。"""
+    secret = os.environ.get("THSR_TICK_KEY", "")
+    if not secret or not hmac.compare_digest(request.args.get("key", ""), secret):
+        return jsonify({"error": "unauthorized"}), 401
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat  = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    out = {"chat_id_set": bool(chat), "token_set": bool(token)}
+    try:
+        me = _requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=8).json()
+        out["bot"] = (me.get("result") or {}).get("username") or me.get("description")
+        r = _requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                           json={"chat_id": chat, "text": "高鐵優惠監控：測試訊息"},
+                           timeout=8).json()
+        out["sent"] = r.get("ok", False)
+        c = (r.get("result") or {}).get("chat") or {}
+        out["chat"] = {k: c.get(k) for k in ("type", "title", "username", "first_name")} if c else r.get("description")
+    except Exception as e:
+        out["error"] = f"{type(e).__name__}: {str(e).replace(token, '***')[:200]}"
+    return jsonify(out)
+
+
 @app.route("/api/thsr/tick")
 def thsr_tick():
     secret = os.environ.get("THSR_TICK_KEY", "")
