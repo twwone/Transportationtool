@@ -180,6 +180,7 @@ select, input[type=date], input[type=time] {
 .train.on { background: var(--accent-2); }
 .train-no { font-weight: 700; font-variant-numeric: tabular-nums; width: 3.2em; }
 .train-time { flex: 1; min-width: 0; font-size: 0.88rem; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.train-tags { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .train-tag {
   font-size: 0.68rem; font-weight: 600; padding: 3px 7px; border-radius: 999px;
   background: var(--ok-2); color: var(--ok); white-space: nowrap;
@@ -238,7 +239,7 @@ select, input[type=date], input[type=time] {
         <label class="check"><input type="checkbox" value="early" checked>早鳥</label>
         <label class="check"><input type="checkbox" value="student" checked>大學生</label>
       </div>
-      <div class="hint">有選車次時，只會盯那幾班，發車時段不用改。車次旁的「早鳥」「大學生」是目前還有的優惠。高鐵只開放 28 天內的車票。日期更遠的任務會先等待，開賣後優惠一出現就通知。</div>
+      <div class="hint">有選車次時，只會盯那幾班，發車時段不用改。車次旁的綠色標籤是目前還有的優惠和折數。高鐵只開放 28 天內的車票。日期更遠的任務會先等待，開賣後優惠一出現就通知。</div>
       <div class="msg" id="msg"></div>
       <button type="submit" class="btn primary" id="submit">開始監控</button>
     </form>
@@ -385,7 +386,8 @@ function renderTrains() {
       <span class="train-check"><i class="bi bi-check-lg"></i></span>
       <span class="train-no">${esc(t.no)}</span>
       <span class="train-time">${esc(t.dep)} → ${esc(t.arr)}</span>
-      ${t.discounts.map(d => `<span class="train-tag">${DISC[d]}</span>`).join('')}
+      <span class="train-tags">${Object.entries(t.discounts).map(([d, v]) =>
+        `<span class="train-tag">${DISC[d]} ${esc(v)}</span>`).join('')}</span>
     </button>`).join('');
 }
 

@@ -2371,10 +2371,17 @@ def thsr_trains():
     except Exception as e:
         app.logger.warning(f"thsr trains: {e}")
         return jsonify({"error": "高鐵時刻表暫時查不到，請稍後再試"}), 502
-    has = {k: {t.get("TrainNumber") for t in got[k]} for k in _THSR_DISCOUNTS}
+    # 每種優惠：車次 → 折數（例如 "88折"、"65折起"）
+    value = {
+        k: {t.get("TrainNumber"): next((x.get("Value", "") for x in t.get("Discount") or []
+                                        if x.get("Id") == v["id"]), "")
+            for t in got[k]}
+        for k, v in _THSR_DISCOUNTS.items()
+    }
     trains = [{"no": t.get("TrainNumber", ""), "dep": t.get("DepartureTime", ""),
                "arr": t.get("DestinationTime", ""),
-               "discounts": [k for k in _THSR_DISCOUNTS if t.get("TrainNumber") in has[k]]}
+               "discounts": {k: value[k][t.get("TrainNumber")]
+                             for k in _THSR_DISCOUNTS if t.get("TrainNumber") in value[k]}}
               for t in got["all"]]
     trains.sort(key=lambda t: t["dep"])
     return jsonify({"trains": trains})
