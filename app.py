@@ -2566,6 +2566,31 @@ def _thsr_sync_buttons(task_id: str, action: str, skip_id: int | None = None) ->
         _kv_set(_THSR_MSGS_KEY, msgs)
 
 
+@app.route("/api/thsr/tasks/<task_id>", methods=["PUT"])
+def thsr_update(task_id):
+    """編輯任務條件：保留 id、去程/回程標記、暫停狀態；通知紀錄清空，照新條件重新判斷。"""
+    b = request.get_json(silent=True) or {}
+    discounts = [d for d in (b.get("discounts") or []) if d in _THSR_DISCOUNTS]
+    if not discounts:
+        return jsonify({"error": "至少勾選一種優惠"}), 400
+    tasks = _thsr_tasks()
+    old = next((t for t in tasks if t["id"] == task_id), None)
+    if not old:
+        return jsonify({"error": "找不到任務，可能已經被刪除"}), 404
+    task, err = _thsr_make_task(b, discounts, old.get("leg", ""))
+    if err:
+        return jsonify({"error": err}), 400
+    task.update({"id": task_id, "paused": old.get("paused", False),
+                 "created": old.get("created", task["created"])})
+    tasks = [task if t["id"] == task_id else t for t in tasks]
+    for key in (_THSR_SEEN_KEY, _THSR_AVAIL_KEY):
+        data = _kv_get(key) or {}
+        if data.pop(task_id, None) is not None:
+            _kv_set(key, data)
+    _kv_set(_THSR_TASKS_KEY, tasks)
+    return jsonify({"ok": True, "task": task})
+
+
 @app.route("/api/thsr/tasks/<task_id>", methods=["PATCH", "DELETE"])
 def thsr_edit(task_id):
     if request.method == "DELETE":

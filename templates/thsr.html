@@ -165,6 +165,7 @@ select, input[type=date], input[type=time] {
   color: var(--accent); cursor: pointer; padding: 0 4px;
 }
 .train-list {
+  position: relative;
   display: flex; flex-direction: column; gap: 6px;
   max-height: 360px; overflow-y: auto; -webkit-overflow-scrolling: touch;
   padding: 6px; border-radius: 16px; background: var(--field);
@@ -189,6 +190,8 @@ select, input[type=date], input[type=time] {
 .train-check { width: 20px; text-align: center; color: var(--accent); visibility: hidden; }
 .train.on .train-check { visibility: visible; }
 /* ── 回程 ── */
+.toggle[hidden], .btn[hidden] { display: none; }
+.editing { outline: 2px solid var(--accent); outline-offset: -2px; }
 .toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 16px; border-radius: 16px; background: var(--field); cursor: pointer;
@@ -246,7 +249,7 @@ select, input[type=date], input[type=time] {
   </div>
 
   <div>
-    <div class="section-label"><span>新增任務</span></div>
+    <div class="section-label" id="formLabel"><span id="formTitle">新增任務</span></div>
     <form class="card form" id="form">
       <div class="row">
         <label class="field"><span>出發</span>
@@ -268,7 +271,7 @@ select, input[type=date], input[type=time] {
       </div>
       <label class="field"><span>最晚抵達（可不填）</span><input type="time" id="arriveBy"></label>
 
-      <label class="toggle">
+      <label class="toggle" id="backToggle">
         <span><b>加回程</b><small>起訖站自動對調，一次建立兩筆任務</small></span>
         <input type="checkbox" id="withBack"><i class="switch"></i>
       </label>
@@ -293,6 +296,7 @@ select, input[type=date], input[type=time] {
       <div class="hint">有選車次時，只會盯那幾班，不用設發車時段。去程、回程共用下面勾選的優惠。車次旁的綠色標籤是目前還有的優惠和折數。高鐵只開放 28 天內的車票。日期更遠的任務會先等待，開賣後優惠一出現就通知。</div>
       <div class="msg" id="msg"></div>
       <button type="submit" class="btn primary" id="submit">開始監控</button>
+      <button type="button" class="btn" id="cancelEdit" hidden>取消編輯</button>
     </form>
   </div>
 </div>
@@ -301,6 +305,8 @@ select, input[type=date], input[type=time] {
 const DISC = { early: '早鳥', student: '大學生' };
 const $ = id => document.getElementById(id);
 let maxTasks = 5;
+let lastTasks = [];
+let editId = null;   // 正在編輯的任務 id；null = 新增模式
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -352,7 +358,7 @@ function statusBadge(t) {
 
 function renderTasks(tasks) {
   $('count').textContent = `${tasks.length} / ${maxTasks}`;
-  $('submit').disabled = tasks.length >= maxTasks;
+  $('submit').disabled = !editId && tasks.length >= maxTasks;
   if (!tasks.length) {
     $('tasks').innerHTML = '<div class="card empty">還沒有任務，從下方新增</div>';
     return;
@@ -378,6 +384,7 @@ function renderTasks(tasks) {
         </div>
         <div class="avail">${chips}</div>
         <div class="task-actions">
+          <button class="btn" data-act="edit" data-id="${t.id}">編輯</button>
           ${t.ended ? '' : `<button class="btn" data-act="pause" data-id="${t.id}" data-paused="${t.paused ? 1 : 0}">${t.paused ? '繼續' : '暫停'}</button>`}
           <button class="btn danger" data-act="del" data-id="${t.id}">刪除</button>
         </div>
@@ -390,6 +397,8 @@ async function load() {
     const r = await fetch('/api/thsr/tasks', { cache: 'no-store' });
     const d = await r.json();
     maxTasks = d.max || 5;
+    lastTasks = d.tasks;
+    if (editId && !lastTasks.some(t => t.id === editId)) exitEdit();   // 編輯中的任務被刪了
     renderTasks(d.tasks);
     renderHealth(d.health || {}, d.tasks);
   } catch (e) {
@@ -401,6 +410,11 @@ async function load() {
 $('tasks').addEventListener('click', async e => {
   const b = e.target.closest('button[data-act]');
   if (!b) return;
+  if (b.dataset.act === 'edit') {
+    const t = lastTasks.find(x => x.id === b.dataset.id);
+    if (t) enterEdit(t);
+    return;
+  }
   if (b.dataset.act === 'del' && !b.classList.contains('armed')) {
     b.classList.add('armed');
     b.textContent = '再按一次刪除';
@@ -449,9 +463,10 @@ function makePicker({ list, clear, timeRow, route }) {
           `<span class="train-tag">${DISC[d]} ${esc(v)}</span>`).join('')}</span>
       </button>`).join('');
   }
-  async function load() {
+  async function load(preset = []) {
     const { origin, dest, date } = route();
     picked.clear();
+    preset.forEach(no => picked.add(no));
     if (!date || origin === dest) {
       trains = { error: origin === dest ? '出發站與到達站不能相同' : '請先選日期' };
       render();
@@ -471,6 +486,9 @@ function makePicker({ list, clear, timeRow, route }) {
       trains = { error: '連線失敗，請稍後再試' };
     }
     render();
+    // 編輯時自動捲到第一個已選的班次
+    const on = $(list).querySelector('.train.on');
+    if (preset.length && on) $(list).scrollTop = on.offsetTop - 6;
   }
 
   $(list).addEventListener('click', e => {
@@ -518,27 +536,70 @@ $('swap').addEventListener('click', () => {
   routeChanged();
 });
 
+/* ── 編輯模式：把任務條件帶回表單 ── */
+function enterEdit(t) {
+  editId = t.id;
+  $('formTitle').textContent = `編輯任務${t.leg ? `（${t.leg}）` : ''}`;
+  $('submit').textContent = '儲存變更';
+  $('submit').disabled = false;
+  $('cancelEdit').hidden = false;
+  $('backToggle').hidden = true;
+  $('withBack').checked = false;
+  $('backBox').hidden = true;
+  $('form').classList.add('editing');
+  $('msg').textContent = '';
+
+  $('origin').value = t.origin;
+  $('dest').value = t.dest;
+  $('date').value = t.date;
+  const picks = t.trains || [];
+  $('tFrom').value = picks.length ? '06:00' : t.time_from;
+  $('tTo').value = picks.length ? '23:59' : t.time_to;
+  $('arriveBy').value = t.arrive_by || '';
+  document.querySelectorAll('.check input').forEach(i => { i.checked = t.discounts.includes(i.value); });
+  outPick.load(picks);
+  $('formLabel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function exitEdit() {
+  editId = null;
+  $('formTitle').textContent = '新增任務';
+  $('submit').textContent = '開始監控';
+  $('submit').disabled = lastTasks.length >= maxTasks;
+  $('cancelEdit').hidden = true;
+  $('backToggle').hidden = false;
+  $('form').classList.remove('editing');
+  $('msg').textContent = '';
+}
+
+$('cancelEdit').addEventListener('click', () => {
+  exitEdit();
+  $('arriveBy').value = '';
+  outPick.load();
+});
+
 $('form').addEventListener('submit', async e => {
   e.preventDefault();
   $('msg').textContent = '';
   const discounts = [...document.querySelectorAll('.check input:checked')].map(i => i.value);
   $('submit').disabled = true;
   try {
-    const r = await fetch('/api/thsr/tasks', {
-      method: 'POST',
+    const r = await fetch(editId ? `/api/thsr/tasks/${editId}` : '/api/thsr/tasks', {
+      method: editId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         origin: $('origin').value, dest: $('dest').value, date: $('date').value,
         time_from: $('tFrom').value, time_to: $('tTo').value,
         arrive_by: $('arriveBy').value, trains: [...outPick.picked].join(' '), discounts,
-        ...($('withBack').checked ? { return: {
+        ...($('withBack').checked && !editId ? { return: {
           date: $('bDate').value, time_from: $('bFrom').value, time_to: $('bTo').value,
           arrive_by: $('bArriveBy').value, trains: [...backPick.picked].join(' '),
         } } : {}),
       }),
     });
     const d = await r.json();
-    if (!r.ok) { $('msg').textContent = d.error || '新增失敗'; return; }
+    if (!r.ok) { $('msg').textContent = d.error || (editId ? '儲存失敗' : '新增失敗'); return; }
+    if (editId) exitEdit();
     $('arriveBy').value = '';
     $('bArriveBy').value = '';
     outPick.picked.clear();
@@ -549,7 +610,7 @@ $('form').addEventListener('submit', async e => {
   } catch (err) {
     $('msg').textContent = '連線失敗，請再試一次';
   } finally {
-    $('submit').disabled = false;
+    $('submit').disabled = !editId && lastTasks.length >= maxTasks;
   }
 });
 
