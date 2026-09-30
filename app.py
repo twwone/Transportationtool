@@ -2378,7 +2378,8 @@ def _thsr_notice(task: dict, disc_key: str, fresh: list) -> str:
     week  = "一二三四五六日"[_dt(y, m, dd).weekday()]
 
     head  = f"<b>高鐵{name}｜{len(fresh)} 班，最低 {esc(best['value'])}</b>"
-    route = f"{esc(task['origin'])} → {esc(task['dest'])}｜{m}/{dd}（{week}）"
+    route = (f"{task['leg']}｜" if task.get("leg") else "") + \
+        f"{esc(task['origin'])} → {esc(task['dest'])}｜{m}/{dd}（{week}）"
     cond  = []
     if task.get("trains"):
         cond.append(f"指定車次 {'、'.join(task['trains'])}")
@@ -2447,9 +2448,8 @@ def thsr_list():
                     "max": _THSR_MAX_TASKS})
 
 
-@app.route("/api/thsr/tasks", methods=["POST"])
-def thsr_add():
-    b = request.get_json(silent=True) or {}
+def _thsr_make_task(b: dict, discounts: list, leg: str = "") -> tuple[dict | None, str]:
+    """驗證一段行程的欄位並組成任務；回傳 (任務, "") 或 (None, 錯誤訊息)。"""
     origin, dest = b.get("origin"), b.get("dest")
     date = str(b.get("date", ""))
     time_from, time_to = str(b.get("time_from", "")), str(b.get("time_to", ""))
@@ -2457,42 +2457,66 @@ def thsr_add():
     # 指定車次：可用空白、逗號、頓號分隔；補零成 4 碼（高鐵 API 的車次都是 4 碼）
     raw_trains = _re.split(r"[\s,，、]+", str(b.get("trains") or "").strip())
     trains = sorted({x.zfill(4) for x in raw_trains if x})
-    discounts = [d for d in (b.get("discounts") or []) if d in _THSR_DISCOUNTS]
+    who = f"{leg}：" if leg else ""
 
     if origin not in _THSR_STATIONS or dest not in _THSR_STATIONS:
-        return jsonify({"error": "請選擇起訖站"}), 400
+        return None, f"{who}請選擇起訖站"
     if origin == dest:
-        return jsonify({"error": "出發站與到達站不能相同"}), 400
+        return None, f"{who}出發站與到達站不能相同"
     if not _re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
-        return jsonify({"error": "日期格式錯誤"}), 400
+        return None, f"{who}日期格式錯誤"
     hhmm = r"([01]\d|2[0-3]):[0-5]\d"
     if not (_re.fullmatch(hhmm, time_from) and _re.fullmatch(hhmm, time_to)):
-        return jsonify({"error": "時間格式錯誤"}), 400
+        return None, f"{who}時間格式錯誤"
     if time_from > time_to:
-        return jsonify({"error": "開始時間不能晚於結束時間"}), 400
+        return None, f"{who}開始時間不能晚於結束時間"
     if trains:
         time_from, time_to = "00:00", "23:59"
     if any(not _re.fullmatch(r"\d{4}", x) for x in trains):
-        return jsonify({"error": "車次只能填數字，例如 0809"}), 400
+        return None, f"{who}車次只能填數字，例如 0809"
     if arrive_by and not _re.fullmatch(hhmm, arrive_by):
-        return jsonify({"error": "最晚抵達時間格式錯誤"}), 400
-    if not discounts:
-        return jsonify({"error": "至少勾選一種優惠"}), 400
+        return None, f"{who}最晚抵達時間格式錯誤"
 
     task = {"id": secrets.token_hex(4), "origin": origin, "dest": dest, "date": date,
             "time_from": time_from, "time_to": time_to, "arrive_by": arrive_by,
-            "trains": trains,
+            "trains": trains, "leg": leg,
             "discounts": discounts, "paused": False,
             "created": _dt.now(_TW).isoformat(timespec="seconds")}
     if _dt.now(_TW) > _thsr_task_end(task):
-        return jsonify({"error": "這個時段已經過了"}), 400
+        return None, f"{who}這個時段已經過了"
+    return task, ""
+
+
+@app.route("/api/thsr/tasks", methods=["POST"])
+def thsr_add():
+    """新增一筆任務；body 帶 "return": {...} 時一次建立去程＋回程兩筆（回程起訖站自動對調）。"""
+    b = request.get_json(silent=True) or {}
+    discounts = [d for d in (b.get("discounts") or []) if d in _THSR_DISCOUNTS]
+    if not discounts:
+        return jsonify({"error": "至少勾選一種優惠"}), 400
+
+    back = b.get("return")
+    task, err = _thsr_make_task(b, discounts, "去程" if back else "")
+    if err:
+        return jsonify({"error": err}), 400
+    new = [task]
+    if back:
+        back = {**back, "origin": b.get("dest"), "dest": b.get("origin")}
+        if str(back.get("date", "")) < task["date"]:
+            return jsonify({"error": "回程日期不能早於去程"}), 400
+        ret, err = _thsr_make_task(back, discounts, "回程")
+        if err:
+            return jsonify({"error": err}), 400
+        new.append(ret)
 
     tasks = _thsr_tasks()
-    if len(tasks) >= _THSR_MAX_TASKS:
-        return jsonify({"error": f"最多 {_THSR_MAX_TASKS} 筆任務，請先刪除舊的"}), 400
-    tasks.append(task)
+    if len(tasks) + len(new) > _THSR_MAX_TASKS:
+        left = _THSR_MAX_TASKS - len(tasks)
+        return jsonify({"error": f"最多 {_THSR_MAX_TASKS} 筆任務，目前只剩 {left} 筆額度"
+                                 + ("，去回程需要 2 筆" if back else "") + "，請先刪除舊的"}), 400
+    tasks += new
     _kv_set(_THSR_TASKS_KEY, tasks)
-    return jsonify({"ok": True, "task": task})
+    return jsonify({"ok": True, "task": task, "tasks": new})
 
 
 def _thsr_change(task_id: str, action: str) -> bool:
