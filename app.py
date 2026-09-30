@@ -2325,7 +2325,7 @@ def _thsr_booking_url(task: dict, disc_key: str) -> str:
 _thsr_tg_error = ""   # 最近一次 Telegram 送出失敗的原因，tick 會寫進 health 給頁面看
 
 
-def _thsr_tg(text: str, html: bool = False) -> bool:
+def _thsr_tg(text: str, html: bool = False, buttons: list | None = None) -> bool:
     global _thsr_tg_error
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat  = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -2336,7 +2336,11 @@ def _thsr_tg(text: str, html: bool = False) -> bool:
             r = _requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
                                json={"chat_id": chat, "text": text[:4000],
                                      "disable_web_page_preview": True,
-                                     **({"parse_mode": "HTML"} if html else {})},
+                                     **({"parse_mode": "HTML"} if html else {}),
+                                     # buttons：[(文字, 網址), ...]，排成一列
+                                     **({"reply_markup": {"inline_keyboard": [
+                                         [{"text": t, "url": u} for t, u in buttons]]}}
+                                        if buttons else {})},
                                timeout=8)
             if r.ok:
                 _thsr_tg_error = ""
@@ -2385,9 +2389,7 @@ def _thsr_notice(task: dict, disc_key: str, fresh: list) -> str:
     if len(fresh) > 10:
         rows.append(f"…另有 {len(fresh) - 10} 班")
 
-    link = esc(_thsr_booking_url(task, disc_key))
-    return (f"{head}\n{route}\n{'｜'.join(cond)}\n\n" + "\n".join(rows)
-            + f'\n\n<a href="{link}">打開高鐵時刻表（條件已帶好）</a>')
+    return f"{head}\n{route}\n{'｜'.join(cond)}\n\n" + "\n".join(rows)
 
 
 @app.route("/thsr")
@@ -2569,7 +2571,9 @@ def thsr_tick():
         if not fresh:
             continue
         msg = _thsr_notice(t, d, fresh)
-        if _thsr_tg(msg, html=True):
+        buttons = [("打開高鐵時刻表", _thsr_booking_url(t, d)),
+                   ("打開任務頁", request.host_url.rstrip("/") + "/thsr")]
+        if _thsr_tg(msg, html=True, buttons=buttons):
             sent += 1
         else:
             # 沒送出去就不要記成已通知，下一輪再試
