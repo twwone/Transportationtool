@@ -2325,8 +2325,9 @@ def _thsr_booking_url(task: dict, disc_key: str) -> str:
 _thsr_tg_error = ""   # 最近一次 Telegram 送出失敗的原因，tick 會寫進 health 給頁面看
 
 
-def _thsr_tg(text: str, html: bool = False, buttons: list | None = None) -> bool:
-    """buttons：按鈕列的清單，每列是 [(文字, 網址或 "cb:動作:任務id"), ...]"""
+def _thsr_tg(text: str, html: bool = False, buttons: list | None = None) -> int | bool:
+    """buttons：按鈕列的清單，每列是 [(文字, 網址或 "cb:動作:任務id"), ...]
+    成功回傳 Telegram 的 message_id（之後同步按鈕用），失敗回傳 False。"""
     global _thsr_tg_error
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat  = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -2343,7 +2344,10 @@ def _thsr_tg(text: str, html: bool = False, buttons: list | None = None) -> bool
                                timeout=8)
             if r.ok:
                 _thsr_tg_error = ""
-                return True
+                try:
+                    return r.json()["result"]["message_id"]
+                except Exception:
+                    return True
             _thsr_tg_error = f"HTTP {r.status_code}: {r.text[:200]}"
         except Exception as e:
             _thsr_tg_error = f"{type(e).__name__}: {str(e).replace(token, '***')[:200]}"
@@ -2508,7 +2512,34 @@ def _thsr_change(task_id: str, action: str) -> bool:
         if data.pop(task_id, None) is not None:
             _kv_set(key, data)
     _kv_set(_THSR_TASKS_KEY, tasks)
+    _thsr_sync_buttons(task_id, action)
     return True
+
+
+_THSR_MSGS_KEY = "thsr:msgs"   # 任務 id → 最近的通知 [{"id": message_id, "links": [[文字, 網址], ...]}]
+
+
+def _thsr_remember_msg(task_id: str, message_id: int, links: list) -> None:
+    msgs = _kv_get(_THSR_MSGS_KEY) or {}
+    lst = msgs.get(task_id, []) + [{"id": message_id, "links": [list(x) for x in links]}]
+    msgs[task_id] = lst[-10:]   # 每個任務只同步最近 10 則
+    _kv_set(_THSR_MSGS_KEY, msgs)
+
+
+def _thsr_sync_buttons(task_id: str, action: str, skip_id: int | None = None) -> None:
+    """把這個任務所有通知的操作按鈕改成目前狀態（網頁或 Telegram 改都會呼叫）。"""
+    msgs = _kv_get(_THSR_MSGS_KEY) or {}
+    chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    for m in msgs.get(task_id, []):
+        if m["id"] == skip_id or not chat:
+            continue
+        links = [tuple(x) for x in m["links"]]
+        tail = [("已刪除", "cb:noop:")] if action == "delete" else \
+            _thsr_task_buttons(task_id, paused=action == "pause")
+        _thsr_tg_api("editMessageReplyMarkup", {"chat_id": chat, "message_id": m["id"],
+                                                "reply_markup": _thsr_keyboard([links, tail])})
+    if action == "delete" and msgs.pop(task_id, None) is not None:
+        _kv_set(_THSR_MSGS_KEY, msgs)
 
 
 @app.route("/api/thsr/tasks/<task_id>", methods=["PATCH", "DELETE"])
@@ -2664,8 +2695,11 @@ def thsr_tick():
         buttons = [[("打開高鐵時刻表", _thsr_booking_url(t, d)),
                     ("打開任務頁", request.host_url.rstrip("/").replace("http://", "https://") + "/thsr")],
                    _thsr_task_buttons(t["id"])]
-        if _thsr_tg(msg, html=True, buttons=buttons):
+        mid = _thsr_tg(msg, html=True, buttons=buttons)
+        if mid:
             sent += 1
+            if mid is not True:
+                _thsr_remember_msg(tid, mid, buttons[0])
         else:
             # 沒送出去就不要記成已通知，下一輪再試
             seen[tid][d] = [n for n in seen[tid][d] if n in prev]
