@@ -2325,7 +2325,7 @@ def _thsr_booking_url(task: dict, disc_key: str) -> str:
 _thsr_tg_error = ""   # 最近一次 Telegram 送出失敗的原因，tick 會寫進 health 給頁面看
 
 
-def _thsr_tg(text: str) -> bool:
+def _thsr_tg(text: str, html: bool = False) -> bool:
     global _thsr_tg_error
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat  = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -2335,7 +2335,8 @@ def _thsr_tg(text: str) -> bool:
         try:
             r = _requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
                                json={"chat_id": chat, "text": text[:4000],
-                                     "disable_web_page_preview": True},
+                                     "disable_web_page_preview": True,
+                                     **({"parse_mode": "HTML"} if html else {})},
                                timeout=8)
             if r.ok:
                 _thsr_tg_error = ""
@@ -2350,6 +2351,43 @@ def _thsr_tg(text: str) -> bool:
 def _thsr_tasks() -> list:
     tasks = _kv_get(_THSR_TASKS_KEY)
     return tasks if isinstance(tasks, list) else []
+
+
+def _thsr_pct(value: str) -> int:
+    """折數字串轉成百分比好比大小："9折"→90、"65折起"→65、"88折"→88；看不懂就當 100。"""
+    m = _re.match(r"(\d+)", value or "")
+    if not m:
+        return 100
+    n = int(m.group(1))
+    return n * 10 if n < 10 else n
+
+
+def _thsr_notice(task: dict, disc_key: str, fresh: list) -> str:
+    """Telegram 通知（HTML）：第一行就是優惠種類、班數、最低折數，鎖定畫面一眼看懂。"""
+    esc = lambda x: str(x).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    name  = _THSR_DISCOUNTS[disc_key]["name"]
+    best  = min(fresh, key=lambda tr: _thsr_pct(tr["value"]))
+    y, m, dd = (int(x) for x in task["date"].split("-"))
+    week  = "一二三四五六日"[_dt(y, m, dd).weekday()]
+
+    head  = f"<b>高鐵{name}｜{len(fresh)} 班，最低 {esc(best['value'])}</b>"
+    route = f"{esc(task['origin'])} → {esc(task['dest'])}｜{m}/{dd}（{week}）"
+    cond  = []
+    if task.get("trains"):
+        cond.append(f"指定車次 {'、'.join(task['trains'])}")
+    else:
+        cond.append(f"{task['time_from']}–{task['time_to']} 發車")
+    if task.get("arrive_by"):
+        cond.append(f"{task['arrive_by']} 前抵達")
+
+    rows = [f"<b>{esc(tr['no'])}</b>　{tr['dep']} → {tr['arr']}　<b>{esc(tr['value'])}</b>"
+            for tr in sorted(fresh, key=lambda tr: tr["dep"])[:10]]
+    if len(fresh) > 10:
+        rows.append(f"…另有 {len(fresh) - 10} 班")
+
+    link = esc(_thsr_booking_url(task, disc_key))
+    return (f"{head}\n{route}\n{'｜'.join(cond)}\n\n" + "\n".join(rows)
+            + f'\n\n<a href="{link}">打開高鐵時刻表（條件已帶好）</a>')
 
 
 @app.route("/thsr")
@@ -2530,20 +2568,8 @@ def thsr_tick():
         seen.setdefault(tid, {})[d] = [tr["no"] for tr in trains]
         if not fresh:
             continue
-        lines = "\n".join(
-            f"{tr['no']}  {tr['dep']} → {tr['arr']}  {tr['value']}"
-            + (f"  自由座 {tr['free']} 車" if tr["free"] else "")
-            for tr in fresh[:10]
-        )
-        if len(fresh) > 10:
-            lines += f"\n...另有 {len(fresh) - 10} 班"
-        msg = (f"高鐵{_THSR_DISCOUNTS[d]['name']}優惠出現！\n"
-               f"{t['origin']} → {t['dest']}｜{t['date']}"
-               + ("" if t.get("trains") else f"｜{t['time_from']}–{t['time_to']}")
-               + (f"｜{t['arrive_by']} 前抵達" if t.get("arrive_by") else "")
-               + (f"｜指定車次 {'、'.join(t['trains'])}" if t.get("trains") else "")
-               + f"\n\n{lines}\n\n立即訂票：\n{_thsr_booking_url(t, d)}")
-        if _thsr_tg(msg):
+        msg = _thsr_notice(t, d, fresh)
+        if _thsr_tg(msg, html=True):
             sent += 1
         else:
             # 沒送出去就不要記成已通知，下一輪再試
