@@ -2326,6 +2326,7 @@ _thsr_tg_error = ""   # 最近一次 Telegram 送出失敗的原因，tick 會�
 
 
 def _thsr_tg(text: str, html: bool = False, buttons: list | None = None) -> bool:
+    """buttons：按鈕列的清單，每列是 [(文字, 網址或 "cb:動作:任務id"), ...]"""
     global _thsr_tg_error
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat  = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -2337,9 +2338,7 @@ def _thsr_tg(text: str, html: bool = False, buttons: list | None = None) -> bool
                                json={"chat_id": chat, "text": text[:4000],
                                      "disable_web_page_preview": True,
                                      **({"parse_mode": "HTML"} if html else {}),
-                                     # buttons：[(文字, 網址), ...]，排成一列
-                                     **({"reply_markup": {"inline_keyboard": [
-                                         [{"text": t, "url": u} for t, u in buttons]]}}
+                                     **({"reply_markup": _thsr_keyboard(buttons)}
                                         if buttons else {})},
                                timeout=8)
             if r.ok:
@@ -2492,25 +2491,116 @@ def thsr_add():
     return jsonify({"ok": True, "task": task})
 
 
-@app.route("/api/thsr/tasks/<task_id>", methods=["PATCH", "DELETE"])
-def thsr_edit(task_id):
+def _thsr_change(task_id: str, action: str) -> bool:
+    """action = pause / resume / delete；找不到任務回 False。網頁和 Telegram 按鈕共用。"""
     tasks = _thsr_tasks()
     if not any(t["id"] == task_id for t in tasks):
-        return jsonify({"error": "找不到任務"}), 404
-    if request.method == "DELETE":
+        return False
+    if action == "delete":
         tasks = [t for t in tasks if t["id"] != task_id]
     else:
-        paused = bool((request.get_json(silent=True) or {}).get("paused"))
         for t in tasks:
             if t["id"] == task_id:
-                t["paused"] = paused
+                t["paused"] = action == "pause"
     # 刪除或暫停都清掉通知紀錄：恢復時會重新推一次目前有的班次
     for key in (_THSR_SEEN_KEY, _THSR_AVAIL_KEY):
         data = _kv_get(key) or {}
         if data.pop(task_id, None) is not None:
             _kv_set(key, data)
     _kv_set(_THSR_TASKS_KEY, tasks)
+    return True
+
+
+@app.route("/api/thsr/tasks/<task_id>", methods=["PATCH", "DELETE"])
+def thsr_edit(task_id):
+    if request.method == "DELETE":
+        action = "delete"
+    else:
+        action = "pause" if (request.get_json(silent=True) or {}).get("paused") else "resume"
+    if not _thsr_change(task_id, action):
+        return jsonify({"error": "找不到任務"}), 404
     return jsonify({"ok": True})
+
+
+# ── Telegram 按鈕 ──
+# 連結按鈕：(文字, 網址)；操作按鈕：(文字, "cb:動作:任務id")，按下後 Telegram 打 /api/thsr/tg-webhook
+def _thsr_keyboard(rows: list) -> dict:
+    return {"inline_keyboard": [
+        [{"text": t, "callback_data": v[3:]} if v.startswith("cb:") else {"text": t, "url": v}
+         for t, v in row]
+        for row in rows]}
+
+
+def _thsr_task_buttons(task_id: str, paused: bool = False) -> list:
+    return [("繼續這個任務" if paused else "暫停這個任務",
+             f"cb:{'resume' if paused else 'pause'}:{task_id}"),
+            ("刪除這個任務", f"cb:delete:{task_id}")]
+
+
+def _thsr_webhook_secret() -> str:
+    """給 Telegram 的 secret_token，由 THSR_TICK_KEY 推出來，不用另外設環境變數。"""
+    key = os.environ.get("THSR_TICK_KEY", "")
+    return hmac.new(key.encode(), b"thsr-tg-webhook", hashlib.sha256).hexdigest() if key else ""
+
+
+def _thsr_tg_api(method: str, payload: dict) -> dict:
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    try:
+        return _requests.post(f"https://api.telegram.org/bot{token}/{method}",
+                              json=payload, timeout=8).json()
+    except Exception as e:
+        return {"ok": False, "description": f"{type(e).__name__}: {str(e).replace(token, '***')[:150]}"}
+
+
+@app.route("/api/thsr/tg-webhook", methods=["POST"])
+def thsr_tg_webhook():
+    secret = _thsr_webhook_secret()
+    got = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not secret or not hmac.compare_digest(got, secret):
+        return jsonify({"error": "unauthorized"}), 401
+    cq = (request.get_json(silent=True) or {}).get("callback_query") or {}
+    msg = cq.get("message") or {}
+    chat_id = str((msg.get("chat") or {}).get("id", ""))
+    # 只接受自己聊天室按的按鈕
+    if not cq or chat_id != os.environ.get("TELEGRAM_CHAT_ID", "").strip():
+        return jsonify({"ok": True})
+
+    action, _, task_id = (cq.get("data") or "").partition(":")
+    if action == "noop":
+        _thsr_tg_api("answerCallbackQuery", {"callback_query_id": cq.get("id"), "text": "這個任務已刪除"})
+        return jsonify({"ok": True})
+    link_row = ((msg.get("reply_markup") or {}).get("inline_keyboard") or [[]])[0]
+    links = [(b["text"], b["url"]) for b in link_row if b.get("url")]
+
+    if action not in ("pause", "resume", "delete") or not _thsr_change(task_id, action):
+        note, rows = "這個任務已經不存在了", [links] if links else []
+    elif action == "delete":
+        note, rows = "已刪除任務", [links, [("已刪除", "cb:noop:")]]
+    else:
+        note = "已暫停，不會再通知" if action == "pause" else "已繼續監控"
+        rows = [links, _thsr_task_buttons(task_id, paused=action == "pause")]
+    rows = [r for r in rows if r]
+
+    _thsr_tg_api("answerCallbackQuery", {"callback_query_id": cq.get("id"), "text": note})
+    _thsr_tg_api("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": msg.get("message_id"),
+                                            "reply_markup": _thsr_keyboard(rows)})
+    return jsonify({"ok": True})
+
+
+@app.route("/api/thsr/tg-setup")
+def thsr_tg_setup():
+    """把 Telegram 的按鈕回呼指到本站。若 bot 已經指到別的網址，不覆蓋（加 force=1 才覆蓋）。"""
+    secret = os.environ.get("THSR_TICK_KEY", "")
+    if not secret or not hmac.compare_digest(request.args.get("key", ""), secret):
+        return jsonify({"error": "unauthorized"}), 401
+    url = request.host_url.rstrip("/").replace("http://", "https://") + "/api/thsr/tg-webhook"
+    before = (_thsr_tg_api("getWebhookInfo", {}).get("result") or {}).get("url", "")
+    if before and before != url and request.args.get("force") != "1":
+        return jsonify({"ok": False, "reason": "bot 已經設定了別的 webhook，未覆蓋", "current": before})
+    r = _thsr_tg_api("setWebhook", {"url": url, "secret_token": _thsr_webhook_secret(),
+                                    "allowed_updates": ["callback_query"]})
+    return jsonify({"ok": r.get("ok", False), "before": before, "now": url,
+                    "detail": r.get("description")})
 
 
 @app.route("/api/thsr/tg-test")
@@ -2571,8 +2661,9 @@ def thsr_tick():
         if not fresh:
             continue
         msg = _thsr_notice(t, d, fresh)
-        buttons = [("打開高鐵時刻表", _thsr_booking_url(t, d)),
-                   ("打開任務頁", request.host_url.rstrip("/") + "/thsr")]
+        buttons = [[("打開高鐵時刻表", _thsr_booking_url(t, d)),
+                    ("打開任務頁", request.host_url.rstrip("/").replace("http://", "https://") + "/thsr")],
+                   _thsr_task_buttons(t["id"])]
         if _thsr_tg(msg, html=True, buttons=buttons):
             sent += 1
         else:
