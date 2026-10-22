@@ -1057,13 +1057,17 @@ _LOADSHEET_PARSE_PROMPT = (
     "其中可能有 LDM 裝載電報，也可能只有維修通知、旅客交接、聊天截圖等無關內容。\n"
     "請只看 LDM（或同一封信裡的裝載說明），找出「飛機在 TPE 落地後仍留在機上、要繼續飛往下一站」的項目：\n"
     "- crew：組員行李（CREW BAG / CREW BGE），例如 'CREW BAG: 6/61 KGS @ HOLD.5'、'05 PCS CREW BGE LDD AT H3'\n"
-    "- toolbox：工具箱（TOOL BOX / TOOLBOX）\n"
+    "- toolbox：工具箱（TOOL BOX / TOOLBOX），常常只寫重量，例如 'TOOL BOX 25 KGS'，也要回報\n"
     "- transit：往下一站的旅客轉機／過境行李（PASSENGER BAG TRANSIT、JOINING BGE、TRANSIT BAG、FLY THRU 的行李）\n"
     "- trash：垃圾（GRBS / GARBAGE）\n"
     "規則：\n"
-    "1. 只回報留機往下一站的項目；在 TPE 卸下的行李、貨物不要算。如果 TPE 是終點站，四項都回 null。\n"
-    "2. 件數 pcs、重量 kg 要照原文數字；同一項在不同段落分別寫了件數和重量時（例如上方寫 5PCS/44KGS、下方寫 LDD AT H3），合併成一筆。原文沒寫的欄位回 null，不要推算。\n"
-    "3. 貨艙 hold 統一寫成 HOLD1～HOLD5（H.5、HOLD.5、H5、AT H3 都要轉換）；沒寫艙位就回 null。\n"
+    "1. 只回報留機往下一站的項目；在 TPE 卸下的行李、貨物不要算。如果 TPE 是終點站，四項都回 null。"
+    "組員行李和工具箱只要出現在 LDM 的貨艙分配（例如 'H.5 = BAG 63 KGS,CREW BAG 6 PCS,TOOL BOX 25 KGS'）或 SI，"
+    "且沒寫在 TPE 卸下（OFFLOAD），就視為留機。\n"
+    "2. 件數 pcs、重量 kg 要照原文數字；同一項在不同段落分別寫了件數和重量時要合併成一筆。"
+    "例如下一站段落寫 '-BGE PW : 1PCS/13KGS'、最後寫 '01 PCS JOINING BGE LDD AT H3'，轉機行李就是 1 件 13 KG、HOLD3。"
+    "原文完全沒寫的欄位才回 null，不要推算。\n"
+    "3. 貨艙 hold 統一寫成 HOLD1～HOLD5（H.5、HOLD.5、H5、AT H3 都要轉換，例如 AT H3 → HOLD3）；沒寫艙位就回 null。\n"
     "4. quote 照抄你依據的原文（可以多行，用 \\n 分隔），讓人工核對。\n"
     "5. 寫成 NIL、0 的項目回 null。\n"
     "嚴格以 JSON 回傳，不得輸出其他內容，格式：\n"
@@ -1092,9 +1096,9 @@ def _loadsheet_clean_item(raw) -> "dict | None":
         return int(n) if n.is_integer() else round(n, 1)
 
     pcs, kg = _num(raw.get("pcs")), _num(raw.get("kg"))
-    hold = str(raw.get("hold") or "").upper().replace(" ", "").replace(".", "")
-    if not _re.match(r"^HOLD[1-5]$", hold):
-        hold = ""
+    # H3、H.3、HOLD.5、HOLD 5、5 都轉成 HOLD5
+    m = _re.match(r"^(?:HOLD|H)?([1-5])$", str(raw.get("hold") or "").upper().replace(" ", "").replace(".", ""))
+    hold = f"HOLD{m.group(1)}" if m else ""
     if pcs is None and kg is None:
         return None
     return {"pcs": pcs, "kg": kg, "hold": hold, "quote": str(raw.get("quote") or "").strip()[:400]}
@@ -1103,7 +1107,7 @@ def _loadsheet_clean_item(raw) -> "dict | None":
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v6:{notion_id}"
+    cache_key = f"loadsheet:parse:v7:{notion_id}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and "ldm_found" in cached:
         return cached, None
