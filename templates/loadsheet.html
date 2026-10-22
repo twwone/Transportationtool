@@ -627,9 +627,16 @@ function renderResult() {
   AC[curAc].holds.forEach((h, i) => {
     const pcs     = holdPcs[h.id] || 0;
     const kg      = holdKg[h.id] ?? 0;
-    const pct     = h.maxKg ? Math.min(100, Math.round(kg / h.maxKg * 100)) : 0;
+    /* 該艙特殊項目（轉機已含在行李件數內，不另外加） */
+    const spItems = [
+      { label:'組員',    s: sp.crew    },
+      { label:'Toolbox', s: sp.toolbox },
+      { label:'垃圾',    s: sp.trash   },
+    ].filter(x => x.s.hold === h.id && x.s.kg > 0);
+    const spKg    = round1(spItems.reduce((sum, x) => sum + x.s.kg, 0));
+    const holdTotal = round1(kg + spKg);
     const overPcs = pcs > h.maxPcs && h.maxPcs > 0;
-    const overKg  = kg  > h.maxKg;
+    const overKg  = holdTotal > h.maxKg;
     const hasTransit = sp.transit.hold === h.id && sp.transit.pcs > 0;
 
     /* 特殊項目 tags */
@@ -660,20 +667,23 @@ function renderResult() {
             onchange="onHoldInput(this)">
         </div>
         ${(()=>{
-          const spItems = [sp.crew, sp.toolbox, sp.transit, sp.trash]
-            .filter(s => s.hold === h.id && s.kg > 0);
-          const spKg = spItems.reduce((sum, s) => sum + s.kg, 0);
-          if (!pcs && !spKg) return '<div class="hold-calc"></div>';
-          const mainKg  = pcs ? kg + ' KG' : spKg + ' KG';
-          const spFormula = spItems.map(s => s.kg).join('+');
-          const mainSub = pcs && avg
-            ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`)
-            : `= ${spFormula}`;
-          const extraLine = pcs && spKg ? `<div class="hold-calc-special">特殊項目 ${spKg} KG</div>` : '';
+          const hasBags = pcs && avg;
+          if (!hasBags && !spKg) return '<div class="hold-calc"></div>';
+          /* 總式：行李 + 各特殊項目 */
+          const terms = [hasBags ? kg : null, ...spItems.map(x => x.s.kg)].filter(t => t != null);
+          const sumLine = terms.length > 1 ? `<div class="hold-calc-sub">= ${terms.join(' + ')}</div>` : '';
+          /* 明細：行李怎麼算、每項特殊項目各多少 */
+          const bagLine = hasBags
+            ? (lastHold && h.id === lastHold.id
+                ? `行李 ${totalKg}−${usedKg} = ${kg}`
+                : `行李 ${pcs}×${avg} = ${kg}`)
+            : '';
+          const spLines = spItems.map(x => `${x.label} ${x.s.kg}`);
+          const detail = [bagLine, ...spLines].filter(Boolean).join('<br>');
           return `<div class="hold-calc">
-            <div class="hold-calc-kg">${mainKg}</div>
-            <div class="hold-calc-sub">${mainSub}</div>
-            ${extraLine}
+            <div class="hold-calc-kg">${holdTotal} KG</div>
+            ${sumLine}
+            <div class="hold-calc-special">${detail}</div>
           </div>`;
         })()}
       </div>
