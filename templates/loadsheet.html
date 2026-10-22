@@ -246,7 +246,7 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
   <button id="clearBtn" onclick="clearAll()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--chip-bg);color:var(--sub);font-size:0.86rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:14px;transition:background .2s,color .2s,transform .12s;">🗑 清除所有資料</button>
 
   <!-- 結果 -->
-  <div id="resultSection" style="display:none">
+  <div id="resultSection">
     <div class="remain-banner" id="remainBanner">
       <div>
         <div class="remain-label">尚未分配件數</div>
@@ -310,13 +310,9 @@ function loadState() {
     }
     if (data.holdPcs && Object.keys(data.holdPcs).length) {
       holdPcs = data.holdPcs;
-      onBagsInput();
-      document.getElementById('resultSection').style.display = '';
       document.getElementById('resultLabel').textContent = `建議裝載方案 · ${curAc}`;
-      renderResult();
-    } else {
-      onBagsInput();
     }
+    onBagsInput();
     updateWeightSummary();
   } catch (e) {}
 }
@@ -395,13 +391,13 @@ function onBagsInput() {
   document.getElementById('avgHint').innerHTML = avg != null
     ? `平均每件：<b>${avg} KG</b>（含轉機）` : '請輸入總件數與總重量';
   updateWeightSummary();
-  if (document.getElementById('resultSection').style.display !== 'none') renderResult();
+  renderResult();
   saveState();
 }
 
 function onSpecialChange() {
   updateWeightSummary();
-  if (document.getElementById('resultSection').style.display !== 'none') renderResult();
+  renderResult();
   saveState();
 }
 
@@ -433,7 +429,6 @@ function calcDistribution() {
     if (remaining <= 0) break;
   }
 
-  document.getElementById('resultSection').style.display = '';
   document.getElementById('resultLabel').textContent = `建議裝載方案 · ${curAc}`;
   renderResult();
   saveState();
@@ -575,6 +570,7 @@ function clearAll() {
 
 /* 初始化 */
 buildHoldOptions();
+renderResult();
 loadState();
 </script>
 </body>
