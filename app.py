@@ -1052,103 +1052,109 @@ def loadsheet_flights_api():
     return jsonify({"flights": result, "date": date_str})
 
 
-_LOADSHEET_OCR_PROMPT = (
-    "Please extract all text from this image exactly as it appears. "
-    "Output only the raw text, no formatting, no explanation, no markdown."
+_LOADSHEET_PARSE_PROMPT = (
+    "你是機場地勤的裝載助理。以下是一班飛機落地台北（TPE）前，系統附加的圖片／檔案／文字，"
+    "其中可能有 LDM 裝載電報，也可能只有維修通知、旅客交接、聊天截圖等無關內容。\n"
+    "請只看 LDM（或同一封信裡的裝載說明），找出「飛機在 TPE 落地後仍留在機上、要繼續飛往下一站」的項目：\n"
+    "- crew：組員行李（CREW BAG / CREW BGE），例如 'CREW BAG: 6/61 KGS @ HOLD.5'、'05 PCS CREW BGE LDD AT H3'\n"
+    "- toolbox：工具箱（TOOL BOX / TOOLBOX）\n"
+    "- transit：往下一站的旅客轉機／過境行李（PASSENGER BAG TRANSIT、JOINING BGE、TRANSIT BAG、FLY THRU 的行李）\n"
+    "- trash：垃圾（GRBS / GARBAGE）\n"
+    "規則：\n"
+    "1. 只回報留機往下一站的項目；在 TPE 卸下的行李、貨物不要算。如果 TPE 是終點站，四項都回 null。\n"
+    "2. 件數 pcs、重量 kg 要照原文數字；同一項在不同段落分別寫了件數和重量時（例如上方寫 5PCS/44KGS、下方寫 LDD AT H3），合併成一筆。原文沒寫的欄位回 null，不要推算。\n"
+    "3. 貨艙 hold 統一寫成 HOLD1～HOLD5（H.5、HOLD.5、H5、AT H3 都要轉換）；沒寫艙位就回 null。\n"
+    "4. quote 照抄你依據的原文（可以多行，用 \\n 分隔），讓人工核對。\n"
+    "5. 寫成 NIL、0 的項目回 null。\n"
+    "嚴格以 JSON 回傳，不得輸出其他內容，格式：\n"
+    '{"ldm_found":true,"onward":"OKA",'
+    '"crew":{"pcs":6,"kg":61,"hold":"HOLD5","quote":"CREW BAG: 6/61 KGS @ HOLD.5"},'
+    '"toolbox":{"pcs":null,"kg":25,"hold":"HOLD5","quote":"TOOL BOX 25 KGS"},'
+    '"transit":null,"trash":null}\n'
+    "ldm_found：內容裡有沒有 LDM 或裝載說明；onward：下一站機場代碼，沒有就空字串。"
 )
 
+_LOADSHEET_ITEMS = ("crew", "toolbox", "transit", "trash")
 
-def _ldm_regex_parse(text: str) -> "dict | None":
-    """用 regex 直接解析 LDM 電報文字，成功就回傳結果，找不到任何欄位回傳 None。"""
-    import re as _re2
-    result = {}
 
-    # CREW 6/53 Kgs. = H.5  /  CREW 6/53KGS=H5
-    m = _re2.search(r'CREW\s+(\d+)/(\d+)\s*Kgs?\.?\s*=?\s*H\.?(\d)', text, _re2.IGNORECASE)
-    if m:
-        result["crew"] = {"hold": f"HOLD{m.group(3)}", "pcs": int(m.group(1)), "kg": int(m.group(2)), "confidence": "high"}
-
-    # Toolbox 2/23 Kgs. H.1
-    m = _re2.search(r'Toolbox\s+(\d+)/(\d+)\s*Kgs?\.?\s*=?\s*H\.?(\d)', text, _re2.IGNORECASE)
-    if m:
-        result["toolbox"] = {"hold": f"HOLD{m.group(3)}", "pcs": int(m.group(1)), "kg": int(m.group(2)), "confidence": "high"}
-
-    # TRANSIT BAG   TO OKA   19/260 Kgs. = H.5
-    m = _re2.search(r'TRANSIT\s+BAG\b.*?(\d+)/(\d+)\s*Kgs?\.?\s*=?\s*H\.?(\d)', text, _re2.IGNORECASE | _re2.DOTALL)
-    if m:
-        result["transit"] = {"hold": f"HOLD{m.group(3)}", "pcs": int(m.group(1)), "kg": int(m.group(2)), "confidence": "high"}
-
-    # GRBS / Garbage / 垃圾  X/Y Kgs. H.N
-    m = _re2.search(r'(?:GRBS|Garbage|垃圾)\s*(?:(\d+)/(\d+)\s*Kgs?\.?)?\s*=?\s*H\.?(\d)', text, _re2.IGNORECASE)
-    if m:
-        entry = {"hold": f"HOLD{m.group(3)}", "confidence": "high"}
-        if m.group(1):
-            entry["pcs"] = int(m.group(1))
-            entry["kg"]  = int(m.group(2))
-        result["trash"] = entry
-
-    if not result:
+def _loadsheet_clean_item(raw) -> "dict | None":
+    """整理 Gemini 回傳的單一項目：數字轉型、艙位格式檢查，沒有任何數值就當作沒有。"""
+    if not isinstance(raw, dict):
         return None
-    result["image_has_data"] = True
-    return result
+
+    def _num(x):
+        try:
+            n = float(x)
+        except (TypeError, ValueError):
+            return None
+        if n <= 0:
+            return None
+        return int(n) if n.is_integer() else round(n, 1)
+
+    pcs, kg = _num(raw.get("pcs")), _num(raw.get("kg"))
+    hold = str(raw.get("hold") or "").upper().replace(" ", "").replace(".", "")
+    if not _re.match(r"^HOLD[1-5]$", hold):
+        hold = ""
+    if pcs is None and kg is None:
+        return None
+    return {"pcs": pcs, "kg": kg, "hold": hold, "quote": str(raw.get("quote") or "").strip()[:400]}
 
 
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v5:{notion_id}"
+    cache_key = f"loadsheet:parse:v6:{notion_id}"
     cached = _kv_get(cache_key)
-    if isinstance(cached, dict) and "image_has_data" in cached:
+    if isinstance(cached, dict) and "ldm_found" in cached:
         return cached, None
-
-    items = _asiaair_fetch_detail(notion_id)
-    if not items:
-        return {"image_has_data": False}, None
-
-    full_text = "\n".join(it["text"] for it in items if it["type"] == "text")
-    image_urls = [it["url"] for it in items if it["type"] == "image"]
-
-    # ── 方案一：Notion 文字 block 直接 regex（最準）
-    if full_text.strip():
-        regex_result = _ldm_regex_parse(full_text)
-        if regex_result:
-            regex_result["image_url"] = image_urls[0] if image_urls else None
-            regex_result["source"] = "text"
-            _kv_set(cache_key, regex_result)
-            return regex_result, None
-
-    # ── 方案二：一次 Gemini OCR call 把所有圖的文字抄出來，再 regex 解析
-    if not image_urls:
-        return {"image_has_data": False}, None
 
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         return None, "伺服器未設定 Gemini API 金鑰"
 
-    parts = [{"text": _LOADSHEET_OCR_PROMPT}]
-    for url in image_urls[:4]:          # 上限 4 張，單次 call 足夠快
-        data, mime = _asiaair_download_bytes(url)
-        if data and mime:
-            parts.append({"inline_data": {"mime_type": mime, "data": _base64.b64encode(data).decode("utf-8")}})
+    items = _asiaair_fetch_detail(notion_id)
+    if not items:
+        return {"ldm_found": False}, None
+
+    parts = [{"text": _LOADSHEET_PARSE_PROMPT}]
+    full_text = "\n".join(it["text"] for it in items if it["type"] == "text" and it.get("text"))
+    if full_text.strip():
+        parts.append({"text": "Notion 頁面文字：\n" + full_text[:6000]})
+    for it in [x for x in items if x["type"] in ("image", "file")][:8]:  # LDM 常在後面幾張，全部送
+        data, mime = _asiaair_download_bytes(it["url"])
+        if not data or not mime:
+            continue
+        if it["type"] == "file" and "pdf" not in mime:
+            continue
+        parts.append({"inline_data": {"mime_type": mime, "data": _base64.b64encode(data).decode("utf-8")}})
 
     if len(parts) <= 1:
-        return {"image_has_data": False, "image_url": image_urls[0]}, None
+        return {"ldm_found": False}, None
 
-    resp, _, _ = _asiaair_call_gemini(api_key, parts)
-    if resp:
-        try:
-            ocr_text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-            if ocr_text:
-                regex_result = _ldm_regex_parse(ocr_text)
-                if regex_result:
-                    regex_result["image_url"] = image_urls[0]
-                    regex_result["source"] = "ocr"
-                    _kv_set(cache_key, regex_result)
-                    return regex_result, None
-        except Exception:
-            pass
+    resp, _, err_msg = _asiaair_call_gemini(api_key, parts)
+    if resp is None:
+        return None, err_msg or "AI 辨識失敗"
 
-    return {"image_has_data": False, "image_url": image_urls[0] if image_urls else None}, None
+    try:
+        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        raw = _json.loads(text)
+    except Exception as e:
+        return None, f"AI 回應解析失敗：{e}"
+
+    result = {
+        "ldm_found": bool(raw.get("ldm_found")),
+        "onward":    str(raw.get("onward") or "").upper()[:3],
+    }
+    for key in _LOADSHEET_ITEMS:
+        result[key] = _loadsheet_clean_item(raw.get(key))
+
+    # 還沒上傳 LDM 的航班不快取，之後補上就能重新辨識
+    if result["ldm_found"]:
+        _kv_set(cache_key, result)
+    return result, None
 
 
 @app.route("/api/loadsheet/parse/<notion_id>")

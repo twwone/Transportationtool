@@ -76,6 +76,19 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .ldm-img { width:100%; border-radius:12px; display:block; margin-bottom:10px; cursor:pointer; }
 .ldm-text-block { font-size:0.8rem; color:var(--text); background:rgba(0,0,0,0.03); border-radius:10px; padding:10px 12px; margin-bottom:8px; white-space:pre-wrap; line-height:1.6; font-family:monospace; }
 @media (prefers-color-scheme:dark) { .ldm-text-block { background:rgba(255,255,255,0.06); } }
+/* LDM 自動辨識 */
+.ldm-parse { border:1.5px solid rgba(0,113,227,0.25); border-radius:14px; padding:12px; margin-bottom:12px; background:rgba(0,113,227,0.04); }
+.ldm-parse-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.ldm-parse-title { font-size:0.8rem; font-weight:800; }
+.ldm-parse-note { font-size:0.68rem; color:var(--sub); }
+.ldm-parse-row { padding:8px 0; border-top:1px solid var(--divider); }
+.ldm-parse-row:first-of-type { border-top:none; }
+.ldm-parse-main { display:flex; justify-content:space-between; gap:8px; font-size:0.82rem; font-weight:700; }
+.ldm-parse-main .warn { color:var(--danger); }
+.ldm-parse-quote { font-family:monospace; font-size:0.7rem; color:var(--sub); white-space:pre-wrap; margin-top:3px; line-height:1.45; }
+.ldm-parse-empty { font-size:0.8rem; color:var(--sub); line-height:1.5; }
+.ldm-apply-btn { width:100%; margin-top:10px; padding:11px; border:none; border-radius:12px; background:var(--accent); color:#fff; font-size:0.86rem; font-weight:700; font-family:inherit; cursor:pointer; transition:transform .12s; }
+.ldm-apply-btn:active { transform:scale(0.98); }
 .ldm-close-btn { width:100%; padding:10px; border:none; border-radius:12px; background:var(--chip-bg); color:var(--sub); font-size:0.84rem; font-weight:700; font-family:inherit; cursor:pointer; margin-top:4px; }
 /* 圖片 Modal */
 .img-modal-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.88); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:16px; }
@@ -231,6 +244,7 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
     </div>
     <div id="ldmFlightList"><div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> 載入航班中…</div></div>
     <div id="ldmContent" style="display:none">
+      <div class="ldm-parse" id="ldmParse"></div>
       <div id="ldmItems"></div>
       <button class="ldm-close-btn" onclick="closeLdm()">收起</button>
     </div>
@@ -644,8 +658,8 @@ function renderResult() {
 
     /* 特殊項目 tags */
     const tagItems = [
-      sp.crew.hold    === h.id && sp.crew.pcs    > 0 ? `<span class="extra-tag">👔 組員行李 ${sp.crew.pcs}件 / ${sp.crew.kg||'—'} KG</span>` : '',
-      sp.toolbox.hold === h.id && sp.toolbox.pcs > 0 ? `<span class="extra-tag">🔧 Toolbox ${sp.toolbox.pcs}件 / ${sp.toolbox.kg||'—'} KG</span>` : '',
+      sp.crew.hold    === h.id && (sp.crew.pcs    > 0 || sp.crew.kg    > 0) ? `<span class="extra-tag">👔 組員行李 ${sp.crew.pcs||'—'}件 / ${sp.crew.kg||'—'} KG</span>` : '',
+      sp.toolbox.hold === h.id && (sp.toolbox.pcs > 0 || sp.toolbox.kg > 0) ? `<span class="extra-tag">🔧 Toolbox ${sp.toolbox.pcs||'—'}件 / ${sp.toolbox.kg||'—'} KG</span>` : '',
       hasTransit ? `<span class="extra-tag transit">🔄 轉機行李 ${sp.transit.pcs}件${sp.transit.kg ? ' / '+sp.transit.kg+' KG' : ''}（固定）</span>` : '',
       sp.trash.hold === h.id ? `<span class="extra-tag">🗑 垃圾${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+'件' : ''}${sp.trash.kg ? ' / '+sp.trash.kg+' KG' : ''}</span>` : '',
     ].filter(Boolean).join('');
@@ -825,7 +839,7 @@ function renderLdmFlights(flights) {
     const prefix = f.flight.slice(0,2).toLowerCase();
     const codeCls = (prefix==='ak'||prefix==='z2') ? prefix : '';
     const sub = [f.origin ? f.origin+'→TPE' : '', f.sta ? '落地 '+f.sta : ''].filter(Boolean).join(' · ');
-    return `<div class="ldm-flight-item" data-notion="${f.notion_id}" data-flight="${f.flight}" onclick="selectLdmFlight(this)">
+    return `<div class="ldm-flight-item" data-notion="${f.notion_id}" data-flight="${f.flight}" data-ac="${f.ac_type}" onclick="selectLdmFlight(this)">
       <div class="ldm-fl-code ${codeCls}">${f.flight.slice(0,2)}</div>
       <div class="ldm-fl-info">
         <div class="ldm-fl-no">${f.flight}</div>
@@ -846,6 +860,7 @@ async function selectLdmFlight(el) {
   const items   = document.getElementById('ldmItems');
   content.style.display = '';
   items.innerHTML = '<div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> 載入 Notion 資料中…</div>';
+  loadLdmParse(notionId, flight, el.dataset.ac);
 
   try {
     const res  = await fetch(`/api/asia-airlines/detail/${notionId}`);
@@ -869,7 +884,93 @@ async function selectLdmFlight(el) {
   }
 }
 
+/* ── LDM 自動辨識：先顯示結果與原文給人核對，按「套用」才寫進特殊項目 ── */
+const LDM_ITEMS = [
+  { key:'crew',    label:'組員行李' },
+  { key:'toolbox', label:'Toolbox'  },
+  { key:'transit', label:'轉機行李' },
+  { key:'trash',   label:'垃圾'     },
+];
+let _ldmParsed = null;   // { data, ac, flight }
+let _ldmParseSeq = 0;    // 快速切換航班時，丟掉舊的回應
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function loadLdmParse(notionId, flight, ac) {
+  const box = document.getElementById('ldmParse');
+  const seq = ++_ldmParseSeq;
+  _ldmParsed = null;
+  box.innerHTML = '<div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> AI 辨識留機項目中（約 10 秒）…</div>';
+  try {
+    const res  = await fetch(`/api/loadsheet/parse/${notionId}`);
+    const data = await res.json();
+    if (seq !== _ldmParseSeq) return;
+    if (!res.ok) throw new Error(data.error || '辨識失敗');
+    _ldmParsed = { data, ac, flight };
+    renderLdmParse();
+  } catch (e) {
+    if (seq !== _ldmParseSeq) return;
+    box.innerHTML = `<div class="ldm-parse-empty">自動辨識失敗：${escHtml(e.message)}。請看下方圖片手動填寫。</div>`;
+  }
+}
+
+function renderLdmParse() {
+  const box = document.getElementById('ldmParse');
+  const { data, ac, flight } = _ldmParsed;
+  const found = LDM_ITEMS.filter(it => data[it.key]);
+  const head = `<div class="ldm-parse-head">
+      <span class="ldm-parse-title">AI 辨識 · ${escHtml(flight)}</span>
+      <span class="ldm-parse-note">${ac}${data.onward ? ' · 續飛 ' + escHtml(data.onward) : ''}</span>
+    </div>`;
+
+  if (!data.ldm_found) {
+    box.innerHTML = head + '<div class="ldm-parse-empty">附件裡沒有找到 LDM，可能還沒上傳。請看下方圖片確認。</div>';
+    return;
+  }
+  if (!found.length) {
+    box.innerHTML = head + '<div class="ldm-parse-empty">LDM 沒有留機項目（台北可能是終點站）。</div>';
+    return;
+  }
+  const validHolds = AC[ac] ? AC[ac].holds.map(h => h.id) : [];
+  const rows = found.map(it => {
+    const d = data[it.key];
+    const holdOk  = d.hold && validHolds.includes(d.hold);
+    const holdTxt = !d.hold ? '<span class="warn">艙位未寫</span>'
+                  : holdOk  ? d.hold.replace('HOLD', 'HOLD ')
+                  : `<span class="warn">${d.hold}（${ac} 沒有這艙）</span>`;
+    const nums = [d.pcs != null ? d.pcs + ' 件' : '件數未寫', d.kg != null ? d.kg + ' KG' : '重量未寫'].join(' / ');
+    return `<div class="ldm-parse-row">
+      <div class="ldm-parse-main"><span>${it.label}</span><span>${holdTxt} · ${nums}</span></div>
+      ${d.quote ? `<div class="ldm-parse-quote">原文：${escHtml(d.quote)}</div>` : ''}
+    </div>`;
+  }).join('');
+  box.innerHTML = head + rows +
+    `<button class="ldm-apply-btn" onclick="applyLdmParse()">套用到特殊項目（機型切成 ${ac}，取代目前四項）</button>`;
+}
+
+function applyLdmParse() {
+  if (!_ldmParsed) return;
+  const { data, ac } = _ldmParsed;
+  if (AC[ac] && ac !== curAc) {
+    curAc = ac;
+    document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.ac === curAc));
+    buildHoldOptions();
+  }
+  LDM_ITEMS.forEach(({ key }) => {
+    const d = data[key];
+    const holdOk = d && d.hold && AC[curAc].holds.some(h => h.id === d.hold);
+    document.getElementById(`${key}-hold`).value = holdOk ? d.hold : '';
+    document.getElementById(`${key}-pcs`).value  = d && d.pcs != null ? d.pcs : '';
+    document.getElementById(`${key}-kg`).value   = d && d.kg  != null ? d.kg  : '';
+  });
+  onSpecialChange();
+  const btn = document.querySelector('.ldm-apply-btn');
+  if (btn) btn.textContent = '已套用，請往下核對特殊項目';
+}
+
 function closeLdm() {
+  _ldmParseSeq++;
+  _ldmParsed = null;
   document.getElementById('ldmContent').style.display = 'none';
   document.querySelectorAll('.ldm-flight-item').forEach(x => x.classList.remove('active'));
 }
