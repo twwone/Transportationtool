@@ -1049,30 +1049,9 @@ def loadsheet_flights_api():
     return jsonify({"flights": result, "date": today})
 
 
-_LOADSHEET_PARSE_PROMPT = (
-    "你是機場地勤助理。以下提供了這班航班 Notion 頁面裡的所有圖片，"
-    "內容可能是 LDM 電報截圖、Load Sheet / LIR、或其他航班文件。\n\n"
-    "請忽略貨單（Cargo Manifest、Air Waybill、AWB）。\n\n"
-    "LDM 格式說明（最常見）：\n"
-    "  CREW X/Y Kgs. = H.N   → 組員行李 X 件 / Y KG 在 HOLD N\n"
-    "  Toolbox X/Y Kgs. H.N  → 工具箱 X 件 / Y KG 在 HOLD N\n"
-    "  TRANSIT BAG TO XXX X/Y Kgs. = H.N → 轉機行李 X 件 / Y KG 在 HOLD N\n"
-    "  GRBS / Garbage / 垃圾  → 垃圾在哪個艙\n"
-    "  H.1~H.5 對應 HOLD1~HOLD5\n\n"
-    "請從圖片中抓出以下五類（找不到就設 null）：\n"
-    "1. crew：組員行李\n"
-    "2. toolbox：工具箱\n"
-    "3. transit：轉機行李（TRANSIT BAG）\n"
-    "4. trash：垃圾\n"
-    "5. image_has_data（bool）：是否找到有效裝載資料\n\n"
-    "嚴格以 JSON 格式回傳，不得輸出其他內容。範例：\n"
-    '{"image_has_data":true,'
-    '"crew":{"hold":"HOLD5","pcs":6,"kg":53,"confidence":"high"},'
-    '"toolbox":{"hold":"HOLD1","pcs":2,"kg":23,"confidence":"high"},'
-    '"transit":{"hold":"HOLD5","pcs":19,"kg":260,"confidence":"high"},'
-    '"trash":null}\n'
-    "confidence 只能填 high / medium / low。"
-    "hold 值請統一用 HOLD1 / HOLD2 / HOLD3 / HOLD4 / HOLD5 格式。"
+_LOADSHEET_OCR_PROMPT = (
+    "Please extract all text from this image exactly as it appears. "
+    "Output only the raw text, no formatting, no explanation, no markdown."
 )
 
 
@@ -1114,7 +1093,7 @@ def _ldm_regex_parse(text: str) -> "dict | None":
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v4:{notion_id}"
+    cache_key = f"loadsheet:parse:v5:{notion_id}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and "image_has_data" in cached:
         return cached, None
@@ -1123,10 +1102,10 @@ def _loadsheet_parse(notion_id: str):
     if not items:
         return {"image_has_data": False}, None
 
-    # ── 方案一：Notion 文字 block 直接 regex 解析（最準確）
     full_text = "\n".join(it["text"] for it in items if it["type"] == "text")
     image_urls = [it["url"] for it in items if it["type"] == "image"]
 
+    # ── 方案一：Notion 文字 block 直接 regex（最準）
     if full_text.strip():
         regex_result = _ldm_regex_parse(full_text)
         if regex_result:
@@ -1135,7 +1114,7 @@ def _loadsheet_parse(notion_id: str):
             _kv_set(cache_key, regex_result)
             return regex_result, None
 
-    # ── 方案二：圖片送 Gemini Vision（fallback）
+    # ── 方案二：一次 Gemini OCR call 把所有圖的文字抄出來，再 regex 解析
     if not image_urls:
         return {"image_has_data": False}, None
 
@@ -1143,34 +1122,30 @@ def _loadsheet_parse(notion_id: str):
     if not api_key:
         return None, "伺服器未設定 Gemini API 金鑰"
 
-    # 把文字內容也附上，讓 Gemini 有更多線索
-    text_ctx = f"[Notion 頁面文字]\n{full_text}\n\n" if full_text.strip() else ""
-    parts = [{"text": text_ctx + _LOADSHEET_PARSE_PROMPT}]
-    for url in image_urls[:6]:
+    parts = [{"text": _LOADSHEET_OCR_PROMPT}]
+    for url in image_urls[:4]:          # 上限 4 張，單次 call 足夠快
         data, mime = _asiaair_download_bytes(url)
         if data and mime:
             parts.append({"inline_data": {"mime_type": mime, "data": _base64.b64encode(data).decode("utf-8")}})
 
     if len(parts) <= 1:
-        return {"image_has_data": False}, None
+        return {"image_has_data": False, "image_url": image_urls[0]}, None
 
-    resp, status, err_msg = _asiaair_call_gemini(api_key, parts)
-    if resp is None:
-        return None, err_msg or "AI 解析失敗"
+    resp, _, _ = _asiaair_call_gemini(api_key, parts)
+    if resp:
+        try:
+            ocr_text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+            if ocr_text:
+                regex_result = _ldm_regex_parse(ocr_text)
+                if regex_result:
+                    regex_result["image_url"] = image_urls[0]
+                    regex_result["source"] = "ocr"
+                    _kv_set(cache_key, regex_result)
+                    return regex_result, None
+        except Exception:
+            pass
 
-    try:
-        raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-        if raw.startswith("```"):
-            lines = raw.splitlines()
-            raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-        result = _json.loads(raw)
-    except Exception as e:
-        return None, f"AI 回應解析失敗：{e}"
-
-    result["image_url"] = image_urls[0] if image_urls else None
-    result["source"] = "vision"
-    _kv_set(cache_key, result)
-    return result, None
+    return {"image_has_data": False, "image_url": image_urls[0] if image_urls else None}, None
 
 
 @app.route("/api/loadsheet/parse/<notion_id>")
