@@ -502,7 +502,7 @@ function renderResult() {
       <div class="hold-top">
         <div class="hold-badge ${h.badge}">${h.label}</div>
         <div class="hold-tag">${h.tag}</div>
-        <div class="hold-max">${h.noload ? '台北不裝' : `上限 ${h.maxPcs}件 / ${h.maxKg} KG`}</div>
+        <div class="hold-max">${h.noload ? '台北不裝' : ''}</div>
       </div>
       <div class="hold-body">
         <div class="hold-input-wrap">
@@ -515,12 +515,6 @@ function renderResult() {
         <div class="hold-calc">
           <div class="hold-calc-kg ${pcs ? '' : 'zero'}">${pcs ? kg + ' KG' : '— KG'}</div>
           <div class="hold-calc-sub">${pcs && avg ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`) : h.noload ? '不裝' : '未使用'}</div>
-        </div>
-      </div>
-      <div class="hold-bar-area">
-        <div class="hold-bar-row">
-          <div class="hold-bar-bg"><div class="hold-bar-fill ${barCls}" style="width:${pct}%"></div></div>
-          <div class="hold-bar-pct">${pcs ? pct + '%' : '—'}</div>
         </div>
       </div>
       ${tagItems ? `<div class="hold-extras">${tagItems}</div>` : ''}
