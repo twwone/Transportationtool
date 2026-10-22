@@ -16,33 +16,20 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
-
 @keyframes pageIn { from { opacity:0; transform:translateY(14px) scale(0.988); } to { opacity:1; transform:translateY(0) scale(1); } }
 @keyframes cardIn { from { opacity:0; transform:translateY(14px) scale(0.97); }  to { opacity:1; transform:translateY(0) scale(1); } }
-
 :root {
-  --bg:      #fbfbfd;
-  --card:    #ffffff;
-  --border:  rgba(0,0,0,0.08);
-  --divider: rgba(0,0,0,0.09);
-  --text:    #1d1d1f;
-  --sub:     #86868b;
-  --accent:  #0071e3;
-  --chip-bg: rgba(118,118,128,0.12);
-  --danger:  #ff3b30;
-  --ok:      #34c759;
+  --bg:#fbfbfd; --card:#fff; --border:rgba(0,0,0,0.08); --divider:rgba(0,0,0,0.09);
+  --text:#1d1d1f; --sub:#86868b; --accent:#0071e3; --chip-bg:rgba(118,118,128,0.12);
+  --danger:#ff3b30; --ok:#34c759;
 }
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme:dark) {
   :root { --bg:#000; --card:#1c1c1e; --border:rgba(255,255,255,0.09); --divider:rgba(255,255,255,0.12); --text:#f5f5f7; --chip-bg:rgba(255,255,255,0.1); }
 }
-html, body { height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif; -webkit-tap-highlight-color:transparent; }
 body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 
-.header {
-  position:sticky; top:0; z-index:100;
-  background:rgba(251,251,253,0.86); backdrop-filter:saturate(1.6) blur(22px); -webkit-backdrop-filter:saturate(1.6) blur(22px);
-  padding:env(safe-area-inset-top,0px) 16px 0; border-bottom:1px solid var(--divider);
-}
+.header { position:sticky; top:0; z-index:100; background:rgba(251,251,253,0.86); backdrop-filter:saturate(1.6) blur(22px); -webkit-backdrop-filter:saturate(1.6) blur(22px); padding:env(safe-area-inset-top,0px) 16px 0; border-bottom:1px solid var(--divider); }
 @media (prefers-color-scheme:dark) { .header { background:rgba(0,0,0,0.75); } }
 .header-row { display:flex; align-items:center; gap:10px; padding:14px 0 10px; }
 .back-btn { display:flex; align-items:center; gap:3px; background:none; border:none; color:var(--accent); font-size:1rem; font-weight:500; cursor:pointer; padding:4px 8px 4px 2px; border-radius:8px; text-decoration:none; transition:transform .15s,opacity .15s; }
@@ -52,45 +39,39 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .header-title-zh { font-size:1rem; font-weight:700; letter-spacing:-0.02em; }
 .header-title-en { font-size:0.68rem; color:var(--sub); font-weight:590; letter-spacing:0.02em; }
 .header-spacer { width:56px; flex-shrink:0; }
-
 .content { max-width:480px; margin:0 auto; padding:20px 16px max(40px,env(safe-area-inset-bottom) + 24px); }
 
-/* 機型切換 */
+/* 機型 */
 .seg { display:flex; gap:4px; background:var(--chip-bg); border-radius:14px; padding:4px; margin-bottom:18px; animation:cardIn .4s cubic-bezier(.22,1,.36,1) both; }
 .seg-btn { flex:1; padding:10px 0; border:none; border-radius:10px; background:transparent; color:var(--sub); font-size:0.92rem; font-weight:700; font-family:inherit; cursor:pointer; transition:background .2s,color .2s,transform .12s; }
 .seg-btn.active { background:var(--card); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.1); }
 .seg-btn:active { transform:scale(0.96); }
 
-/* 通用卡片 */
+/* 卡片 */
 .card { background:var(--card); border:1px solid var(--border); border-radius:22px; padding:18px 16px; margin-bottom:14px; animation:cardIn .45s cubic-bezier(.22,1,.36,1) both; }
 .card-title { font-size:0.88rem; font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
 .card-title .bi { color:var(--accent); }
 
 /* 特殊項目 */
-.special-item { padding:12px 0; border-bottom:1px solid var(--divider); display:flex; align-items:center; gap:10px; }
+.special-item { padding:11px 0; border-bottom:1px solid var(--divider); }
 .special-item:last-child { border-bottom:none; padding-bottom:0; }
 .special-item:first-child { padding-top:0; }
-.si-icon { font-size:1.1rem; flex-shrink:0; width:26px; text-align:center; }
+.si-top { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.si-icon { font-size:1rem; flex-shrink:0; width:22px; text-align:center; }
 .si-label { flex:1; font-size:0.86rem; font-weight:600; }
-.si-fields { display:flex; gap:6px; align-items:center; }
-.si-select {
-  padding:8px 10px; font-size:0.84rem; font-weight:700;
-  border:1.5px solid var(--border); border-radius:10px;
-  background:var(--bg); color:var(--text); outline:none; font-family:inherit;
-  -webkit-appearance:none; min-width:76px;
-}
+.si-hold-wrap { }
+.si-select { padding:7px 10px; font-size:0.82rem; font-weight:700; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); outline:none; font-family:inherit; -webkit-appearance:none; min-width:80px; }
 .si-select:focus { border-color:var(--accent); }
-.si-input {
-  width:58px; padding:8px 10px; font-size:0.92rem; font-weight:700;
-  border:1.5px solid var(--border); border-radius:10px; text-align:center;
-  background:var(--bg); color:var(--text); outline:none; font-family:inherit;
-  -webkit-appearance:none;
-}
+.si-nums { display:flex; gap:6px; padding-left:32px; }
+.si-field { flex:1; }
+.si-field-label { font-size:0.62rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px; }
+.si-input { width:100%; padding:8px 10px; font-size:0.9rem; font-weight:700; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); outline:none; font-family:inherit; -webkit-appearance:none; text-align:center; }
 .si-input:focus { border-color:var(--accent); }
-.si-unit { font-size:0.72rem; color:var(--sub); font-weight:600; flex-shrink:0; }
 @media (prefers-color-scheme:dark) { .si-select,.si-input { background:#2c2c2e; } }
+/* transit 特別標記 */
+.transit-note { font-size:0.68rem; color:var(--sub); background:rgba(255,149,0,0.1); border-radius:8px; padding:5px 9px; margin-top:6px; margin-left:32px; line-height:1.4; }
 
-/* 行李輸入 */
+/* 出發行李 */
 .two-col { display:flex; gap:10px; }
 .field { flex:1; }
 .field label { display:block; font-size:0.68rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
@@ -99,6 +80,16 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 @media (prefers-color-scheme:dark) { .field input { background:#2c2c2e; } }
 .avg-hint { margin-top:10px; font-size:0.8rem; color:var(--sub); background:rgba(0,113,227,0.07); border-radius:10px; padding:9px 11px; }
 .avg-hint b { color:var(--accent); }
+
+/* 總重合計 */
+.weight-summary { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:14px 16px; margin-bottom:14px; animation:cardIn .45s cubic-bezier(.22,1,.36,1) .06s both; }
+.ws-title { font-size:0.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px; }
+.ws-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--divider); font-size:0.82rem; }
+.ws-row:last-child { border-bottom:none; }
+.ws-row.total { font-size:0.95rem; font-weight:800; color:var(--accent); padding-top:9px; }
+.ws-label { color:var(--sub); }
+.ws-val   { font-weight:700; }
+.ws-row.total .ws-label { color:var(--accent); }
 
 /* 計算按鈕 */
 .calc-btn { width:100%; padding:15px; border:none; border-radius:16px; background:linear-gradient(135deg,#2997ff,#0071e3); color:#fff; font-size:0.96rem; font-weight:700; font-family:inherit; cursor:pointer; margin-bottom:14px; transition:transform .12s; }
@@ -113,27 +104,27 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .remain-val { font-size:1.05rem; font-weight:800; color:var(--accent); }
 .remain-val.ok   { color:var(--ok); }
 .remain-val.warn { color:var(--danger); }
-
 .section-label { font-size:0.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.06em; margin:4px 0 10px 2px; }
 
 /* 貨艙卡 */
 .hold-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:14px; margin-bottom:10px; animation:cardIn .45s cubic-bezier(.22,1,.36,1) both; }
+.hold-card.fixed-transit { border-color:rgba(255,149,0,0.3); }
 .hold-top { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
 .hold-badge { font-size:0.72rem; font-weight:800; color:#fff; background:var(--accent); border-radius:8px; padding:3px 9px; flex-shrink:0; }
 .hold-badge.aft  { background:#5856d6; }
 .hold-badge.bulk { background:#c7c7cc; }
-.hold-tag  { flex:1; font-size:0.82rem; font-weight:700; }
-.hold-max  { font-size:0.68rem; color:var(--sub); }
+.hold-tag { flex:1; font-size:0.82rem; font-weight:700; }
+.hold-max { font-size:0.68rem; color:var(--sub); }
 .hold-body { display:flex; gap:8px; align-items:flex-end; }
 .hold-input-wrap { flex:1; }
 .hold-input-label { font-size:0.65rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
 .hold-input { width:100%; padding:11px 12px; font-size:1.1rem; font-weight:800; border:2px solid rgba(0,113,227,0.3); border-radius:12px; background:rgba(0,113,227,0.05); color:var(--accent); outline:none; font-family:inherit; text-align:center; -webkit-appearance:none; }
-.hold-input.aft { border-color:rgba(88,86,214,0.3); background:rgba(88,86,214,0.05); color:#5856d6; }
-.hold-input.err { border-color:var(--danger); background:rgba(255,59,48,0.06); color:var(--danger); }
-.hold-input.off { border-color:var(--border); background:transparent; color:var(--sub); pointer-events:none; }
+.hold-input.aft  { border-color:rgba(88,86,214,0.3); background:rgba(88,86,214,0.05); color:#5856d6; }
+.hold-input.err  { border-color:var(--danger); background:rgba(255,59,48,0.06); color:var(--danger); }
+.hold-input.off  { border-color:var(--border); background:transparent; color:var(--sub); pointer-events:none; }
 .hold-calc { flex:1; background:rgba(0,0,0,0.03); border-radius:12px; padding:11px 12px; text-align:center; }
 @media (prefers-color-scheme:dark) { .hold-calc { background:rgba(255,255,255,0.06); } }
-.hold-calc-kg { font-size:1rem; font-weight:800; }
+.hold-calc-kg  { font-size:1rem; font-weight:800; }
 .hold-calc-kg.zero { color:var(--sub); font-weight:500; font-size:0.88rem; }
 .hold-calc-sub { font-size:0.65rem; color:var(--sub); margin-top:2px; }
 .hold-bar-area { margin-top:9px; }
@@ -145,6 +136,7 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .hold-bar-pct { font-size:0.68rem; font-weight:700; color:var(--sub); width:30px; text-align:right; flex-shrink:0; }
 .hold-extras { margin-top:8px; display:flex; gap:5px; flex-wrap:wrap; }
 .extra-tag { font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:5px; background:var(--chip-bg); color:var(--sub); }
+.extra-tag.transit { background:rgba(255,149,0,0.12); color:#b25000; }
 </style>
 </head>
 <body>
@@ -168,58 +160,83 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
     <button class="seg-btn" data-ac="A321">A321</button>
   </div>
 
-  <!-- 特殊項目（落地帶來的） -->
+  <!-- 特殊項目 -->
   <div class="card" style="animation-delay:.02s">
     <div class="card-title"><i class="bi bi-clipboard-data-fill"></i> 落地特殊項目</div>
 
+    <!-- 組員行李 -->
     <div class="special-item">
-      <div class="si-icon">👔</div>
-      <div class="si-label">組員行李 D</div>
-      <div class="si-fields">
-        <select class="si-select" id="crew-hold"><option value="">—</option></select>
-        <input class="si-input" type="number" inputmode="numeric" id="crew-pcs" placeholder="件">
-        <span class="si-unit">件</span>
+      <div class="si-top">
+        <div class="si-icon">👔</div>
+        <div class="si-label">組員行李 D</div>
+        <div class="si-hold-wrap"><select class="si-select" id="crew-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select></div>
+      </div>
+      <div class="si-nums">
+        <div class="si-field"><div class="si-field-label">件數</div><input class="si-input" type="number" inputmode="numeric" id="crew-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">重量 KG</div><input class="si-input" type="number" inputmode="decimal" id="crew-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
+    <!-- Toolbox -->
     <div class="special-item">
-      <div class="si-icon">🔧</div>
-      <div class="si-label">Toolbox</div>
-      <div class="si-fields">
-        <select class="si-select" id="toolbox-hold"><option value="">—</option></select>
-        <input class="si-input" type="number" inputmode="numeric" id="toolbox-pcs" placeholder="件">
-        <span class="si-unit">件</span>
+      <div class="si-top">
+        <div class="si-icon">🔧</div>
+        <div class="si-label">Toolbox</div>
+        <div class="si-hold-wrap"><select class="si-select" id="toolbox-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select></div>
+      </div>
+      <div class="si-nums">
+        <div class="si-field"><div class="si-field-label">件數</div><input class="si-input" type="number" inputmode="numeric" id="toolbox-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">重量 KG</div><input class="si-input" type="number" inputmode="decimal" id="toolbox-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
+    <!-- 轉機行李 -->
     <div class="special-item">
-      <div class="si-icon">🔄</div>
-      <div class="si-label">轉機行李</div>
-      <div class="si-fields">
-        <select class="si-select" id="transit-hold"><option value="">—</option></select>
-        <input class="si-input" type="number" inputmode="numeric" id="transit-pcs" placeholder="件">
-        <span class="si-unit">件</span>
+      <div class="si-top">
+        <div class="si-icon">🔄</div>
+        <div class="si-label">轉機行李</div>
+        <div class="si-hold-wrap"><select class="si-select" id="transit-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select></div>
       </div>
+      <div class="si-nums">
+        <div class="si-field"><div class="si-field-label">件數</div><input class="si-input" type="number" inputmode="numeric" id="transit-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">重量 KG</div><input class="si-input" type="number" inputmode="decimal" id="transit-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+      </div>
+      <div class="transit-note">件數與重量已含在出發行李總計內，僅記錄位置，不另外加總</div>
     </div>
 
+    <!-- 垃圾 -->
     <div class="special-item">
-      <div class="si-icon">🗑</div>
-      <div class="si-label">垃圾</div>
-      <div class="si-fields">
-        <select class="si-select" id="trash-hold"><option value="">—</option></select>
+      <div class="si-top">
+        <div class="si-icon">🗑</div>
+        <div class="si-label">垃圾</div>
+        <div class="si-hold-wrap"><select class="si-select" id="trash-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select></div>
+      </div>
+      <div class="si-nums">
+        <div class="si-field"><div class="si-field-label">件數</div><input class="si-input" type="number" inputmode="numeric" id="trash-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">重量 KG</div><input class="si-input" type="number" inputmode="decimal" id="trash-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
   </div>
 
-  <!-- 出發行李 -->
+  <!-- 出發行李（含轉機） -->
   <div class="card" style="animation-delay:.04s">
-    <div class="card-title"><i class="bi bi-luggage-fill"></i> 今日出發行李</div>
+    <div class="card-title"><i class="bi bi-luggage-fill"></i> 出發行李總計（含轉機）</div>
     <div class="two-col">
       <div class="field"><label>總件數 PCS</label><input type="number" inputmode="numeric" id="totalPcs" placeholder="0" oninput="onBagsInput()"></div>
       <div class="field"><label>總重量 KG</label><input type="number" inputmode="decimal" id="totalKg"  placeholder="0" oninput="onBagsInput()"></div>
     </div>
     <div class="avg-hint" id="avgHint">請輸入總件數與總重量</div>
+  </div>
+
+  <!-- 總重合計 -->
+  <div class="weight-summary" id="weightSummary" style="display:none">
+    <div class="ws-title">裝載總重合計</div>
+    <div class="ws-row"><span class="ws-label">出發行李（含轉機）</span><span class="ws-val" id="ws-bags">— KG</span></div>
+    <div class="ws-row" id="ws-crew-row"  style="display:none"><span class="ws-label">👔 組員行李</span><span class="ws-val" id="ws-crew">— KG</span></div>
+    <div class="ws-row" id="ws-toolbox-row" style="display:none"><span class="ws-label">🔧 Toolbox</span><span class="ws-val" id="ws-toolbox">— KG</span></div>
+    <div class="ws-row" id="ws-trash-row" style="display:none"><span class="ws-label">🗑 垃圾</span><span class="ws-val" id="ws-trash">— KG</span></div>
+    <div class="ws-row total"><span class="ws-label">總計</span><span class="ws-val" id="ws-total">— KG</span></div>
   </div>
 
   <!-- 計算 -->
@@ -242,33 +259,29 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 
 <script>
 const AC = {
-  A320: {
-    holds: [
-      { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:3402 },
-      { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:2426 },
-      { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2110 },
-      { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:1497, noload:true },
-    ]
-  },
-  A321: {
-    holds: [
-      { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:2202 },
-      { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:3468 },
-      { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:3587 },
-      { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2083 },
-      { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:800,  noload:true },
-    ]
-  }
+  A320: { holds: [
+    { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:3402 },
+    { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:2426 },
+    { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2110 },
+    { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:1497, noload:true },
+  ]},
+  A321: { holds: [
+    { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:2202 },
+    { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:3468 },
+    { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:3587 },
+    { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2083 },
+    { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:800,  noload:true },
+  ]}
 };
 
 let curAc   = 'A320';
 let holdPcs = {};
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
-document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-let _lt = 0; document.addEventListener('touchend', e => { const n = Date.now(); if (n - _lt < 300) e.preventDefault(); _lt = n; }, { passive: false });
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive:false });
+let _lt = 0; document.addEventListener('touchend', e => { const n = Date.now(); if (n - _lt < 300) e.preventDefault(); _lt = n; }, { passive:false });
 
-/* 機型切換 */
+/* ── 機型切換 ── */
 document.getElementById('acSwitch').addEventListener('click', e => {
   const btn = e.target.closest('.seg-btn');
   if (!btn) return;
@@ -279,70 +292,117 @@ document.getElementById('acSwitch').addEventListener('click', e => {
   if (document.getElementById('resultSection').style.display !== 'none') calcDistribution();
 });
 
-/* 動態產生各 HOLD 下拉選項 */
 function buildHoldOptions() {
   const holds = AC[curAc].holds;
-  const selects = ['crew-hold', 'toolbox-hold', 'transit-hold', 'trash-hold'];
-  selects.forEach(id => {
+  ['crew-hold','toolbox-hold','transit-hold','trash-hold'].forEach(id => {
     const sel = document.getElementById(id);
     const cur = sel.value;
-    sel.innerHTML = '<option value="">—</option>' +
+    sel.innerHTML = '<option value="">— 艙位</option>' +
       holds.map(h => `<option value="${h.id}">${h.label}</option>`).join('');
     if (holds.find(h => h.id === cur)) sel.value = cur;
   });
 }
 
-/* 行李輸入 */
+/* ── 輔助 ── */
 function round1(n) { return Math.round(n * 10) / 10; }
+function v(id)     { return parseFloat(document.getElementById(id).value) || 0; }
+
 function avgWeight() {
-  const pcs = parseFloat(document.getElementById('totalPcs').value) || 0;
-  const kg  = parseFloat(document.getElementById('totalKg').value)  || 0;
+  const pcs = v('totalPcs'), kg = v('totalKg');
   return pcs ? round1(kg / pcs) : null;
 }
+
+/* ── 特殊項目讀取 ── */
+function getSpecials() {
+  return {
+    crew:    { hold: document.getElementById('crew-hold').value,    pcs: v('crew-pcs'),    kg: v('crew-kg')    },
+    toolbox: { hold: document.getElementById('toolbox-hold').value, pcs: v('toolbox-pcs'), kg: v('toolbox-kg') },
+    transit: { hold: document.getElementById('transit-hold').value, pcs: v('transit-pcs'), kg: v('transit-kg') },
+    trash:   { hold: document.getElementById('trash-hold').value,   pcs: v('trash-pcs'),   kg: v('trash-kg')   },
+  };
+}
+
+/* ── 總重合計 ── */
+function updateWeightSummary() {
+  const bagsKg = v('totalKg');
+  if (!bagsKg) { document.getElementById('weightSummary').style.display = 'none'; return; }
+  const sp = getSpecials();
+  // 轉機行李不加（已含在出發行李）
+  const extraKg = sp.crew.kg + sp.toolbox.kg + sp.trash.kg;
+  const total   = round1(bagsKg + extraKg);
+
+  document.getElementById('ws-bags').textContent    = bagsKg + ' KG';
+  document.getElementById('ws-total').textContent   = total  + ' KG';
+
+  const showRow = (rowId, valId, kg) => {
+    const show = kg > 0;
+    document.getElementById(rowId).style.display = show ? '' : 'none';
+    if (show) document.getElementById(valId).textContent = kg + ' KG';
+  };
+  showRow('ws-crew-row',    'ws-crew',    sp.crew.kg);
+  showRow('ws-toolbox-row', 'ws-toolbox', sp.toolbox.kg);
+  showRow('ws-trash-row',   'ws-trash',   sp.trash.kg);
+  document.getElementById('weightSummary').style.display = '';
+}
+
 function onBagsInput() {
   const avg = avgWeight();
   document.getElementById('avgHint').innerHTML = avg != null
-    ? `平均每件：<b>${avg} KG</b>` : '請輸入總件數與總重量';
+    ? `平均每件：<b>${avg} KG</b>（含轉機）` : '請輸入總件數與總重量';
+  updateWeightSummary();
   if (document.getElementById('resultSection').style.display !== 'none') renderResult();
 }
 
-/* 計算分配 */
+function onSpecialChange() {
+  updateWeightSummary();
+  if (document.getElementById('resultSection').style.display !== 'none') renderResult();
+}
+
+/* ── 計算分配 ── */
 function calcDistribution() {
-  const totalPcs = parseFloat(document.getElementById('totalPcs').value) || 0;
+  const totalPcs = v('totalPcs');
   if (!totalPcs) return;
-  holdPcs = {};
-  let remaining = totalPcs;
-  for (const h of AC[curAc].holds.filter(h => !h.noload)) {
-    const fill = Math.min(remaining, h.maxPcs);
-    holdPcs[h.id] = fill;
+
+  const sp      = getSpecials();
+  const holds   = AC[curAc].holds;
+  holdPcs       = {};
+
+  // 1. 轉機行李先固定放好（位置不動）
+  if (sp.transit.hold && sp.transit.pcs > 0) {
+    holdPcs[sp.transit.hold] = sp.transit.pcs;
+  }
+
+  // 2. 剩下的出發行李依優先順序填（不含 noload，排除已被轉機固定的件數）
+  let remaining = totalPcs - (sp.transit.pcs || 0);
+  for (const h of holds.filter(h => !h.noload)) {
+    const alreadyFilled = holdPcs[h.id] || 0;
+    const available     = h.maxPcs - alreadyFilled;
+    if (available <= 0) continue;
+    const fill = Math.min(remaining, available);
+    holdPcs[h.id] = alreadyFilled + fill;
     remaining -= fill;
     if (remaining <= 0) break;
   }
+
   document.getElementById('resultSection').style.display = '';
   document.getElementById('resultLabel').textContent = `建議裝載方案 · ${curAc}`;
   renderResult();
 }
 
-/* 渲染結果 */
+/* ── 渲染結果 ── */
 function renderResult() {
   const avg      = avgWeight() || 0;
-  const totalPcs = parseFloat(document.getElementById('totalPcs').value) || 0;
+  const totalPcs = v('totalPcs');
   const assigned = Object.values(holdPcs).reduce((a, b) => a + b, 0);
   const remain   = totalPcs - assigned;
+  const sp       = getSpecials();
 
+  /* banner */
   const banner = document.getElementById('remainBanner');
   const val    = document.getElementById('remainVal');
   val.textContent  = remain === 0 ? '0 PCS ✓' : remain > 0 ? `+${remain} PCS` : `${remain} PCS`;
   banner.className = 'remain-banner' + (remain === 0 ? ' ok' : ' warn');
   val.className    = 'remain-val'    + (remain === 0 ? ' ok' : ' warn');
-
-  /* 特殊項目對應 */
-  const specials = {
-    crew:    { icon:'👔', label:'組員行李', hold: document.getElementById('crew-hold').value,    pcs: parseInt(document.getElementById('crew-pcs').value)||0 },
-    toolbox: { icon:'🔧', label:'Toolbox',  hold: document.getElementById('toolbox-hold').value, pcs: parseInt(document.getElementById('toolbox-pcs').value)||0 },
-    transit: { icon:'🔄', label:'轉機行李', hold: document.getElementById('transit-hold').value, pcs: parseInt(document.getElementById('transit-pcs').value)||0 },
-    trash:   { icon:'🗑', label:'垃圾',     hold: document.getElementById('trash-hold').value,   pcs: 0 },
-  };
 
   const list = document.getElementById('holdList');
   list.innerHTML = '';
@@ -353,17 +413,21 @@ function renderResult() {
     const pct     = h.maxKg ? Math.min(100, Math.round(kg / h.maxKg * 100)) : 0;
     const overPcs = pcs > h.maxPcs && h.maxPcs > 0;
     const overKg  = kg  > h.maxKg;
+    const hasTransit = sp.transit.hold === h.id && sp.transit.pcs > 0;
 
-    const extras = Object.values(specials)
-      .filter(s => s.hold === h.id)
-      .map(s => `<span class="extra-tag">${s.icon} ${s.label}${s.pcs ? ' '+s.pcs+'件' : ''}</span>`)
-      .join('');
+    /* 特殊項目 tags */
+    const tagItems = [
+      sp.crew.hold    === h.id && sp.crew.pcs    > 0 ? `<span class="extra-tag">👔 組員行李 ${sp.crew.pcs}件 / ${sp.crew.kg||'—'} KG</span>` : '',
+      sp.toolbox.hold === h.id && sp.toolbox.pcs > 0 ? `<span class="extra-tag">🔧 Toolbox ${sp.toolbox.pcs}件 / ${sp.toolbox.kg||'—'} KG</span>` : '',
+      hasTransit ? `<span class="extra-tag transit">🔄 轉機行李 ${sp.transit.pcs}件（固定）</span>` : '',
+      sp.trash.hold   === h.id ? `<span class="extra-tag">🗑 垃圾${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+'件' : ''}</span>` : '',
+    ].filter(Boolean).join('');
 
     const inputCls = h.noload ? 'off' : (overPcs || overKg) ? 'err' : h.badge === 'aft' ? 'aft' : '';
     const barCls   = h.badge === 'aft' || h.badge === 'bulk' ? 'bar-aft' : 'bar-fwd';
 
     const card = document.createElement('div');
-    card.className = 'hold-card';
+    card.className = 'hold-card' + (hasTransit ? ' fixed-transit' : '');
     card.style.animationDelay = (i * 0.05) + 's';
     card.innerHTML = `
       <div class="hold-top">
@@ -390,7 +454,7 @@ function renderResult() {
           <div class="hold-bar-pct">${pcs ? pct + '%' : '—'}</div>
         </div>
       </div>
-      ${extras ? `<div class="hold-extras">${extras}</div>` : ''}
+      ${tagItems ? `<div class="hold-extras">${tagItems}</div>` : ''}
     `;
     list.appendChild(card);
   });
@@ -407,7 +471,7 @@ function onHoldInput(el) {
   renderResult();
 }
 
-/* 初始化 hold 選項 */
+/* 初始化 */
 buildHoldOptions();
 </script>
 </body>
