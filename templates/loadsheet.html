@@ -38,7 +38,16 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .header-title { flex:1; text-align:center; }
 .header-title-zh { font-size:1rem; font-weight:700; letter-spacing:-0.02em; }
 .header-title-en { font-size:0.68rem; color:var(--sub); font-weight:590; letter-spacing:0.02em; }
-.header-spacer { width:56px; flex-shrink:0; }
+.sync-btn { background:none; border:none; color:var(--accent); font-size:1.15rem; cursor:pointer; padding:6px 8px; border-radius:8px; transition:transform .15s; -webkit-tap-highlight-color:transparent; width:56px; text-align:right; }
+.sync-btn:active { transform:scale(0.88); }
+.sync-sheet { padding:10px 16px 12px; border-top:1px solid var(--divider); }
+.sync-sheet-label { font-size:0.72rem; font-weight:700; color:var(--sub); margin-bottom:7px; }
+.sync-sheet-row { display:flex; gap:6px; }
+.sync-input { flex:1; padding:9px 12px; font-size:0.92rem; font-weight:700; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); outline:none; font-family:inherit; -webkit-appearance:none; letter-spacing:0.05em; }
+.sync-input:focus { border-color:var(--accent); }
+@media (prefers-color-scheme:dark) { .sync-input { background:#2c2c2e; } }
+.sync-copy-btn { padding:9px 13px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--accent); font-size:0.9rem; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.sync-status { font-size:0.72rem; color:var(--sub); margin-top:6px; min-height:16px; }
 .content { max-width:480px; margin:0 auto; padding:20px 16px max(40px,env(safe-area-inset-bottom) + 24px); }
 
 /* 機型 */
@@ -149,7 +158,18 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
       <div class="header-title-zh"><i class="bi bi-boxes"></i> 貨艙裝載計算</div>
       <div class="header-title-en">LOAD &amp; TRIM SHEET</div>
     </div>
-    <div class="header-spacer"></div>
+    <button class="sync-btn" id="syncBtn" onclick="toggleSyncSheet()" title="同步設定">
+      <i class="bi bi-arrow-repeat"></i>
+    </button>
+  </div>
+  <!-- 同步碼面板 -->
+  <div class="sync-sheet" id="syncSheet" style="display:none">
+    <div class="sync-sheet-label">同步碼（換裝置輸入同一組）</div>
+    <div class="sync-sheet-row">
+      <input class="sync-input" id="syncCodeInput" type="text" placeholder="輸入或自動產生" maxlength="32" oninput="onSyncCodeInput()">
+      <button class="sync-copy-btn" onclick="copySyncCode()" title="複製"><i class="bi bi-clipboard"></i></button>
+    </div>
+    <div class="sync-status" id="syncStatus"></div>
   </div>
 </div>
 
@@ -278,9 +298,72 @@ const AC = {
   ]}
 };
 
-const STORE_KEY = 'loadsheet_v1';
+const STORE_KEY   = 'loadsheet_v1';
+const SYNCID_KEY  = 'loadsheet_syncid';
 let curAc   = 'A320';
 let holdPcs = {};
+let _syncDebounce = null;
+
+/* ── 同步碼 ── */
+function getSyncId() { return localStorage.getItem(SYNCID_KEY) || ''; }
+function setSyncId(id) {
+  localStorage.setItem(SYNCID_KEY, id);
+  document.getElementById('syncCodeInput').value = id;
+}
+function genSyncId() {
+  return Math.random().toString(36).slice(2,7) + Math.random().toString(36).slice(2,7);
+}
+function toggleSyncSheet() {
+  const s = document.getElementById('syncSheet');
+  s.style.display = s.style.display === 'none' ? '' : 'none';
+}
+function copySyncCode() {
+  const code = document.getElementById('syncCodeInput').value.trim();
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => setSyncStatus('已複製'));
+}
+function onSyncCodeInput() {
+  const code = document.getElementById('syncCodeInput').value.trim();
+  if (code.length >= 6) {
+    setSyncId(code);
+    setSyncStatus('正在拉取資料…');
+    pullState();
+  }
+}
+function setSyncStatus(msg) {
+  document.getElementById('syncStatus').textContent = msg;
+  setTimeout(() => { if (document.getElementById('syncStatus').textContent === msg) document.getElementById('syncStatus').textContent = ''; }, 3000);
+}
+
+async function pushState() {
+  const id = getSyncId();
+  if (!id) return;
+  const payload = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+  try {
+    await fetch(`/api/loadsheet/state/${id}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  } catch(e) {}
+}
+
+async function pullState() {
+  const id = getSyncId();
+  if (!id) return;
+  try {
+    const res = await fetch(`/api/loadsheet/state/${id}`);
+    const data = await res.json();
+    if (data && (data.fields || data.holdPcs)) {
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+      loadState();
+      setSyncStatus('同步完成');
+    } else {
+      setSyncStatus('尚無雲端資料');
+    }
+  } catch(e) { setSyncStatus('同步失敗'); }
+}
+
+function schedulePush() {
+  clearTimeout(_syncDebounce);
+  _syncDebounce = setTimeout(pushState, 1500);
+}
 
 /* ── localStorage ── */
 function saveState() {
@@ -290,6 +373,7 @@ function saveState() {
   const data = { ac: curAc, holdPcs, fields: {} };
   fields.forEach(id => { data.fields[id] = document.getElementById(id)?.value || ''; });
   localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  schedulePush();
 }
 
 function loadState() {
@@ -586,7 +670,9 @@ function clearAll() {
 /* 初始化 */
 buildHoldOptions();
 renderResult();
-loadState();
+const _initSyncId = getSyncId() || genSyncId();
+setSyncId(_initSyncId);
+if (getSyncId()) pullState(); else loadState();
 </script>
 </body>
 </html>

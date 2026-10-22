@@ -1158,6 +1158,23 @@ def loadsheet_parse_api(notion_id):
     return jsonify(result)
 
 
+@app.route("/api/loadsheet/state/<sync_id>")
+def loadsheet_state_get(sync_id):
+    if not _valid_sync_id(sync_id):
+        return jsonify({"error": "invalid sync_id"}), 400
+    data = _kv_get(f"loadsheet:state:{sync_id}") or {}
+    return jsonify(data)
+
+
+@app.route("/api/loadsheet/state/<sync_id>", methods=["POST"])
+def loadsheet_state_set(sync_id):
+    if not _valid_sync_id(sync_id):
+        return jsonify({"error": "invalid sync_id"}), 400
+    data = request.get_json(force=True) or {}
+    _kv_set(f"loadsheet:state:{sync_id}", data)
+    return jsonify({"ok": True})
+
+
 @app.route("/api/amenities")
 def amenities_api():
     data, source = _fetch_amenities()
