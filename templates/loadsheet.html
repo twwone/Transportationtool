@@ -50,6 +50,40 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .sync-status { font-size:0.72rem; color:var(--sub); margin-top:6px; min-height:16px; }
 .content { max-width:480px; margin:0 auto; padding:20px 16px max(40px,env(safe-area-inset-bottom) + 24px); }
 
+/* LDM 區塊 */
+.ldm-loading { text-align:center; padding:12px 0; color:var(--sub); font-size:0.84rem; }
+.ldm-spin { display:inline-block; animation:spin .7s linear infinite; }
+.ldm-flight-item {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-radius:12px; margin-bottom:7px; cursor:pointer;
+  border:1.5px solid var(--border); background:var(--bg);
+  transition:border-color .15s, background .15s;
+}
+.ldm-flight-item:active { background:rgba(0,113,227,0.05); }
+.ldm-flight-item.active { border-color:var(--accent); background:rgba(0,113,227,0.07); }
+@media (prefers-color-scheme:dark) { .ldm-flight-item { background:#2c2c2e; } .ldm-flight-item.active { background:rgba(0,113,227,0.18); } }
+.ldm-fl-code { width:30px; height:30px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:800; color:#fff; background:linear-gradient(135deg,#e0261f,#b91c1c); }
+.ldm-fl-code.ak,.ldm-fl-code.z2 { background:linear-gradient(135deg,#2997ff,#0071e3); }
+.ldm-fl-info { flex:1; }
+.ldm-fl-no  { font-size:0.86rem; font-weight:800; }
+.ldm-fl-sub { font-size:0.7rem; color:var(--sub); margin-top:1px; }
+.ldm-no-flights { text-align:center; padding:12px 0; color:var(--sub); font-size:0.82rem; }
+/* LDM 內容 */
+.ldm-img { width:100%; border-radius:12px; display:block; margin-bottom:10px; cursor:pointer; }
+.ldm-text-block { font-size:0.8rem; color:var(--text); background:rgba(0,0,0,0.03); border-radius:10px; padding:10px 12px; margin-bottom:8px; white-space:pre-wrap; line-height:1.6; font-family:monospace; }
+@media (prefers-color-scheme:dark) { .ldm-text-block { background:rgba(255,255,255,0.06); } }
+.ldm-close-btn { width:100%; padding:10px; border:none; border-radius:12px; background:var(--chip-bg); color:var(--sub); font-size:0.84rem; font-weight:700; font-family:inherit; cursor:pointer; margin-top:4px; }
+/* 圖片 Modal */
+.img-modal-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.88); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:16px; }
+.img-modal-overlay.open { display:flex; }
+.img-modal { background:#1c1c1e; border-radius:22px; width:100%; max-width:440px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); display:flex; flex-direction:column; max-height:90vh; }
+.img-modal-bar { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+.img-modal-title { color:#f5f5f7; font-size:0.88rem; font-weight:700; }
+.img-modal-close { background:rgba(255,255,255,0.1); border:none; color:#f5f5f7; font-size:0.78rem; font-weight:700; padding:5px 12px; border-radius:8px; cursor:pointer; font-family:inherit; }
+.img-modal-body { flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; padding:12px; }
+.img-modal-body img { max-width:100%; border-radius:8px; display:block; }
+.img-modal-note { padding:8px 16px 12px; font-size:0.72rem; color:rgba(255,255,255,0.35); text-align:center; flex-shrink:0; }
+
 /* 機型 */
 .seg { display:flex; gap:4px; background:var(--chip-bg); border-radius:14px; padding:4px; margin-bottom:18px; animation:cardIn .4s cubic-bezier(.22,1,.36,1) both; }
 .seg-btn { flex:1; padding:10px 0; border:none; border-radius:10px; background:transparent; color:var(--sub); font-size:0.92rem; font-weight:700; font-family:inherit; cursor:pointer; transition:background .2s,color .2s,transform .12s; }
@@ -181,6 +215,16 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
     <button class="seg-btn" data-ac="A321">A321</button>
   </div>
 
+  <!-- 落地 LDM：選航班 + 顯示 Notion 內容 -->
+  <div class="card" id="ldmCard" style="animation-delay:.01s">
+    <div class="card-title"><i class="bi bi-airplane-engines-fill"></i> 落地 LDM</div>
+    <div id="ldmFlightList"><div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> 載入航班中…</div></div>
+    <div id="ldmContent" style="display:none">
+      <div id="ldmItems"></div>
+      <button class="ldm-close-btn" onclick="closeLdm()">收起</button>
+    </div>
+  </div>
+
   <!-- 特殊項目 -->
   <div class="card" style="animation-delay:.02s">
     <div class="card-title"><i class="bi bi-clipboard-data-fill"></i> 落地特殊項目</div>
@@ -279,6 +323,18 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
     <div id="holdList"></div>
   </div>
 
+</div>
+
+<!-- 圖片放大 Modal -->
+<div class="img-modal-overlay" id="imgModalOverlay" onclick="if(event.target===this)closeImgModal()">
+  <div class="img-modal">
+    <div class="img-modal-bar">
+      <div class="img-modal-title" id="imgModalTitle"></div>
+      <button class="img-modal-close" onclick="closeImgModal()">關閉</button>
+    </div>
+    <div class="img-modal-body"><img id="imgModalImg" src="" alt=""></div>
+    <div class="img-modal-note">點空白處關閉</div>
+  </div>
 </div>
 
 <script>
@@ -667,9 +723,95 @@ function clearAll() {
   btn.style.color = '';
 }
 
+/* ── 圖片 Modal ── */
+let _slCount = 0, _slY = 0;
+function lockScroll()   { if(_slCount++>0)return; _slY=window.scrollY; document.body.style.cssText+=`;position:fixed;top:-${_slY}px;left:0;right:0;width:100%`; }
+function unlockScroll() { if(_slCount<=0)return; if(--_slCount>0)return; document.body.style.cssText=document.body.style.cssText.replace(/position:fixed.*?width:100%;?/,''); window.scrollTo(0,_slY); }
+function openImgModal(url, title) {
+  lockScroll();
+  document.getElementById('imgModalImg').src = url;
+  document.getElementById('imgModalTitle').textContent = title || '';
+  document.getElementById('imgModalOverlay').classList.add('open');
+}
+function closeImgModal() {
+  document.getElementById('imgModalOverlay').classList.remove('open');
+  unlockScroll();
+}
+
+/* ── 落地 LDM ── */
+async function loadLdmFlights() {
+  try {
+    const res  = await fetch('/api/loadsheet/flights');
+    const data = await res.json();
+    renderLdmFlights(data.flights || []);
+  } catch(e) {
+    document.getElementById('ldmFlightList').innerHTML = '<div class="ldm-no-flights">航班載入失敗</div>';
+  }
+}
+
+function renderLdmFlights(flights) {
+  const el = document.getElementById('ldmFlightList');
+  if (!flights.length) {
+    el.innerHTML = '<div class="ldm-no-flights">今日暫無入境班次資料</div>';
+    return;
+  }
+  el.innerHTML = flights.map(f => {
+    const prefix = f.flight.slice(0,2).toLowerCase();
+    const codeCls = (prefix==='ak'||prefix==='z2') ? prefix : '';
+    const sub = [f.origin ? f.origin+'→TPE' : '', f.sta ? '落地 '+f.sta : ''].filter(Boolean).join(' · ');
+    return `<div class="ldm-flight-item" data-notion="${f.notion_id}" data-flight="${f.flight}" onclick="selectLdmFlight(this)">
+      <div class="ldm-fl-code ${codeCls}">${f.flight.slice(0,2)}</div>
+      <div class="ldm-fl-info">
+        <div class="ldm-fl-no">${f.flight}</div>
+        <div class="ldm-fl-sub">${sub || '—'}</div>
+      </div>
+      <i class="bi bi-chevron-right" style="color:var(--sub);font-size:0.8rem"></i>
+    </div>`;
+  }).join('');
+}
+
+async function selectLdmFlight(el) {
+  document.querySelectorAll('.ldm-flight-item').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  const notionId = el.dataset.notion;
+  const flight   = el.dataset.flight;
+
+  const content = document.getElementById('ldmContent');
+  const items   = document.getElementById('ldmItems');
+  content.style.display = '';
+  items.innerHTML = '<div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> 載入 Notion 資料中…</div>';
+
+  try {
+    const res  = await fetch(`/api/asia-airlines/detail/${notionId}`);
+    const data = await res.json();
+    const list = data.items || [];
+    if (!list.length) {
+      items.innerHTML = '<div class="ldm-no-flights">此航班 Notion 頁面無內容</div>';
+      return;
+    }
+    items.innerHTML = list.map(it => {
+      if (it.type === 'image') {
+        return `<img class="ldm-img" src="${it.url}" alt="${flight} LDM" onclick="openImgModal('${it.url}','${flight} LDM')">`;
+      }
+      if (it.type === 'text' && it.text) {
+        return `<div class="ldm-text-block">${it.text.replace(/</g,'&lt;')}</div>`;
+      }
+      return '';
+    }).join('');
+  } catch(e) {
+    items.innerHTML = '<div class="ldm-no-flights">載入失敗，請稍後再試</div>';
+  }
+}
+
+function closeLdm() {
+  document.getElementById('ldmContent').style.display = 'none';
+  document.querySelectorAll('.ldm-flight-item').forEach(x => x.classList.remove('active'));
+}
+
 /* 初始化 */
 buildHoldOptions();
 renderResult();
+loadLdmFlights();
 const _initSyncId = getSyncId() || genSyncId();
 setSyncId(_initSyncId);
 if (getSyncId()) pullState(); else loadState();
