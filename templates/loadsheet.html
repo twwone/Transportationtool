@@ -422,6 +422,8 @@ async function pullState() {
       loadState();
       setSyncStatus('同步完成');
     } else {
+      /* 雲端沒資料：把本機資料推上去當起點 */
+      if (localStorage.getItem(STORE_KEY)) pushState();
       setSyncStatus('尚無雲端資料');
     }
   } catch(e) { setSyncStatus('同步失敗'); }
@@ -605,10 +607,11 @@ function renderResult() {
   const list = document.getElementById('holdList');
   list.innerHTML = '';
 
-  /* 找最後一個有行李的艙（非 nodist），它的重量用總重減法算 */
+  /* 件數全部分配完時，最後一個有行李的艙（非 nodist）用總重減法算，吸收四捨五入誤差；
+     還有未分配件數時一律件數 × 平均重，避免把沒分配的重量算進最後一艙 */
   const totalKg     = v('totalKg');
   const activeHolds = AC[curAc].holds.filter(h => !h.nodist && (holdPcs[h.id] || 0) > 0);
-  const lastHold    = activeHolds[activeHolds.length - 1];
+  const lastHold    = remain === 0 ? activeHolds[activeHolds.length - 1] : null;
   let   usedKg      = 0;   // 前面各艙已算出的重量加總
 
   /* 先算非最後一艙的重量，記錄加總 */
@@ -735,8 +738,11 @@ function clearAll() {
   holdPcs = {};
   document.getElementById('avgHint').textContent = '請輸入總件數與總重量';
   document.getElementById('weightSummary').style.display = 'none';
-  document.getElementById('resultSection').style.display = 'none';
   localStorage.removeItem(STORE_KEY);
+  renderResult();
+  /* 雲端也清空，避免重新整理又被拉回舊資料 */
+  clearTimeout(_syncDebounce);
+  pushState();
 
   const btn = document.getElementById('clearBtn');
   btn.textContent = '🗑 清除所有資料';
@@ -762,10 +768,14 @@ function closeImgModal() {
 /* ── 落地 LDM ── */
 let _ldmDate = '';  // 空字串 = 今天
 
+/* 日期一律用台灣時間（跟後端 _asiaair_today 一致），不用 toISOString 的 UTC 日期 */
+function ldmShiftDate(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
 function ldmDateStr(offset = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+  return ldmShiftDate(today, offset);
 }
 function ldmOffsetFromToday() {
   if (!_ldmDate) return 0;
@@ -780,16 +790,12 @@ function updateLdmDateLabel() {
   document.getElementById('ldmNextBtn').disabled = offset >= 0;
 }
 function ldmPrevDay() {
-  const cur = _ldmDate || ldmDateStr(0);
-  const d   = new Date(cur); d.setDate(d.getDate() - 1);
-  _ldmDate  = d.toISOString().slice(0, 10);
+  _ldmDate  = ldmShiftDate(_ldmDate || ldmDateStr(0), -1);
   closeLdm();
   loadLdmFlights();
 }
 function ldmNextDay() {
-  const cur = _ldmDate || ldmDateStr(0);
-  const d   = new Date(cur); d.setDate(d.getDate() + 1);
-  const next = d.toISOString().slice(0, 10);
+  const next = ldmShiftDate(_ldmDate || ldmDateStr(0), 1);
   if (next > ldmDateStr(0)) return;
   _ldmDate = next;
   closeLdm();
@@ -874,7 +880,9 @@ renderResult();
 loadLdmFlights();
 const _initSyncId = getSyncId() || genSyncId();
 setSyncId(_initSyncId);
-if (getSyncId()) pullState(); else loadState();
+/* 先顯示本機資料，雲端有資料再覆蓋；雲端沒有或連不上就維持本機 */
+loadState();
+pullState();
 </script>
 </body>
 </html>
