@@ -1051,20 +1051,27 @@ def loadsheet_flights_api():
 
 _LOADSHEET_PARSE_PROMPT = (
     "你是機場地勤助理。以下提供了這班航班 Notion 頁面裡的所有圖片，"
-    "其中可能混有 Load Sheet（LIR）、貨單（Cargo Manifest / AWB）、維修通知等不同文件。\n\n"
-    "請你只看 Load Sheet / LIR（Loading Instruction Report）這張，"
-    "忽略貨單（Cargo Manifest、Air Waybill、AWB）以及其他非裝載表的文件。\n\n"
-    "從 Load Sheet 裡找出以下四類特殊項目，這些是落地時各貨艙裡已有的東西：\n"
-    "1. crew（組員行李 D / Crew Baggage）：裝在哪個艙（HOLD 幾），幾件\n"
-    "2. toolbox（Toolbox / 工具箱）：裝在哪個艙，幾件\n"
-    "3. trash（垃圾 / Garbage / GRBS）：裝在哪個艙\n"
-    "4. image_has_data（bool）：圖片中是否有找到 Load Sheet，true/false\n\n"
+    "內容可能是 LDM 電報截圖、Load Sheet / LIR、或其他航班文件。\n\n"
+    "請忽略貨單（Cargo Manifest、Air Waybill、AWB）。\n\n"
+    "LDM 格式說明（最常見）：\n"
+    "  CREW X/Y Kgs. = H.N   → 組員行李 X 件 / Y KG 在 HOLD N\n"
+    "  Toolbox X/Y Kgs. H.N  → 工具箱 X 件 / Y KG 在 HOLD N\n"
+    "  TRANSIT BAG TO XXX X/Y Kgs. = H.N → 轉機行李 X 件 / Y KG 在 HOLD N\n"
+    "  GRBS / Garbage / 垃圾  → 垃圾在哪個艙\n"
+    "  H.1~H.5 對應 HOLD1~HOLD5\n\n"
+    "請從圖片中抓出以下五類（找不到就設 null）：\n"
+    "1. crew：組員行李\n"
+    "2. toolbox：工具箱\n"
+    "3. transit：轉機行李（TRANSIT BAG）\n"
+    "4. trash：垃圾\n"
+    "5. image_has_data（bool）：是否找到有效裝載資料\n\n"
     "嚴格以 JSON 格式回傳，不得輸出其他內容。範例：\n"
     '{"image_has_data":true,'
-    '"crew":{"hold":"HOLD1","pcs":3,"confidence":"high"},'
-    '"toolbox":{"hold":"HOLD4","pcs":1,"confidence":"high"},'
-    '"trash":{"hold":"HOLD3","confidence":"low"}}\n'
-    "找不到某一項就設為 null。confidence 只能填 high / medium / low。"
+    '"crew":{"hold":"HOLD5","pcs":6,"kg":53,"confidence":"high"},'
+    '"toolbox":{"hold":"HOLD1","pcs":2,"kg":23,"confidence":"high"},'
+    '"transit":{"hold":"HOLD5","pcs":19,"kg":260,"confidence":"high"},'
+    '"trash":null}\n'
+    "confidence 只能填 high / medium / low。"
     "hold 值請統一用 HOLD1 / HOLD2 / HOLD3 / HOLD4 / HOLD5 格式。"
 )
 
@@ -1072,7 +1079,7 @@ _LOADSHEET_PARSE_PROMPT = (
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v2:{notion_id}"
+    cache_key = f"loadsheet:parse:v3:{notion_id}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and "image_has_data" in cached:
         return cached, None

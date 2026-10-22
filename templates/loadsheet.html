@@ -547,6 +547,7 @@ function renderNotionParse(f, data) {
   const rows = [
     { key:'crew',    icon:'👔', name:'組員行李 D', d: data.crew    },
     { key:'toolbox', icon:'🔧', name:'Toolbox',   d: data.toolbox },
+    { key:'transit', icon:'🔄', name:'轉機行李',   d: data.transit },
     { key:'trash',   icon:'🗑', name:'垃圾',       d: data.trash   },
   ];
 
@@ -569,7 +570,7 @@ function renderNotionParse(f, data) {
     if (!d) return `<div class="parse-row"><div class="parse-icon">${icon}</div><div class="parse-info"><div class="parse-name">${name}</div><div class="parse-loc">未找到</div></div><div class="parse-val" style="color:var(--sub)">—</div></div>`;
     const conf = d.confidence || 'low';
     const confCls = conf === 'high' ? 'conf-high' : conf === 'medium' ? 'conf-medium' : 'conf-low';
-    const val  = d.pcs != null ? `${d.pcs} 件` : '—';
+    const val  = d.pcs != null ? `${d.pcs} 件${d.kg != null ? ' / '+d.kg+' KG' : ''}` : '—';
     const loc  = d.hold || '位置不明';
     const needCheck = conf !== 'high';
     return `<div class="parse-row">
@@ -669,7 +670,7 @@ function renderResult() {
     /* 特殊項目標籤（從 notionParse 來） */
     const extras = [];
     if (notionParse) {
-      const map = { crew:'👔 組員行李', toolbox:'🔧 Toolbox', trash:'🗑 垃圾' };
+      const map = { crew:'👔 組員行李', toolbox:'🔧 Toolbox', transit:'🔄 轉機行李', trash:'🗑 垃圾' };
       for (const [key, label] of Object.entries(map)) {
         const d = notionParse[key];
         if (d && d.hold === h.id) extras.push(label);
