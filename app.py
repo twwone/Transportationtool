@@ -1028,8 +1028,11 @@ def _loadsheet_ac_type(flight_no: str) -> "str | None":
 
 @app.route("/api/loadsheet/flights")
 def loadsheet_flights_api():
-    today = _asiaair_today()
-    flights, ok = _asiaair_fetch(today)
+    today    = _asiaair_today()
+    date_str = request.args.get("date", "").strip() or today
+    if not _re.match(r"^\d{4}-\d{2}-\d{2}$", date_str) or date_str > today:
+        date_str = today
+    flights, ok = _asiaair_fetch(date_str)
     if not ok:
         return jsonify({"error": "Notion 資料暫時無法連線，請稍後再試", "retry": True}), 503
     result = []
@@ -1046,7 +1049,7 @@ def loadsheet_flights_api():
             "origin":    f.get("origin", ""),
             "ac_type":   ac_type,
         })
-    return jsonify({"flights": result, "date": today})
+    return jsonify({"flights": result, "date": date_str})
 
 
 _LOADSHEET_OCR_PROMPT = (

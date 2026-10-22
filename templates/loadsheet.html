@@ -51,6 +51,10 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .content { max-width:480px; margin:0 auto; padding:20px 16px max(40px,env(safe-area-inset-bottom) + 24px); }
 
 /* LDM 區塊 */
+.ldm-date-nav { display:flex; align-items:center; gap:6px; margin-left:auto; }
+.ldm-date-btn { background:none; border:none; color:var(--accent); font-size:1rem; cursor:pointer; padding:2px 6px; border-radius:6px; -webkit-tap-highlight-color:transparent; }
+.ldm-date-btn:disabled { color:var(--sub); pointer-events:none; }
+.ldm-date-label { font-size:0.78rem; font-weight:700; color:var(--sub); min-width:52px; text-align:center; }
 .ldm-loading { text-align:center; padding:12px 0; color:var(--sub); font-size:0.84rem; }
 .ldm-spin { display:inline-block; animation:spin .7s linear infinite; }
 .ldm-flight-item {
@@ -217,7 +221,14 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 
   <!-- 落地 LDM：選航班 + 顯示 Notion 內容 -->
   <div class="card" id="ldmCard" style="animation-delay:.01s">
-    <div class="card-title"><i class="bi bi-airplane-engines-fill"></i> 落地 LDM</div>
+    <div class="card-title">
+      <span><i class="bi bi-airplane-engines-fill"></i> 落地 LDM</span>
+      <div class="ldm-date-nav">
+        <button class="ldm-date-btn" onclick="ldmPrevDay()"><i class="bi bi-chevron-left"></i></button>
+        <span class="ldm-date-label" id="ldmDateLabel"></span>
+        <button class="ldm-date-btn" id="ldmNextBtn" onclick="ldmNextDay()"><i class="bi bi-chevron-right"></i></button>
+      </div>
+    </div>
     <div id="ldmFlightList"><div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> 載入航班中…</div></div>
     <div id="ldmContent" style="display:none">
       <div id="ldmItems"></div>
@@ -739,9 +750,48 @@ function closeImgModal() {
 }
 
 /* ── 落地 LDM ── */
+let _ldmDate = '';  // 空字串 = 今天
+
+function ldmDateStr(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+function ldmOffsetFromToday() {
+  if (!_ldmDate) return 0;
+  const today = ldmDateStr(0);
+  const diff  = (new Date(_ldmDate) - new Date(today)) / 86400000;
+  return Math.round(diff);
+}
+function updateLdmDateLabel() {
+  const offset = ldmOffsetFromToday();
+  const label  = offset === 0 ? '今天' : offset === -1 ? '昨天' : _ldmDate.slice(5).replace('-','/');
+  document.getElementById('ldmDateLabel').textContent = label;
+  document.getElementById('ldmNextBtn').disabled = offset >= 0;
+}
+function ldmPrevDay() {
+  const cur = _ldmDate || ldmDateStr(0);
+  const d   = new Date(cur); d.setDate(d.getDate() - 1);
+  _ldmDate  = d.toISOString().slice(0, 10);
+  closeLdm();
+  loadLdmFlights();
+}
+function ldmNextDay() {
+  const cur = _ldmDate || ldmDateStr(0);
+  const d   = new Date(cur); d.setDate(d.getDate() + 1);
+  const next = d.toISOString().slice(0, 10);
+  if (next > ldmDateStr(0)) return;
+  _ldmDate = next;
+  closeLdm();
+  loadLdmFlights();
+}
+
 async function loadLdmFlights() {
+  updateLdmDateLabel();
+  document.getElementById('ldmFlightList').innerHTML = '<div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> 載入航班中…</div>';
   try {
-    const res  = await fetch('/api/loadsheet/flights');
+    const url  = _ldmDate ? `/api/loadsheet/flights?date=${_ldmDate}` : '/api/loadsheet/flights';
+    const res  = await fetch(url);
     const data = await res.json();
     renderLdmFlights(data.flights || []);
   } catch(e) {
