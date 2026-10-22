@@ -509,14 +509,15 @@ function renderResult() {
             oninput="onHoldInput(this)">
         </div>
         ${(()=>{
-          const spKg = [sp.crew, sp.toolbox, sp.transit, sp.trash]
-            .filter(s => s.hold === h.id && s.kg > 0)
-            .reduce((sum, s) => sum + s.kg, 0);
+          const spItems = [sp.crew, sp.toolbox, sp.transit, sp.trash]
+            .filter(s => s.hold === h.id && s.kg > 0);
+          const spKg = spItems.reduce((sum, s) => sum + s.kg, 0);
           if (!pcs && !spKg) return '<div class="hold-calc"></div>';
           const mainKg  = pcs ? kg + ' KG' : spKg + ' KG';
+          const spFormula = spItems.map(s => s.kg).join('+');
           const mainSub = pcs && avg
             ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`)
-            : '特殊項目';
+            : `= ${spFormula}`;
           const extraLine = pcs && spKg ? `<div class="hold-calc-special">特殊項目 ${spKg} KG</div>` : '';
           return `<div class="hold-calc">
             <div class="hold-calc-kg">${mainKg}</div>
