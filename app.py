@@ -1012,6 +1012,122 @@ def loadsheet():
     return render_template("loadsheet.html")
 
 
+# ──────────────────────────────────────────────
+#  貨艙裝載計算 - 智慧分配 API
+# ──────────────────────────────────────────────
+
+def _loadsheet_ac_type(flight_no: str) -> "str | None":
+    """從航班號前綴判斷機型：FD→A321，AK/Z2→A320"""
+    fn = (flight_no or "").upper()
+    if fn.startswith("FD"):
+        return "A321"
+    if fn.startswith("AK") or fn.startswith("Z2"):
+        return "A320"
+    return None
+
+
+@app.route("/api/loadsheet/flights")
+def loadsheet_flights_api():
+    today = _asiaair_today()
+    flights, ok = _asiaair_fetch(today)
+    if not ok:
+        return jsonify({"error": "Notion 資料暫時無法連線，請稍後再試", "retry": True}), 503
+    result = []
+    for f in flights:
+        ac_type = _loadsheet_ac_type(f.get("flight", ""))
+        if not ac_type:
+            continue
+        if not f.get("has_detail"):
+            continue
+        result.append({
+            "notion_id": f["notion_id"],
+            "flight":    f.get("flight", ""),
+            "sta":       f.get("sta", ""),
+            "origin":    f.get("origin", ""),
+            "ac_type":   ac_type,
+        })
+    return jsonify({"flights": result, "date": today})
+
+
+_LOADSHEET_PARSE_PROMPT = (
+    "你是機場地勤助理，請分析這張 Load Sheet / LIR 截圖，找出落地時各貨艙裡的特殊項目。"
+    "我只需要以下四類：\n"
+    "1. crew（組員行李 D）：裝在哪個艙（HOLD 幾），幾件\n"
+    "2. toolbox（Toolbox / 工具箱）：裝在哪個艙，幾件\n"
+    "3. trash（垃圾 / Garbage / GRBS）：裝在哪個艙\n"
+    "4. image_has_data（bool）：這張圖是否確實是 Load Sheet，true/false\n\n"
+    "嚴格以 JSON 格式回傳，不得輸出其他內容。範例：\n"
+    '{"image_has_data":true,'
+    '"crew":{"hold":"HOLD1","pcs":3,"confidence":"high"},'
+    '"toolbox":{"hold":"HOLD4","pcs":1,"confidence":"high"},'
+    '"trash":{"hold":"HOLD3","confidence":"low"}}\n'
+    "找不到某一項就設為 null。confidence 只能填 high / medium / low。"
+    "hold 值請統一用 HOLD1 / HOLD2 / HOLD3 / HOLD4 / HOLD5 格式。"
+)
+
+
+def _loadsheet_parse(notion_id: str):
+    import base64 as _base64
+
+    cache_key = f"loadsheet:parse:v1:{notion_id}"
+    cached = _kv_get(cache_key)
+    if isinstance(cached, dict) and "image_has_data" in cached:
+        return cached, None
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return None, "伺服器未設定 Gemini API 金鑰"
+
+    items = _asiaair_fetch_detail(notion_id)
+    if not items:
+        return {"image_has_data": False}, None
+
+    image_url = None
+    for it in items:
+        if it["type"] == "image":
+            image_url = it["url"]
+            break
+
+    if not image_url:
+        return {"image_has_data": False}, None
+
+    data, mime = _asiaair_download_bytes(image_url)
+    if not data or not mime:
+        return None, "無法下載 Load Sheet 圖片"
+
+    parts = [
+        {"text": _LOADSHEET_PARSE_PROMPT},
+        {"inline_data": {"mime_type": mime, "data": _base64.b64encode(data).decode("utf-8")}},
+    ]
+
+    resp, status, err_msg = _asiaair_call_gemini(api_key, parts)
+    if resp is None:
+        return None, err_msg or "AI 解析失敗"
+
+    try:
+        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        result = _json.loads(text)
+    except Exception as e:
+        return None, f"AI 回應解析失敗：{e}"
+
+    result["image_url"] = image_url
+    _kv_set(cache_key, result)
+    return result, None
+
+
+@app.route("/api/loadsheet/parse/<notion_id>")
+def loadsheet_parse_api(notion_id):
+    if not _NOTION_ID_RE.match(notion_id):
+        return jsonify({"error": "invalid id"}), 400
+    result, err = _loadsheet_parse(notion_id)
+    if result is None:
+        return jsonify({"error": err or "解析失敗"}), 503
+    return jsonify(result)
+
+
 @app.route("/api/amenities")
 def amenities_api():
     data, source = _fetch_amenities()

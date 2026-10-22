@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>貨艙裝載計算 · Load & Trim</title>
+<title>貨艙裝載計算 · Load &amp; Trim</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
@@ -17,18 +17,9 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
 
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(14px) scale(0.988); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(16px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(18px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
+@keyframes pageIn  { from { opacity:0; transform:translateY(14px) scale(0.988); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes cardIn  { from { opacity:0; transform:translateY(16px) scale(0.97); }  to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes spin    { to { transform:rotate(360deg); } }
 
 :root {
   --bg:      #fbfbfd;
@@ -38,289 +29,313 @@ html, body { overscroll-behavior: none; }
   --text:    #1d1d1f;
   --sub:     #86868b;
   --accent:  #0071e3;
-  --line:    #1d1d1f;
   --chip-bg: rgba(118,118,128,0.12);
+  --danger:  #ff3b30;
+  --warn:    #ff9500;
+  --ok:      #34c759;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000; --card: #1c1c1e;
+    --border: rgba(255,255,255,0.09); --divider: rgba(255,255,255,0.12);
+    --text: #f5f5f7; --sub: #86868b; --chip-bg: rgba(255,255,255,0.1);
+  }
 }
 
 html, body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
+  height: 100%; background: var(--bg); color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 
-/* ── 頂部 header ── */
+/* ── header ── */
 .header {
   position: sticky; top: 0; z-index: 100;
   background: rgba(251,251,253,0.86);
   backdrop-filter: saturate(1.6) blur(22px);
   -webkit-backdrop-filter: saturate(1.6) blur(22px);
-  padding: env(safe-area-inset-top, 0px) 16px 0;
+  padding: env(safe-area-inset-top,0px) 16px 0;
   border-bottom: 1px solid var(--divider);
 }
-.header-row { display: flex; align-items: center; gap: 10px; padding: 14px 0 10px; }
+@media (prefers-color-scheme: dark) { .header { background: rgba(0,0,0,0.75); } }
+.header-row { display:flex; align-items:center; gap:10px; padding:14px 0 10px; }
 .back-btn {
-  display: flex; align-items: center; gap: 3px;
-  background: none; border: none; color: var(--accent);
-  font-size: 1rem; font-weight: 500; cursor: pointer;
-  padding: 4px 8px 4px 2px; border-radius: 8px;
-  transition: background 0.15s, transform 0.15s cubic-bezier(0.25,1,0.5,1), opacity 0.15s ease;
-  flex-shrink: 0; text-decoration: none;
+  display:flex; align-items:center; gap:3px; background:none; border:none;
+  color:var(--accent); font-size:1rem; font-weight:500; cursor:pointer;
+  padding:4px 8px 4px 2px; border-radius:8px; text-decoration:none;
+  transition:transform .15s cubic-bezier(.25,1,.5,1), opacity .15s;
 }
-.back-btn:active { transform: scale(0.93); opacity: 0.6; background: rgba(0,113,227,0.1); }
-.back-arrow { font-size: 1.2rem; line-height: 1; }
-.header-title { flex: 1; text-align: center; }
-.header-title-zh { font-size: 1rem; font-weight: 700; color: var(--text); line-height: 1.2; letter-spacing: -0.02em; }
-.header-title-en { font-size: 0.68rem; color: var(--sub); font-weight: 590; letter-spacing: 0.02em; }
-.header-spacer { width: 56px; flex-shrink: 0; }
+.back-btn:active { transform:scale(0.93); opacity:0.6; }
+.back-arrow { font-size:1.2rem; line-height:1; }
+.header-title { flex:1; text-align:center; }
+.header-title-zh { font-size:1rem; font-weight:700; letter-spacing:-0.02em; }
+.header-title-en { font-size:0.68rem; color:var(--sub); font-weight:590; letter-spacing:0.02em; }
+.header-spacer { width:56px; flex-shrink:0; }
 
-/* ── 內容 ── */
-.content { max-width: 480px; margin: 0 auto; padding: 20px 16px max(40px, env(safe-area-inset-bottom) + 24px); }
+.content { max-width:480px; margin:0 auto; padding:20px 16px max(40px, env(safe-area-inset-bottom) + 24px); }
 
-/* ── 機型切換 ── */
-.segmented {
-  display: flex; gap: 4px; background: var(--chip-bg);
-  border-radius: 14px; padding: 4px; margin-bottom: 20px;
+/* ── 通用卡片 ── */
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:22px; padding:18px 16px; margin-bottom:14px;
   animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
 }
-.seg-btn {
-  flex: 1; padding: 10px 0; border: none; border-radius: 10px;
-  background: transparent; color: var(--sub);
-  font-size: 0.92rem; font-weight: 700; font-family: inherit;
-  cursor: pointer; transition: background 0.2s, color 0.2s, transform 0.15s;
-  -webkit-tap-highlight-color: transparent;
+.card-title {
+  font-size:0.88rem; font-weight:800; margin-bottom:14px;
+  display:flex; align-items:center; gap:8px;
 }
-.seg-btn.active { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-.seg-btn:active { transform: scale(0.96); }
+.card-title .bi { color:var(--accent); }
 
-/* ── 行李總計 ── */
-.total-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 22px; padding: 18px 16px; margin-bottom: 16px;
-  animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) 0.02s both;
+/* ── 航班選擇 ── */
+.flight-loading { text-align:center; padding:20px 0; color:var(--sub); font-size:0.85rem; }
+.flight-loading .spin { display:inline-block; animation:spin .7s linear infinite; }
+.flight-item {
+  display:flex; align-items:center; gap:10px; padding:11px 12px;
+  border-radius:14px; margin-bottom:8px; cursor:pointer;
+  border:1.5px solid var(--border); background:var(--bg);
+  transition:border-color .15s, background .15s, transform .12s cubic-bezier(.25,1,.5,1);
 }
-.total-card-title {
-  font-size: 0.92rem; font-weight: 800; margin-bottom: 14px;
-  display: flex; align-items: center; gap: 8px;
-}
-.total-card-title .bi { color: var(--accent); }
-.total-row { display: flex; gap: 10px; }
-.total-field { flex: 1; }
-.total-field label {
-  display: block; font-size: 0.68rem; font-weight: 700; color: var(--sub);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
-}
-.total-field input {
-  width: 100%; padding: 12px; font-size: 1.1rem; font-weight: 700;
-  border: 1.5px solid var(--border); border-radius: 12px;
-  background: var(--bg); color: var(--text); outline: none;
-  font-family: inherit; -webkit-appearance: none;
-}
-.total-field input:focus { border-color: var(--accent); }
-.avg-hint {
-  margin-top: 12px; font-size: 0.8rem; color: var(--sub);
-  background: rgba(0,113,227,0.06); border-radius: 12px; padding: 10px 12px;
-  line-height: 1.5;
-}
-.avg-hint b { color: var(--accent); font-weight: 800; }
-.cat-block { padding: 14px 0; border-top: 1px solid var(--divider); }
-.cat-block:first-child { padding-top: 0; border-top: none; }
-.cat-block-title {
-  font-size: 0.84rem; font-weight: 700; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 6px;
-}
-.cat-block-title .bi { color: var(--accent); }
-
-/* ── 飛機側視圖（外框線稿）── */
-.plane-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 22px; padding: 34px 8px 14px;
-  margin-bottom: 22px;
-  animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) 0.05s both;
-}
-.plane-wrap { position: relative; width: 100%; }
-.plane-svg { width: 100%; height: auto; display: block; }
+.flight-item:active { transform:scale(0.98); }
+.flight-item.selected { border-color:var(--accent); background:rgba(0,113,227,0.07); }
 @media (prefers-color-scheme: dark) {
-  .plane-svg { filter: invert(1); }
+  .flight-item { background:#2c2c2e; }
+  .flight-item.selected { background:rgba(0,113,227,0.18); }
 }
-.leader-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.fwd-tag {
-  position: absolute; left: 2px; top: -22px;
-  display: flex; align-items: center; gap: 4px;
-  font-size: 0.64rem; font-weight: 700; color: var(--sub);
-  letter-spacing: 0.06em; text-transform: uppercase;
+.fl-code {
+  width:32px; height:32px; border-radius:8px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.68rem; font-weight:800; color:#fff;
+  background:linear-gradient(135deg,#e0261f,#b91c1c);
 }
-.ac-name {
-  text-align: center; font-size: 0.78rem; color: var(--sub);
-  font-weight: 600; margin-top: 10px; letter-spacing: -0.01em;
+.fl-code.ak, .fl-code.z2 { background:linear-gradient(135deg,#2997ff,#0071e3); }
+.fl-info { flex:1; }
+.fl-no  { font-size:0.88rem; font-weight:800; }
+.fl-sub { font-size:0.72rem; color:var(--sub); margin-top:1px; }
+.ac-badge {
+  font-size:0.65rem; font-weight:700; padding:3px 8px; border-radius:6px; flex-shrink:0;
 }
-.img-credit {
-  text-align: center; font-size: 0.6rem; color: var(--sub);
-  opacity: 0.6; margin-top: 8px; letter-spacing: 0.01em;
+.ac-badge.a321 { background:rgba(88,86,214,0.12); color:#5856d6; }
+.ac-badge.a320 { background:rgba(0,113,227,0.1);  color:var(--accent); }
+.fl-check { color:var(--accent); font-size:1rem; flex-shrink:0; }
+
+.no-flights { text-align:center; padding:18px 0; color:var(--sub); font-size:0.84rem; line-height:1.6; }
+.skip-btn {
+  width:100%; padding:11px; border:none; border-radius:14px;
+  background:var(--chip-bg); color:var(--sub);
+  font-size:0.84rem; font-weight:700; font-family:inherit; cursor:pointer; margin-top:8px;
+  transition:transform .12s cubic-bezier(.25,1,.5,1);
+}
+.skip-btn:active { transform:scale(0.97); }
+
+/* ── Notion 解析區 ── */
+.notion-card {
+  background:var(--card); border:1.5px solid rgba(88,86,214,0.22);
+  border-radius:22px; padding:16px; margin-bottom:14px;
+  animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) 0.06s both;
+}
+.notion-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.notion-icon {
+  width:30px; height:30px; border-radius:8px; flex-shrink:0;
+  background:linear-gradient(135deg,#7b79f7,#5856d6);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.72rem; font-weight:800; color:#fff;
+}
+.notion-label { flex:1; }
+.notion-label-main { font-size:0.88rem; font-weight:700; }
+.notion-label-sub  { font-size:0.7rem; color:var(--sub); margin-top:1px; }
+.notion-status { font-size:0.65rem; font-weight:700; padding:3px 8px; border-radius:6px; }
+.notion-status.ok   { background:rgba(52,199,89,0.12); color:#1a7a3a; }
+.notion-status.busy { background:rgba(0,113,227,0.1);  color:var(--accent); }
+.notion-status.fail { background:rgba(255,59,48,0.1);  color:var(--danger); }
+
+/* 縮圖 */
+.thumb-row { display:flex; gap:10px; align-items:stretch; margin-bottom:12px; }
+.thumb-box {
+  width:80px; flex-shrink:0; border-radius:12px; overflow:hidden;
+  background:#1c1c1e; cursor:pointer; display:flex; flex-direction:column;
+  transition:transform .12s cubic-bezier(.25,1,.5,1);
+}
+.thumb-box:active { transform:scale(0.95); }
+.thumb-img {
+  flex:1; display:flex; flex-direction:column; gap:3px; padding:8px 6px;
+}
+.thumb-line { height:5px; border-radius:2px; background:rgba(255,255,255,0.18); }
+.thumb-line.v { background:rgba(255,255,255,0.42); }
+.thumb-footer {
+  background:rgba(0,0,0,0.5); color:#fff; font-size:0.58rem; font-weight:700;
+  text-align:center; padding:4px; display:flex; align-items:center; justify-content:center; gap:2px;
+}
+.thumb-meta { flex:1; display:flex; flex-direction:column; gap:6px; }
+.thumb-meta-row {
+  flex:1; background:var(--bg); border-radius:9px; padding:7px 10px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+@media (prefers-color-scheme: dark) { .thumb-meta-row { background:#2c2c2e; } }
+.tm-label { font-size:0.68rem; color:var(--sub); }
+.tm-val   { font-size:0.8rem; font-weight:700; }
+
+/* 解析列 */
+.parse-row {
+  display:flex; align-items:center; gap:9px;
+  padding:9px 0; border-bottom:1px solid var(--divider);
+}
+.parse-row:last-child { border-bottom:none; }
+.parse-icon { font-size:1rem; width:22px; text-align:center; flex-shrink:0; }
+.parse-info { flex:1; }
+.parse-name { font-size:0.84rem; font-weight:600; }
+.parse-loc  { font-size:0.7rem; color:var(--sub); margin-top:1px; }
+.conf-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.conf-high   { background:var(--ok); }
+.conf-medium { background:var(--warn); }
+.conf-low    { background:var(--danger); }
+.parse-val { font-size:0.88rem; font-weight:700; }
+.edit-chip {
+  font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:6px;
+  background:rgba(255,149,0,0.12); color:#b25000;
+  border:1px solid rgba(255,149,0,0.3); cursor:pointer; margin-left:4px;
 }
 
-/* ── 貨艙定位 pin（疊加在飛機圖上）── */
-.hold-pin {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 30px; height: 30px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.74rem; font-weight: 800; color: #fff;
-  background: linear-gradient(135deg,#2997ff,#0071e3);
-  box-shadow: 0 2px 6px rgba(0,113,227,0.35), 0 0 0 3px var(--card);
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s cubic-bezier(0.25,1,0.5,1);
-  z-index: 2;
+/* ── 行李輸入 ── */
+.two-col { display:flex; gap:10px; }
+.field { flex:1; }
+.field label { display:block; font-size:0.68rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+.field input {
+  width:100%; padding:12px; font-size:1.1rem; font-weight:700;
+  border:1.5px solid var(--border); border-radius:12px;
+  background:var(--bg); color:var(--text); outline:none; font-family:inherit;
+  -webkit-appearance:none;
 }
-.hold-pin.nodoor { background: linear-gradient(135deg,#98a2ad,#6e7680); }
-.hold-pin.filled { box-shadow: 0 2px 8px rgba(52,199,89,0.45), 0 0 0 3px var(--card); background: linear-gradient(135deg,#34d399,#059669); }
-.hold-pin:active { transform: translate(-50%, -50%) scale(0.88); }
+.field input:focus { border-color:var(--accent); }
+@media (prefers-color-scheme: dark) { .field input { background:#2c2c2e; } }
+.avg-hint { margin-top:10px; font-size:0.8rem; color:var(--sub); background:rgba(0,113,227,0.07); border-radius:10px; padding:9px 11px; }
+.avg-hint b { color:var(--accent); }
 
-/* ── 貨艙區（下方清單，僅顯示狀態，點擊同步開彈窗）── */
-.hold-section-title {
-  font-size: 0.72rem; font-weight: 700; color: var(--sub);
-  text-transform: uppercase; letter-spacing: 0.06em;
-  margin: 4px 0 10px 2px;
+/* ── 計算按鈕 ── */
+.calc-btn {
+  width:100%; padding:15px; border:none; border-radius:16px;
+  background:linear-gradient(135deg,#2997ff,#0071e3); color:#fff;
+  font-size:0.96rem; font-weight:700; font-family:inherit; cursor:pointer;
+  margin-bottom:14px; transition:transform .12s cubic-bezier(.25,1,.5,1);
 }
-.hold-row {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 8px;
+.calc-btn:active { transform:scale(0.98); }
+.calc-btn:disabled { opacity:0.45; pointer-events:none; }
+
+/* ── 剩餘件數 banner ── */
+.remain-banner {
+  display:flex; justify-content:space-between; align-items:center;
+  background:var(--card); border:1.5px solid rgba(0,113,227,0.2);
+  border-radius:14px; padding:12px 14px; margin-bottom:12px;
+  animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
 }
+.remain-banner.ok   { border-color:rgba(52,199,89,0.35); }
+.remain-banner.warn { border-color:rgba(255,59,48,0.35); }
+.remain-label { font-size:0.8rem; color:var(--sub); }
+.remain-label-sub { font-size:0.68rem; color:var(--sub); margin-top:2px; }
+.remain-val { font-size:1.05rem; font-weight:800; color:var(--accent); }
+.remain-val.ok   { color:#34c759; }
+.remain-val.warn { color:var(--danger); }
+
+/* ── 貨艙結果卡 ── */
 .hold-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 18px; padding: 12px 6px 10px; text-align: center;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s cubic-bezier(0.25,1,0.5,1), background 0.15s;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:18px; padding:14px; margin-bottom:10px;
   animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
 }
-.hold-card:active { transform: scale(0.965); background: rgba(0,0,0,0.02); }
-.hold-card.filled { border-color: rgba(52,199,89,0.4); background: rgba(52,199,89,0.06); }
-.hold-name { font-size: 0.84rem; font-weight: 700; color: var(--text); }
-.hold-max  { font-size: 0.64rem; color: var(--sub); margin-top: 5px; }
-.hold-val  { font-size: 0.76rem; font-weight: 700; color: #059669; margin-top: 4px; min-height: 16px; }
-.hold-val.empty { color: var(--sub); font-weight: 500; }
-.hold-toolbox { font-size: 0.62rem; color: var(--accent); font-weight: 700; margin-top: 2px; }
+.hold-card.disabled { opacity:0.45; }
+.hold-top { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+.hold-badge {
+  font-size:0.72rem; font-weight:800; color:#fff; background:var(--accent);
+  border-radius:8px; padding:3px 9px; flex-shrink:0;
+}
+.hold-badge.aft  { background:#5856d6; }
+.hold-badge.bulk { background:#c7c7cc; }
+.hold-tag { flex:1; font-size:0.82rem; font-weight:700; }
+.hold-max { font-size:0.68rem; color:var(--sub); }
+.hold-body { display:flex; gap:8px; align-items:flex-end; }
+.hold-input-wrap { flex:1; }
+.hold-input-label { font-size:0.65rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+.hold-input {
+  width:100%; padding:11px 12px; font-size:1.1rem; font-weight:800;
+  border:2px solid rgba(0,113,227,0.3); border-radius:12px;
+  background:rgba(0,113,227,0.05); color:var(--accent);
+  outline:none; font-family:inherit; text-align:center; -webkit-appearance:none;
+}
+.hold-input.aft { border-color:rgba(88,86,214,0.3); background:rgba(88,86,214,0.05); color:#5856d6; }
+.hold-input.err { border-color:var(--danger); background:rgba(255,59,48,0.06); color:var(--danger); }
+.hold-input.off { border-color:var(--border); background:transparent; color:var(--sub); pointer-events:none; }
+.hold-calc { flex:1; background:rgba(0,0,0,0.03); border-radius:12px; padding:11px 12px; text-align:center; }
+@media (prefers-color-scheme: dark) { .hold-calc { background:rgba(255,255,255,0.06); } }
+.hold-calc-kg  { font-size:1rem; font-weight:800; }
+.hold-calc-kg.zero { color:var(--sub); font-weight:500; font-size:0.88rem; }
+.hold-calc-sub { font-size:0.65rem; color:var(--sub); margin-top:2px; }
+.hold-bar-area { margin-top:9px; }
+.hold-bar-row { display:flex; align-items:center; gap:8px; }
+.hold-bar-bg { flex:1; height:5px; background:var(--chip-bg); border-radius:3px; overflow:hidden; }
+.hold-bar-fill { height:100%; border-radius:3px; transition:width .4s cubic-bezier(.22,1,.36,1); }
+.bar-fwd { background:linear-gradient(90deg,#2997ff,#0071e3); }
+.bar-aft { background:linear-gradient(90deg,#7b79f7,#5856d6); }
+.hold-bar-pct { font-size:0.68rem; font-weight:700; color:var(--sub); width:30px; text-align:right; flex-shrink:0; }
+.hold-extras { margin-top:8px; display:flex; gap:5px; flex-wrap:wrap; }
+.extra-tag { font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:5px; background:var(--chip-bg); color:var(--sub); }
 
-/* ── 彈窗（置中 modal，非跳頁／非底部全螢幕）── */
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 300;
-  background: rgba(0,0,0,0.42);
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  display: none; align-items: center; justify-content: center;
-  padding: 20px;
+/* ── 圖片 Modal ── */
+.img-modal-overlay {
+  position:fixed; inset:0; z-index:400;
+  background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center; padding:16px;
 }
-.modal-overlay.open { display: flex; animation: fadeSlideUp 0.3s cubic-bezier(0.22,1,0.36,1) both; }
-.modal-card {
-  background: var(--card); border-radius: 24px;
-  padding: 22px 20px 20px; width: 100%; max-width: 340px;
-  max-height: 86vh; overflow-y: auto; overscroll-behavior: contain;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+.img-modal-overlay.open { display:flex; }
+.img-modal {
+  background:#1c1c1e; border-radius:22px; width:100%; max-width:440px;
+  overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  display:flex; flex-direction:column; max-height:88vh;
 }
-.modal-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-.modal-title .bi { color: var(--accent); }
-.field-group { margin-bottom: 14px; }
-.field-group label {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 0.72rem; font-weight: 700; color: var(--sub);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+.img-modal-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0;
 }
-.field-group input {
-  width: 100%; padding: 13px 14px; font-size: 1.2rem; font-weight: 700;
-  border: 1.5px solid var(--border); border-radius: 14px;
-  background: var(--bg); color: var(--text); outline: none;
-  font-family: inherit; -webkit-appearance: none;
+.img-modal-title { color:#f5f5f7; font-size:0.88rem; font-weight:700; }
+.img-modal-close {
+  background:rgba(255,255,255,0.1); border:none; color:#f5f5f7;
+  font-size:0.78rem; font-weight:700; padding:5px 12px; border-radius:8px;
+  cursor:pointer; font-family:inherit;
 }
-.field-group input:focus { border-color: var(--accent); }
-.cat-calc { font-size: 0.72rem; color: var(--sub); margin-top: 5px; line-height: 1.4; }
-.cat-calc b { color: var(--text); }
+.img-modal-body { flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; padding:12px; }
+.img-modal-body img { max-width:100%; border-radius:8px; display:block; }
+.img-modal-note { padding:8px 16px 12px; font-size:0.72rem; color:rgba(255,255,255,0.35); text-align:center; flex-shrink:0; }
 
-/* ── 貨艙彈窗：其他項目（C／D／Toolbox）清單與新增 ── */
-.items-section { margin-bottom: 16px; }
-.items-title {
-  font-size: 0.72rem; font-weight: 700; color: var(--sub);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;
+/* 編輯 modal（垃圾等橘色確認）*/
+.edit-modal-overlay {
+  position:fixed; inset:0; z-index:300;
+  background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center; padding:20px;
 }
-.items-empty { font-size: 0.78rem; color: var(--sub); padding: 2px 0 10px; }
-.item-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px; border-radius: 12px;
-  background: rgba(0,113,227,0.06); margin-bottom: 6px;
+.edit-modal-overlay.open { display:flex; }
+.edit-modal {
+  background:var(--card); border-radius:24px; padding:22px 20px 20px;
+  width:100%; max-width:340px; box-shadow:0 20px 60px rgba(0,0,0,0.25);
 }
-.item-row-icon { color: var(--accent); flex-shrink: 0; }
-.item-row-text { flex: 1; font-size: 0.82rem; color: var(--text); }
-.item-row-text b { font-weight: 800; }
-.item-row-remove {
-  background: none; border: none; color: #ff3b30; font-size: 1.1rem;
-  cursor: pointer; padding: 2px 4px; flex-shrink: 0; line-height: 1;
-  -webkit-tap-highlight-color: transparent;
+.edit-modal-title { font-size:1rem; font-weight:800; margin-bottom:16px; }
+.edit-modal select, .edit-modal input {
+  width:100%; padding:12px 14px; font-size:1rem; font-weight:700;
+  border:1.5px solid var(--border); border-radius:12px;
+  background:var(--bg); color:var(--text); outline:none; font-family:inherit;
+  -webkit-appearance:none; margin-bottom:10px;
 }
-.add-item-row { border: 1.5px dashed var(--border); border-radius: 14px; padding: 12px; }
-.add-item-row select {
-  width: 100%; padding: 11px 12px; font-size: 0.92rem; font-weight: 700;
-  border: 1.5px solid var(--border); border-radius: 12px;
-  background: var(--bg); color: var(--text); outline: none;
-  font-family: inherit; margin-bottom: 8px; -webkit-appearance: none;
-}
-.add-item-row select:focus { border-color: var(--accent); }
-.add-item-fields { display: flex; gap: 8px; margin-bottom: 8px; }
-.add-item-fields input {
-  flex: 1; width: 0; padding: 11px 12px; font-size: 1rem; font-weight: 700;
-  border: 1.5px solid var(--border); border-radius: 12px;
-  background: var(--bg); color: var(--text); outline: none;
-  font-family: inherit; -webkit-appearance: none;
-}
-.add-item-fields input:focus { border-color: var(--accent); }
-.add-item-fields input.hidden { display: none; }
-.add-item-btn {
-  width: 100%; padding: 11px; border-radius: 12px; border: none;
-  background: linear-gradient(135deg,#2997ff,#0071e3); color: #fff;
-  font-size: 0.86rem; font-weight: 700; font-family: inherit; cursor: pointer;
-  transition: transform 0.15s cubic-bezier(0.25,1,0.5,1);
-  -webkit-tap-highlight-color: transparent;
-}
-.add-item-btn:active { transform: scale(0.96); }
-.hold-items-tags { display: flex; gap: 4px; justify-content: center; margin-top: 4px; font-size: 0.68rem; color: var(--accent); }
-.max-hint {
-  font-size: 0.78rem; color: var(--sub); background: rgba(0,0,0,0.03);
-  border-radius: 12px; padding: 10px 12px; line-height: 1.5; margin-bottom: 16px;
-}
-.max-hint b { color: var(--text); }
-.modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+.edit-modal select:focus, .edit-modal input:focus { border-color:var(--accent); }
+@media (prefers-color-scheme: dark) { .edit-modal select, .edit-modal input { background:#2c2c2e; } }
+.edit-modal-actions { display:flex; gap:8px; margin-top:4px; }
 .modal-btn {
-  flex: 1; padding: 13px; border-radius: 14px; border: none;
-  font-size: 0.9rem; font-weight: 700; font-family: inherit; cursor: pointer;
-  transition: transform 0.15s cubic-bezier(0.25,1,0.5,1);
-  -webkit-tap-highlight-color: transparent;
+  flex:1; padding:13px; border-radius:14px; border:none;
+  font-size:0.9rem; font-weight:700; font-family:inherit; cursor:pointer;
+  transition:transform .12s cubic-bezier(.25,1,.5,1);
 }
-.modal-btn:active { transform: scale(0.96); }
-.modal-btn.cancel { background: var(--chip-bg); color: var(--sub); }
-.modal-btn.confirm { background: linear-gradient(135deg,#2997ff,#0071e3); color: #fff; }
-.clear-btn {
-  display: block; width: 100%; margin-top: 10px; padding: 12px;
-  border-radius: 14px; background: rgba(255,59,48,0.08); border: none;
-  color: #ff3b30; font-size: 0.84rem; font-weight: 700; font-family: inherit;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s cubic-bezier(0.25,1,0.5,1);
-}
-.clear-btn:active { transform: scale(0.97); }
+.modal-btn:active { transform:scale(0.96); }
+.modal-btn.cancel  { background:var(--chip-bg); color:var(--sub); }
+.modal-btn.confirm { background:linear-gradient(135deg,#2997ff,#0071e3); color:#fff; }
 
-/* ── Dark Mode ── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #000; --card: #1c1c1e;
-    --border: rgba(255,255,255,0.09); --divider: rgba(255,255,255,0.12);
-    --text: #f5f5f7; --sub: #86868b; --line: #f5f5f7;
-    --chip-bg: rgba(255,255,255,0.1);
-  }
-  .header { background: rgba(0,0,0,0.75); }
-  .seg-btn.active { background: #2c2c2e; color: #f5f5f7; }
-  .hold-card.filled { background: rgba(52,199,89,0.1); }
-  .field-group input { background: #2c2c2e; }
-  .max-hint { background: rgba(255,255,255,0.06); }
-  .item-row { background: rgba(41,151,255,0.14); }
-  .add-item-row select, .add-item-fields input { background: #2c2c2e; }
-}
+.section-label { font-size:0.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.06em; margin:4px 0 10px 2px; }
 </style>
 </head>
 <body>
@@ -338,455 +353,419 @@ body { animation: pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 
 <div class="content">
 
-  <!-- 機型切換 -->
-  <div class="segmented" id="acSwitch">
-    <button class="seg-btn active" data-ac="A320">A320</button>
-    <button class="seg-btn" data-ac="A321">A321</button>
+  <!-- 步驟 1：選入境航班 -->
+  <div class="card" id="flightCard" style="animation-delay:0.02s">
+    <div class="card-title"><i class="bi bi-airplane-fill"></i> 選入境班次</div>
+    <div id="flightList"><div class="flight-loading"><span class="spin bi bi-arrow-clockwise"></span> 載入航班中…</div></div>
+    <button class="skip-btn" id="skipBtn" onclick="skipNotion()">略過，直接手動輸入</button>
   </div>
 
-  <!-- 行李總計：只有 B（行李）這一項有總計池，C／D／Toolbox 在貨艙裡各別新增 -->
-  <div class="total-card">
-    <div class="total-card-title"><i class="bi bi-luggage-fill"></i> 行李總計</div>
-    <div class="total-row">
-      <div class="total-field"><label>總件數 PCS</label><input type="number" inputmode="numeric" pattern="[0-9]*" id="totalPcs_B" placeholder="0"></div>
-      <div class="total-field"><label>總重量 KG</label><input type="number" inputmode="decimal" id="totalWgt_B" placeholder="0"></div>
+  <!-- 步驟 2：Notion 解析（選班次後出現） -->
+  <div class="notion-card" id="notionCard" style="display:none">
+    <div class="notion-header">
+      <div class="notion-icon">N</div>
+      <div class="notion-label">
+        <div class="notion-label-main" id="notionTitle">讀取中…</div>
+        <div class="notion-label-sub" id="notionSub"></div>
+      </div>
+      <div class="notion-status busy" id="notionBadge">解析中</div>
     </div>
-    <div class="avg-hint" id="avgHint_B"></div>
+    <div id="notionBody"></div>
   </div>
 
-  <!-- 飛機側視圖 + 貨艙定位 -->
-  <div class="plane-card">
-    <div class="plane-wrap" id="planeWrap">
-      <span class="fwd-tag"><i class="bi bi-arrow-left"></i> FWD</span>
-      <img id="planeImg" class="plane-svg" src="" alt="">
-      <svg id="leaderSvg" class="leader-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
-      <!-- pin 由 JS 動態疊加 -->
+  <!-- 步驟 3：行李輸入 -->
+  <div class="card" id="bagsCard" style="animation-delay:0.04s">
+    <div class="card-title"><i class="bi bi-luggage-fill"></i> 今日出發行李</div>
+    <div class="two-col">
+      <div class="field"><label>總件數 PCS</label><input type="number" inputmode="numeric" id="totalPcs" placeholder="0" oninput="onBagsInput()"></div>
+      <div class="field"><label>總重量 KG</label><input type="number" inputmode="decimal" id="totalKg"  placeholder="0" oninput="onBagsInput()"></div>
     </div>
-    <div class="ac-name" id="acName">Airbus A320</div>
-    <div class="img-credit">Wikimedia Commons（Julien.scavini，CC BY-SA 3.0）</div>
+    <div class="avg-hint" id="avgHint">請輸入總件數與總重量</div>
   </div>
 
-  <!-- 貨艙狀態列 -->
-  <div class="hold-section-title">Departure Loading · 貨艙狀態</div>
-  <div class="hold-row" id="holdRow"></div>
+  <!-- 計算按鈕 -->
+  <button class="calc-btn" id="calcBtn" onclick="calcDistribution()">⚡ 計算建議裝載</button>
+
+  <!-- 步驟 4：分配結果 -->
+  <div id="resultSection" style="display:none">
+    <div class="remain-banner" id="remainBanner">
+      <div>
+        <div class="remain-label">尚未分配件數</div>
+        <div class="remain-label-sub">調整各艙件數直到歸零</div>
+      </div>
+      <div class="remain-val" id="remainVal">—</div>
+    </div>
+    <div class="section-label" id="resultLabel">建議裝載方案</div>
+    <div id="holdList"></div>
+  </div>
 
 </div>
 
-<!-- 彈窗：貨艙輸入 -->
-<div class="modal-overlay" id="holdModalOverlay" onclick="handleOverlayClick(event)">
-  <div class="modal-card">
-    <div class="modal-title"><i class="bi bi-box-seam-fill"></i> <span id="modalTitle">HOLD 1</span></div>
-
-    <div class="field-group">
-      <label><i class="bi bi-bag-fill"></i> B · 行李（PCS）</label>
-      <input type="number" inputmode="numeric" pattern="[0-9]*" id="bPcsInput" placeholder="0">
-      <div class="cat-calc" id="bCalc"></div>
+<!-- 圖片 Modal -->
+<div class="img-modal-overlay" id="imgModalOverlay" onclick="if(event.target===this)closeImgModal()">
+  <div class="img-modal">
+    <div class="img-modal-bar">
+      <div class="img-modal-title" id="imgModalTitle">Load Sheet 原圖</div>
+      <button class="img-modal-close" onclick="closeImgModal()">關閉</button>
     </div>
+    <div class="img-modal-body"><img id="imgModalImg" src="" alt="Load Sheet"></div>
+    <div class="img-modal-note">點空白處關閉 · 以實際截圖為準</div>
+  </div>
+</div>
 
-    <div class="items-section">
-      <div class="items-title">其他項目</div>
-      <div id="itemsList"></div>
-      <div class="add-item-row">
-        <select id="newItemType" onchange="onNewItemTypeChange()">
-          <option value="C">C · 貨物</option>
-          <option value="D">D · 組員行李</option>
-          <option value="TOOLBOX">Toolbox</option>
-        </select>
-        <div class="add-item-fields">
-          <input type="number" inputmode="numeric" pattern="[0-9]*" id="newItemPcs" placeholder="件數">
-          <input type="number" inputmode="decimal" id="newItemWgt" placeholder="總重 KG">
-        </div>
-        <button type="button" class="add-item-btn" onclick="addModalItem()"><i class="bi bi-plus-lg"></i> 新增項目</button>
-      </div>
+<!-- 編輯 Modal（垃圾等橘色確認） -->
+<div class="edit-modal-overlay" id="editModalOverlay" onclick="if(event.target===this)closeEditModal()">
+  <div class="edit-modal">
+    <div class="edit-modal-title" id="editModalTitle">確認項目</div>
+    <select id="editHoldSel">
+      <option value="HOLD1">HOLD 1</option>
+      <option value="HOLD2">HOLD 2</option>
+      <option value="HOLD3">HOLD 3</option>
+      <option value="HOLD4">HOLD 4</option>
+      <option value="HOLD5">HOLD 5</option>
+    </select>
+    <input type="number" inputmode="numeric" id="editPcsInput" placeholder="件數（Toolbox 可留 0）">
+    <div class="edit-modal-actions">
+      <button class="modal-btn cancel" onclick="closeEditModal()">取消</button>
+      <button class="modal-btn confirm" onclick="saveEditModal()">確認</button>
     </div>
-
-    <div class="max-hint" id="maxHint"></div>
-    <div class="modal-actions">
-      <button class="modal-btn cancel" onclick="closeHoldModal()">取消</button>
-      <button class="modal-btn confirm" onclick="saveHoldModal()">儲存</button>
-    </div>
-    <button class="clear-btn" onclick="clearHoldModal()"><i class="bi bi-trash3"></i> 清空這個貨艙</button>
   </div>
 </div>
 
 <script>
-/* ── 背景頁面捲動鎖定：面板開著時，拖拉只捲動最上層那個面板，
-   不會穿透帶動底下的頁面／上一層面板一起動。計數器處理疊面板的巢狀情況。 */
-let _scrollLockCount = 0;
-let _scrollLockY = 0;
-function lockBodyScroll() {
-  if (_scrollLockCount++ > 0) return;
-  _scrollLockY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${_scrollLockY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.width = '100%';
-}
-function unlockBodyScroll() {
-  if (_scrollLockCount <= 0) return;
-  if (--_scrollLockCount > 0) return;
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.width = '';
-  window.scrollTo(0, _scrollLockY);
-}
-
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
-document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-let _lastTap = 0;
-document.addEventListener('touchend', e => {
-  const now = Date.now();
-  if (now - _lastTap < 300) e.preventDefault();
-  _lastTap = now;
-}, { passive: false });
-
-/* ════════════════════════════════════════
-   機型資料
-   側視圖採用 Wikimedia Commons「Airbus A32X family」線稿
-   （Julien.scavini 繪製，CC BY-SA 3.0，已裁切出 A320 / A321 單機列）。
-   圖中機頭朝左，cx/cy 為艙門在原圖中的實際像素座標，
-   pin 直接對齊圖上畫好的艙門方框。
-
-   MAX 上限與艙門位置依 Thai AirAsia LOADING INSTRUCTION/REPORT (LIR)
-   TAA/RGE/F/003 Rev.04 印刷固定值：
-   HOLD1（FWD）／HOLD4（AFT）／HOLD5（BULK）都有獨立艙門；
-   HOLD3（AFT 內側）與 HOLD2（FWD 內側，只有 A321 才有）沒有獨立艙門，
-   要從旁邊的艙門推進去。A321 比 A320 多一個 HOLD2（COMPARTMENT 2 FOR
-   A321 ONLY），A320 該位置是 NOT APPLICABLE。
-   ════════════════════════════════════════ */
-const AIRCRAFT = {
+/* ════ 機型定義 ════ */
+const AC = {
   A320: {
     name: 'Airbus A320',
-    img: '/static/aircraft/a320-side.png',
-    imgW: 792, imgH: 264,
     holds: [
-      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE',  max: 3402, maxNote: 'MAX 3402 KGS',                        cx: 202, cy: 197 },
-      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: 2426, maxNote: 'MAX 2426 KGS',                        cx: 420, cy: 197 },
-      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: 2110, maxNote: 'MAX 2110 KGS',                         cx: 485, cy: 197 },
-      { id: 'HOLD5', label: 'HOLD 5', door: true,  doorLabel: 'BULK DOOR',     max: null, maxNote: 'MAX 1497 KGS (180Y) / 500 KGS (186Y)', cx: 650, cy: 190 },
+      { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80,  maxKg:3402 },
+      { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80,  maxKg:2426 },
+      { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40,  maxKg:2110 },
+      { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,   maxKg:1497, noload:true },
     ]
   },
   A321: {
     name: 'Airbus A321',
-    img: '/static/aircraft/a321-side.png',
-    imgW: 935, imgH: 263,
     holds: [
-      { id: 'HOLD1', label: 'HOLD 1', door: true,  doorLabel: 'FWD DOOR SIDE',  max: 2202, maxNote: 'MAX 2202 KGS',              cx: 200, cy: 197 },
-      { id: 'HOLD2', label: 'HOLD 2', door: false, doorLabel: '',              max: 3468, maxNote: 'MAX 3468 KGS（僅 A321）',    cx: 400, cy: 197 },
-      { id: 'HOLD3', label: 'HOLD 3', door: false, doorLabel: '',              max: 3587, maxNote: 'MAX 3587 KGS',               cx: 640, cy: 197 },
-      { id: 'HOLD4', label: 'HOLD 4', door: true,  doorLabel: 'AFT DOOR SIDE', max: 2083, maxNote: 'MAX 2083 KGS',              cx: 725, cy: 197 },
-      { id: 'HOLD5', label: 'HOLD 5', door: true,  doorLabel: 'BULK DOOR',     max: 800,  maxNote: 'MAX 800 KGS',               cx: 790, cy: 190 },
+      { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80,  maxKg:2202 },
+      { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:80,  maxKg:3468 },
+      { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80,  maxKg:3587 },
+      { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40,  maxKg:2083 },
+      { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,   maxKg:800,  noload:true },
     ]
   }
 };
 
-const PIN_Y = 40; /* pin 疊加在機身上方的固定像素高度（原圖座標系） */
-const STORE_KEY = 'loadsheet_state_v4';
-const ITEM_TYPES = {
-  C:       { label: '貨物',     icon: 'bi-box-seam-fill' },
-  D:       { label: '組員行李', icon: 'bi-briefcase-fill' },
-  TOOLBOX: { label: 'Toolbox',  icon: 'bi-tools' },
-};
-let curAc = 'A320';
-let curHoldId = null;
-let modalItems = []; /* 目前彈窗編輯中的「其他項目」暫存清單，按儲存才寫回 state */
+/* ════ 狀態 ════ */
+let curAc       = null;   // 'A320'|'A321'
+let curFlight   = null;   // { notion_id, flight, sta, origin, ac_type }
+let notionParse = null;   // Gemini 解析結果
+let holdPcs     = {};     // { HOLD1:80, HOLD3:73, ... }
+let editTarget  = null;   // 正在編輯哪個項目 key
 
-function loadState() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
-  catch { return {}; }
-}
-function saveState(state) { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+/* scroll lock */
+let _slCount = 0, _slY = 0;
+function lockScroll()  { if(_slCount++>0)return; _slY=window.scrollY; document.body.style.cssText+=`;position:fixed;top:-${_slY}px;left:0;right:0;width:100%`; }
+function unlockScroll(){ if(_slCount<=0)return; if(--_slCount>0)return; document.body.style.cssText=document.body.style.cssText.replace(/position:fixed.*?width:100%;?/,''); window.scrollTo(0,_slY); }
 
-/* ── 資料模型
-   state[ac] = {
-     totalB: { pcs, wgt },   // 只有「行李 B」這一項有整台飛機的總計池
-     holds:  { HOLD1: { B:{pcs}, items:[ {type:'C'|'D'|'TOOLBOX', pcs?, wgt}, ... ] }, ... }
-   }
-   B 用「總重 ÷ 總件數」反推每件平均重量（四捨五入到小數點第1位）。
-   C／D／Toolbox 沒有整台飛機總計池，是在貨艙彈窗裡透過下拉選單個別新增，
-   每筆都直接手動輸入重量（Toolbox 沒有件數，只填公斤），可以在同一艙加好幾筆。
-   ── */
-function round1(n) { return Math.round(n * 10) / 10; }
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+document.addEventListener('touchmove', e=>{ if(e.touches.length>1)e.preventDefault(); },{passive:false});
+let _lt=0; document.addEventListener('touchend', e=>{ const n=Date.now(); if(n-_lt<300)e.preventDefault(); _lt=n; },{passive:false});
 
-function getAcState(ac) {
-  const s = loadState()[ac] || {};
-  return { totalB: s.totalB || { pcs: 0, wgt: 0 }, holds: s.holds || {} };
-}
-function updateAcState(ac, fn) {
-  const state = loadState();
-  if (!state[ac]) state[ac] = { totalB: { pcs: 0, wgt: 0 }, holds: {} };
-  if (!state[ac].totalB) state[ac].totalB = { pcs: 0, wgt: 0 };
-  if (!state[ac].holds) state[ac].holds = {};
-  fn(state[ac]);
-  saveState(state);
+/* ════ 載入航班 ════ */
+async function loadFlights() {
+  try {
+    const res  = await fetch('/api/loadsheet/flights');
+    const data = await res.json();
+    renderFlights(data.flights || []);
+  } catch(e) {
+    document.getElementById('flightList').innerHTML = '<div class="no-flights">航班資料載入失敗<br>請稍後再試或略過</div>';
+  }
 }
 
-/* 每件平均重量（B 的總重 ÷ 總件數，四捨五入到小數點第 1 位）*/
-function avgWeightB(ac) {
-  const t = getAcState(ac).totalB;
-  if (!t.pcs) return null;
-  return round1(t.wgt / t.pcs);
-}
-function holdBPcs(ac, holdId) {
-  return getAcState(ac).holds[holdId]?.B?.pcs || 0;
-}
-function holdBWeight(ac, holdId) {
-  const avg = avgWeightB(ac);
-  const pcs = holdBPcs(ac, holdId);
-  if (avg == null || !pcs) return 0;
-  return round1(pcs * avg);
-}
-/* 排除某一艙之後，其餘已填貨艙的 B 件數／重量加總 */
-function sumOtherHoldsB(ac, excludeId) {
-  let pcs = 0, wgt = 0;
-  AIRCRAFT[ac].holds.forEach(h => {
-    if (h.id === excludeId) return;
-    const p = holdBPcs(ac, h.id);
-    if (p) { pcs += p; wgt += holdBWeight(ac, h.id); }
-  });
-  return { pcs, wgt: round1(wgt) };
-}
-/* B 剩餘可分配 = B 總計 - 其餘所有已填貨艙的 B 加總（不含目前正在看的這一艙）*/
-function remainingB(ac, excludeId) {
-  const t = getAcState(ac).totalB;
-  const other = sumOtherHoldsB(ac, excludeId);
-  return { pcs: t.pcs - other.pcs, wgt: round1(t.wgt - other.wgt) };
-}
-
-function holdItems(ac, holdId) {
-  return getAcState(ac).holds[holdId]?.items || [];
-}
-function holdItemsWeight(ac, holdId) {
-  return round1(holdItems(ac, holdId).reduce((sum, it) => sum + (it.wgt || 0), 0));
-}
-function holdItemsPcs(ac, holdId) {
-  return holdItems(ac, holdId).reduce((sum, it) => sum + (it.pcs || 0), 0);
-}
-/* 該艙件數合計（B + 其他項目裡有填件數的部分，Toolbox 沒有件數不計入）*/
-function holdTotalPcs(ac, holdId) {
-  return holdBPcs(ac, holdId) + holdItemsPcs(ac, holdId);
-}
-/* 該艙總重量（B 計算重量 + 其他項目每一筆手動輸入的重量加總）*/
-function holdTotalWeight(ac, holdId) {
-  return round1(holdBWeight(ac, holdId) + holdItemsWeight(ac, holdId));
-}
-
-/* ── 飛機側視圖：套用真實側視線稿圖，疊加艙位定位虛線 ── */
-function drawPlane(ac) {
-  const a = AIRCRAFT[ac];
-  const img = document.getElementById('planeImg');
-  img.src = a.img;
-  img.alt = a.name + ' 側視圖';
-
-  const svg = document.getElementById('leaderSvg');
-  svg.setAttribute('viewBox', `0 0 ${a.imgW} ${a.imgH}`);
-  svg.innerHTML = a.holds.map(h => `
-    <line x1="${h.cx}" y1="${PIN_Y}" x2="${h.cx}" y2="${h.cy - 14}"
-          stroke="#0071e3" stroke-width="1.2" stroke-dasharray="2 3" opacity="0.55"/>
-  `).join('');
-}
-
-/* ── 行李總計卡片（只有 B）── */
-function renderTotalCard() {
-  const t = getAcState(curAc).totalB;
-  document.getElementById('totalPcs_B').value = t.pcs || '';
-  document.getElementById('totalWgt_B').value = t.wgt || '';
-  const avg = avgWeightB(curAc);
-  document.getElementById('avgHint_B').innerHTML = avg != null
-    ? `每件平均重量：<b>${avg} KG</b>`
-    : '請先輸入總件數與總重量';
-}
-
-/* ── Pin 疊加渲染 ── */
-function renderPins() {
-  const wrap = document.getElementById('planeWrap');
-  wrap.querySelectorAll('.hold-pin').forEach(el => el.remove());
-  const a = AIRCRAFT[curAc];
-
-  a.holds.forEach(h => {
-    const filled = holdBPcs(curAc, h.id) > 0 || holdItems(curAc, h.id).length > 0;
-
-    const pin = document.createElement('div');
-    pin.className = 'hold-pin' + (h.door ? '' : ' nodoor') + (filled ? ' filled' : '');
-    pin.style.left = (h.cx / a.imgW) * 100 + '%';
-    pin.style.top  = (PIN_Y / a.imgH) * 100 + '%';
-    pin.textContent = h.label.replace('HOLD ', '');
-    pin.title = h.label + (h.doorLabel ? ' · ' + h.doorLabel : '');
-    pin.addEventListener('click', () => openHoldModal(h.id));
-    wrap.appendChild(pin);
-  });
-}
-
-/* ── 貨艙狀態卡片 ── */
-function renderHolds() {
-  const row = document.getElementById('holdRow');
-  row.innerHTML = '';
-  AIRCRAFT[curAc].holds.forEach((h, i) => {
-    const items = holdItems(curAc, h.id);
-    const pcs = holdTotalPcs(curAc, h.id);
-    const filled = holdBPcs(curAc, h.id) > 0 || items.length > 0;
-    const wgt = filled ? holdTotalWeight(curAc, h.id) : 0;
-    const typeTags = [...new Set(items.map(it => it.type))];
-    const card = document.createElement('div');
-    card.className = 'hold-card' + (filled ? ' filled' : '');
-    card.style.animation = `cardIn 0.4s cubic-bezier(0.22,1,0.36,1) ${i * 60}ms both`;
-    card.innerHTML = `
-      <div class="hold-name">${h.label}</div>
-      <div class="hold-max">${h.max ? 'MAX ' + h.max + ' KG' : '上限待確認'}</div>
-      <div class="hold-val ${filled ? '' : 'empty'}">${filled ? pcs + ' PCS / ' + wgt + ' KG' : '尚未輸入'}</div>
-      ${typeTags.length ? `<div class="hold-items-tags">${typeTags.map(t => `<i class="bi ${ITEM_TYPES[t].icon}" title="${ITEM_TYPES[t].label}"></i>`).join('')}</div>` : ''}
-    `;
-    card.addEventListener('click', () => openHoldModal(h.id));
-    row.appendChild(card);
-  });
-}
-
-/* ── 彈窗控制 ── */
-function openHoldModal(holdId) {
-  lockBodyScroll();
-  curHoldId = holdId;
-  document.getElementById('modalTitle').textContent = `${AIRCRAFT[curAc].name} · ${AIRCRAFT[curAc].holds.find(x => x.id === holdId).label}`;
-  document.getElementById('bPcsInput').value = holdBPcs(curAc, holdId) || '';
-  modalItems = holdItems(curAc, holdId).map(it => ({ ...it }));
-  document.getElementById('newItemType').value = 'C';
-  document.getElementById('newItemPcs').value = '';
-  document.getElementById('newItemWgt').value = '';
-  onNewItemTypeChange();
-  renderModalItems();
-  refreshModalCalc();
-  document.getElementById('holdModalOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('bPcsInput').focus(), 50);
-}
-function closeHoldModal() {
-  document.getElementById('holdModalOverlay').classList.remove('open');
-  curHoldId = null;
-  unlockBodyScroll();
-}
-function handleOverlayClick(e) {
-  if (e.target.id === 'holdModalOverlay') closeHoldModal();
-}
-
-/* 下拉選單切換：Toolbox 沒有件數，隱藏件數欄位 */
-function onNewItemTypeChange() {
-  const type = document.getElementById('newItemType').value;
-  document.getElementById('newItemPcs').classList.toggle('hidden', type === 'TOOLBOX');
-  document.getElementById('newItemWgt').placeholder = type === 'TOOLBOX' ? '公斤 KG' : '總重 KG';
-}
-
-/* 「其他項目」清單渲染 */
-function renderModalItems() {
-  const list = document.getElementById('itemsList');
-  if (!modalItems.length) {
-    list.innerHTML = `<div class="items-empty">尚未新增其他項目</div>`;
+function renderFlights(flights) {
+  const el = document.getElementById('flightList');
+  if (!flights.length) {
+    el.innerHTML = '<div class="no-flights">今日暫無入境班次資料</div>';
     return;
   }
-  list.innerHTML = modalItems.map((it, idx) => {
-    const t = ITEM_TYPES[it.type];
-    const desc = it.type === 'TOOLBOX' ? `${it.wgt} KG` : `${it.pcs || 0} 件 / ${it.wgt} KG`;
-    return `<div class="item-row">
-      <i class="bi ${t.icon} item-row-icon"></i>
-      <div class="item-row-text"><b>${t.label}</b> · ${desc}</div>
-      <button type="button" class="item-row-remove" onclick="removeModalItem(${idx})"><i class="bi bi-x-circle-fill"></i></button>
+  el.innerHTML = flights.map(f => {
+    const prefix = f.flight.slice(0,2).toLowerCase();
+    const badgeCls = f.ac_type === 'A321' ? 'a321' : 'a320';
+    const codeCls  = (prefix==='ak'||prefix==='z2') ? prefix : '';
+    const sub = [f.origin ? f.origin+'→TPE' : '', f.sta ? '落地 '+f.sta : ''].filter(Boolean).join(' · ');
+    return `<div class="flight-item" data-id="${f.notion_id}" data-flight='${JSON.stringify(f).replace(/'/g,"&#39;")}' onclick="selectFlight(this)">
+      <div class="fl-code ${codeCls}">${f.flight.slice(0,2)}</div>
+      <div class="fl-info">
+        <div class="fl-no">${f.flight}</div>
+        <div class="fl-sub">${sub || '—'}</div>
+      </div>
+      <div class="ac-badge ${badgeCls}">${f.ac_type}</div>
     </div>`;
   }).join('');
 }
 
-/* 新增一筆「其他項目」到暫存清單（存檔時才真正寫入）*/
-function addModalItem() {
-  const type = document.getElementById('newItemType').value;
-  const wgt = parseFloat(document.getElementById('newItemWgt').value) || 0;
-  if (!wgt) return;
-  const item = { type, wgt };
-  if (type !== 'TOOLBOX') item.pcs = parseFloat(document.getElementById('newItemPcs').value) || 0;
-  modalItems.push(item);
-  document.getElementById('newItemPcs').value = '';
-  document.getElementById('newItemWgt').value = '';
-  renderModalItems();
-  refreshModalCalc();
-}
-function removeModalItem(idx) {
-  modalItems.splice(idx, 1);
-  renderModalItems();
-  refreshModalCalc();
+function selectFlight(el) {
+  document.querySelectorAll('.flight-item').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+  const f = JSON.parse(el.dataset.flight.replace(/&#39;/g,"'"));
+  curFlight = f;
+  curAc     = f.ac_type;
+  startNotionParse(f);
 }
 
-/* 彈窗內即時計算：B 件數與其他項目清單一有變動就重算 */
-function refreshModalCalc() {
-  if (!curHoldId) return;
-  const h = AIRCRAFT[curAc].holds.find(x => x.id === curHoldId);
-  const bPcs = parseFloat(document.getElementById('bPcsInput').value) || 0;
-  const avg = avgWeightB(curAc);
-  const rem = remainingB(curAc, curHoldId);
-  const bWgt = avg != null ? round1(bPcs * avg) : 0;
+/* ════ Notion 解析 ════ */
+function startNotionParse(f) {
+  const card = document.getElementById('notionCard');
+  card.style.display = '';
+  document.getElementById('notionTitle').textContent = f.flight + ' 落地資料';
+  document.getElementById('notionSub').textContent   = (f.origin?f.origin+'→TPE · ':'') + (f.sta?'落地 '+f.sta:'');
+  document.getElementById('notionBadge').textContent = '解析中';
+  document.getElementById('notionBadge').className   = 'notion-status busy';
+  document.getElementById('notionBody').innerHTML    = '<div class="flight-loading"><span class="spin bi bi-arrow-clockwise"></span> AI 解析截圖中…</div>';
 
-  document.getElementById('bCalc').innerHTML = avg != null
-    ? `行李：<b>${bWgt} KG</b> ・ 剩餘：<b>${rem.pcs} 件 / ${rem.wgt} KG</b>`
-    : `尚未輸入行李總件數／總重量`;
-
-  const itemsWgt = round1(modalItems.reduce((s, it) => s + (it.wgt || 0), 0));
-  const grandTotal = round1(bWgt + itemsWgt);
-
-  document.getElementById('maxHint').innerHTML =
-    `此艙總重量：<b>${grandTotal} KG</b><br>${h.maxNote}`;
+  fetch(`/api/loadsheet/parse/${f.notion_id}`)
+    .then(r => r.json())
+    .then(data => renderNotionParse(f, data))
+    .catch(() => renderNotionFail());
 }
-document.getElementById('bPcsInput').addEventListener('input', refreshModalCalc);
 
-function saveHoldModal() {
-  if (!curHoldId) return;
-  const bPcs = parseFloat(document.getElementById('bPcsInput').value) || 0;
-  const itemsCopy = modalItems.map(it => ({ ...it }));
-  updateAcState(curAc, s => {
-    s.holds[curHoldId] = { B: { pcs: bPcs }, items: itemsCopy };
+function renderNotionParse(f, data) {
+  notionParse = data;
+  const badge = document.getElementById('notionBadge');
+
+  if (!data.image_has_data) {
+    badge.textContent = '無圖片';
+    badge.className   = 'notion-status fail';
+    document.getElementById('notionBody').innerHTML = '<div class="no-flights" style="padding:10px 0">此航班 Notion 頁面沒有找到 Load Sheet 截圖</div>';
+    return;
+  }
+
+  badge.textContent = '✓ 已解析';
+  badge.className   = 'notion-status ok';
+
+  const rows = [
+    { key:'crew',    icon:'👔', name:'組員行李 D', d: data.crew    },
+    { key:'toolbox', icon:'🔧', name:'Toolbox',   d: data.toolbox },
+    { key:'trash',   icon:'🗑', name:'垃圾',       d: data.trash   },
+  ];
+
+  const thumbHtml = data.image_url
+    ? `<div class="thumb-row">
+        <div class="thumb-box" onclick="openImgModal('${data.image_url}','${f.flight} Load Sheet')">
+          <div class="thumb-img">
+            ${['','v','','v','','v',''].map(c=>`<div class="thumb-line ${c}"></div>`).join('')}
+          </div>
+          <div class="thumb-footer"><i class="bi bi-zoom-in"></i> 查看原圖</div>
+        </div>
+        <div class="thumb-meta">
+          <div class="thumb-meta-row"><span class="tm-label">航班</span><span class="tm-val">${f.flight}</span></div>
+          <div class="thumb-meta-row"><span class="tm-label">機型</span><span class="tm-val">${curAc}</span></div>
+          <div class="thumb-meta-row"><span class="tm-label">落地</span><span class="tm-val">${f.sta||'—'}</span></div>
+        </div>
+      </div>` : '';
+
+  const parseHtml = rows.map(({key,icon,name,d}) => {
+    if (!d) return `<div class="parse-row"><div class="parse-icon">${icon}</div><div class="parse-info"><div class="parse-name">${name}</div><div class="parse-loc">未找到</div></div><div class="parse-val" style="color:var(--sub)">—</div></div>`;
+    const conf = d.confidence || 'low';
+    const confCls = conf === 'high' ? 'conf-high' : conf === 'medium' ? 'conf-medium' : 'conf-low';
+    const val  = d.pcs != null ? `${d.pcs} 件` : '—';
+    const loc  = d.hold || '位置不明';
+    const needCheck = conf !== 'high';
+    return `<div class="parse-row">
+      <div class="parse-icon">${icon}</div>
+      <div class="parse-info"><div class="parse-name">${name}</div><div class="parse-loc">${loc}</div></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="conf-dot ${confCls}"></div>
+        <div class="parse-val">${val}</div>
+        ${needCheck ? `<span class="edit-chip" onclick="openEditModal('${key}','${name}')">確認</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('notionBody').innerHTML = thumbHtml + `<div>${parseHtml}</div>`;
+}
+
+function renderNotionFail() {
+  document.getElementById('notionBadge').textContent = '讀取失敗';
+  document.getElementById('notionBadge').className   = 'notion-status fail';
+  document.getElementById('notionBody').innerHTML    = '<div class="no-flights" style="padding:10px 0">無法讀取 Notion 資料，請略過後手動輸入</div>';
+}
+
+function skipNotion() {
+  curFlight   = null;
+  notionParse = null;
+  document.getElementById('notionCard').style.display = 'none';
+  document.querySelectorAll('.flight-item').forEach(x=>x.classList.remove('selected'));
+  if (!curAc) {
+    curAc = 'A320';
+  }
+}
+
+/* ════ 行李輸入 ════ */
+function avgWeight() {
+  const pcs = parseFloat(document.getElementById('totalPcs').value)||0;
+  const kg  = parseFloat(document.getElementById('totalKg').value)||0;
+  if (!pcs) return null;
+  return Math.round(kg/pcs*10)/10;
+}
+function onBagsInput() {
+  const avg = avgWeight();
+  document.getElementById('avgHint').innerHTML = avg != null
+    ? `平均每件：<b>${avg} KG</b>` : '請輸入總件數與總重量';
+  if (document.getElementById('resultSection').style.display !== 'none') calcDistribution();
+}
+
+/* ════ 計算分配 ════ */
+function calcDistribution() {
+  if (!curAc) { curAc = 'A320'; }
+  const totalPcs = parseFloat(document.getElementById('totalPcs').value)||0;
+  if (!totalPcs) return;
+  const holds = AC[curAc].holds.filter(h => !h.noload);
+
+  holdPcs = {};
+  let remaining = totalPcs;
+  for (const h of holds) {
+    const fill = Math.min(remaining, h.maxPcs);
+    holdPcs[h.id] = fill;
+    remaining -= fill;
+    if (remaining <= 0) break;
+  }
+
+  renderResult();
+  document.getElementById('resultSection').style.display = '';
+  document.getElementById('resultLabel').textContent = `建議裝載方案 · ${curAc}`;
+  document.getElementById('calcBtn').textContent = '⚡ 重新計算';
+}
+
+/* ════ 渲染結果 ════ */
+function round1(n) { return Math.round(n*10)/10; }
+
+function renderResult() {
+  const avg     = avgWeight() || 0;
+  const allHolds = AC[curAc].holds;
+  const totalPcs = parseFloat(document.getElementById('totalPcs').value)||0;
+  const assigned = Object.values(holdPcs).reduce((a,b)=>a+b,0);
+  const remain   = totalPcs - assigned;
+
+  /* 剩餘 banner */
+  const banner = document.getElementById('remainBanner');
+  const val    = document.getElementById('remainVal');
+  val.textContent = remain === 0 ? '0 PCS ✓' : remain > 0 ? `+${remain} PCS` : `${remain} PCS`;
+  banner.className = 'remain-banner' + (remain === 0 ? ' ok' : ' warn');
+  val.className    = 'remain-val' + (remain === 0 ? ' ok' : ' warn');
+
+  /* 貨艙卡 */
+  const list = document.getElementById('holdList');
+  list.innerHTML = '';
+
+  allHolds.forEach((h, i) => {
+    const pcs    = holdPcs[h.id] || 0;
+    const kg     = avg ? round1(pcs * avg) : 0;
+    const pct    = h.maxKg ? Math.min(100, Math.round(kg/h.maxKg*100)) : 0;
+    const overPcs = pcs > h.maxPcs && h.maxPcs > 0;
+    const overKg  = kg  > h.maxKg;
+
+    /* 特殊項目標籤（從 notionParse 來） */
+    const extras = [];
+    if (notionParse) {
+      const map = { crew:'👔 組員行李', toolbox:'🔧 Toolbox', trash:'🗑 垃圾' };
+      for (const [key, label] of Object.entries(map)) {
+        const d = notionParse[key];
+        if (d && d.hold === h.id) extras.push(label);
+      }
+    }
+
+    const inputCls = h.noload ? 'off' : (overPcs||overKg) ? 'err' : (h.badge === 'aft' ? 'aft' : '');
+    const barCls   = h.badge === 'aft' || h.badge === 'bulk' ? 'bar-aft' : 'bar-fwd';
+
+    const card = document.createElement('div');
+    card.className = 'hold-card' + (h.noload ? ' disabled' : '');
+    card.style.animationDelay = (i * 0.05) + 's';
+    card.innerHTML = `
+      <div class="hold-top">
+        <div class="hold-badge ${h.badge}">${h.label}</div>
+        <div class="hold-tag">${h.tag}</div>
+        <div class="hold-max">${h.noload ? '台北不裝' : `上限 ${h.maxPcs}件 / ${h.maxKg} KG`}</div>
+      </div>
+      <div class="hold-body">
+        <div class="hold-input-wrap">
+          <div class="hold-input-label">件數${h.noload?'':' (可修改)'}</div>
+          <input class="hold-input ${inputCls}" type="number" inputmode="numeric"
+            value="${pcs||''}" placeholder="0" data-hold="${h.id}"
+            ${h.noload ? 'readonly' : ''}
+            oninput="onHoldInput(this)">
+        </div>
+        <div class="hold-calc">
+          <div class="hold-calc-kg ${pcs?'':'zero'}">${pcs ? kg+' KG' : '— KG'}</div>
+          <div class="hold-calc-sub">${pcs && avg ? `= ${pcs}×${avg}` : h.noload ? '不裝' : '未使用'}</div>
+        </div>
+      </div>
+      <div class="hold-bar-area">
+        <div class="hold-bar-row">
+          <div class="hold-bar-bg"><div class="hold-bar-fill ${barCls}" style="width:${pct}%"></div></div>
+          <div class="hold-bar-pct">${pcs ? pct+'%' : '—'}</div>
+        </div>
+      </div>
+      ${extras.length ? `<div class="hold-extras">${extras.map(e=>`<span class="extra-tag">${e}</span>`).join('')}</div>` : ''}
+    `;
+    list.appendChild(card);
   });
-  closeHoldModal();
-  renderHolds();
-  renderPins();
-}
-function clearHoldModal() {
-  if (!curHoldId) return;
-  updateAcState(curAc, s => { delete s.holds[curHoldId]; });
-  modalItems = [];
-  closeHoldModal();
-  renderHolds();
-  renderPins();
 }
 
-/* ── 行李總計輸入（只有 B）── */
-function onTotalInput() {
-  updateAcState(curAc, s => {
-    s.totalB.pcs = parseFloat(document.getElementById('totalPcs_B').value) || 0;
-    s.totalB.wgt = parseFloat(document.getElementById('totalWgt_B').value) || 0;
-  });
-  renderTotalCard();
-  renderHolds();
-  renderPins();
-  if (document.getElementById('holdModalOverlay').classList.contains('open')) refreshModalCalc();
+function onHoldInput(el) {
+  const holdId = el.dataset.hold;
+  const v = parseFloat(el.value)||0;
+  holdPcs[holdId] = v;
+  const h = AC[curAc].holds.find(x=>x.id===holdId);
+  const overPcs = h && h.maxPcs > 0 && v > h.maxPcs;
+  const avg = avgWeight()||0;
+  const overKg  = h && avg && round1(v*avg) > h.maxKg;
+  el.className = 'hold-input ' + (overPcs||overKg ? 'err' : h.badge==='aft'?'aft':'');
+  renderResult();
 }
-document.getElementById('totalPcs_B').addEventListener('input', onTotalInput);
-document.getElementById('totalWgt_B').addEventListener('input', onTotalInput);
 
-/* ── 機型切換 ── */
-document.getElementById('acSwitch').addEventListener('click', e => {
-  const btn = e.target.closest('.seg-btn');
-  if (!btn) return;
-  document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  curAc = btn.dataset.ac;
-  document.getElementById('acName').textContent = AIRCRAFT[curAc].name;
-  drawPlane(curAc);
-  renderTotalCard();
-  renderPins();
-  renderHolds();
-});
+/* ════ 圖片 Modal ════ */
+function openImgModal(url, title) {
+  lockScroll();
+  document.getElementById('imgModalImg').src   = url;
+  document.getElementById('imgModalTitle').textContent = title;
+  document.getElementById('imgModalOverlay').classList.add('open');
+}
+function closeImgModal() {
+  document.getElementById('imgModalOverlay').classList.remove('open');
+  unlockScroll();
+}
 
-/* ── 初始化 ── */
-drawPlane(curAc);
-renderTotalCard();
-renderPins();
-renderHolds();
+/* ════ 編輯 Modal ════ */
+function openEditModal(key, name) {
+  lockScroll();
+  editTarget = key;
+  document.getElementById('editModalTitle').textContent = `確認：${name}`;
+  const d = notionParse && notionParse[key];
+  document.getElementById('editHoldSel').value  = d?.hold  || 'HOLD1';
+  document.getElementById('editPcsInput').value = d?.pcs   != null ? d.pcs : '';
+  document.getElementById('editModalOverlay').classList.add('open');
+}
+function closeEditModal() {
+  document.getElementById('editModalOverlay').classList.remove('open');
+  unlockScroll();
+  editTarget = null;
+}
+function saveEditModal() {
+  if (!editTarget || !notionParse) return closeEditModal();
+  notionParse[editTarget] = {
+    hold:       document.getElementById('editHoldSel').value,
+    pcs:        parseFloat(document.getElementById('editPcsInput').value)||0,
+    confidence: 'high',
+  };
+  closeEditModal();
+  renderNotionParse(curFlight, notionParse);
+  if (document.getElementById('resultSection').style.display !== 'none') renderResult();
+}
+
+/* ════ 初始化 ════ */
+loadFlights();
 </script>
 </body>
 </html>
