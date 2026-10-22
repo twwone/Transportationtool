@@ -590,7 +590,7 @@ function renderResult() {
           <div class="hold-input-label">件數</div>
           <input class="hold-input ${inputCls}" type="number" inputmode="numeric"
             value="${pcs || ''}" placeholder="0" data-hold="${h.id}"
-            oninput="onHoldInput(this)">
+            onchange="onHoldInput(this)">
         </div>
         ${(()=>{
           const spItems = [sp.crew, sp.toolbox, sp.transit, sp.trash]
