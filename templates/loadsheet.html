@@ -509,22 +509,15 @@ function renderResult() {
             oninput="onHoldInput(this)">
         </div>
         ${(()=>{
-          const sItems = [sp.crew, sp.toolbox, sp.transit, sp.trash].filter(s => s.hold === h.id && s.kg > 0);
-          const sLabels = [
-            sp.crew.hold    === h.id && sp.crew.kg    > 0 ? `組員 ${sp.crew.kg} KG`    : '',
-            sp.toolbox.hold === h.id && sp.toolbox.kg > 0 ? `Toolbox ${sp.toolbox.kg} KG` : '',
-            sp.transit.hold === h.id && sp.transit.kg > 0 ? `轉機 ${sp.transit.kg} KG`  : '',
-            sp.trash.hold   === h.id && sp.trash.kg   > 0 ? `垃圾 ${sp.trash.kg} KG`   : '',
-          ].filter(Boolean);
-          const hasSpecial = sLabels.length > 0;
-          if (pcs || hasSpecial) {
-            return `<div class="hold-calc">
-              <div class="hold-calc-kg ${pcs ? '' : 'zero'}">${pcs ? kg + ' KG' : ''}</div>
-              <div class="hold-calc-sub">${pcs && avg ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`) : ''}</div>
-              ${hasSpecial ? `<div class="hold-calc-special">${sLabels.join('<br>')}</div>` : ''}
-            </div>`;
-          }
-          return '<div class="hold-calc"></div>';
+          const spKg = [sp.crew, sp.toolbox, sp.transit, sp.trash]
+            .filter(s => s.hold === h.id && s.kg > 0)
+            .reduce((sum, s) => sum + s.kg, 0);
+          if (!pcs && !spKg) return '<div class="hold-calc"></div>';
+          return `<div class="hold-calc">
+            <div class="hold-calc-kg">${pcs ? kg + ' KG' : ''}</div>
+            <div class="hold-calc-sub">${pcs && avg ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`) : ''}</div>
+            ${spKg ? `<div class="hold-calc-special">特殊項目 ${spKg} KG</div>` : ''}
+          </div>`;
         })()}
       </div>
       ${tagItems ? `<div class="hold-extras">${tagItems}</div>` : ''}
