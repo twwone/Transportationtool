@@ -266,14 +266,14 @@ const AC = {
     { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:3402 },
     { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:2426 },
     { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2110 },
-    { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:1497, noload:true },
+    { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:1497, nodist:true },
   ]},
   A321: { holds: [
     { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:2202 },
     { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:3468 },
     { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:3587 },
     { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2083 },
-    { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:800,  noload:true },
+    { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:800,  nodist:true },
   ]}
 };
 
@@ -419,11 +419,11 @@ function calcDistribution() {
     holdPcs[sp.transit.hold] = sp.transit.pcs;
   }
 
-  // 2. 剩下的出發行李依優先順序填（不含 noload，排除已被轉機固定的件數）
+  // 2. 剩下的出發行李依優先順序填（不含 nodist，排除已被轉機固定的件數）
   // 轉機件數已含在 totalPcs 內，只有在艙位+件數都填好時才從 remaining 扣除
   const transitFixed = sp.transit.hold && sp.transit.pcs > 0 ? sp.transit.pcs : 0;
   let remaining = totalPcs - transitFixed;
-  for (const h of holds.filter(h => !h.noload)) {
+  for (const h of holds.filter(h => !h.nodist)) {
     const alreadyFilled = holdPcs[h.id] || 0;
     const available     = h.maxPcs - alreadyFilled;
     if (available <= 0) continue;
@@ -457,9 +457,9 @@ function renderResult() {
   const list = document.getElementById('holdList');
   list.innerHTML = '';
 
-  /* 找最後一個有行李的艙（非 noload），它的重量用總重減法算 */
+  /* 找最後一個有行李的艙（非 nodist），它的重量用總重減法算 */
   const totalKg     = v('totalKg');
-  const activeHolds = AC[curAc].holds.filter(h => !h.noload && (holdPcs[h.id] || 0) > 0);
+  const activeHolds = AC[curAc].holds.filter(h => !h.nodist && (holdPcs[h.id] || 0) > 0);
   const lastHold    = activeHolds[activeHolds.length - 1];
   let   usedKg      = 0;   // 前面各艙已算出的重量加總
 
@@ -467,7 +467,7 @@ function renderResult() {
   const holdKg = {};
   AC[curAc].holds.forEach(h => {
     const pcs = holdPcs[h.id] || 0;
-    if (!pcs || h.noload) { holdKg[h.id] = 0; return; }
+    if (!pcs) { holdKg[h.id] = 0; return; }
     if (lastHold && h.id === lastHold.id) return; // 最後一艙稍後算
     const kg = avg ? Math.round(pcs * avg) : 0;
     holdKg[h.id] = kg;
@@ -492,7 +492,7 @@ function renderResult() {
       sp.trash.hold   === h.id ? `<span class="extra-tag">🗑 垃圾${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+'件' : ''}</span>` : '',
     ].filter(Boolean).join('');
 
-    const inputCls = h.noload ? 'off' : (overPcs || overKg) ? 'err' : h.badge === 'aft' ? 'aft' : '';
+    const inputCls = (overPcs || overKg) ? 'err' : h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
     const barCls   = h.badge === 'aft' || h.badge === 'bulk' ? 'bar-aft' : 'bar-fwd';
 
     const card = document.createElement('div');
@@ -502,19 +502,18 @@ function renderResult() {
       <div class="hold-top">
         <div class="hold-badge ${h.badge}">${h.label}</div>
         <div class="hold-tag">${h.tag}</div>
-        <div class="hold-max">${h.noload ? '台北不裝' : ''}</div>
+        <div class="hold-max"></div>
       </div>
       <div class="hold-body">
         <div class="hold-input-wrap">
-          <div class="hold-input-label">件數${h.noload ? '' : ' (可修改)'}</div>
+          <div class="hold-input-label">件數</div>
           <input class="hold-input ${inputCls}" type="number" inputmode="numeric"
             value="${pcs || ''}" placeholder="0" data-hold="${h.id}"
-            ${h.noload ? 'readonly' : ''}
             oninput="onHoldInput(this)">
         </div>
         <div class="hold-calc">
           <div class="hold-calc-kg ${pcs ? '' : 'zero'}">${pcs ? kg + ' KG' : '— KG'}</div>
-          <div class="hold-calc-sub">${pcs && avg ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`) : h.noload ? '不裝' : '未使用'}</div>
+          <div class="hold-calc-sub">${pcs && avg ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`) : '未使用'}</div>
         </div>
       </div>
       ${tagItems ? `<div class="hold-extras">${tagItems}</div>` : ''}
