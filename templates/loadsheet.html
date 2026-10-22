@@ -459,7 +459,7 @@ function renderResult() {
 
   AC[curAc].holds.forEach((h, i) => {
     const pcs     = holdPcs[h.id] || 0;
-    const kg      = avg ? round1(pcs * avg) : 0;
+    const kg      = avg ? Math.round(pcs * avg) : 0;
     const pct     = h.maxKg ? Math.min(100, Math.round(kg / h.maxKg * 100)) : 0;
     const overPcs = pcs > h.maxPcs && h.maxPcs > 0;
     const overKg  = kg  > h.maxKg;
