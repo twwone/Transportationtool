@@ -512,7 +512,7 @@ function renderResult() {
           const spKg = [sp.crew, sp.toolbox, sp.transit, sp.trash]
             .filter(s => s.hold === h.id && s.kg > 0)
             .reduce((sum, s) => sum + s.kg, 0);
-          if (!pcs && !spKg) return '';
+          if (!pcs && !spKg) return '<div class="hold-calc"></div>';
           const mainKg  = pcs ? kg + ' KG' : spKg + ' KG';
           const mainSub = pcs && avg
             ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`)
