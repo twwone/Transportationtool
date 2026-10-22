@@ -1076,28 +1076,76 @@ _LOADSHEET_PARSE_PROMPT = (
 )
 
 
+def _ldm_regex_parse(text: str) -> "dict | None":
+    """用 regex 直接解析 LDM 電報文字，成功就回傳結果，找不到任何欄位回傳 None。"""
+    import re as _re2
+    result = {}
+
+    # CREW 6/53 Kgs. = H.5  /  CREW 6/53KGS=H5
+    m = _re2.search(r'CREW\s+(\d+)/(\d+)\s*Kgs?\.?\s*=?\s*H\.?(\d)', text, _re2.IGNORECASE)
+    if m:
+        result["crew"] = {"hold": f"HOLD{m.group(3)}", "pcs": int(m.group(1)), "kg": int(m.group(2)), "confidence": "high"}
+
+    # Toolbox 2/23 Kgs. H.1
+    m = _re2.search(r'Toolbox\s+(\d+)/(\d+)\s*Kgs?\.?\s*=?\s*H\.?(\d)', text, _re2.IGNORECASE)
+    if m:
+        result["toolbox"] = {"hold": f"HOLD{m.group(3)}", "pcs": int(m.group(1)), "kg": int(m.group(2)), "confidence": "high"}
+
+    # TRANSIT BAG   TO OKA   19/260 Kgs. = H.5
+    m = _re2.search(r'TRANSIT\s+BAG\b.*?(\d+)/(\d+)\s*Kgs?\.?\s*=?\s*H\.?(\d)', text, _re2.IGNORECASE | _re2.DOTALL)
+    if m:
+        result["transit"] = {"hold": f"HOLD{m.group(3)}", "pcs": int(m.group(1)), "kg": int(m.group(2)), "confidence": "high"}
+
+    # GRBS / Garbage / 垃圾  X/Y Kgs. H.N
+    m = _re2.search(r'(?:GRBS|Garbage|垃圾)\s*(?:(\d+)/(\d+)\s*Kgs?\.?)?\s*=?\s*H\.?(\d)', text, _re2.IGNORECASE)
+    if m:
+        entry = {"hold": f"HOLD{m.group(3)}", "confidence": "high"}
+        if m.group(1):
+            entry["pcs"] = int(m.group(1))
+            entry["kg"]  = int(m.group(2))
+        result["trash"] = entry
+
+    if not result:
+        return None
+    result["image_has_data"] = True
+    return result
+
+
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v3:{notion_id}"
+    cache_key = f"loadsheet:parse:v4:{notion_id}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and "image_has_data" in cached:
         return cached, None
-
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
-        return None, "伺服器未設定 Gemini API 金鑰"
 
     items = _asiaair_fetch_detail(notion_id)
     if not items:
         return {"image_has_data": False}, None
 
-    # 收集所有圖片（上限 6 張），同時記住第一張 URL 供縮圖預覽
+    # ── 方案一：Notion 文字 block 直接 regex 解析（最準確）
+    full_text = "\n".join(it["text"] for it in items if it["type"] == "text")
     image_urls = [it["url"] for it in items if it["type"] == "image"]
+
+    if full_text.strip():
+        regex_result = _ldm_regex_parse(full_text)
+        if regex_result:
+            regex_result["image_url"] = image_urls[0] if image_urls else None
+            regex_result["source"] = "text"
+            _kv_set(cache_key, regex_result)
+            return regex_result, None
+
+    # ── 方案二：圖片送 Gemini Vision（fallback）
     if not image_urls:
         return {"image_has_data": False}, None
 
-    parts = [{"text": _LOADSHEET_PARSE_PROMPT}]
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return None, "伺服器未設定 Gemini API 金鑰"
+
+    # 把文字內容也附上，讓 Gemini 有更多線索
+    text_ctx = f"[Notion 頁面文字]\n{full_text}\n\n" if full_text.strip() else ""
+    parts = [{"text": text_ctx + _LOADSHEET_PARSE_PROMPT}]
     for url in image_urls[:6]:
         data, mime = _asiaair_download_bytes(url)
         if data and mime:
@@ -1111,15 +1159,16 @@ def _loadsheet_parse(notion_id: str):
         return None, err_msg or "AI 解析失敗"
 
     try:
-        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-        if text.startswith("```"):
-            lines = text.splitlines()
-            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-        result = _json.loads(text)
+        raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if raw.startswith("```"):
+            lines = raw.splitlines()
+            raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        result = _json.loads(raw)
     except Exception as e:
         return None, f"AI 回應解析失敗：{e}"
 
     result["image_url"] = image_urls[0] if image_urls else None
+    result["source"] = "vision"
     _kv_set(cache_key, result)
     return result, None
 
