@@ -127,6 +127,7 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
 .hold-calc-kg  { font-size:1rem; font-weight:800; }
 .hold-calc-kg.zero { color:var(--sub); font-weight:500; font-size:0.88rem; }
 .hold-calc-sub { font-size:0.65rem; color:var(--sub); margin-top:2px; }
+.hold-calc-special { font-size:0.68rem; color:var(--sub); margin-top:5px; line-height:1.5; border-top:1px solid var(--divider); padding-top:5px; }
 .hold-bar-area { margin-top:9px; }
 .hold-bar-row { display:flex; align-items:center; gap:8px; }
 .hold-bar-bg { flex:1; height:5px; background:var(--chip-bg); border-radius:3px; overflow:hidden; }
@@ -507,10 +508,24 @@ function renderResult() {
             value="${pcs || ''}" placeholder="0" data-hold="${h.id}"
             oninput="onHoldInput(this)">
         </div>
-        <div class="hold-calc">
-          <div class="hold-calc-kg ${pcs ? '' : 'zero'}">${pcs ? kg + ' KG' : '— KG'}</div>
-          <div class="hold-calc-sub">${pcs && avg ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`) : '未使用'}</div>
-        </div>
+        ${(()=>{
+          const sItems = [sp.crew, sp.toolbox, sp.transit, sp.trash].filter(s => s.hold === h.id && s.kg > 0);
+          const sLabels = [
+            sp.crew.hold    === h.id && sp.crew.kg    > 0 ? `組員 ${sp.crew.kg} KG`    : '',
+            sp.toolbox.hold === h.id && sp.toolbox.kg > 0 ? `Toolbox ${sp.toolbox.kg} KG` : '',
+            sp.transit.hold === h.id && sp.transit.kg > 0 ? `轉機 ${sp.transit.kg} KG`  : '',
+            sp.trash.hold   === h.id && sp.trash.kg   > 0 ? `垃圾 ${sp.trash.kg} KG`   : '',
+          ].filter(Boolean);
+          const hasSpecial = sLabels.length > 0;
+          if (pcs || hasSpecial) {
+            return `<div class="hold-calc">
+              <div class="hold-calc-kg ${pcs ? '' : 'zero'}">${pcs ? kg + ' KG' : ''}</div>
+              <div class="hold-calc-sub">${pcs && avg ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`) : ''}</div>
+              ${hasSpecial ? `<div class="hold-calc-special">${sLabels.join('<br>')}</div>` : ''}
+            </div>`;
+          }
+          return '<div class="hold-calc"></div>';
+        })()}
       </div>
       ${tagItems ? `<div class="hold-extras">${tagItems}</div>` : ''}
     `;
