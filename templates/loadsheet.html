@@ -242,6 +242,9 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
   <!-- 計算 -->
   <button class="calc-btn" onclick="calcDistribution()">⚡ 計算建議裝載</button>
 
+  <!-- 清除按鈕 -->
+  <button id="clearBtn" onclick="clearAll()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--chip-bg);color:var(--sub);font-size:0.86rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:14px;transition:background .2s,color .2s,transform .12s;">🗑 清除所有資料</button>
+
   <!-- 結果 -->
   <div id="resultSection" style="display:none">
     <div class="remain-banner" id="remainBanner">
@@ -274,8 +277,49 @@ const AC = {
   ]}
 };
 
+const STORE_KEY = 'loadsheet_v1';
 let curAc   = 'A320';
 let holdPcs = {};
+
+/* ── localStorage ── */
+function saveState() {
+  const fields = ['crew-hold','crew-pcs','crew-kg','toolbox-hold','toolbox-pcs','toolbox-kg',
+                  'transit-hold','transit-pcs','transit-kg','trash-hold','trash-pcs','trash-kg',
+                  'totalPcs','totalKg'];
+  const data = { ac: curAc, holdPcs, fields: {} };
+  fields.forEach(id => { data.fields[id] = document.getElementById(id)?.value || ''; });
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+function loadState() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (!data) return;
+    if (data.ac && AC[data.ac]) {
+      curAc = data.ac;
+      document.querySelectorAll('.seg-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.ac === curAc);
+      });
+    }
+    buildHoldOptions();
+    if (data.fields) {
+      Object.entries(data.fields).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+      });
+    }
+    if (data.holdPcs && Object.keys(data.holdPcs).length) {
+      holdPcs = data.holdPcs;
+      onBagsInput();
+      document.getElementById('resultSection').style.display = '';
+      document.getElementById('resultLabel').textContent = `建議裝載方案 · ${curAc}`;
+      renderResult();
+    } else {
+      onBagsInput();
+    }
+    updateWeightSummary();
+  } catch (e) {}
+}
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive:false });
@@ -290,6 +334,7 @@ document.getElementById('acSwitch').addEventListener('click', e => {
   curAc = btn.dataset.ac;
   buildHoldOptions();
   if (document.getElementById('resultSection').style.display !== 'none') calcDistribution();
+  saveState();
 });
 
 function buildHoldOptions() {
@@ -351,11 +396,13 @@ function onBagsInput() {
     ? `平均每件：<b>${avg} KG</b>（含轉機）` : '請輸入總件數與總重量';
   updateWeightSummary();
   if (document.getElementById('resultSection').style.display !== 'none') renderResult();
+  saveState();
 }
 
 function onSpecialChange() {
   updateWeightSummary();
   if (document.getElementById('resultSection').style.display !== 'none') renderResult();
+  saveState();
 }
 
 /* ── 計算分配 ── */
@@ -389,6 +436,7 @@ function calcDistribution() {
   document.getElementById('resultSection').style.display = '';
   document.getElementById('resultLabel').textContent = `建議裝載方案 · ${curAc}`;
   renderResult();
+  saveState();
 }
 
 /* ── 渲染結果 ── */
@@ -471,10 +519,51 @@ function onHoldInput(el) {
   const overKg  = h && avg && round1(holdPcs[holdId] * avg) > h.maxKg;
   el.className = 'hold-input ' + (overPcs || overKg ? 'err' : h.badge === 'aft' ? 'aft' : '');
   renderResult();
+  saveState();
+}
+
+/* ── 清除（雙確認）── */
+let _clearPending = false, _clearTimer = null;
+function clearAll() {
+  if (!_clearPending) {
+    _clearPending = true;
+    const btn = document.getElementById('clearBtn');
+    btn.textContent = '確定清除所有資料？';
+    btn.style.background = 'rgba(255,59,48,0.15)';
+    btn.style.color = '#ff3b30';
+    _clearTimer = setTimeout(() => {
+      _clearPending = false;
+      btn.textContent = '🗑 清除所有資料';
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 3000);
+    return;
+  }
+  clearTimeout(_clearTimer);
+  _clearPending = false;
+
+  /* 清除所有欄位 */
+  ['crew-hold','crew-pcs','crew-kg','toolbox-hold','toolbox-pcs','toolbox-kg',
+   'transit-hold','transit-pcs','transit-kg','trash-hold','trash-pcs','trash-kg',
+   'totalPcs','totalKg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  holdPcs = {};
+  document.getElementById('avgHint').textContent = '請輸入總件數與總重量';
+  document.getElementById('weightSummary').style.display = 'none';
+  document.getElementById('resultSection').style.display = 'none';
+  localStorage.removeItem(STORE_KEY);
+
+  const btn = document.getElementById('clearBtn');
+  btn.textContent = '🗑 清除所有資料';
+  btn.style.background = '';
+  btn.style.color = '';
 }
 
 /* 初始化 */
 buildHoldOptions();
+loadState();
 </script>
 </body>
 </html>
