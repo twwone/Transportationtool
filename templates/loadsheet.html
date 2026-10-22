@@ -365,15 +365,16 @@ function getSpecials() {
 
 /* ── 總重合計 ── */
 function updateWeightSummary() {
+  const sp     = getSpecials();
   const bagsKg = v('totalKg');
-  if (!bagsKg) { document.getElementById('weightSummary').style.display = 'none'; return; }
-  const sp = getSpecials();
-  // 轉機行李不加（已含在出發行李）
-  const extraKg = sp.crew.kg + sp.toolbox.kg + sp.trash.kg;
+  const extraKg = sp.crew.kg + sp.toolbox.kg + sp.trash.kg; // 轉機不加（已含在出發行李）
   const total   = round1(bagsKg + extraKg);
+  const hasAny  = bagsKg > 0 || extraKg > 0;
 
-  document.getElementById('ws-bags').textContent    = bagsKg + ' KG';
-  document.getElementById('ws-total').textContent   = total  + ' KG';
+  if (!hasAny) { document.getElementById('weightSummary').style.display = 'none'; return; }
+
+  document.getElementById('ws-bags').textContent  = bagsKg ? bagsKg + ' KG' : '—';
+  document.getElementById('ws-total').textContent = total + ' KG';
 
   const showRow = (rowId, valId, kg) => {
     const show = kg > 0;
@@ -483,8 +484,8 @@ function renderResult() {
     const tagItems = [
       sp.crew.hold    === h.id && sp.crew.pcs    > 0 ? `<span class="extra-tag">👔 組員行李 ${sp.crew.pcs}件 / ${sp.crew.kg||'—'} KG</span>` : '',
       sp.toolbox.hold === h.id && sp.toolbox.pcs > 0 ? `<span class="extra-tag">🔧 Toolbox ${sp.toolbox.pcs}件 / ${sp.toolbox.kg||'—'} KG</span>` : '',
-      hasTransit ? `<span class="extra-tag transit">🔄 轉機行李 ${sp.transit.pcs}件（固定）</span>` : '',
-      sp.trash.hold   === h.id ? `<span class="extra-tag">🗑 垃圾${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+'件' : ''}</span>` : '',
+      hasTransit ? `<span class="extra-tag transit">🔄 轉機行李 ${sp.transit.pcs}件${sp.transit.kg ? ' / '+sp.transit.kg+' KG' : ''}（固定）</span>` : '',
+      sp.trash.hold === h.id ? `<span class="extra-tag">🗑 垃圾${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+'件' : ''}${sp.trash.kg ? ' / '+sp.trash.kg+' KG' : ''}</span>` : '',
     ].filter(Boolean).join('');
 
     const inputCls = (overPcs || overKg) ? 'err' : h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
