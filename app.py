@@ -1050,12 +1050,15 @@ def loadsheet_flights_api():
 
 
 _LOADSHEET_PARSE_PROMPT = (
-    "你是機場地勤助理，請分析這張 Load Sheet / LIR 截圖，找出落地時各貨艙裡的特殊項目。"
-    "我只需要以下四類：\n"
-    "1. crew（組員行李 D）：裝在哪個艙（HOLD 幾），幾件\n"
+    "你是機場地勤助理。以下提供了這班航班 Notion 頁面裡的所有圖片，"
+    "其中可能混有 Load Sheet（LIR）、貨單（Cargo Manifest / AWB）、維修通知等不同文件。\n\n"
+    "請你只看 Load Sheet / LIR（Loading Instruction Report）這張，"
+    "忽略貨單（Cargo Manifest、Air Waybill、AWB）以及其他非裝載表的文件。\n\n"
+    "從 Load Sheet 裡找出以下四類特殊項目，這些是落地時各貨艙裡已有的東西：\n"
+    "1. crew（組員行李 D / Crew Baggage）：裝在哪個艙（HOLD 幾），幾件\n"
     "2. toolbox（Toolbox / 工具箱）：裝在哪個艙，幾件\n"
     "3. trash（垃圾 / Garbage / GRBS）：裝在哪個艙\n"
-    "4. image_has_data（bool）：這張圖是否確實是 Load Sheet，true/false\n\n"
+    "4. image_has_data（bool）：圖片中是否有找到 Load Sheet，true/false\n\n"
     "嚴格以 JSON 格式回傳，不得輸出其他內容。範例：\n"
     '{"image_has_data":true,'
     '"crew":{"hold":"HOLD1","pcs":3,"confidence":"high"},'
@@ -1069,7 +1072,7 @@ _LOADSHEET_PARSE_PROMPT = (
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v1:{notion_id}"
+    cache_key = f"loadsheet:parse:v2:{notion_id}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and "image_has_data" in cached:
         return cached, None
@@ -1082,23 +1085,19 @@ def _loadsheet_parse(notion_id: str):
     if not items:
         return {"image_has_data": False}, None
 
-    image_url = None
-    for it in items:
-        if it["type"] == "image":
-            image_url = it["url"]
-            break
-
-    if not image_url:
+    # 收集所有圖片（上限 6 張），同時記住第一張 URL 供縮圖預覽
+    image_urls = [it["url"] for it in items if it["type"] == "image"]
+    if not image_urls:
         return {"image_has_data": False}, None
 
-    data, mime = _asiaair_download_bytes(image_url)
-    if not data or not mime:
-        return None, "無法下載 Load Sheet 圖片"
+    parts = [{"text": _LOADSHEET_PARSE_PROMPT}]
+    for url in image_urls[:6]:
+        data, mime = _asiaair_download_bytes(url)
+        if data and mime:
+            parts.append({"inline_data": {"mime_type": mime, "data": _base64.b64encode(data).decode("utf-8")}})
 
-    parts = [
-        {"text": _LOADSHEET_PARSE_PROMPT},
-        {"inline_data": {"mime_type": mime, "data": _base64.b64encode(data).decode("utf-8")}},
-    ]
+    if len(parts) <= 1:
+        return {"image_has_data": False}, None
 
     resp, status, err_msg = _asiaair_call_gemini(api_key, parts)
     if resp is None:
@@ -1113,7 +1112,7 @@ def _loadsheet_parse(notion_id: str):
     except Exception as e:
         return None, f"AI 回應解析失敗：{e}"
 
-    result["image_url"] = image_url
+    result["image_url"] = image_urls[0] if image_urls else None
     _kv_set(cache_key, result)
     return result, None
 
