@@ -457,9 +457,28 @@ function renderResult() {
   const list = document.getElementById('holdList');
   list.innerHTML = '';
 
+  /* 找最後一個有行李的艙（非 noload），它的重量用總重減法算 */
+  const totalKg     = v('totalKg');
+  const activeHolds = AC[curAc].holds.filter(h => !h.noload && (holdPcs[h.id] || 0) > 0);
+  const lastHold    = activeHolds[activeHolds.length - 1];
+  let   usedKg      = 0;   // 前面各艙已算出的重量加總
+
+  /* 先算非最後一艙的重量，記錄加總 */
+  const holdKg = {};
+  AC[curAc].holds.forEach(h => {
+    const pcs = holdPcs[h.id] || 0;
+    if (!pcs || h.noload) { holdKg[h.id] = 0; return; }
+    if (lastHold && h.id === lastHold.id) return; // 最後一艙稍後算
+    const kg = avg ? Math.round(pcs * avg) : 0;
+    holdKg[h.id] = kg;
+    usedKg += kg;
+  });
+  /* 最後一艙 = 總重 − 前面加總 */
+  if (lastHold) holdKg[lastHold.id] = avg ? Math.max(0, totalKg - usedKg) : 0;
+
   AC[curAc].holds.forEach((h, i) => {
     const pcs     = holdPcs[h.id] || 0;
-    const kg      = avg ? Math.round(pcs * avg) : 0;
+    const kg      = holdKg[h.id] ?? 0;
     const pct     = h.maxKg ? Math.min(100, Math.round(kg / h.maxKg * 100)) : 0;
     const overPcs = pcs > h.maxPcs && h.maxPcs > 0;
     const overKg  = kg  > h.maxKg;
@@ -495,7 +514,7 @@ function renderResult() {
         </div>
         <div class="hold-calc">
           <div class="hold-calc-kg ${pcs ? '' : 'zero'}">${pcs ? kg + ' KG' : '— KG'}</div>
-          <div class="hold-calc-sub">${pcs && avg ? `= ${pcs}×${avg}` : h.noload ? '不裝' : '未使用'}</div>
+          <div class="hold-calc-sub">${pcs && avg ? (lastHold && h.id === lastHold.id ? `= ${totalKg}−${usedKg}` : `= ${pcs}×${avg}`) : h.noload ? '不裝' : '未使用'}</div>
         </div>
       </div>
       <div class="hold-bar-area">
