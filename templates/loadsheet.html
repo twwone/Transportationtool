@@ -373,7 +373,9 @@ function calcDistribution() {
   }
 
   // 2. 剩下的出發行李依優先順序填（不含 noload，排除已被轉機固定的件數）
-  let remaining = totalPcs - (sp.transit.pcs || 0);
+  // 轉機件數已含在 totalPcs 內，只有在艙位+件數都填好時才從 remaining 扣除
+  const transitFixed = sp.transit.hold && sp.transit.pcs > 0 ? sp.transit.pcs : 0;
+  let remaining = totalPcs - transitFixed;
   for (const h of holds.filter(h => !h.noload)) {
     const alreadyFilled = holdPcs[h.id] || 0;
     const available     = h.maxPcs - alreadyFilled;
