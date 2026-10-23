@@ -768,7 +768,13 @@ function renderResult() {
   /* 件數全部分配完時，最後一個有行李的艙（非 nodist）用總重減法算，吸收四捨五入誤差；
      還有未分配件數時一律件數 × 平均重，避免把沒分配的重量算進最後一艙 */
   const totalKg     = v('totalKg');
-  const activeHolds = AC[curAc].holds.filter(h => !h.nodist && (holdPcs[h.id] || 0) > 0);
+  /* 轉機行李單獨放一艙（該艙件數剛好等於轉機件數，沒混一般行李）：那艙行李重量用轉機實重，
+     其他艙改用扣掉轉機後的出發行李平均重；有混到一般行李就照原本平均重算 */
+  const tHold        = sp.transit.hold;
+  const transitAlone = !!(tHold && sp.transit.pcs > 0 && sp.transit.kg > 0 && (holdPcs[tHold] || 0) === sp.transit.pcs);
+  const restPcs      = totalPcs - sp.transit.pcs;
+  const bagAvg       = transitAlone && restPcs > 0 && avg ? round1((totalKg - sp.transit.kg) / restPcs) : avg;
+  const activeHolds = AC[curAc].holds.filter(h => !h.nodist && (holdPcs[h.id] || 0) > 0 && !(transitAlone && h.id === tHold));
   const lastHold    = remain === 0 ? activeHolds[activeHolds.length - 1] : null;
   let   usedKg      = 0;   // 前面各艙已算出的重量加總
 
@@ -778,7 +784,8 @@ function renderResult() {
     const pcs = holdPcs[h.id] || 0;
     if (!pcs) { holdKg[h.id] = 0; return; }
     if (lastHold && h.id === lastHold.id) return; // 最後一艙稍後算
-    const kg = avg ? Math.round(pcs * avg) : 0;
+    if (transitAlone && h.id === tHold) { holdKg[h.id] = sp.transit.kg; usedKg += sp.transit.kg; return; }
+    const kg = bagAvg ? Math.round(pcs * bagAvg) : 0;
     holdKg[h.id] = kg;
     usedKg += kg;
   });
@@ -838,9 +845,11 @@ function renderResult() {
           const sumLine = terms.length > 1 ? `<div class="hold-calc-sub">= ${terms.join(' + ')}</div>` : '';
           /* 明細：行李怎麼算、每項特殊項目各多少 */
           const bagLine = hasBags
-            ? (lastHold && h.id === lastHold.id
-                ? `行李 ${totalKg}−${usedKg} = ${kg}`
-                : `行李 ${pcs}×${avg} = ${kg}`)
+            ? (transitAlone && h.id === tHold
+                ? `轉機行李 實重 ${kg}`
+                : lastHold && h.id === lastHold.id
+                  ? `行李 ${totalKg}−${usedKg} = ${kg}`
+                  : `行李 ${pcs}×${bagAvg} = ${kg}`)
             : '';
           const spLines = spItems.map(x => x.s === sp.cargo ? `<span class="cargo-line">${x.label} ${x.s.kg}</span>` : `${x.label} ${x.s.kg}`);
           const detail = [bagLine, ...spLines].filter(Boolean).join('<br>');
