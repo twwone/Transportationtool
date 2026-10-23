@@ -292,6 +292,7 @@ input::placeholder { color:#6f7276; }
 .kp-key:disabled { color:#c3c6ca; pointer-events:none; }
 .kp-key.fn { font-size:0.86rem; letter-spacing:0.04em; }
 .kp-key.del { font-size:1.3rem; color:#55585c; }
+.kp-key.restore { font-size:1.35rem; color:#32507f; }
 .kp-key.done { grid-row:span 2; color:#32507f; font-size:0.92rem; }
 .kp-key.zero { grid-column:span 2; }
 </style>
@@ -481,7 +482,7 @@ input::placeholder { color:#6f7276; }
     <button class="kp-key" data-k="1">1</button><button class="kp-key" data-k="2">2</button><button class="kp-key" data-k="3">3</button><button class="kp-key del" data-k="del" aria-label="Backspace"><i class="bi bi-backspace-fill"></i></button>
     <button class="kp-key" data-k="4">4</button><button class="kp-key" data-k="5">5</button><button class="kp-key" data-k="6">6</button><button class="kp-key fn" data-k="next">Next</button>
     <button class="kp-key" data-k="7">7</button><button class="kp-key" data-k="8">8</button><button class="kp-key" data-k="9">9</button><button class="kp-key fn done" data-k="done">Done</button>
-    <button class="kp-key zero" data-k="0">0</button><button class="kp-key" data-k="." id="kpDot">.</button>
+    <button class="kp-key zero" data-k="0">0</button><button class="kp-key restore" data-k="restore" id="kpRestore" aria-label="Restore last value"><i class="bi bi-arrow-counterclockwise"></i></button>
   </div>
 </div>
 
@@ -1212,7 +1213,6 @@ function kpOpen(el) {
   el.classList.add('kp-active');
   document.getElementById('kpTitle').textContent = kpTitleOf(el);
   document.getElementById('kpUnit').textContent = kpUnitOf(el);
-  document.getElementById('kpDot').disabled = el.getAttribute('inputmode') !== 'decimal';
   document.getElementById('kpOverlay').classList.add('open');
   document.getElementById('kp').classList.add('open');
   kpRender();
@@ -1254,6 +1254,14 @@ function kpPress(k) {
   if (!el) return;
   if (k === 'done') { kpClose(); return; }
   if (k === 'next') { kpNext(); return; }
+  /* 還原鍵：回到打開鍵盤前的值（也就是上一次按 Done 確定的數字），接著打數字會重新取代 */
+  if (k === 'restore') {
+    el.value = _kp.orig;
+    _kp.fresh = true;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    kpRender();
+    return;
+  }
   let v = el.value;
   if (/^[0-9]$/.test(k)) {
     if (_kp.fresh || v === '0') v = '';
