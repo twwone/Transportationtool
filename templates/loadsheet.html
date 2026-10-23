@@ -246,6 +246,10 @@ input::placeholder { color:#6f7276; }
 .extra-tag { font-size:0.64rem; font-weight:700; padding:2px 7px; border-radius:4px; background:#26292e; border:1px solid #1d2024; color:var(--cyan); box-shadow:0 1px 0 rgba(161,161,161,0.25); }
 .extra-tag.transit { color:var(--yellow); }
 /* 貨物特別標示（橘色） */
+/* 貨物有無標籤（Notion CGO） */
+.cgo-badge { margin-left:6px; font-size:0.6rem; font-weight:800; padding:1px 6px; border-radius:3px; letter-spacing:0.04em; vertical-align:1px; }
+.cgo-badge.yes { color:var(--amber); border:1px solid rgba(255,166,51,0.6); background:rgba(255,166,51,0.12); }
+.cgo-badge.nil { color:var(--sub); border:1px solid #57595b; background:#26292e; }
 .extra-tag.cargo { color:var(--amber); border-color:rgba(255,166,51,0.6); background:rgba(255,166,51,0.12); }
 .cargo-line { color:var(--amber); font-weight:700; }
 .ws-row.cargo .ws-label, .ws-row.cargo .ws-val { color:var(--amber); }
@@ -391,7 +395,7 @@ input::placeholder { color:#6f7276; }
     <!-- 貨物（同組員行李：重量算進該艙，件數不佔艙位上限） -->
     <div class="special-item">
       <div class="si-top">
-        <div class="si-label"><span class="row-label">CARGO</span><span class="row-zh">貨物</span></div>
+        <div class="si-label"><span class="row-label">CARGO</span><span class="row-zh">貨物</span><span class="cgo-badge" id="cgoBadge" hidden></span></div>
         <select class="si-select" id="cargo-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
@@ -494,6 +498,26 @@ const AC = {
 };
 
 const STORE_KEY   = 'loadsheet_v1';
+/* Notion CGO：選航班時記下這班有沒有貨，NIL 時貨物欄顯示 NIL（仍可修改） */
+let _cgo = null;   // { flight, status: 'YES' | 'NIL' | '' }
+function applyCgo() {
+  const badge = document.getElementById('cgoBadge');
+  const st = _cgo ? _cgo.status : '';
+  badge.hidden = !_cgo;
+  if (_cgo) {
+    badge.className = 'cgo-badge ' + (st === 'YES' ? 'yes' : 'nil');
+    badge.textContent = (st === 'YES' ? '有貨' : st === 'NIL' ? 'NIL' : '未標示') + ' · ' + _cgo.flight.split('/')[0];
+  }
+  ['cargo-pcs','cargo-kg'].forEach(id => { document.getElementById(id).placeholder = st === 'NIL' ? 'NIL' : '0'; });
+}
+function setCgoFromFlight(flight, raw) {
+  const v = String(raw || '').trim().toUpperCase();
+  const status = /^(Y|YES)\b/.test(v) ? 'YES' : /^(NIL|NO|N|NONE|0)$/.test(v) ? 'NIL' : '';
+  _cgo = { flight, status };
+  if (status === 'NIL') ['cargo-hold','cargo-pcs','cargo-kg'].forEach(id => { document.getElementById(id).value = ''; });
+  applyCgo();
+  onSpecialChange();
+}
 const SYNCID_KEY  = 'loadsheet_syncid';
 let curAc   = 'A320';
 let holdPcs = {};
@@ -568,7 +592,7 @@ function saveState() {
                   'transit-hold','transit-pcs','transit-kg','trash-hold','trash-pcs','trash-kg',
                   'cargo-hold','cargo-pcs','cargo-kg',
                   'totalPcs','totalKg'];
-  const data = { ac: curAc, holdPcs, fields: {} };
+  const data = { ac: curAc, holdPcs, fields: {}, cgo: _cgo };
   fields.forEach(id => { data.fields[id] = document.getElementById(id)?.value || ''; });
   localStorage.setItem(STORE_KEY, JSON.stringify(data));
   schedulePush();
@@ -591,6 +615,8 @@ function loadState() {
         if (el) el.value = val;
       });
     }
+    _cgo = data.cgo || null;
+    applyCgo();
     if (data.holdPcs && Object.keys(data.holdPcs).length) {
       holdPcs = data.holdPcs;
       document.getElementById('resultLabel').textContent = `建議裝載方案 · ${curAc}`;
@@ -907,6 +933,8 @@ function clearAll() {
     if (el) el.value = '';
   });
   holdPcs = {};
+  _cgo = null;
+  applyCgo();
   document.getElementById('avgHint').textContent = '請輸入總件數與總重量';
   document.getElementById('weightSummary').style.display = 'none';
   localStorage.removeItem(STORE_KEY);
@@ -998,7 +1026,7 @@ function renderLdmFlights(flights) {
     const prefix = f.flight.slice(0,2).toLowerCase();
     const codeCls = (prefix==='ak'||prefix==='z2') ? prefix : '';
     const sub = [f.origin ? f.origin+'→TPE' : '', f.sta ? '落地 '+f.sta : ''].filter(Boolean).join(' · ');
-    return `<div class="ldm-flight-item" data-notion="${f.notion_id}" data-flight="${f.flight}" data-ac="${f.ac_type}" onclick="selectLdmFlight(this)">
+    return `<div class="ldm-flight-item" data-notion="${f.notion_id}" data-flight="${f.flight}" data-ac="${f.ac_type}" data-cgo="${f.cgo || ''}" onclick="selectLdmFlight(this)">
       <div class="ldm-fl-code ${codeCls}">${f.flight.slice(0,2)}</div>
       <div class="ldm-fl-info">
         <div class="ldm-fl-no">${f.flight}</div>
@@ -1014,6 +1042,7 @@ async function selectLdmFlight(el) {
   el.classList.add('active');
   const notionId = el.dataset.notion;
   const flight   = el.dataset.flight;
+  setCgoFromFlight(flight, el.dataset.cgo);
 
   const content = document.getElementById('ldmContent');
   const items   = document.getElementById('ldmItems');

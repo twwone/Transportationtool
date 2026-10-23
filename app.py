@@ -1048,6 +1048,7 @@ def loadsheet_flights_api():
             "sta":       f.get("sta", ""),
             "origin":    f.get("origin", ""),
             "ac_type":   ac_type,
+            "cgo":       f.get("cgo", ""),
         })
     return jsonify({"flights": result, "date": date_str})
 
