@@ -1259,14 +1259,31 @@ function kpNext() {
 }
 
 /* 按下就觸發（pointerdown），不等 click：頁面防雙擊放大的 touchend 會吃掉 0.3 秒內的第二次 click，連按會掉字 */
+/* 防穿透：按鍵在按下時就動作（Done 會關掉鍵盤、Next 會移位），手指放開後瀏覽器補發的 click
+   會落到原本被鍵盤蓋住的按鈕（曾誤觸 COMPUTE）。iOS 在 touchend 取消補發；另外按完 0.35 秒內
+   鍵盤以外的 click 一律攔掉。這個攔截要比下面「點數字框開鍵盤」的監聽先註冊才擋得到 */
+let _kpPressing = false, _kpGuardUntil = 0;
+document.addEventListener('click', e => {
+  if (Date.now() < _kpGuardUntil && !(e.target.closest && e.target.closest('#kp'))) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
+document.getElementById('kp').addEventListener('touchend', e => {
+  if (e.target.closest('[data-k]')) e.preventDefault();
+}, { passive: false });
 document.getElementById('kp').addEventListener('pointerdown', e => {
   const b = e.target.closest('[data-k]');
   if (!b || b.disabled) return;
   e.preventDefault();
+  _kpPressing = true;
   b.classList.add('pressed');
   kpPress(b.dataset.k);
 });
-const kpRelease = () => document.querySelectorAll('.kp-key.pressed, .kp-clear.pressed').forEach(b => b.classList.remove('pressed'));
+const kpRelease = () => {
+  if (_kpPressing) { _kpPressing = false; _kpGuardUntil = Date.now() + 350; }
+  document.querySelectorAll('.kp-key.pressed, .kp-clear.pressed').forEach(b => b.classList.remove('pressed'));
+};
 document.addEventListener('pointerup', kpRelease);
 document.addEventListener('pointercancel', kpRelease);
 document.getElementById('kpOverlay').addEventListener('click', e => {
