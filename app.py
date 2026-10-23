@@ -1127,7 +1127,7 @@ def _loadsheet_parse(notion_id: str):
 
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
-        return None, "伺服器未設定 Gemini API 金鑰"
+        return None, "Gemini API key is not configured on the server"
 
     items = _asiaair_fetch_detail(notion_id)
     if not items:
@@ -1150,7 +1150,7 @@ def _loadsheet_parse(notion_id: str):
 
     resp, _, err_msg = _asiaair_call_gemini(api_key, parts)
     if resp is None:
-        return None, err_msg or "AI 辨識失敗"
+        return None, err_msg or "AI recognition failed"
 
     try:
         text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -1159,7 +1159,7 @@ def _loadsheet_parse(notion_id: str):
             text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
         raw = _json.loads(text)
     except Exception as e:
-        return None, f"AI 回應解析失敗：{e}"
+        return None, f"Failed to parse AI response: {e}"
 
     result = {
         "ldm_found": bool(raw.get("ldm_found")),
@@ -1180,7 +1180,7 @@ def loadsheet_parse_api(notion_id):
         return jsonify({"error": "invalid id"}), 400
     result, err = _loadsheet_parse(notion_id)
     if result is None:
-        return jsonify({"error": err or "解析失敗"}), 503
+        return jsonify({"error": err or "Parse failed"}), 503
     return jsonify(result)
 
 
