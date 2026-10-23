@@ -1,0 +1,17 @@
+{
+  "name": "Load & Trim 貨艙裝載",
+  "short_name": "Load&Trim",
+  "description": "貨艙裝載計算（交通助理）",
+  "id": "/lt",
+  "start_url": "/lt",
+  "scope": "/lt",
+  "display": "standalone",
+  "background_color": "#8c8c8b",
+  "theme_color": "#ededed",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/static/lt-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/lt-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/lt-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

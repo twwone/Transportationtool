@@ -1012,6 +1012,12 @@ def loadsheet():
     return render_template("loadsheet.html")
 
 
+@app.route("/lt")
+def loadsheet_app():
+    """獨立 app 版（加到主畫面用）：同一頁、同一份資料，換成 Load&Trim 的 manifest 與圖示、隱藏返回"""
+    return render_template("loadsheet.html", standalone=True)
+
+
 # ──────────────────────────────────────────────
 #  貨艙裝載計算 - 智慧分配 API
 # ──────────────────────────────────────────────
