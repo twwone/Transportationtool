@@ -378,11 +378,12 @@ const AC = {
     { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2110 },
     { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:1497, nodist:true },
   ]},
-  A321: { holds: [
-    { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:2202 },
-    { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:3468 },
-    { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:3587 },
-    { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2083 },
+  /* fillOrder：計算建議裝載時的填艙順序（沒設就照 holds 順序）；HOLD5 不分配，塞小件 */
+  A321: { fillOrder: ['HOLD3','HOLD4','HOLD2','HOLD1'], holds: [
+    { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:50, maxKg:2202 },
+    { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:90, maxKg:3468 },
+    { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:90, maxKg:3587 },
+    { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:50, maxKg:2083 },
     { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:800,  nodist:true },
   ]}
 };
@@ -596,7 +597,11 @@ function calcDistribution() {
   // 轉機件數已含在 totalPcs 內，只有在艙位+件數都填好時才從 remaining 扣除
   const transitFixed = sp.transit.hold && sp.transit.pcs > 0 ? sp.transit.pcs : 0;
   let remaining = totalPcs - transitFixed;
-  for (const h of holds.filter(h => !h.nodist)) {
+  const fillOrder = AC[curAc].fillOrder;
+  const fillHolds = fillOrder
+    ? fillOrder.map(id => holds.find(h => h.id === id))
+    : holds.filter(h => !h.nodist);
+  for (const h of fillHolds) {
     const alreadyFilled = holdPcs[h.id] || 0;
     const available     = h.maxPcs - alreadyFilled;
     if (available <= 0) continue;
