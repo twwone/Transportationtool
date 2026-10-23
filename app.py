@@ -1041,8 +1041,10 @@ def _loadsheet_ac_type(flight_no: str) -> "str | None":
 @app.route("/api/loadsheet/flights")
 def loadsheet_flights_api():
     today    = _asiaair_today()
+    # 最多可以看到明天（預先準備隔天的航班），再往後一律回今天
+    tomorrow = (_dt.now(_tz(_td(hours=8))) + _td(days=1)).strftime("%Y-%m-%d")
     date_str = request.args.get("date", "").strip() or today
-    if not _re.match(r"^\d{4}-\d{2}-\d{2}$", date_str) or date_str > today:
+    if not _re.match(r"^\d{4}-\d{2}-\d{2}$", date_str) or date_str > tomorrow:
         date_str = today
     flights, ok = _asiaair_fetch(date_str)
     if not ok:

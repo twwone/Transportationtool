@@ -999,7 +999,7 @@ function ldmFormatDate(dateStr) {
 function updateLdmDateLabel() {
   const offset = ldmOffsetFromToday();
   document.getElementById('ldmDateLabel').textContent = ldmFormatDate(_ldmDate || ldmDateStr(0));
-  document.getElementById('ldmNextBtn').disabled = offset >= 0;
+  document.getElementById('ldmNextBtn').disabled = offset >= 1;
 }
 function ldmPrevDay() {
   _ldmDate  = ldmShiftDate(_ldmDate || ldmDateStr(0), -1);
@@ -1008,7 +1008,7 @@ function ldmPrevDay() {
 }
 function ldmNextDay() {
   const next = ldmShiftDate(_ldmDate || ldmDateStr(0), 1);
-  if (next > ldmDateStr(0)) return;
+  if (next > ldmDateStr(1)) return;   // 最多看到明天
   _ldmDate = next;
   closeLdm();
   loadLdmFlights();
