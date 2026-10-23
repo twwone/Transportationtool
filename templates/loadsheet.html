@@ -273,8 +273,8 @@ input::placeholder { color:#6d7073; }
         <select class="si-select" id="crew-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="number" inputmode="numeric" id="crew-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="number" inputmode="decimal" id="crew-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="text" inputmode="numeric" id="crew-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="text" inputmode="decimal" id="crew-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
@@ -285,8 +285,8 @@ input::placeholder { color:#6d7073; }
         <select class="si-select" id="toolbox-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="number" inputmode="numeric" id="toolbox-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="number" inputmode="decimal" id="toolbox-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="text" inputmode="numeric" id="toolbox-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="text" inputmode="decimal" id="toolbox-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
@@ -297,8 +297,8 @@ input::placeholder { color:#6d7073; }
         <select class="si-select" id="transit-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="number" inputmode="numeric" id="transit-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="number" inputmode="decimal" id="transit-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="text" inputmode="numeric" id="transit-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="text" inputmode="decimal" id="transit-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
       <div class="transit-note">件數與重量已含在出發行李總計內，僅記錄位置，不另外加總</div>
     </div>
@@ -310,8 +310,8 @@ input::placeholder { color:#6d7073; }
         <select class="si-select" id="trash-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="number" inputmode="numeric" id="trash-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="number" inputmode="decimal" id="trash-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="text" inputmode="numeric" id="trash-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="text" inputmode="decimal" id="trash-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
@@ -321,8 +321,8 @@ input::placeholder { color:#6d7073; }
   <div class="card" style="animation-delay:.04s">
     <div class="card-title">DEPARTURE BAGS <span class="ct-zh">出發行李總計（含轉機）</span></div>
     <div class="two-col">
-      <div class="field"><label for="totalPcs">PCS</label><input type="number" inputmode="numeric" id="totalPcs" placeholder="0" oninput="onBagsInput()"></div>
-      <div class="field"><label for="totalKg">KG</label><input type="number" inputmode="decimal" id="totalKg"  placeholder="0" oninput="onBagsInput()"></div>
+      <div class="field"><label for="totalPcs">PCS</label><input type="text" inputmode="numeric" id="totalPcs" placeholder="0" oninput="onBagsInput()"></div>
+      <div class="field"><label for="totalKg">KG</label><input type="text" inputmode="decimal" id="totalKg"  placeholder="0" oninput="onBagsInput()"></div>
     </div>
     <div class="avg-hint" id="avgHint">請輸入總件數與總重量</div>
   </div>
@@ -497,6 +497,21 @@ function loadState() {
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive:false });
 let _lt = 0; document.addEventListener('touchend', e => { const n = Date.now(); if (n - _lt < 300) e.preventDefault(); _lt = n; }, { passive:false });
+
+/* 點進數字框時游標放到最後面，方便直接刪改（數字框右對齊，iOS 點下去游標常停在最前面）。
+   type="number" 不能設定游標位置，所以數字框都用 type="text" + inputmode 叫出數字鍵盤 */
+function caretToEnd(el) { const n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) {} }
+let _caretFresh = null;
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if (!el.matches || !el.matches('input[inputmode]')) return;
+  _caretFresh = el;
+  setTimeout(() => caretToEnd(el), 0);
+});
+document.addEventListener('click', e => {
+  if (e.target === _caretFresh) { caretToEnd(e.target); _caretFresh = null; }
+});
+document.addEventListener('focusout', () => { _caretFresh = null; });
 
 /* ── 機型切換 ── */
 document.getElementById('acSwitch').addEventListener('click', e => {
@@ -697,7 +712,7 @@ function renderResult() {
       <div class="hold-body">
         <div class="hold-input-wrap">
           <div class="hold-input-label">件數</div>
-          <input class="hold-input ${inputCls}" type="number" inputmode="numeric"
+          <input class="hold-input ${inputCls}" type="text" inputmode="numeric"
             value="${pcs || ''}" placeholder="0" data-hold="${h.id}"
             onchange="onHoldInput(this)">
         </div>
