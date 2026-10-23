@@ -245,6 +245,40 @@ input::placeholder { color:#6f7276; }
 .hold-extras { margin-top:8px; display:flex; gap:5px; flex-wrap:wrap; }
 .extra-tag { font-size:0.64rem; font-weight:700; padding:2px 7px; border-radius:4px; background:#26292e; border:1px solid #1d2024; color:var(--cyan); box-shadow:0 1px 0 rgba(161,161,161,0.25); }
 .extra-tag.transit { color:var(--yellow); }
+
+/* ── 數字鍵盤彈窗（仿 Flysmart+ WHBasicKeypadVC：popWindowMainBg 底、白色結果列、numericPad 白鍵）── */
+.si-field.kp-active, .field.kp-active { background:var(--active-fill); border-color:var(--active-edge); box-shadow:inset 0 1px 0 var(--active-hi); }
+.si-field.kp-active .si-input, .field.kp-active input { color:#fff; }
+.si-field.kp-active .si-field-label, .field.kp-active label { color:#e2e8ee; }
+.hold-input.kp-active { background:var(--active-fill); border-color:var(--active-edge); color:#fff; box-shadow:inset 0 1px 0 var(--active-hi); }
+.kp-overlay { position:fixed; inset:0; z-index:490; display:none; }
+.kp-overlay.open { display:block; }
+.kp { position:fixed; z-index:500; width:min(286px, calc(100vw - 16px)); display:none; background:var(--popup); border:1px solid #282c32; border-radius:8px; padding:0 8px 8px; box-shadow:0 10px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.45); }
+.kp.open { display:block; }
+.kp-arrow { position:absolute; width:18px; height:18px; background:#b9bdc2; border:1px solid #282c32; transform:rotate(45deg); left:20px; }
+.kp.up .kp-arrow { top:-10px; border-right:none; border-bottom:none; }
+.kp.down .kp-arrow { bottom:-10px; background:#666a70; border-left:none; border-top:none; }
+.kp-bar { position:relative; display:flex; align-items:center; justify-content:center; padding:8px 0 7px; }
+.kp-title { font-size:0.8rem; font-weight:800; color:#fff; letter-spacing:0.05em; text-transform:uppercase; text-shadow:0 -1px 0 rgba(0,0,0,0.4); }
+.kp-result { position:relative; display:flex; align-items:center; gap:6px; background:var(--btn-white); border:1px solid #151920; border-radius:6px; padding:6px 8px 6px 12px; margin-bottom:8px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.25); }
+.kp-value { flex:1; text-align:right; font-family:"HelveticaNeue-CondensedBold","Helvetica Neue",var(--num); font-stretch:condensed; font-size:1.7rem; font-weight:700; color:#32507f; letter-spacing:0.02em; min-height:2.1rem; line-height:2.1rem; overflow:hidden; white-space:nowrap; }
+.kp-value.empty { color:#a5a9ae; }
+.kp-unit { font-size:0.72rem; font-weight:800; color:#808386; letter-spacing:0.05em; min-width:22px; }
+.kp-clear { flex-shrink:0; width:32px; height:32px; border:none; background:none; color:#8a8d91; font-size:1.35rem; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.kp-clear:active { color:#55585c; }
+.kp-grid { display:grid; grid-template-columns:repeat(4, 1fr); grid-auto-rows:50px; gap:6px; }
+.kp-key {
+  border:1px solid #151920; border-radius:6px; background:linear-gradient(180deg,#ffffff 0%,#fbfbfb 25%,#ececed 70%,#d3d5d6 100%);
+  color:#51626b; font-family:"HelveticaNeue-CondensedBold","Helvetica Neue",var(--num); font-stretch:condensed; font-size:1.45rem; font-weight:700;
+  box-shadow:0 1px 0 #6a6d72, inset 0 1px 0 #ffffff; cursor:pointer; -webkit-user-select:none; user-select:none; touch-action:manipulation;
+  display:flex; align-items:center; justify-content:center;
+}
+.kp-key:active, .kp-key.pressed { background:linear-gradient(180deg,#c9ccd0 0%,#dcdee0 100%); box-shadow:inset 0 1px 3px rgba(0,0,0,0.35); }
+.kp-key:disabled { color:#c3c6ca; pointer-events:none; }
+.kp-key.fn { font-size:0.86rem; letter-spacing:0.04em; }
+.kp-key.del { font-size:1.3rem; color:#55585c; }
+.kp-key.done { grid-row:span 2; color:#32507f; font-size:0.92rem; }
+.kp-key.zero { grid-column:span 2; }
 </style>
 </head>
 <body>
@@ -402,6 +436,24 @@ input::placeholder { color:#6f7276; }
     </div>
     <div class="img-modal-body"><img id="imgModalImg" src="" alt=""></div>
     <div class="img-modal-note">點空白處關閉</div>
+  </div>
+</div>
+
+<!-- 數字鍵盤彈窗 -->
+<div class="kp-overlay" id="kpOverlay"></div>
+<div class="kp" id="kp" role="dialog" aria-label="數字鍵盤">
+  <div class="kp-arrow" id="kpArrow"></div>
+  <div class="kp-bar"><span class="kp-title" id="kpTitle"></span></div>
+  <div class="kp-result">
+    <span class="kp-value" id="kpValue"></span>
+    <span class="kp-unit" id="kpUnit"></span>
+    <button class="kp-clear" data-k="clear" aria-label="清除"><i class="bi bi-x-circle-fill"></i></button>
+  </div>
+  <div class="kp-grid">
+    <button class="kp-key" data-k="1">1</button><button class="kp-key" data-k="2">2</button><button class="kp-key" data-k="3">3</button><button class="kp-key del" data-k="del" aria-label="退格"><i class="bi bi-backspace-fill"></i></button>
+    <button class="kp-key" data-k="4">4</button><button class="kp-key" data-k="5">5</button><button class="kp-key" data-k="6">6</button><button class="kp-key fn" data-k="next">Next</button>
+    <button class="kp-key" data-k="7">7</button><button class="kp-key" data-k="8">8</button><button class="kp-key" data-k="9">9</button><button class="kp-key fn done" data-k="done">Done</button>
+    <button class="kp-key zero" data-k="0">0</button><button class="kp-key" data-k="." id="kpDot">.</button>
   </div>
 </div>
 
@@ -1044,6 +1096,165 @@ function closeLdm() {
   document.getElementById('ldmContent').style.display = 'none';
   document.querySelectorAll('.ldm-flight-item').forEach(x => x.classList.remove('active'));
 }
+
+/* ── 數字鍵盤彈窗：點數字框不叫出系統鍵盤，改跳 FlySmart 樣式的鍵盤。
+   每按一鍵就照打字的方式觸發 input 事件；下方各艙件數（onchange）在 Done/Next/關閉時才觸發 change，
+   跟原本「打完離開才更新」一樣，不改任何計算函式 ── */
+const _kp = { key: null, fresh: false, orig: '' };
+function kpFieldOf(target) {
+  if (!target || !target.closest) return null;
+  const input = target.closest('input[inputmode]');
+  if (input) return input;
+  const wrap = target.closest('.si-field, .field');
+  return wrap ? wrap.querySelector('input[inputmode]') : null;
+}
+function kpKeyOf(el) { return el.id ? '#' + el.id : `.hold-input[data-hold="${el.dataset.hold}"]`; }
+function kpTarget() { return _kp.key ? document.querySelector(_kp.key) : null; }
+function kpAnchor(el) { return el.closest('.si-field, .field') || el; }
+function kpFields() { return [...document.querySelectorAll('input[inputmode]')].filter(el => el.offsetParent !== null); }
+function kpTitleOf(el) {
+  if (el.classList.contains('hold-input')) return el.closest('.hold-card').querySelector('.hold-badge').textContent + ' · PCS';
+  const unit = (el.closest('.si-field, .field').querySelector('.si-field-label, label') || {}).textContent || '';
+  const item = el.closest('.special-item');
+  const name = item ? item.querySelector('.row-label').textContent : el.closest('.card').querySelector('.card-title').firstChild.textContent.trim();
+  return name + ' · ' + unit;
+}
+function kpUnitOf(el) {
+  if (el.classList.contains('hold-input')) return 'PCS';
+  return (el.closest('.si-field, .field').querySelector('.si-field-label, label') || {}).textContent || '';
+}
+
+function kpOpen(el) {
+  if (!el) return;
+  const key = kpKeyOf(el);
+  if (_kp.key === key) return;
+  if (_kp.key) kpCommit();
+  _kp.key = key; _kp.fresh = true; _kp.orig = el.value;
+  el.readOnly = true; el.blur();
+  kpAnchor(el).classList.add('kp-active');
+  el.classList.add('kp-active');
+  document.getElementById('kpTitle').textContent = kpTitleOf(el);
+  document.getElementById('kpUnit').textContent = kpUnitOf(el);
+  document.getElementById('kpDot').disabled = el.getAttribute('inputmode') !== 'decimal';
+  document.getElementById('kpOverlay').classList.add('open');
+  document.getElementById('kp').classList.add('open');
+  kpRender();
+  /* 下方空間不夠就先把欄位捲到上面一點 */
+  const kpH = document.getElementById('kp').offsetHeight;
+  const headerB = document.querySelector('.header').getBoundingClientRect().bottom;
+  const r = kpAnchor(el).getBoundingClientRect();
+  if (window.innerHeight - r.bottom < kpH + 24) window.scrollBy(0, r.top - headerB - 12);
+  kpPlace();
+}
+function kpPlace() {
+  const el = kpTarget();
+  if (!el) return;
+  const kp = document.getElementById('kp'), arrow = document.getElementById('kpArrow');
+  const r = kpAnchor(el).getBoundingClientRect();
+  const w = kp.offsetWidth, h = kp.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+  const headerB = document.querySelector('.header').getBoundingClientRect().bottom;
+  const below = vh - r.bottom, above = r.top - headerB;
+  const up = below >= h + 14 || below >= above;
+  let top = up ? r.bottom + 11 : r.top - 11 - h;
+  top = Math.max(headerB + 4, Math.min(top, vh - h - 4));
+  let left = r.left + r.width / 2 - w / 2;
+  left = Math.max(8, Math.min(left, vw - w - 8));
+  kp.style.top = top + 'px';
+  kp.style.left = left + 'px';
+  kp.classList.toggle('up', up);
+  kp.classList.toggle('down', !up);
+  arrow.style.left = Math.max(12, Math.min(r.left + r.width / 2 - left - 9, w - 30)) + 'px';
+}
+function kpRender() {
+  const el = kpTarget();
+  if (!el) return;
+  const v = document.getElementById('kpValue');
+  v.textContent = el.value || '0';
+  v.classList.toggle('empty', !el.value);
+}
+function kpPress(k) {
+  const el = kpTarget();
+  if (!el) return;
+  if (k === 'done') { kpClose(); return; }
+  if (k === 'next') { kpNext(); return; }
+  let v = el.value;
+  if (/^[0-9]$/.test(k)) {
+    if (_kp.fresh || v === '0') v = '';
+    if (v.replace('.', '').length >= 6) return;
+    v += k;
+  } else if (k === '.') {
+    if (el.getAttribute('inputmode') !== 'decimal') return;
+    if (_kp.fresh) v = '';
+    if (v.includes('.')) return;
+    v = (v || '0') + '.';
+  } else if (k === 'del') {
+    v = v.slice(0, -1);
+  } else if (k === 'clear') {
+    v = '';
+  }
+  _kp.fresh = false;
+  el.value = v;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  kpRender();
+}
+function kpCommit() {
+  const el = kpTarget();
+  if (!el) return;
+  kpAnchor(el).classList.remove('kp-active');
+  el.classList.remove('kp-active');
+  const changed = el.value !== _kp.orig;
+  _kp.key = null;
+  if (changed) el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+function kpClose() {
+  kpCommit();
+  document.getElementById('kp').classList.remove('open');
+  document.getElementById('kpOverlay').classList.remove('open');
+}
+function kpNext() {
+  const el = kpTarget();
+  const list = kpFields();
+  const nxt = list[list.indexOf(el) + 1];
+  const nextKey = nxt ? kpKeyOf(nxt) : null;
+  kpCommit();   // 各艙件數 commit 會重畫卡片，所以先記下一格的選擇器再重新找
+  if (nextKey && document.querySelector(nextKey)) kpOpen(document.querySelector(nextKey));
+  else kpClose();
+}
+
+document.getElementById('kp').addEventListener('click', e => {
+  const b = e.target.closest('[data-k]');
+  if (b) kpPress(b.dataset.k);
+});
+document.getElementById('kpOverlay').addEventListener('click', e => {
+  /* 點彈窗外：完成目前這格；如果點到的是另一個數字框就直接換過去 */
+  const ov = e.currentTarget;
+  ov.style.display = 'none';
+  const under = kpFieldOf(document.elementFromPoint(e.clientX, e.clientY));
+  ov.style.display = '';
+  const underKey = under ? kpKeyOf(under) : null;
+  if (underKey && underKey !== _kp.key) { kpCommit(); kpOpen(document.querySelector(underKey)); }
+  else kpClose();
+});
+document.addEventListener('pointerdown', e => {
+  const el = kpFieldOf(e.target);
+  if (el) el.readOnly = true;   // 不讓系統鍵盤跳出來
+}, true);
+document.addEventListener('click', e => {
+  const el = kpFieldOf(e.target);
+  if (!el) return;
+  e.preventDefault();
+  kpOpen(el);
+}, true);
+document.addEventListener('keydown', e => {
+  if (!_kp.key) return;
+  const map = { Backspace: 'del', Delete: 'clear', Enter: 'done', Escape: 'done', Tab: 'next', '.': '.' };
+  const k = /^[0-9]$/.test(e.key) ? e.key : map[e.key];
+  if (!k) return;
+  e.preventDefault();
+  kpPress(k);
+});
+window.addEventListener('scroll', () => { if (_kp.key) kpPlace(); }, { passive: true });
+window.addEventListener('resize', () => { if (_kp.key) kpPlace(); });
 
 /* 初始化 */
 buildHoldOptions();
