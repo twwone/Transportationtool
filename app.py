@@ -13,7 +13,7 @@ import urllib.parse as _urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 import requests as _requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -1012,10 +1012,16 @@ def loadsheet():
     return render_template("loadsheet.html")
 
 
-@app.route("/lt")
+@app.route("/wb")
 def loadsheet_app():
-    """獨立 app 版（加到主畫面用）：同一頁、同一份資料，換成 Load&Trim 的 manifest 與圖示、隱藏返回"""
+    """Weight & Balance 獨立 app 版（加到主畫面用）：同一頁、同一份資料，換成 W&B 的 manifest 與圖示、隱藏返回"""
     return render_template("loadsheet.html", standalone=True)
+
+
+@app.route("/lt")
+def loadsheet_app_legacy():
+    """舊網址：已加到主畫面的舊圖示點開仍可用"""
+    return redirect("/wb", code=301)
 
 
 # ──────────────────────────────────────────────

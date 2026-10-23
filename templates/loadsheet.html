@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>貨艙裝載計算 · Load &amp; Trim</title>
+<title>Weight &amp; Balance · 貨艙裝載計算</title>
 {% if standalone %}
-<link rel="manifest" href="/static/lt-manifest.json">
-<link rel="icon" type="image/png" href="/static/lt-icon-192.png">
-<link rel="apple-touch-icon" href="/static/lt-icon-180.png">
+<link rel="manifest" href="/static/wb-manifest.json">
+<link rel="icon" type="image/png" href="/static/wb-icon-192.png">
+<link rel="apple-touch-icon" href="/static/wb-icon-180.png">
 {% else %}
 <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="{{ 'Load&Trim' if standalone else '交通助理' }}">
+<meta name="apple-mobile-web-app-title" content="{{ 'W&B' if standalone else '交通助理' }}">
 <meta name="theme-color" content="#ededed">
 <style>
 /* ── FlySmart+ Loadsheet 風格：色碼取自 app 內 colorCode.plist 與介面圖檔實測（@2x 換算）──
@@ -302,7 +302,7 @@ input::placeholder { color:#6f7276; }
   <div class="header-row">
     {% if standalone %}<span class="back-spacer"></span>{% else %}<a class="back-btn" href="/"><span class="back-arrow">‹</span>返回</a>{% endif %}
     <div class="header-title">
-      <div class="header-title-zh">LOAD &amp; TRIM</div>
+      <div class="header-title-zh">WEIGHT &amp; BALANCE</div>
       <div class="header-title-en">貨艙裝載計算</div>
     </div>
     <button class="sync-btn" id="syncBtn" onclick="toggleSyncSheet()" title="同步設定">
