@@ -245,6 +245,10 @@ input::placeholder { color:#6f7276; }
 .hold-extras { margin-top:8px; display:flex; gap:5px; flex-wrap:wrap; }
 .extra-tag { font-size:0.64rem; font-weight:700; padding:2px 7px; border-radius:4px; background:#26292e; border:1px solid #1d2024; color:var(--cyan); box-shadow:0 1px 0 rgba(161,161,161,0.25); }
 .extra-tag.transit { color:var(--yellow); }
+/* 貨物特別標示（橘色） */
+.extra-tag.cargo { color:var(--amber); border-color:rgba(255,166,51,0.6); background:rgba(255,166,51,0.12); }
+.cargo-line { color:var(--amber); font-weight:700; }
+.ws-row.cargo .ws-label, .ws-row.cargo .ws-val { color:var(--amber); }
 
 /* ── 數字鍵盤彈窗（仿 Flysmart+ WHBasicKeypadVC：popWindowMainBg 底、白色結果列、numericPad 白鍵）── */
 .si-field.kp-active, .field.kp-active { background:var(--active-fill); border-color:var(--active-edge); box-shadow:inset 0 1px 0 var(--active-hi); }
@@ -415,7 +419,7 @@ input::placeholder { color:#6f7276; }
     <div class="ws-row" id="ws-crew-row"  style="display:none"><span class="ws-label">組員行李</span><span class="ws-val" id="ws-crew">— KG</span></div>
     <div class="ws-row" id="ws-toolbox-row" style="display:none"><span class="ws-label">Toolbox</span><span class="ws-val" id="ws-toolbox">— KG</span></div>
     <div class="ws-row" id="ws-trash-row" style="display:none"><span class="ws-label">垃圾</span><span class="ws-val" id="ws-trash">— KG</span></div>
-    <div class="ws-row" id="ws-cargo-row" style="display:none"><span class="ws-label">貨物</span><span class="ws-val" id="ws-cargo">— KG</span></div>
+    <div class="ws-row cargo" id="ws-cargo-row" style="display:none"><span class="ws-label">貨物 CARGO</span><span class="ws-val" id="ws-cargo">— KG</span></div>
     <div class="ws-row total"><span class="ws-label">TOTAL 總計</span><span class="ws-val" id="ws-total">— KG</span></div>
   </div>
 
@@ -804,7 +808,7 @@ function renderResult() {
       sp.toolbox.hold === h.id && (sp.toolbox.pcs > 0 || sp.toolbox.kg > 0) ? `<span class="extra-tag">Toolbox ${sp.toolbox.pcs||'—'}件 / ${sp.toolbox.kg||'—'} KG</span>` : '',
       hasTransit ? `<span class="extra-tag transit">轉機行李 ${sp.transit.pcs}件${sp.transit.kg ? ' / '+sp.transit.kg+' KG' : ''}（固定）</span>` : '',
       sp.trash.hold === h.id ? `<span class="extra-tag">垃圾${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+'件' : ''}${sp.trash.kg ? ' / '+sp.trash.kg+' KG' : ''}</span>` : '',
-      sp.cargo.hold === h.id && (sp.cargo.pcs > 0 || sp.cargo.kg > 0) ? `<span class="extra-tag">貨物 ${sp.cargo.pcs||'—'}件 / ${sp.cargo.kg||'—'} KG</span>` : '',
+      sp.cargo.hold === h.id && sp.cargo.kg > 0 ? `<span class="extra-tag cargo">貨物 ${sp.cargo.kg} KG</span>` : '',
     ].filter(Boolean).join('');
 
     const inputCls = (overPcs || overKg) ? 'err' : h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
@@ -838,7 +842,7 @@ function renderResult() {
                 ? `行李 ${totalKg}−${usedKg} = ${kg}`
                 : `行李 ${pcs}×${avg} = ${kg}`)
             : '';
-          const spLines = spItems.map(x => `${x.label} ${x.s.kg}`);
+          const spLines = spItems.map(x => x.s === sp.cargo ? `<span class="cargo-line">${x.label} ${x.s.kg}</span>` : `${x.label} ${x.s.kg}`);
           const detail = [bagLine, ...spLines].filter(Boolean).join('<br>');
           return `<div class="hold-calc">
             <div class="hold-calc-kg">${holdTotal} KG</div>
