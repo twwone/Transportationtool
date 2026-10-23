@@ -1221,10 +1221,17 @@ function kpNext() {
   else kpClose();
 }
 
-document.getElementById('kp').addEventListener('click', e => {
+/* 按下就觸發（pointerdown），不等 click：頁面防雙擊放大的 touchend 會吃掉 0.3 秒內的第二次 click，連按會掉字 */
+document.getElementById('kp').addEventListener('pointerdown', e => {
   const b = e.target.closest('[data-k]');
-  if (b) kpPress(b.dataset.k);
+  if (!b || b.disabled) return;
+  e.preventDefault();
+  b.classList.add('pressed');
+  kpPress(b.dataset.k);
 });
+const kpRelease = () => document.querySelectorAll('.kp-key.pressed, .kp-clear.pressed').forEach(b => b.classList.remove('pressed'));
+document.addEventListener('pointerup', kpRelease);
+document.addEventListener('pointercancel', kpRelease);
 document.getElementById('kpOverlay').addEventListener('click', e => {
   /* 點彈窗外：完成目前這格；如果點到的是另一個數字框就直接換過去 */
   const ov = e.currentTarget;
