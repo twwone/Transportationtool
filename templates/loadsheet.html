@@ -378,11 +378,11 @@ const AC = {
     { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2110 },
     { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:1497, nodist:true },
   ]},
-  /* fillOrder：計算建議裝載時的填艙順序（沒設就照 holds 順序）；HOLD5 不分配，塞小件 */
+  /* fillOrder：計算建議裝載時的填艙順序（沒設就照 holds 順序）；softPcs：優先只裝到這個件數；HOLD5 不分配，塞小件 */
   A321: { fillOrder: ['HOLD3','HOLD4','HOLD2','HOLD1'], holds: [
     { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:50, maxKg:2202 },
-    { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:90, maxKg:3468 },
-    { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:90, maxKg:3587 },
+    { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:90, softPcs:80, maxKg:3468 },
+    { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:90, softPcs:80, maxKg:3587 },
     { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:50, maxKg:2083 },
     { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:800,  nodist:true },
   ]}
@@ -601,14 +601,19 @@ function calcDistribution() {
   const fillHolds = fillOrder
     ? fillOrder.map(id => holds.find(h => h.id === id))
     : holds.filter(h => !h.nodist);
-  for (const h of fillHolds) {
-    const alreadyFilled = holdPcs[h.id] || 0;
-    const available     = h.maxPcs - alreadyFilled;
-    if (available <= 0) continue;
-    const fill = Math.min(remaining, available);
-    holdPcs[h.id] = alreadyFilled + fill;
-    remaining -= fill;
-    if (remaining <= 0) break;
+  /* 第一輪先裝到建議件數（softPcs，沒設就是上限），全部艙都裝滿還有剩，第二輪才補到上限 maxPcs */
+  const passes = [h => h.softPcs ?? h.maxPcs, h => h.maxPcs];
+  for (const cap of passes) {
+    if (remaining <= 0 && cap !== passes[0]) break;
+    for (const h of fillHolds) {
+      const alreadyFilled = holdPcs[h.id] || 0;
+      const available     = cap(h) - alreadyFilled;
+      if (available <= 0) continue;
+      const fill = Math.min(remaining, available);
+      holdPcs[h.id] = alreadyFilled + fill;
+      remaining -= fill;
+      if (remaining <= 0) break;
+    }
   }
 
   document.getElementById('resultLabel').textContent = `建議裝載方案 · ${curAc}`;
