@@ -27,7 +27,8 @@ html, body { overscroll-behavior: none; }
   :root { --bg:#000; --card:#1c1c1e; --border:rgba(255,255,255,0.09); --divider:rgba(255,255,255,0.12); --text:#f5f5f7; --chip-bg:rgba(255,255,255,0.1); }
 }
 html,body { height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif; -webkit-tap-highlight-color:transparent; }
-body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) both; }
+/* backwards：動畫結束後不保留 transform，否則 body 會變成 fixed 元素的定位基準，圖片放大視窗會被鎖捲動帶出畫面 */
+body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) backwards; }
 
 .header { position:sticky; top:0; z-index:100; background:rgba(251,251,253,0.86); backdrop-filter:saturate(1.6) blur(22px); -webkit-backdrop-filter:saturate(1.6) blur(22px); padding:env(safe-area-inset-top,0px) 16px 0; border-bottom:1px solid var(--divider); }
 @media (prefers-color-scheme:dark) { .header { background:rgba(0,0,0,0.75); } }
@@ -766,8 +767,10 @@ function clearAll() {
 
 /* ── 圖片 Modal ── */
 let _slCount = 0, _slY = 0;
-function lockScroll()   { if(_slCount++>0)return; _slY=window.scrollY; document.body.style.cssText+=`;position:fixed;top:-${_slY}px;left:0;right:0;width:100%`; }
-function unlockScroll() { if(_slCount<=0)return; if(--_slCount>0)return; document.body.style.cssText=document.body.style.cssText.replace(/position:fixed.*?width:100%;?/,''); window.scrollTo(0,_slY); }
+/* 逐一設定/清除屬性：瀏覽器會把 cssText 改寫成 "position: fixed;" 這種格式，用 regex 清會比對不到 */
+const _SL_PROPS = ['position','top','left','right','width'];
+function lockScroll()   { if(_slCount++>0)return; _slY=window.scrollY; Object.assign(document.body.style,{position:'fixed',top:`-${_slY}px`,left:'0',right:'0',width:'100%'}); }
+function unlockScroll() { if(_slCount<=0)return; if(--_slCount>0)return; _SL_PROPS.forEach(p => document.body.style.removeProperty(p)); window.scrollTo(0,_slY); }
 function openImgModal(url, title) {
   lockScroll();
   document.getElementById('imgModalImg').src = url;
