@@ -991,10 +991,14 @@ function ldmOffsetFromToday() {
   const diff  = (new Date(_ldmDate) - new Date(today)) / 86400000;
   return Math.round(diff);
 }
+/* 2026-10-23 → 23OCT2026（航空常用格式） */
+function ldmFormatDate(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  return d + ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][+m - 1] + y;
+}
 function updateLdmDateLabel() {
   const offset = ldmOffsetFromToday();
-  const label  = offset === 0 ? 'Today' : offset === -1 ? 'Yesterday' : _ldmDate.slice(5).replace('-','/');
-  document.getElementById('ldmDateLabel').textContent = label;
+  document.getElementById('ldmDateLabel').textContent = ldmFormatDate(_ldmDate || ldmDateStr(0));
   document.getElementById('ldmNextBtn').disabled = offset >= 0;
 }
 function ldmPrevDay() {
