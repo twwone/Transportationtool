@@ -472,14 +472,15 @@ input::placeholder { color:#6f7276; }
 
 <script>
 const AC = {
-  A320: { holds: [
+  /* cargoHolds：貨物可選的艙位 */
+  A320: { cargoHolds: ['HOLD3'], holds: [
     { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:3402 },
     { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:2426 },
     { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2110 },
     { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:1497, nodist:true },
   ]},
   /* fillOrder：計算建議裝載時的填艙順序（沒設就照 holds 順序）；softPcs：優先只裝到這個件數；HOLD5 不分配，塞小件 */
-  A321: { fillOrder: ['HOLD3','HOLD4','HOLD2','HOLD1'], holds: [
+  A321: { fillOrder: ['HOLD3','HOLD4','HOLD2','HOLD1'], cargoHolds: ['HOLD2','HOLD3'], holds: [
     { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:50, maxKg:2202 },
     { id:'HOLD2', label:'HOLD 2', tag:'FWD',  badge:'',    maxPcs:90, softPcs:80, maxKg:3468 },
     { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:90, softPcs:80, maxKg:3587 },
@@ -631,9 +632,12 @@ function buildHoldOptions() {
   ['crew-hold','toolbox-hold','transit-hold','trash-hold','cargo-hold'].forEach(id => {
     const sel = document.getElementById(id);
     const cur = sel.value;
+    const opts = id === 'cargo-hold' && AC[curAc].cargoHolds
+      ? holds.filter(h => AC[curAc].cargoHolds.includes(h.id))
+      : holds;
     sel.innerHTML = '<option value="">— 艙位</option>' +
-      holds.map(h => `<option value="${h.id}">${h.label}</option>`).join('');
-    if (holds.find(h => h.id === cur)) sel.value = cur;
+      opts.map(h => `<option value="${h.id}">${h.label}</option>`).join('');
+    if (opts.find(h => h.id === cur)) sel.value = cur;
   });
 }
 
@@ -790,7 +794,8 @@ function renderResult() {
     const spKg    = round1(spItems.reduce((sum, x) => sum + x.s.kg, 0));
     const holdTotal = round1(kg + spKg);
     const overPcs = pcs > h.maxPcs && h.maxPcs > 0;
-    const overKg  = holdTotal > h.maxKg;
+    /* 貨物不設上限：超重判斷不算貨物重量 */
+    const overKg  = holdTotal - (sp.cargo.hold === h.id ? sp.cargo.kg : 0) > h.maxKg;
     const hasTransit = sp.transit.hold === h.id && sp.transit.pcs > 0;
 
     /* 特殊項目 tags */
