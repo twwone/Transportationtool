@@ -295,6 +295,22 @@ input::placeholder { color:#6f7276; }
 .kp-key.restore { font-size:1.35rem; color:#32507f; }
 .kp-key.done { grid-row:span 2; color:#32507f; font-size:0.92rem; }
 .kp-key.zero { grid-column:span 2; }
+
+/* ── COMPUTE 前檢查：欄位紅字紅框 + 警示框 ── */
+.si-error { color:var(--danger); font-size:0.68rem; font-weight:800; letter-spacing:0.03em; margin-top:6px; }
+.si-select.invalid, .si-field.invalid, .field.invalid { border-color:var(--danger) !important; box-shadow:0 0 0 1px var(--danger), inset 0 1px 2px rgba(0,0,0,0.5); }
+.chk-overlay { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; padding:20px; }
+.chk-overlay.open { display:flex; }
+.chk-box { width:100%; max-width:340px; background:var(--popup); border:1px solid #282c32; border-radius:8px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4); }
+.chk-title { padding:8px 12px; background:var(--title); border-bottom:1px solid #6a6e74; color:#4a4d51; font-size:0.8rem; font-weight:800; letter-spacing:0.05em; text-shadow:0 1px 0 rgba(255,255,255,0.8); display:flex; align-items:center; gap:7px; }
+.chk-title i { color:var(--danger); }
+.chk-list { margin:10px; padding:9px 11px; background:#000; border:1px solid #282c32; border-radius:4px; list-style:none; max-height:50vh; overflow:auto; }
+.chk-list li { color:#fff; font-size:0.78rem; line-height:1.5; padding:3px 0; border-bottom:1px dashed #333; }
+.chk-list li:last-child { border-bottom:none; }
+.chk-list b { color:var(--danger); font-weight:800; margin-right:4px; }
+.chk-btns { display:flex; gap:8px; padding:0 10px 10px; }
+.chk-btns button { flex:1; padding:11px 0; font-size:0.8rem; font-weight:800; letter-spacing:0.04em; border-radius:5px; cursor:pointer; background:var(--btn-white); border:1px solid var(--btn-white-edge); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,0.45), inset 0 1px 0 #fff; }
+.chk-btns .primary { color:var(--blue); }
 </style>
 </head>
 <body>
@@ -438,7 +454,7 @@ input::placeholder { color:#6f7276; }
   <!-- 清除 / 計算 -->
   <div class="btn-row">
     <button class="clear-btn" id="clearBtn" onclick="clearAll()">CLEAR</button>
-    <button class="calc-btn" onclick="calcDistribution()">COMPUTE<span class="btn-sub">Suggest distribution</span></button>
+    <button class="calc-btn" onclick="onComputeClick()">COMPUTE<span class="btn-sub">Suggest distribution</span></button>
   </div>
 
   <!-- 結果 -->
@@ -465,6 +481,18 @@ input::placeholder { color:#6f7276; }
     </div>
     <div class="img-modal-body"><img id="imgModalImg" src="" alt=""></div>
     <div class="img-modal-note">Tap outside to close</div>
+  </div>
+</div>
+
+<!-- COMPUTE 前檢查警示框 -->
+<div class="chk-overlay" id="chkOverlay">
+  <div class="chk-box" role="alertdialog" aria-labelledby="chkTitle">
+    <div class="chk-title" id="chkTitle"><i class="bi bi-exclamation-triangle-fill"></i> CHECK INPUT</div>
+    <ul class="chk-list" id="chkList"></ul>
+    <div class="chk-btns">
+      <button class="primary" onclick="chkFix()">FIX</button>
+      <button onclick="chkComputeAnyway()">COMPUTE ANYWAY</button>
+    </div>
   </div>
 </div>
 
@@ -955,6 +983,8 @@ function clearAll() {
   btn.textContent = 'CLEAR';
   btn.style.background = '';
   btn.style.color = '';
+  _chkActive = false;
+  chkClearMarks();
 }
 
 /* ── 圖片 Modal ── */
@@ -1364,6 +1394,67 @@ document.addEventListener('keydown', e => {
 });
 window.addEventListener('scroll', () => { if (_kp.key) kpPlace(); }, { passive: true });
 window.addEventListener('resize', () => { if (_kp.key) kpPlace(); });
+
+/* ── COMPUTE 前檢查：沒填好的項目跳警示框、欄位標紅字；不改 calcDistribution 本身 ── */
+const CHK_ITEMS = [
+  { key:'crew',    name:'CREW BAG',    need:'kg'  },
+  { key:'toolbox', name:'TOOLBOX',     need:'kg'  },
+  { key:'transit', name:'TRANSIT BAG', need:'pcs' },
+  { key:'trash',   name:'GARBAGE',     need:'kg'  },
+  { key:'cargo',   name:'CARGO',       need:'kg'  },
+];
+let _chkActive = false;   // 按過 COMPUTE 且有錯之後，改資料就即時更新紅字
+function chkCollect() {
+  const issues = [];
+  CHK_ITEMS.forEach(({ key, name, need }) => {
+    const hold = document.getElementById(key + '-hold').value;
+    const pcs = v(key + '-pcs'), kg = v(key + '-kg');
+    if ((pcs > 0 || kg > 0) && !hold) issues.push({ key, name, msg:'Select a hold', target: key + '-hold' });
+    else if (hold && need === 'kg' && !(kg > 0)) issues.push({ key, name, msg:'Enter KG', target: key + '-kg' });
+    else if (hold && need === 'pcs' && !(pcs > 0)) issues.push({ key, name, msg:'Enter PCS', target: key + '-pcs' });
+  });
+  if (!(v('totalPcs') > 0)) issues.push({ key:'bags', name:'DEPARTURE BAGS', msg:'Enter total PCS', target:'totalPcs' });
+  if (!(v('totalKg')  > 0)) issues.push({ key:'bags', name:'DEPARTURE BAGS', msg:'Enter total KG',  target:'totalKg' });
+  return issues;
+}
+function chkClearMarks() {
+  document.querySelectorAll('.si-error').forEach(e => e.remove());
+  document.querySelectorAll('.invalid').forEach(e => e.classList.remove('invalid'));
+}
+function chkMark(issues) {
+  chkClearMarks();
+  issues.forEach(it => {
+    const el = document.getElementById(it.target);
+    (el.closest('.si-field, .field') || el).classList.add('invalid');
+    const box = it.key === 'bags' ? el.closest('.card') : el.closest('.special-item');
+    let msg = box.querySelector(':scope > .si-error');
+    if (!msg) { msg = document.createElement('div'); msg.className = 'si-error'; box.appendChild(msg); }
+    msg.textContent = msg.textContent ? msg.textContent + ' · ' + it.msg : it.msg;
+  });
+}
+function onComputeClick() {
+  const issues = chkCollect();
+  if (!issues.length) { _chkActive = false; chkClearMarks(); calcDistribution(); return; }
+  _chkActive = true;
+  chkMark(issues);
+  document.getElementById('chkList').innerHTML = issues.map(it => `<li><b>${it.name}</b>${it.msg}</li>`).join('');
+  document.getElementById('chkOverlay').classList.add('open');
+}
+function chkFix() {
+  document.getElementById('chkOverlay').classList.remove('open');
+  const first = document.querySelector('.invalid');
+  if (first) first.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+function chkComputeAnyway() {
+  document.getElementById('chkOverlay').classList.remove('open');
+  calcDistribution();
+}
+['input','change'].forEach(t => document.addEventListener(t, () => {
+  if (!_chkActive) return;
+  const issues = chkCollect();
+  chkMark(issues);
+  if (!issues.length) _chkActive = false;
+}));
 
 /* 初始化 */
 buildHoldOptions();
