@@ -9,196 +9,207 @@
 <link rel="apple-touch-icon" href="/static/icon.svg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="交通助理">
-<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#e4e5e6">
 <style>
+/* ── FlySmart 風格：拉絲金屬灰底、深炭灰面板、ECAM 配色（青=輸入值、綠=計算結果、黃=重點、紅=超限）── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overscroll-behavior: none; }
-@keyframes pageIn { from { opacity:0; transform:translateY(14px) scale(0.988); } to { opacity:1; transform:translateY(0) scale(1); } }
-@keyframes cardIn { from { opacity:0; transform:translateY(14px) scale(0.97); }  to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes pageIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes cardIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 :root {
-  --bg:#fbfbfd; --card:#fff; --border:rgba(0,0,0,0.08); --divider:rgba(0,0,0,0.09);
-  --text:#1d1d1f; --sub:#86868b; --accent:#0071e3; --chip-bg:rgba(118,118,128,0.12);
-  --danger:#ff3b30; --ok:#34c759;
+  --metal:#8b8e91; --panel:#3a3b3d; --panel-edge:#232425; --inset:#262729; --row:#4b4c4e;
+  --text:#f2f2f2; --sub:#a9acaf; --ink:#3c3e40;
+  --cyan:#45c3f2; --green:#62e35b; --yellow:#f3d02f; --amber:#ffa53a; --danger:#ff4b3e;
+  --blue:#2b8fd3;
+  --strip:linear-gradient(180deg,#f6f6f6 0%,#dcdddd 55%,#cfd0d1 100%);
+  --btn:linear-gradient(180deg,#ffffff 0%,#e9eaea 50%,#d2d3d4 100%);
+  --num:"DIN Alternate","DIN Condensed","Avenir Next Condensed",-apple-system,"Helvetica Neue",sans-serif;
 }
-@media (prefers-color-scheme:dark) {
-  :root { --bg:#000; --card:#1c1c1e; --border:rgba(255,255,255,0.09); --divider:rgba(255,255,255,0.12); --text:#f5f5f7; --chip-bg:rgba(255,255,255,0.1); }
+html,body {
+  min-height:100%; color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang TC",sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  background-color:var(--metal);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.045) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.035) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg,#979a9d 0%,#86898c 100%);
+  background-attachment:fixed;
 }
-html,body { height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif; -webkit-tap-highlight-color:transparent; }
 /* backwards：動畫結束後不保留 transform，否則 body 會變成 fixed 元素的定位基準，圖片放大視窗會被鎖捲動帶出畫面 */
-body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) backwards; }
+body { animation:pageIn 0.32s cubic-bezier(0.22,1,0.36,1) backwards; }
+input, select, button { font-family:inherit; }
+input::placeholder { color:#6d7073; }
 
-.header { position:sticky; top:0; z-index:100; background:rgba(251,251,253,0.86); backdrop-filter:saturate(1.6) blur(22px); -webkit-backdrop-filter:saturate(1.6) blur(22px); padding:env(safe-area-inset-top,0px) 16px 0; border-bottom:1px solid var(--divider); }
-@media (prefers-color-scheme:dark) { .header { background:rgba(0,0,0,0.75); } }
-.header-row { display:flex; align-items:center; gap:10px; padding:14px 0 10px; }
-.back-btn { display:flex; align-items:center; gap:3px; background:none; border:none; color:var(--accent); font-size:1rem; font-weight:500; cursor:pointer; padding:4px 8px 4px 2px; border-radius:8px; text-decoration:none; transition:transform .15s,opacity .15s; }
-.back-btn:active { transform:scale(0.93); opacity:0.6; }
-.back-arrow { font-size:1.2rem; line-height:1; }
+/* 頂部工具列（淺灰漸層，同 FlySmart） */
+.header { position:sticky; top:0; z-index:100; background:var(--strip); padding:env(safe-area-inset-top,0px) 12px 0; border-bottom:1px solid #8f9193; box-shadow:0 1px 3px rgba(0,0,0,0.25); }
+.header-row { display:flex; align-items:center; gap:8px; padding:9px 0 8px; }
+.back-btn { display:flex; align-items:center; gap:2px; color:#4a4c4e; font-size:0.86rem; font-weight:700; text-decoration:none; padding:4px 9px 4px 6px; border:1px solid #9c9ea0; border-radius:5px; background:var(--btn); box-shadow:0 1px 0 rgba(255,255,255,0.8) inset; transition:transform .12s; }
+.back-btn:active { transform:scale(0.95); }
+.back-arrow { font-size:1.05rem; line-height:1; }
 .header-title { flex:1; text-align:center; }
-.header-title-zh { font-size:1rem; font-weight:700; letter-spacing:-0.02em; }
-.header-title-en { font-size:0.68rem; color:var(--sub); font-weight:590; letter-spacing:0.02em; }
-.sync-btn { background:none; border:none; color:var(--accent); font-size:1.15rem; cursor:pointer; padding:6px 8px; border-radius:8px; transition:transform .15s; -webkit-tap-highlight-color:transparent; width:56px; text-align:right; }
-.sync-btn:active { transform:scale(0.88); }
-.sync-sheet { padding:10px 16px 12px; border-top:1px solid var(--divider); }
-.sync-sheet-label { font-size:0.72rem; font-weight:700; color:var(--sub); margin-bottom:7px; }
+.header-title-zh { font-family:var(--num); font-size:1.02rem; font-weight:700; color:#55585b; letter-spacing:0.04em; }
+.header-title-en { font-size:0.64rem; color:#7b7e81; font-weight:600; margin-top:1px; }
+.sync-btn { width:auto; background:var(--btn); border:1px solid #9c9ea0; border-radius:5px; color:#4a4c4e; font-size:1rem; padding:4px 9px; cursor:pointer; box-shadow:0 1px 0 rgba(255,255,255,0.8) inset; transition:transform .12s; }
+.sync-btn:active { transform:scale(0.92); }
+.sync-sheet { padding:8px 0 10px; border-top:1px solid #b5b7b9; }
+.sync-sheet-label { font-size:0.7rem; font-weight:700; color:#5d6063; margin-bottom:6px; }
 .sync-sheet-row { display:flex; gap:6px; }
-.sync-input { flex:1; padding:9px 12px; font-size:0.92rem; font-weight:700; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); outline:none; font-family:inherit; -webkit-appearance:none; letter-spacing:0.05em; }
-.sync-input:focus { border-color:var(--accent); }
-@media (prefers-color-scheme:dark) { .sync-input { background:#2c2c2e; } }
-.sync-copy-btn { padding:9px 13px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--accent); font-size:0.9rem; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.sync-status { font-size:0.72rem; color:var(--sub); margin-top:6px; min-height:16px; }
-.content { max-width:480px; margin:0 auto; padding:20px 16px max(40px,env(safe-area-inset-bottom) + 24px); }
+.sync-input { flex:1; padding:8px 10px; font-family:var(--num); font-size:0.95rem; font-weight:700; letter-spacing:0.06em; border:1px solid #8f9193; border-radius:4px; background:#2b2c2e; color:var(--cyan); outline:none; -webkit-appearance:none; }
+.sync-copy-btn { padding:8px 12px; border:1px solid #9c9ea0; border-radius:4px; background:var(--btn); color:#4a4c4e; font-size:0.9rem; cursor:pointer; }
+.sync-status { font-size:0.7rem; color:#5d6063; margin-top:5px; min-height:15px; }
+
+.content { max-width:480px; margin:0 auto; padding:0 10px max(32px,env(safe-area-inset-bottom) + 20px); }
+
+/* 機型 tab（白色分段，選中藍色） */
+.seg { display:flex; margin:0 -10px 12px; border-bottom:1px solid #8f9193; background:var(--btn); }
+.seg-btn { flex:1; padding:9px 0; border:none; border-right:1px solid #a9abad; background:transparent; color:#4a4c4e; font-family:var(--num); font-size:0.95rem; font-weight:700; letter-spacing:0.05em; cursor:pointer; transition:background .15s,color .15s; }
+.seg-btn:last-child { border-right:none; }
+.seg-btn.active { background:linear-gradient(180deg,#5ab3ea 0%,#2b8fd3 100%); color:#fff; text-shadow:0 -1px 0 rgba(0,0,0,0.25); }
+
+/* 深炭灰面板 + 淺灰標題條 */
+.card, .weight-summary { background:var(--panel); border:1px solid var(--panel-edge); border-radius:7px; padding:0 11px 11px; margin-bottom:10px; overflow:hidden; box-shadow:0 1px 0 rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.06); animation:cardIn .36s cubic-bezier(.22,1,.36,1) both; }
+.card-title, .ws-title { display:flex; align-items:center; gap:8px; margin:0 -11px 6px; padding:6px 11px; background:var(--strip); border-bottom:1px solid #8f9193; color:#4a4c4e; font-size:0.74rem; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; }
+.ct-zh { font-size:0.68rem; font-weight:600; color:#7b7e81; letter-spacing:0; text-transform:none; }
+
+/* 一列一項：左標籤、右數值 */
+.row-label { font-size:0.78rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--text); }
+.row-zh { font-size:0.66rem; color:var(--sub); font-weight:500; margin-left:5px; letter-spacing:0; text-transform:none; }
 
 /* LDM 區塊 */
-.ldm-date-nav { display:flex; align-items:center; gap:6px; margin-left:auto; }
-.ldm-date-btn { background:none; border:none; color:var(--accent); font-size:1rem; cursor:pointer; padding:2px 6px; border-radius:6px; -webkit-tap-highlight-color:transparent; }
-.ldm-date-btn:disabled { color:var(--sub); pointer-events:none; }
-.ldm-date-label { font-size:0.78rem; font-weight:700; color:var(--sub); min-width:52px; text-align:center; }
-.ldm-loading { text-align:center; padding:12px 0; color:var(--sub); font-size:0.84rem; }
+.ldm-date-nav { display:flex; align-items:center; gap:4px; margin-left:auto; }
+.ldm-date-btn { background:var(--btn); border:1px solid #9c9ea0; border-radius:4px; color:var(--blue); font-size:0.8rem; cursor:pointer; padding:1px 7px; }
+.ldm-date-btn:disabled { color:#a5a7a9; pointer-events:none; }
+.ldm-date-label { font-family:var(--num); font-size:0.78rem; font-weight:700; color:#4a4c4e; min-width:44px; text-align:center; }
+.ldm-loading { text-align:center; padding:12px 0; color:var(--sub); font-size:0.8rem; }
 .ldm-spin { display:inline-block; animation:spin .7s linear infinite; }
-.ldm-flight-item {
-  display:flex; align-items:center; gap:10px; padding:10px 12px;
-  border-radius:12px; margin-bottom:7px; cursor:pointer;
-  border:1.5px solid var(--border); background:var(--bg);
-  transition:border-color .15s, background .15s;
-}
-.ldm-flight-item:active { background:rgba(0,113,227,0.05); }
-.ldm-flight-item.active { border-color:var(--accent); background:rgba(0,113,227,0.07); }
-@media (prefers-color-scheme:dark) { .ldm-flight-item { background:#2c2c2e; } .ldm-flight-item.active { background:rgba(0,113,227,0.18); } }
-.ldm-fl-code { width:30px; height:30px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:800; color:#fff; background:linear-gradient(135deg,#e0261f,#b91c1c); }
-.ldm-fl-code.ak,.ldm-fl-code.z2 { background:linear-gradient(135deg,#2997ff,#0071e3); }
+@keyframes spin { to { transform:rotate(360deg); } }
+.ldm-flight-item { display:flex; align-items:center; gap:10px; padding:8px 10px; margin-top:6px; border-radius:5px; cursor:pointer; background:var(--inset); border:1px solid #47494b; transition:border-color .15s, background .15s; }
+.ldm-flight-item:active { background:#2f3b42; }
+.ldm-flight-item.active { border-color:var(--cyan); background:#22333c; }
+.ldm-fl-code { width:28px; height:28px; border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--num); font-size:0.7rem; font-weight:700; color:#fff; background:linear-gradient(180deg,#e0362f,#a81b17); }
+.ldm-fl-code.ak,.ldm-fl-code.z2 { background:linear-gradient(180deg,#3aa3e6,#1c6fae); }
 .ldm-fl-info { flex:1; }
-.ldm-fl-no  { font-size:0.86rem; font-weight:800; }
-.ldm-fl-sub { font-size:0.7rem; color:var(--sub); margin-top:1px; }
-.ldm-no-flights { text-align:center; padding:12px 0; color:var(--sub); font-size:0.82rem; }
-/* LDM 內容 */
-.ldm-img { width:100%; border-radius:12px; display:block; margin-bottom:10px; cursor:pointer; }
-.ldm-text-block { font-size:0.8rem; color:var(--text); background:rgba(0,0,0,0.03); border-radius:10px; padding:10px 12px; margin-bottom:8px; white-space:pre-wrap; line-height:1.6; font-family:monospace; }
-@media (prefers-color-scheme:dark) { .ldm-text-block { background:rgba(255,255,255,0.06); } }
-/* LDM 自動辨識 */
-.ldm-parse { border:1.5px solid rgba(0,113,227,0.25); border-radius:14px; padding:12px; margin-bottom:12px; background:rgba(0,113,227,0.04); }
-.ldm-parse-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
-.ldm-parse-title { font-size:0.8rem; font-weight:800; }
-.ldm-parse-note { font-size:0.68rem; color:var(--sub); }
-.ldm-parse-row { padding:8px 0; border-top:1px solid var(--divider); }
+.ldm-fl-no  { font-family:var(--num); font-size:0.95rem; font-weight:700; color:var(--text); letter-spacing:0.03em; }
+.ldm-fl-sub { font-size:0.68rem; color:var(--sub); margin-top:1px; }
+.ldm-no-flights { text-align:center; padding:10px 0; color:var(--sub); font-size:0.8rem; }
+.ldm-img { width:100%; border-radius:4px; display:block; margin-bottom:8px; cursor:pointer; border:1px solid #555; }
+.ldm-text-block { font-family:Menlo,monospace; font-size:0.74rem; color:var(--text); background:#000; border:1px solid #555; border-radius:4px; padding:9px 10px; margin-bottom:8px; white-space:pre-wrap; line-height:1.55; }
+#ldmContent { margin-top:10px; }
+.ldm-parse { background:#000; border:1px solid #666; border-radius:4px; padding:10px; margin-bottom:10px; }
+.ldm-parse-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.ldm-parse-title { font-size:0.78rem; font-weight:800; color:var(--text); letter-spacing:0.03em; }
+.ldm-parse-note { font-family:var(--num); font-size:0.74rem; color:var(--yellow); }
+.ldm-parse-row { padding:7px 0; border-top:1px dashed #444; }
 .ldm-parse-row:first-of-type { border-top:none; }
-.ldm-parse-main { display:flex; justify-content:space-between; gap:8px; font-size:0.82rem; font-weight:700; }
+.ldm-parse-main { display:flex; justify-content:space-between; gap:8px; font-size:0.8rem; font-weight:700; color:var(--text); }
+.ldm-parse-main span:last-child { font-family:var(--num); color:var(--green); text-align:right; }
 .ldm-parse-main .warn { color:var(--danger); }
-.ldm-parse-quote { font-family:monospace; font-size:0.7rem; color:var(--sub); white-space:pre-wrap; margin-top:3px; line-height:1.45; }
-.ldm-parse-empty { font-size:0.8rem; color:var(--sub); line-height:1.5; }
-.ldm-apply-btn { width:100%; margin-top:10px; padding:11px; border:none; border-radius:12px; background:var(--accent); color:#fff; font-size:0.86rem; font-weight:700; font-family:inherit; cursor:pointer; transition:transform .12s; }
-.ldm-apply-btn:active { transform:scale(0.98); }
-.ldm-close-btn { width:100%; padding:10px; border:none; border-radius:12px; background:var(--chip-bg); color:var(--sub); font-size:0.84rem; font-weight:700; font-family:inherit; cursor:pointer; margin-top:4px; }
+.ldm-parse-quote { font-family:Menlo,monospace; font-size:0.66rem; color:var(--sub); white-space:pre-wrap; margin-top:3px; line-height:1.45; }
+.ldm-parse-empty { font-size:0.78rem; color:var(--sub); line-height:1.5; }
+
+/* 淺灰按鈕（FlySmart 的 CLEAR / COMPUTE / MODIFY） */
+.ldm-apply-btn, .ldm-close-btn, .calc-btn, .clear-btn {
+  border:1px solid #8f9193; border-radius:5px; background:var(--btn); color:#3e4043;
+  font-weight:800; letter-spacing:0.04em; cursor:pointer;
+  box-shadow:0 1px 0 rgba(255,255,255,0.85) inset, 0 1px 2px rgba(0,0,0,0.35);
+  transition:transform .12s, filter .12s;
+}
+.ldm-apply-btn:active, .ldm-close-btn:active, .calc-btn:active, .clear-btn:active { transform:scale(0.98); filter:brightness(0.92); }
+.ldm-apply-btn { width:100%; margin-top:10px; padding:10px; font-size:0.82rem; }
+.ldm-close-btn { width:100%; padding:8px; font-size:0.78rem; color:#5d6063; margin-top:2px; }
+.btn-row { display:flex; gap:8px; margin:4px 0 12px; }
+.clear-btn { flex:0 0 34%; padding:13px 0; font-size:0.86rem; }
+.calc-btn { flex:1; padding:13px 0; font-size:0.94rem; }
+.btn-sub { display:block; font-size:0.62rem; font-weight:600; color:#7b7e81; letter-spacing:0; margin-top:1px; }
+
 /* 圖片 Modal */
-.img-modal-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.88); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:16px; }
+.img-modal-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.82); display:none; align-items:center; justify-content:center; padding:14px; }
 .img-modal-overlay.open { display:flex; }
-.img-modal { background:#1c1c1e; border-radius:22px; width:100%; max-width:440px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); display:flex; flex-direction:column; max-height:90vh; }
-.img-modal-bar { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
-.img-modal-title { color:#f5f5f7; font-size:0.88rem; font-weight:700; }
-.img-modal-close { background:rgba(255,255,255,0.1); border:none; color:#f5f5f7; font-size:0.78rem; font-weight:700; padding:5px 12px; border-radius:8px; cursor:pointer; font-family:inherit; }
-.img-modal-body { flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; padding:12px; }
-.img-modal-body img { max-width:100%; border-radius:8px; display:block; }
-.img-modal-note { padding:8px 16px 12px; font-size:0.72rem; color:rgba(255,255,255,0.35); text-align:center; flex-shrink:0; }
-
-/* 機型 */
-.seg { display:flex; gap:4px; background:var(--chip-bg); border-radius:14px; padding:4px; margin-bottom:18px; animation:cardIn .4s cubic-bezier(.22,1,.36,1) both; }
-.seg-btn { flex:1; padding:10px 0; border:none; border-radius:10px; background:transparent; color:var(--sub); font-size:0.92rem; font-weight:700; font-family:inherit; cursor:pointer; transition:background .2s,color .2s,transform .12s; }
-.seg-btn.active { background:var(--card); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.1); }
-.seg-btn:active { transform:scale(0.96); }
-
-/* 卡片 */
-.card { background:var(--card); border:1px solid var(--border); border-radius:22px; padding:18px 16px; margin-bottom:14px; animation:cardIn .45s cubic-bezier(.22,1,.36,1) both; }
-.card-title { font-size:0.88rem; font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
-.card-title .bi { color:var(--accent); }
+.img-modal { background:var(--panel); border:1px solid var(--panel-edge); border-radius:7px; width:100%; max-width:440px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); display:flex; flex-direction:column; max-height:90vh; }
+.img-modal-bar { display:flex; align-items:center; justify-content:space-between; padding:7px 11px; background:var(--strip); border-bottom:1px solid #8f9193; flex-shrink:0; }
+.img-modal-title { color:#4a4c4e; font-size:0.8rem; font-weight:800; letter-spacing:0.04em; }
+.img-modal-close { background:var(--btn); border:1px solid #9c9ea0; color:#3e4043; font-size:0.76rem; font-weight:800; padding:4px 11px; border-radius:4px; cursor:pointer; }
+.img-modal-body { flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; padding:10px; }
+.img-modal-body img { max-width:100%; border-radius:3px; display:block; }
+.img-modal-note { padding:6px 12px 10px; font-size:0.68rem; color:var(--sub); text-align:center; flex-shrink:0; }
 
 /* 特殊項目 */
-.special-item { padding:11px 0; border-bottom:1px solid var(--divider); }
+.special-item { padding:9px 0; border-bottom:1px solid var(--row); }
 .special-item:last-child { border-bottom:none; padding-bottom:0; }
-.special-item:first-child { padding-top:0; }
-.si-top { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-.si-icon { font-size:1rem; flex-shrink:0; width:22px; text-align:center; }
-.si-label { flex:1; font-size:0.86rem; font-weight:600; }
-.si-hold-wrap { }
-.si-select { padding:7px 10px; font-size:0.82rem; font-weight:700; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); outline:none; font-family:inherit; -webkit-appearance:none; min-width:80px; }
-.si-select:focus { border-color:var(--accent); }
-.si-nums { display:flex; gap:6px; padding-left:32px; }
-.si-field { flex:1; }
-.si-field-label { font-size:0.62rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px; }
-.si-input { width:100%; padding:8px 10px; font-size:0.9rem; font-weight:700; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); outline:none; font-family:inherit; -webkit-appearance:none; text-align:center; }
-.si-input:focus { border-color:var(--accent); }
-@media (prefers-color-scheme:dark) { .si-select,.si-input { background:#2c2c2e; } }
-/* transit 特別標記 */
-.transit-note { font-size:0.68rem; color:var(--sub); background:rgba(255,149,0,0.1); border-radius:8px; padding:5px 9px; margin-top:6px; margin-left:32px; line-height:1.4; }
+.si-top { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+.si-label { flex:1; }
+.si-select {
+  padding:6px 26px 6px 10px; font-family:var(--num); font-size:0.9rem; font-weight:700; letter-spacing:0.03em;
+  border:1px solid #57595b; border-radius:4px; background-color:var(--inset); color:var(--cyan); outline:none; -webkit-appearance:none; appearance:none; min-width:94px; text-align:right;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='12' viewBox='0 0 8 12'%3E%3Cpath d='M1.5 1.5 6 6l-4.5 4.5' fill='none' stroke='%23f2f2f2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 9px center;
+}
+.si-select:focus { border-color:var(--cyan); }
+.si-nums { display:flex; gap:6px; }
+.si-field { flex:1; display:flex; align-items:center; gap:6px; background:var(--inset); border:1px solid #47494b; border-radius:4px; padding:0 9px; }
+.si-field:focus-within { border-color:var(--cyan); }
+.si-field-label { font-size:0.66rem; font-weight:800; color:var(--sub); letter-spacing:0.05em; flex-shrink:0; }
+.si-input { width:100%; min-width:0; padding:8px 0; font-family:var(--num); font-size:1.02rem; font-weight:700; border:none; background:transparent; color:var(--cyan); outline:none; -webkit-appearance:none; text-align:right; }
+.transit-note { font-size:0.66rem; color:var(--amber); margin-top:6px; line-height:1.4; }
 
 /* 出發行李 */
-.two-col { display:flex; gap:10px; }
-.field { flex:1; }
-.field label { display:block; font-size:0.68rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
-.field input { width:100%; padding:12px; font-size:1.1rem; font-weight:700; border:1.5px solid var(--border); border-radius:12px; background:var(--bg); color:var(--text); outline:none; font-family:inherit; -webkit-appearance:none; }
-.field input:focus { border-color:var(--accent); }
-@media (prefers-color-scheme:dark) { .field input { background:#2c2c2e; } }
-.avg-hint { margin-top:10px; font-size:0.8rem; color:var(--sub); background:rgba(0,113,227,0.07); border-radius:10px; padding:9px 11px; }
-.avg-hint b { color:var(--accent); }
+.two-col { display:flex; gap:6px; margin-top:4px; }
+.field { flex:1; display:flex; align-items:center; gap:6px; background:var(--inset); border:1px solid #47494b; border-radius:4px; padding:0 10px; }
+.field:focus-within { border-color:var(--cyan); }
+.field label { font-size:0.68rem; font-weight:800; color:var(--sub); letter-spacing:0.05em; flex-shrink:0; }
+.field input { width:100%; min-width:0; padding:10px 0; font-family:var(--num); font-size:1.25rem; font-weight:700; border:none; background:transparent; color:var(--yellow); outline:none; -webkit-appearance:none; text-align:right; }
+.avg-hint { margin-top:8px; font-size:0.74rem; color:var(--sub); }
+.avg-hint b { font-family:var(--num); font-size:0.9rem; color:var(--green); }
 
 /* 總重合計 */
-.weight-summary { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:14px 16px; margin-bottom:14px; animation:cardIn .45s cubic-bezier(.22,1,.36,1) .06s both; }
-.ws-title { font-size:0.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px; }
-.ws-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--divider); font-size:0.82rem; }
+.ws-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--row); font-size:0.78rem; }
 .ws-row:last-child { border-bottom:none; }
-.ws-row.total { font-size:0.95rem; font-weight:800; color:var(--accent); padding-top:9px; }
-.ws-label { color:var(--sub); }
-.ws-val   { font-weight:700; }
-.ws-row.total .ws-label { color:var(--accent); }
-
-/* 計算按鈕 */
-.calc-btn { width:100%; padding:15px; border:none; border-radius:16px; background:linear-gradient(135deg,#2997ff,#0071e3); color:#fff; font-size:0.96rem; font-weight:700; font-family:inherit; cursor:pointer; margin-bottom:14px; transition:transform .12s; }
-.calc-btn:active { transform:scale(0.98); }
+.ws-label { color:var(--sub); font-weight:600; }
+.ws-val { font-family:var(--num); font-size:0.95rem; font-weight:700; color:var(--text); }
+.ws-row.total { padding-top:8px; }
+.ws-row.total .ws-label { color:var(--text); font-weight:800; letter-spacing:0.04em; }
+.ws-row.total .ws-val { color:var(--green); font-size:1.15rem; }
 
 /* 剩餘 banner */
-.remain-banner { display:flex; justify-content:space-between; align-items:center; background:var(--card); border:1.5px solid rgba(0,113,227,0.2); border-radius:14px; padding:12px 14px; margin-bottom:12px; }
-.remain-banner.ok   { border-color:rgba(52,199,89,0.35); }
-.remain-banner.warn { border-color:rgba(255,59,48,0.35); }
-.remain-label { font-size:0.8rem; color:var(--sub); }
-.remain-label-sub { font-size:0.68rem; color:var(--sub); margin-top:2px; }
-.remain-val { font-size:1.05rem; font-weight:800; color:var(--accent); }
-.remain-val.ok   { color:var(--ok); }
+.remain-banner { display:flex; justify-content:space-between; align-items:center; background:var(--panel); border:1px solid var(--panel-edge); border-left:4px solid var(--cyan); border-radius:7px; padding:10px 12px; margin-bottom:10px; box-shadow:0 1px 0 rgba(255,255,255,0.22); }
+.remain-banner.ok   { border-left-color:var(--green); }
+.remain-banner.warn { border-left-color:var(--danger); }
+.remain-label { font-size:0.78rem; font-weight:700; color:var(--text); }
+.remain-label-sub { font-size:0.66rem; color:var(--sub); margin-top:2px; }
+.remain-val { font-family:var(--num); font-size:1.25rem; font-weight:700; color:var(--cyan); }
+.remain-val.ok   { color:var(--green); }
 .remain-val.warn { color:var(--danger); }
-.section-label { font-size:0.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.06em; margin:4px 0 10px 2px; }
+.section-label { font-size:0.72rem; font-weight:800; color:#2f3133; text-shadow:0 1px 0 rgba(255,255,255,0.35); letter-spacing:0.06em; text-transform:uppercase; margin:2px 0 8px 2px; }
 
 /* 貨艙卡 */
-.hold-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:14px; margin-bottom:10px; animation:cardIn .45s cubic-bezier(.22,1,.36,1) both; }
-.hold-card.fixed-transit { border-color:rgba(255,149,0,0.3); }
-.hold-top { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
-.hold-badge { font-size:0.72rem; font-weight:800; color:#fff; background:var(--accent); border-radius:8px; padding:3px 9px; flex-shrink:0; }
-.hold-badge.aft  { background:#5856d6; }
-.hold-badge.bulk { background:#c7c7cc; }
-.hold-tag { flex:1; font-size:0.82rem; font-weight:700; }
-.hold-max { font-size:0.68rem; color:var(--sub); }
-.hold-body { display:flex; gap:8px; align-items:flex-end; }
-.hold-input-wrap { flex:1; }
-.hold-input-label { font-size:0.65rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
-.hold-input { width:100%; padding:11px 12px; font-size:1.1rem; font-weight:800; border:2px solid rgba(0,113,227,0.3); border-radius:12px; background:rgba(0,113,227,0.05); color:var(--accent); outline:none; font-family:inherit; text-align:center; -webkit-appearance:none; }
-.hold-input.aft  { border-color:rgba(88,86,214,0.3); background:rgba(88,86,214,0.05); color:#5856d6; }
-.hold-input.err  { border-color:var(--danger); background:rgba(255,59,48,0.06); color:var(--danger); }
-.hold-input.off  { border-color:var(--border); background:transparent; color:var(--sub); pointer-events:none; }
-.hold-calc { flex:1; background:rgba(0,0,0,0.03); border-radius:12px; padding:11px 12px; text-align:center; }
-@media (prefers-color-scheme:dark) { .hold-calc { background:rgba(255,255,255,0.06); } }
-.hold-calc-kg  { font-size:1rem; font-weight:800; }
+.hold-card { background:var(--panel); border:1px solid var(--panel-edge); border-radius:7px; padding:0 11px 11px; margin-bottom:9px; overflow:hidden; box-shadow:0 1px 0 rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.06); animation:cardIn .36s cubic-bezier(.22,1,.36,1) both; }
+.hold-card.fixed-transit { border-color:var(--amber); }
+.hold-top { display:flex; align-items:center; gap:8px; margin:0 -11px 9px; padding:6px 11px; background:var(--strip); border-bottom:1px solid #8f9193; }
+.hold-badge { font-family:var(--num); font-size:0.82rem; font-weight:700; color:#fff; background:linear-gradient(180deg,#5ab3ea,#2b8fd3); border-radius:3px; padding:2px 8px; letter-spacing:0.04em; flex-shrink:0; }
+.hold-badge.aft  { background:linear-gradient(180deg,#6d7073,#4a4c4e); }
+.hold-badge.bulk { background:linear-gradient(180deg,#a3a5a7,#7b7e81); }
+.hold-tag { flex:1; font-size:0.74rem; font-weight:800; color:#4a4c4e; letter-spacing:0.06em; }
+.hold-max { font-size:0.66rem; color:#7b7e81; }
+.hold-body { display:flex; gap:8px; align-items:stretch; }
+.hold-input-wrap { flex:1; display:flex; flex-direction:column; }
+.hold-input-label { font-size:0.64rem; font-weight:800; color:var(--sub); letter-spacing:0.06em; margin-bottom:4px; }
+.hold-input { width:100%; flex:1; padding:10px; font-family:var(--num); font-size:1.4rem; font-weight:700; border:1px solid #57595b; border-radius:4px; background:var(--inset); color:var(--cyan); outline:none; text-align:center; -webkit-appearance:none; }
+.hold-input:focus { border-color:var(--cyan); }
+.hold-input.aft  { color:var(--cyan); }
+.hold-input.err  { border-color:var(--danger); color:var(--danger); background:#3a2524; }
+.hold-input.off  { color:var(--sub); pointer-events:none; }
+.hold-calc { flex:1; background:#000; border:1px solid #5f6163; border-radius:4px; padding:8px 10px; text-align:left; min-height:56px; }
+.hold-calc-kg  { font-family:var(--num); font-size:1.2rem; font-weight:700; color:var(--green); }
 .hold-calc-kg.zero { color:var(--sub); font-weight:500; font-size:0.88rem; }
-.hold-calc-sub { font-size:0.65rem; color:var(--sub); margin-top:2px; }
-.hold-calc-special { font-size:0.68rem; color:var(--sub); margin-top:5px; line-height:1.5; border-top:1px solid var(--divider); padding-top:5px; }
+.hold-calc-sub { font-family:Menlo,monospace; font-size:0.66rem; color:var(--text); margin-top:2px; }
+.hold-calc-special { font-family:Menlo,monospace; font-size:0.64rem; color:var(--sub); margin-top:5px; line-height:1.55; border-top:1px dashed #444; padding-top:5px; }
 .hold-bar-area { margin-top:9px; }
-.hold-bar-row { display:flex; align-items:center; gap:8px; }
-.hold-bar-bg { flex:1; height:5px; background:var(--chip-bg); border-radius:3px; overflow:hidden; }
-.hold-bar-fill { height:100%; border-radius:3px; transition:width .4s cubic-bezier(.22,1,.36,1); }
-.bar-fwd { background:linear-gradient(90deg,#2997ff,#0071e3); }
-.bar-aft { background:linear-gradient(90deg,#7b79f7,#5856d6); }
-.hold-bar-pct { font-size:0.68rem; font-weight:700; color:var(--sub); width:30px; text-align:right; flex-shrink:0; }
 .hold-extras { margin-top:8px; display:flex; gap:5px; flex-wrap:wrap; }
-.extra-tag { font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:5px; background:var(--chip-bg); color:var(--sub); }
-.extra-tag.transit { background:rgba(255,149,0,0.12); color:#b25000; }
+.extra-tag { font-size:0.64rem; font-weight:700; padding:2px 7px; border-radius:3px; background:var(--inset); border:1px solid #57595b; color:var(--cyan); }
+.extra-tag.transit { color:var(--amber); border-color:rgba(255,165,58,0.5); }
 </style>
 </head>
 <body>
@@ -207,8 +218,8 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) backwards; }
   <div class="header-row">
     <a class="back-btn" href="/"><span class="back-arrow">‹</span>返回</a>
     <div class="header-title">
-      <div class="header-title-zh"><i class="bi bi-boxes"></i> 貨艙裝載計算</div>
-      <div class="header-title-en">LOAD &amp; TRIM SHEET</div>
+      <div class="header-title-zh">LOAD &amp; TRIM</div>
+      <div class="header-title-en">貨艙裝載計算</div>
     </div>
     <button class="sync-btn" id="syncBtn" onclick="toggleSyncSheet()" title="同步設定">
       <i class="bi bi-arrow-repeat"></i>
@@ -236,7 +247,7 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) backwards; }
   <!-- 落地 LDM：選航班 + 顯示 Notion 內容 -->
   <div class="card" id="ldmCard" style="animation-delay:.01s">
     <div class="card-title">
-      <span><i class="bi bi-airplane-engines-fill"></i> 落地 LDM</span>
+      <span>ARRIVAL LDM <span class="ct-zh">落地</span></span>
       <div class="ldm-date-nav">
         <button class="ldm-date-btn" onclick="ldmPrevDay()"><i class="bi bi-chevron-left"></i></button>
         <span class="ldm-date-label" id="ldmDateLabel"></span>
@@ -253,44 +264,41 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) backwards; }
 
   <!-- 特殊項目 -->
   <div class="card" style="animation-delay:.02s">
-    <div class="card-title"><i class="bi bi-clipboard-data-fill"></i> 落地特殊項目</div>
+    <div class="card-title">SPECIAL LOAD <span class="ct-zh">落地特殊項目</span></div>
 
     <!-- 組員行李 -->
     <div class="special-item">
       <div class="si-top">
-        <div class="si-icon">👔</div>
-        <div class="si-label">組員行李 D</div>
-        <div class="si-hold-wrap"><select class="si-select" id="crew-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select></div>
+        <div class="si-label"><span class="row-label">CREW BAG</span><span class="row-zh">組員行李</span></div>
+        <select class="si-select" id="crew-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">件數</div><input class="si-input" type="number" inputmode="numeric" id="crew-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">重量 KG</div><input class="si-input" type="number" inputmode="decimal" id="crew-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="number" inputmode="numeric" id="crew-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="number" inputmode="decimal" id="crew-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
     <!-- Toolbox -->
     <div class="special-item">
       <div class="si-top">
-        <div class="si-icon">🔧</div>
-        <div class="si-label">Toolbox</div>
-        <div class="si-hold-wrap"><select class="si-select" id="toolbox-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select></div>
+        <div class="si-label"><span class="row-label">TOOLBOX</span><span class="row-zh">工具箱</span></div>
+        <select class="si-select" id="toolbox-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">件數</div><input class="si-input" type="number" inputmode="numeric" id="toolbox-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">重量 KG</div><input class="si-input" type="number" inputmode="decimal" id="toolbox-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="number" inputmode="numeric" id="toolbox-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="number" inputmode="decimal" id="toolbox-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
     <!-- 轉機行李 -->
     <div class="special-item">
       <div class="si-top">
-        <div class="si-icon">🔄</div>
-        <div class="si-label">轉機行李</div>
-        <div class="si-hold-wrap"><select class="si-select" id="transit-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select></div>
+        <div class="si-label"><span class="row-label">TRANSIT BAG</span><span class="row-zh">轉機行李</span></div>
+        <select class="si-select" id="transit-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">件數</div><input class="si-input" type="number" inputmode="numeric" id="transit-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">重量 KG</div><input class="si-input" type="number" inputmode="decimal" id="transit-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="number" inputmode="numeric" id="transit-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="number" inputmode="decimal" id="transit-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
       <div class="transit-note">件數與重量已含在出發行李總計內，僅記錄位置，不另外加總</div>
     </div>
@@ -298,13 +306,12 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) backwards; }
     <!-- 垃圾 -->
     <div class="special-item">
       <div class="si-top">
-        <div class="si-icon">🗑</div>
-        <div class="si-label">垃圾</div>
-        <div class="si-hold-wrap"><select class="si-select" id="trash-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select></div>
+        <div class="si-label"><span class="row-label">GARBAGE</span><span class="row-zh">垃圾</span></div>
+        <select class="si-select" id="trash-hold" onchange="onSpecialChange()"><option value="">— 艙位</option></select>
       </div>
       <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">件數</div><input class="si-input" type="number" inputmode="numeric" id="trash-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">重量 KG</div><input class="si-input" type="number" inputmode="decimal" id="trash-kg"  placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="number" inputmode="numeric" id="trash-pcs" placeholder="0" oninput="onSpecialChange()"></div>
+        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="number" inputmode="decimal" id="trash-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
     </div>
 
@@ -312,29 +319,29 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) backwards; }
 
   <!-- 出發行李（含轉機） -->
   <div class="card" style="animation-delay:.04s">
-    <div class="card-title"><i class="bi bi-luggage-fill"></i> 出發行李總計（含轉機）</div>
+    <div class="card-title">DEPARTURE BAGS <span class="ct-zh">出發行李總計（含轉機）</span></div>
     <div class="two-col">
-      <div class="field"><label>總件數 PCS</label><input type="number" inputmode="numeric" id="totalPcs" placeholder="0" oninput="onBagsInput()"></div>
-      <div class="field"><label>總重量 KG</label><input type="number" inputmode="decimal" id="totalKg"  placeholder="0" oninput="onBagsInput()"></div>
+      <div class="field"><label for="totalPcs">PCS</label><input type="number" inputmode="numeric" id="totalPcs" placeholder="0" oninput="onBagsInput()"></div>
+      <div class="field"><label for="totalKg">KG</label><input type="number" inputmode="decimal" id="totalKg"  placeholder="0" oninput="onBagsInput()"></div>
     </div>
     <div class="avg-hint" id="avgHint">請輸入總件數與總重量</div>
   </div>
 
   <!-- 總重合計 -->
   <div class="weight-summary" id="weightSummary" style="display:none">
-    <div class="ws-title">裝載總重合計</div>
+    <div class="ws-title">TOTAL LOAD <span class="ct-zh">裝載總重合計</span></div>
     <div class="ws-row"><span class="ws-label">出發行李（含轉機）</span><span class="ws-val" id="ws-bags">— KG</span></div>
-    <div class="ws-row" id="ws-crew-row"  style="display:none"><span class="ws-label">👔 組員行李</span><span class="ws-val" id="ws-crew">— KG</span></div>
-    <div class="ws-row" id="ws-toolbox-row" style="display:none"><span class="ws-label">🔧 Toolbox</span><span class="ws-val" id="ws-toolbox">— KG</span></div>
-    <div class="ws-row" id="ws-trash-row" style="display:none"><span class="ws-label">🗑 垃圾</span><span class="ws-val" id="ws-trash">— KG</span></div>
-    <div class="ws-row total"><span class="ws-label">總計</span><span class="ws-val" id="ws-total">— KG</span></div>
+    <div class="ws-row" id="ws-crew-row"  style="display:none"><span class="ws-label">組員行李</span><span class="ws-val" id="ws-crew">— KG</span></div>
+    <div class="ws-row" id="ws-toolbox-row" style="display:none"><span class="ws-label">Toolbox</span><span class="ws-val" id="ws-toolbox">— KG</span></div>
+    <div class="ws-row" id="ws-trash-row" style="display:none"><span class="ws-label">垃圾</span><span class="ws-val" id="ws-trash">— KG</span></div>
+    <div class="ws-row total"><span class="ws-label">TOTAL 總計</span><span class="ws-val" id="ws-total">— KG</span></div>
   </div>
 
-  <!-- 計算 -->
-  <button class="calc-btn" onclick="calcDistribution()">⚡ 計算建議裝載</button>
-
-  <!-- 清除按鈕 -->
-  <button id="clearBtn" onclick="clearAll()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--chip-bg);color:var(--sub);font-size:0.86rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:14px;transition:background .2s,color .2s,transform .12s;">🗑 清除所有資料</button>
+  <!-- 清除 / 計算 -->
+  <div class="btn-row">
+    <button class="clear-btn" id="clearBtn" onclick="clearAll()">CLEAR</button>
+    <button class="calc-btn" onclick="calcDistribution()">COMPUTE<span class="btn-sub">計算建議裝載</span></button>
+  </div>
 
   <!-- 結果 -->
   <div id="resultSection">
@@ -356,7 +363,7 @@ body { animation:pageIn 0.38s cubic-bezier(0.22,1,0.36,1) backwards; }
   <div class="img-modal">
     <div class="img-modal-bar">
       <div class="img-modal-title" id="imgModalTitle"></div>
-      <button class="img-modal-close" onclick="closeImgModal()">關閉</button>
+      <button class="img-modal-close" onclick="closeImgModal()">CLOSE</button>
     </div>
     <div class="img-modal-body"><img id="imgModalImg" src="" alt=""></div>
     <div class="img-modal-note">點空白處關閉</div>
@@ -659,10 +666,10 @@ function renderResult() {
 
     /* 特殊項目 tags */
     const tagItems = [
-      sp.crew.hold    === h.id && (sp.crew.pcs    > 0 || sp.crew.kg    > 0) ? `<span class="extra-tag">👔 組員行李 ${sp.crew.pcs||'—'}件 / ${sp.crew.kg||'—'} KG</span>` : '',
-      sp.toolbox.hold === h.id && (sp.toolbox.pcs > 0 || sp.toolbox.kg > 0) ? `<span class="extra-tag">🔧 Toolbox ${sp.toolbox.pcs||'—'}件 / ${sp.toolbox.kg||'—'} KG</span>` : '',
-      hasTransit ? `<span class="extra-tag transit">🔄 轉機行李 ${sp.transit.pcs}件${sp.transit.kg ? ' / '+sp.transit.kg+' KG' : ''}（固定）</span>` : '',
-      sp.trash.hold === h.id ? `<span class="extra-tag">🗑 垃圾${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+'件' : ''}${sp.trash.kg ? ' / '+sp.trash.kg+' KG' : ''}</span>` : '',
+      sp.crew.hold    === h.id && (sp.crew.pcs    > 0 || sp.crew.kg    > 0) ? `<span class="extra-tag">組員行李 ${sp.crew.pcs||'—'}件 / ${sp.crew.kg||'—'} KG</span>` : '',
+      sp.toolbox.hold === h.id && (sp.toolbox.pcs > 0 || sp.toolbox.kg > 0) ? `<span class="extra-tag">Toolbox ${sp.toolbox.pcs||'—'}件 / ${sp.toolbox.kg||'—'} KG</span>` : '',
+      hasTransit ? `<span class="extra-tag transit">轉機行李 ${sp.transit.pcs}件${sp.transit.kg ? ' / '+sp.transit.kg+' KG' : ''}（固定）</span>` : '',
+      sp.trash.hold === h.id ? `<span class="extra-tag">垃圾${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+'件' : ''}${sp.trash.kg ? ' / '+sp.trash.kg+' KG' : ''}</span>` : '',
     ].filter(Boolean).join('');
 
     const inputCls = (overPcs || overKg) ? 'err' : h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
@@ -729,12 +736,12 @@ function clearAll() {
   if (!_clearPending) {
     _clearPending = true;
     const btn = document.getElementById('clearBtn');
-    btn.textContent = '確定清除所有資料？';
+    btn.textContent = '確定清除？';
     btn.style.background = 'rgba(255,59,48,0.15)';
     btn.style.color = '#ff3b30';
     _clearTimer = setTimeout(() => {
       _clearPending = false;
-      btn.textContent = '🗑 清除所有資料';
+      btn.textContent = 'CLEAR';
       btn.style.background = '';
       btn.style.color = '';
     }, 3000);
@@ -760,7 +767,7 @@ function clearAll() {
   pushState();
 
   const btn = document.getElementById('clearBtn');
-  btn.textContent = '🗑 清除所有資料';
+  btn.textContent = 'CLEAR';
   btn.style.background = '';
   btn.style.color = '';
 }
