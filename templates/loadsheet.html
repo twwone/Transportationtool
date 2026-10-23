@@ -381,7 +381,7 @@ const AC = {
   /* fillOrder：計算建議裝載時的填艙順序（沒設就照 holds 順序）；softPcs：優先只裝到這個件數；HOLD5 不分配，塞小件 */
   A321: { fillOrder: ['HOLD3','HOLD4','HOLD2','HOLD1'], holds: [
     { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:50, maxKg:2202 },
-    { id:'HOLD2', label:'HOLD 2', tag:'AFT',  badge:'aft', maxPcs:90, softPcs:80, maxKg:3468 },
+    { id:'HOLD2', label:'HOLD 2', tag:'FWD',  badge:'',    maxPcs:90, softPcs:80, maxKg:3468 },
     { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:90, softPcs:80, maxKg:3587 },
     { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:50, maxKg:2083 },
     { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:800,  nodist:true },
