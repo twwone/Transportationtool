@@ -1028,14 +1028,7 @@ def loadsheet_app_legacy():
 #  貨艙裝載計算 - 智慧分配 API
 # ──────────────────────────────────────────────
 
-def _loadsheet_ac_type(flight_no: str) -> "str | None":
-    """從航班號前綴判斷機型：FD→A321，AK/Z2→A320"""
-    fn = (flight_no or "").upper()
-    if fn.startswith("FD"):
-        return "A321"
-    if fn.startswith("AK") or fn.startswith("Z2"):
-        return "A320"
-    return None
+_LOADSHEET_CODES = ("FD", "AK", "Z2")  # 有 A320/A321 艙位設定的機隊；機型改由 LDM 判斷
 
 
 @app.route("/api/loadsheet/flights")
@@ -1051,8 +1044,7 @@ def loadsheet_flights_api():
         return jsonify({"error": "Notion 資料暫時無法連線，請稍後再試", "retry": True}), 503
     result = []
     for f in flights:
-        ac_type = _loadsheet_ac_type(f.get("flight", ""))
-        if not ac_type:
+        if not (f.get("flight") or "").upper().startswith(_LOADSHEET_CODES):
             continue
         if not f.get("has_detail"):
             continue
@@ -1061,7 +1053,7 @@ def loadsheet_flights_api():
             "flight":    f.get("flight", ""),
             "sta":       f.get("sta", ""),
             "origin":    f.get("origin", ""),
-            "ac_type":   ac_type,
+            "reg":       f.get("acft_reg", ""),
             "cgo":       f.get("cgo", ""),
         })
     return jsonify({"flights": result, "date": date_str})
@@ -1090,8 +1082,38 @@ _LOADSHEET_PARSE_PROMPT = (
     '"crew":{"pcs":6,"kg":61,"hold":"HOLD5","quote":"CREW BAG: 6/61 KGS @ HOLD.5"},'
     '"toolbox":{"pcs":null,"kg":25,"hold":"HOLD5","quote":"TOOL BOX 25 KGS"},'
     '"transit":null,"trash":null}\n'
-    "ldm_found：內容裡有沒有 LDM 或裝載說明；onward：下一站機場代碼，沒有就空字串。"
+    "ldm_found：內容裡有沒有 LDM 或裝載說明；onward：下一站機場代碼，沒有就空字串。\n"
+    "另外請回傳 aircraft：LDM 開頭的航班行（格式「航班/日期.機號.座位配置.組員」，例如 'FD230/24.HSBBX.Y180.2/4'）"
+    "裡的機號 reg（去掉連字號）與座位總數 seats（Y180 → 180；C12Y168 → 180）；"
+    "若原文直接寫了 A320 或 A321（含 A320N、A321N、A21N）就填 type，沒寫就回 null，不要推算；quote 照抄那一行。"
+    "找不到就整個 aircraft 回 null。格式："
+    '"aircraft":{"reg":"HSBBX","seats":180,"type":null,"quote":"FD230/24.HSBBX.Y180.2/4"}'
 )
+
+
+def _loadsheet_clean_aircraft(raw) -> "dict | None":
+    """LDM 的機號與座位數 → 機型：原文寫明的優先，否則依座位數（A320 約 180～186 座，A321 230 座以上）。"""
+    if not isinstance(raw, dict):
+        return None
+    reg = _re.sub(r"[^A-Z0-9]", "", str(raw.get("reg") or "").upper())[:8]
+    try:
+        seats = int(float(raw.get("seats")))
+    except (TypeError, ValueError):
+        seats = None
+    t = str(raw.get("type") or "").upper()
+    if "321" in t or t == "A21N":
+        ac = "A321"
+    elif "320" in t or t == "A20N":
+        ac = "A320"
+    elif seats and seats >= 200:
+        ac = "A321"
+    elif seats and 150 <= seats < 200:
+        ac = "A320"
+    else:
+        ac = ""
+    if not (reg or ac):
+        return None
+    return {"reg": reg, "seats": seats, "type": ac, "quote": str(raw.get("quote") or "").strip()[:200]}
 
 _LOADSHEET_ITEMS = ("crew", "toolbox", "transit", "trash")
 
@@ -1122,7 +1144,7 @@ def _loadsheet_clean_item(raw) -> "dict | None":
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v7:{notion_id}"
+    cache_key = f"loadsheet:parse:v8:{notion_id}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and "ldm_found" in cached:
         return cached, None
@@ -1166,6 +1188,7 @@ def _loadsheet_parse(notion_id: str):
     result = {
         "ldm_found": bool(raw.get("ldm_found")),
         "onward":    str(raw.get("onward") or "").upper()[:3],
+        "aircraft":  _loadsheet_clean_aircraft(raw.get("aircraft")),
     }
     for key in _LOADSHEET_ITEMS:
         result[key] = _loadsheet_clean_item(raw.get(key))

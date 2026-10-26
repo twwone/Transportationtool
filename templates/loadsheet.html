@@ -153,7 +153,7 @@ input::placeholder { color:#6f7276; }
 .ldm-parse-row:first-of-type { border-top:none; }
 .ldm-parse-main { display:flex; justify-content:space-between; gap:8px; font-size:0.8rem; font-weight:700; color:var(--text); }
 .ldm-parse-main span:last-child { font-family:var(--num); color:var(--green); text-align:right; }
-.ldm-parse-main .warn { color:var(--danger); }
+.ldm-parse-main .warn, .ldm-parse-note .warn { color:var(--danger); }
 .ldm-parse-quote { font-family:Menlo,monospace; font-size:0.66rem; color:var(--sub); white-space:pre-wrap; margin-top:3px; line-height:1.45; }
 .ldm-parse-empty { font-size:0.78rem; color:var(--sub); line-height:1.5; }
 
@@ -689,6 +689,7 @@ document.getElementById('acSwitch').addEventListener('click', e => {
   btn.classList.add('active');
   curAc = btn.dataset.ac;
   buildHoldOptions();
+  if (_ldmParsed && !_ldmParsed.ac) renderLdmParse();  // LDM 看不出機型時，手動切換後重新檢查艙位
   if (document.getElementById('resultSection').style.display !== 'none') calcDistribution();
   saveState();
 });
@@ -1067,8 +1068,8 @@ function renderLdmFlights(flights) {
   el.innerHTML = flights.map(f => {
     const prefix = f.flight.slice(0,2).toLowerCase();
     const codeCls = (prefix==='ak'||prefix==='z2') ? prefix : '';
-    const sub = [f.origin ? f.origin+'→TPE' : '', f.sta ? 'ARR '+f.sta : ''].filter(Boolean).join(' · ');
-    return `<div class="ldm-flight-item" data-notion="${f.notion_id}" data-flight="${f.flight}" data-ac="${f.ac_type}" data-cgo="${f.cgo || ''}" onclick="selectLdmFlight(this)">
+    const sub = [f.origin ? f.origin+'→TPE' : '', f.sta ? 'ARR '+f.sta : '', f.reg ? escHtml(f.reg) : ''].filter(Boolean).join(' · ');
+    return `<div class="ldm-flight-item" data-notion="${f.notion_id}" data-flight="${f.flight}" data-cgo="${f.cgo || ''}" onclick="selectLdmFlight(this)">
       <div class="ldm-fl-code ${codeCls}">${f.flight.slice(0,2)}</div>
       <div class="ldm-fl-info">
         <div class="ldm-fl-no">${f.flight}</div>
@@ -1090,7 +1091,7 @@ async function selectLdmFlight(el) {
   const items   = document.getElementById('ldmItems');
   content.style.display = '';
   items.innerHTML = '<div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> Loading Notion data…</div>';
-  loadLdmParse(notionId, flight, el.dataset.ac);
+  loadLdmParse(notionId, flight);
 
   try {
     const res  = await fetch(`/api/asia-airlines/detail/${notionId}`);
@@ -1121,12 +1122,12 @@ const LDM_ITEMS = [
   { key:'transit', label:'Transit bag' },
   { key:'trash',   label:'Garbage'  },
 ];
-let _ldmParsed = null;   // { data, ac, flight }
+let _ldmParsed = null;   // { data, ac, flight }，ac 由 LDM 機號／座位數判斷，判斷不出來是空字串
 let _ldmParseSeq = 0;    // 快速切換航班時，丟掉舊的回應
 
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-async function loadLdmParse(notionId, flight, ac) {
+async function loadLdmParse(notionId, flight) {
   const box = document.getElementById('ldmParse');
   const seq = ++_ldmParseSeq;
   _ldmParsed = null;
@@ -1136,7 +1137,7 @@ async function loadLdmParse(notionId, flight, ac) {
     const data = await res.json();
     if (seq !== _ldmParseSeq) return;
     if (!res.ok) throw new Error(data.error || 'Recognition failed');
-    _ldmParsed = { data, ac, flight };
+    _ldmParsed = { data, ac: (data.aircraft && AC[data.aircraft.type]) ? data.aircraft.type : '', flight };
     renderLdmParse();
   } catch (e) {
     if (seq !== _ldmParseSeq) return;
@@ -1146,12 +1147,19 @@ async function loadLdmParse(notionId, flight, ac) {
 
 function renderLdmParse() {
   const box = document.getElementById('ldmParse');
-  const { data, ac, flight } = _ldmParsed;
+  const { data, ac: ldmAc, flight } = _ldmParsed;
+  const ac = ldmAc || curAc;   // LDM 看不出機型時，以目前選的機型檢查艙位
+  const acft = data.aircraft || {};
   const found = LDM_ITEMS.filter(it => data[it.key]);
+  const acNote = ldmAc
+    ? `${ldmAc}${acft.reg ? ' · ' + escHtml(acft.reg) : ''}${acft.seats ? ' · Y' + acft.seats : ''}`
+    : '<span class="warn">Type unknown</span>';
   const head = `<div class="ldm-parse-head">
       <span class="ldm-parse-title">AI LDM · ${escHtml(flight)}</span>
-      <span class="ldm-parse-note">${ac}${data.onward ? ' · onward ' + escHtml(data.onward) : ''}</span>
-    </div>`;
+      <span class="ldm-parse-note">${acNote}${data.onward ? ' · onward ' + escHtml(data.onward) : ''}</span>
+    </div>` + (data.ldm_found && !ldmAc
+      ? `<div class="ldm-parse-empty">Aircraft type not found in the LDM — select A320 / A321 above manually (holds checked against ${curAc}).</div>`
+      : '');
 
   if (!data.ldm_found) {
     box.innerHTML = head + '<div class="ldm-parse-empty">No LDM found in the attachments — it may not be uploaded yet. Check the images below.</div>';
@@ -1175,7 +1183,7 @@ function renderLdmParse() {
     </div>`;
   }).join('');
   box.innerHTML = head + rows +
-    `<button class="ldm-apply-btn" onclick="applyLdmParse()">Apply to Special Load (switch to ${ac}, replaces current items)</button>`;
+    `<button class="ldm-apply-btn" onclick="applyLdmParse()">Apply to Special Load (${ldmAc ? 'switch to ' + ldmAc + ', ' : ''}replaces current items)</button>`;
 }
 
 function applyLdmParse() {
