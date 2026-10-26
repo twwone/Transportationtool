@@ -34,3 +34,5 @@ python3 -m flask --app app run --port 5001
 ```
 
 部署於 Vercel（見 `vercel.json`）。
+
+`/loadsheet` 的樣式與程式拆在 `static/loadsheet.css`、`static/loadsheet.js`；模板用 `asset_ver()` 在網址後加內容雜湊（`?v=`），檔案一改網址就變，不會被 Service Worker 的舊快取卡住。

@@ -21,6 +21,20 @@ load_dotenv(".env.local", override=True)  # 本機 vercel dev 注入的 KV 環�
 
 app = Flask(__name__)
 
+
+_asset_ver_cache: dict = {}
+
+
+@app.context_processor
+def _inject_asset_ver():
+    """靜態檔網址帶內容雜湊（?v=），檔案一改網址就變，避開 sw.js 的 stale-while-revalidate 舊快取"""
+    def asset_ver(filename: str) -> str:
+        if app.debug or filename not in _asset_ver_cache:
+            with open(os.path.join(app.static_folder, filename), "rb") as f:
+                _asset_ver_cache[filename] = hashlib.md5(f.read()).hexdigest()[:8]
+        return _asset_ver_cache[filename]
+    return {"asset_ver": asset_ver}
+
 # ──────────────────────────────────────────────
 #  TDX API（桃園機場捷運即時資料）
 # ──────────────────────────────────────────────
