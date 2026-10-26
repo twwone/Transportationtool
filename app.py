@@ -1053,7 +1053,7 @@ def loadsheet_flights_api():
             "flight":    f.get("flight", ""),
             "sta":       f.get("sta", ""),
             "origin":    f.get("origin", ""),
-            "reg":       f.get("acft_reg", ""),
+            "reg":       (f.get("acft_reg") or "").strip(),
             "cgo":       f.get("cgo", ""),
         })
     return jsonify({"flights": result, "date": date_str})
@@ -1095,7 +1095,10 @@ def _loadsheet_clean_aircraft(raw) -> "dict | None":
     """LDM 的機號與座位數 → 機型：原文寫明的優先，否則依座位數（A320 約 180～186 座，A321 230 座以上）。"""
     if not isinstance(raw, dict):
         return None
-    reg = _re.sub(r"[^A-Z0-9]", "", str(raw.get("reg") or "").upper())[:8]
+    quote = str(raw.get("quote") or "").strip()[:200]
+    # 機號以航班行原文為準（Gemini 偶爾會把後面的字黏進 reg）
+    m = _re.match(r"^[A-Z0-9]+/\d+\.([A-Z0-9-]+)\.", quote.upper())
+    reg = _re.sub(r"[^A-Z0-9]", "", m.group(1) if m else str(raw.get("reg") or "").upper())[:8]
     try:
         seats = int(float(raw.get("seats")))
     except (TypeError, ValueError):
@@ -1113,7 +1116,7 @@ def _loadsheet_clean_aircraft(raw) -> "dict | None":
         ac = ""
     if not (reg or ac):
         return None
-    return {"reg": reg, "seats": seats, "type": ac, "quote": str(raw.get("quote") or "").strip()[:200]}
+    return {"reg": reg, "seats": seats, "type": ac, "quote": quote}
 
 _LOADSHEET_ITEMS = ("crew", "toolbox", "transit", "trash")
 
@@ -1144,7 +1147,7 @@ def _loadsheet_clean_item(raw) -> "dict | None":
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v8:{notion_id}"
+    cache_key = f"loadsheet:parse:v9:{notion_id}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and "ldm_found" in cached:
         return cached, None
