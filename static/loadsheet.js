@@ -136,8 +136,9 @@ function loadState() {
     }
     _cgo = data.cgo || null;
     applyCgo();
-    if (data.holdPcs && Object.keys(data.holdPcs).length) {
-      holdPcs = data.holdPcs;
+    /* 雲端是空的分配（另一台按了 CLEAR）也要蓋掉，不然會留著舊件數 */
+    holdPcs = data.holdPcs || {};
+    if (Object.keys(holdPcs).length) {
       document.getElementById('resultLabel').textContent = `Suggested distribution · ${curAc}`;
     }
     onBagsInput();
@@ -673,7 +674,8 @@ function renderLdmParse() {
 function applyLdmParse() {
   if (!_ldmParsed) return;
   const { data, ac } = _ldmParsed;
-  if (AC[ac] && ac !== curAc) {
+  const acChanged = AC[ac] && ac !== curAc;
+  if (acChanged) {
     curAc = ac;
     document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.ac === curAc));
     buildHoldOptions();
@@ -686,6 +688,8 @@ function applyLdmParse() {
     document.getElementById(`${key}-kg`).value   = d && d.kg  != null ? d.kg  : '';
   });
   onSpecialChange();
+  /* 換機型後舊的分配含有新機型沒有的艙位（例如 A321 HOLD2），要跟手動切換一樣重算 */
+  if (acChanged) calcDistribution();
   const btn = document.querySelector('.ldm-apply-btn');
   if (btn) btn.textContent = 'Applied — please check Special Load below';
 }
