@@ -1,4 +1,4 @@
-const CACHE = 'transport-v46';
+const CACHE = 'transport-v47';
 const PRECACHE = ['/', '/mrt', '/static/icon.svg', '/static/manifest.json', '/static/config.js'];
 
 self.addEventListener('install', e => {

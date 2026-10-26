@@ -1151,8 +1151,9 @@ function renderLdmParse() {
   const ac = ldmAc || curAc;   // LDM 看不出機型時，以目前選的機型檢查艙位
   const acft = data.aircraft || {};
   const found = LDM_ITEMS.filter(it => data[it.key]);
+  // 186 座是 A320neo、180 座是 A320，艙位設定相同，只差顯示
   const acNote = ldmAc
-    ? `${ldmAc}${acft.reg ? ' · ' + escHtml(acft.reg) : ''}${acft.seats ? ' · Y' + acft.seats : ''}`
+    ? `${ldmAc === 'A320' && acft.seats === 186 ? 'A320neo' : ldmAc}${acft.reg ? ' · ' + escHtml(acft.reg) : ''}${acft.seats ? ' · Y' + acft.seats : ''}`
     : '<span class="warn">Type unknown</span>';
   const head = `<div class="ldm-parse-head">
       <span class="ldm-parse-title">AI LDM · ${escHtml(flight)}</span>
