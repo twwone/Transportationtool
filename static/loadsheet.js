@@ -483,11 +483,88 @@ function openImgModal(url, title) {
   document.getElementById('imgModalImg').src = url;
   document.getElementById('imgModalTitle').textContent = title || '';
   document.getElementById('imgModalOverlay').classList.add('open');
+  zoomReset();  // 要在 open 之後：display:none 時外框量不到大小
 }
 function closeImgModal() {
   document.getElementById('imgModalOverlay').classList.remove('open');
   unlockScroll();
 }
+
+/* ── 圖片縮放拖曳：雙指／滾輪縮放、放大後拖曳、點兩下放大或還原 ──
+   手勢掛在外框不掛在圖片上，手指離開圖片範圍也不會斷；座標以外框中心為原點 */
+const ZOOM_MAX = 6, ZOOM_TAP = 2.5, ZOOM_TAP_MS = 300, ZOOM_TAP_MOVE = 10;
+const _zoomBox = document.getElementById('imgModalBody');
+const _zoomImg = document.getElementById('imgModalImg');
+const _zoomPts = new Map();
+let _zoom = { s:1, x:0, y:0 }, _zoomPinch = null, _zoomMoved = 0, _zoomLastTap = 0;
+
+function zoomApply() {
+  const b = _zoomBox.getBoundingClientRect();
+  const nw = _zoomImg.naturalWidth || b.width, nh = _zoomImg.naturalHeight || b.height;
+  const fit = Math.min(b.width / nw, b.height / nh);  // object-fit:contain 實際顯示大小
+  const limX = Math.max(0, (nw * fit * _zoom.s - b.width) / 2);
+  const limY = Math.max(0, (nh * fit * _zoom.s - b.height) / 2);
+  _zoom.x = Math.min(limX, Math.max(-limX, _zoom.x));
+  _zoom.y = Math.min(limY, Math.max(-limY, _zoom.y));
+  _zoomImg.style.transform = `translate(${_zoom.x}px, ${_zoom.y}px) scale(${_zoom.s})`;
+  _zoomBox.classList.toggle('zoomed', _zoom.s > 1);
+}
+function zoomReset() { _zoom = { s:1, x:0, y:0 }; _zoomPts.clear(); _zoomPinch = null; _zoomLastTap = 0; zoomApply(); }
+/* 以螢幕座標 (cx, cy) 為中心縮放，手指下的內容留在原位 */
+function zoomTo(s, cx, cy) {
+  const b = _zoomBox.getBoundingClientRect();
+  const px = cx - b.left - b.width / 2, py = cy - b.top - b.height / 2;
+  s = Math.min(ZOOM_MAX, Math.max(1, s));
+  const k = s / _zoom.s;
+  _zoom.x = px - (px - _zoom.x) * k;
+  _zoom.y = py - (py - _zoom.y) * k;
+  _zoom.s = s;
+  zoomApply();
+}
+function zoomPinchState() {
+  const [a, b] = [..._zoomPts.values()];
+  return { d:Math.hypot(a.x - b.x, a.y - b.y) || 1, x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 };
+}
+_zoomBox.addEventListener('pointerdown', e => {
+  _zoomBox.setPointerCapture(e.pointerId);
+  _zoomPts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  _zoomMoved = 0;
+  if (_zoomPts.size === 2) _zoomPinch = zoomPinchState();
+});
+_zoomBox.addEventListener('pointermove', e => {
+  const p = _zoomPts.get(e.pointerId);
+  if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  _zoomMoved += Math.hypot(dx, dy);
+  if (_zoomPts.size >= 2 && _zoomPinch) {
+    const n = zoomPinchState();
+    _zoom.x += n.x - _zoomPinch.x;
+    _zoom.y += n.y - _zoomPinch.y;
+    zoomTo(_zoom.s * n.d / _zoomPinch.d, n.x, n.y);
+    _zoomPinch = n;
+  } else if (_zoomPts.size === 1 && _zoom.s > 1) {
+    _zoom.x += dx; _zoom.y += dy;
+    zoomApply();
+  }
+});
+function zoomPointerEnd(e) {
+  if (!_zoomPts.delete(e.pointerId)) return;
+  if (_zoomPts.size < 2) _zoomPinch = null;
+  if (e.type !== 'pointerup' || _zoomPts.size || _zoomMoved > ZOOM_TAP_MOVE) return;
+  const now = Date.now();
+  if (now - _zoomLastTap < ZOOM_TAP_MS) {
+    zoomTo(_zoom.s > 1 ? 1 : ZOOM_TAP, e.clientX, e.clientY);
+    _zoomLastTap = 0;
+  } else _zoomLastTap = now;
+}
+_zoomBox.addEventListener('pointerup', zoomPointerEnd);
+_zoomBox.addEventListener('pointercancel', zoomPointerEnd);
+_zoomBox.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoomTo(_zoom.s * Math.exp(-e.deltaY * 0.002), e.clientX, e.clientY);
+}, { passive:false });
+_zoomImg.addEventListener('load', zoomApply);
 
 /* ── 落地 LDM ── */
 let _ldmDate = '';  // 空字串 = 今天

@@ -158,12 +158,14 @@ input::placeholder { color:#6f7276; }
 /* 圖片 Modal（popWindowMainBg） */
 .img-modal-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; padding:14px; }
 .img-modal-overlay.open { display:flex; }
-.img-modal { background:var(--popup); border:1px solid #282c32; border-radius:7px; width:100%; max-width:440px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4); display:flex; flex-direction:column; max-height:90vh; }
+.img-modal { background:var(--popup); border:1px solid #282c32; border-radius:7px; width:100%; max-width:440px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4); display:flex; flex-direction:column; height:90vh; }
 .img-modal-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 11px; flex-shrink:0; }
 .img-modal-title { color:#fff; font-size:0.82rem; font-weight:800; letter-spacing:0.04em; text-shadow:0 -1px 0 rgba(0,0,0,0.4); }
 .img-modal-close { font-size:0.76rem; padding:4px 12px; }
-.img-modal-body { flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; margin:0 8px; padding:8px; background:#000; border:1px solid #282c32; border-radius:3px; }
-.img-modal-body img { max-width:100%; display:block; }
+.img-modal-body { flex:1; min-height:0; position:relative; overflow:hidden; margin:0 8px; background:#000; border:1px solid #282c32; border-radius:3px; touch-action:none; cursor:zoom-in; -webkit-user-select:none; user-select:none; }
+.img-modal-body.zoomed { cursor:grab; }
+.img-modal-body.zoomed:active { cursor:grabbing; }
+.img-modal-body img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; }
 .img-modal-note { padding:6px 12px 9px; font-size:0.68rem; color:#e6e8ea; text-align:center; flex-shrink:0; }
 
 /* 特殊項目：一列一項，列間深線 + 淡亮線（listFieldBgMiddle） */
