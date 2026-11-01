@@ -41,6 +41,8 @@ const SYNCID_KEY  = 'loadsheet_syncid';
 let curAc   = 'A320';
 let holdPcs = {};
 let _syncDebounce = null;
+let _pulling = false;   // 拉雲端期間不回推，本機舊資料才不會蓋掉雲端
+let _distSig = '';      // 上次分配時的轉機艙位與件數
 
 /* ── 同步碼 ── */
 function getSyncId() { return localStorage.getItem(SYNCID_KEY) || ''; }
@@ -73,10 +75,10 @@ function setSyncStatus(msg) {
   setTimeout(() => { if (document.getElementById('syncStatus').textContent === msg) document.getElementById('syncStatus').textContent = ''; }, 3000);
 }
 
-async function pushState() {
+async function pushState(override) {
   const id = getSyncId();
   if (!id) return;
-  const payload = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+  const payload = override || JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
   try {
     await fetch(`/api/loadsheet/state/${id}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
   } catch(e) {}
@@ -85,10 +87,16 @@ async function pushState() {
 async function pullState() {
   const id = getSyncId();
   if (!id) return;
+  _pulling = true;
   try {
     const res = await fetch(`/api/loadsheet/state/${id}`);
     const data = await res.json();
-    if (data && (data.fields || data.holdPcs)) {
+    if (data && data.cleared) {
+      /* 另一台按了 CLEAR：這台也清掉，不能把本機舊資料推回去 */
+      resetForm();
+      localStorage.removeItem(STORE_KEY);
+      setSyncStatus('Synced');
+    } else if (data && (data.fields || data.holdPcs)) {
       localStorage.setItem(STORE_KEY, JSON.stringify(data));
       loadState();
       setSyncStatus('Synced');
@@ -98,9 +106,11 @@ async function pullState() {
       setSyncStatus('No cloud data yet');
     }
   } catch(e) { setSyncStatus('Sync failed'); }
+  _pulling = false;
 }
 
 function schedulePush() {
+  if (_pulling) return;
   clearTimeout(_syncDebounce);
   _syncDebounce = setTimeout(pushState, 1500);
 }
@@ -138,6 +148,7 @@ function loadState() {
     applyCgo();
     /* 雲端是空的分配（另一台按了 CLEAR）也要蓋掉，不然會留著舊件數 */
     holdPcs = data.holdPcs || {};
+    _distSig = transitSig();
     if (Object.keys(holdPcs).length) {
       document.getElementById('resultLabel').textContent = `Suggested distribution · ${curAc}`;
     }
@@ -176,6 +187,7 @@ document.getElementById('acSwitch').addEventListener('click', e => {
   if (_ldmParsed && !_ldmParsed.ac) renderLdmParse();  // LDM 看不出機型時，手動切換後重新檢查艙位
   if (document.getElementById('resultSection').style.display !== 'none') calcDistribution();
   saveState();
+  chkHoldsAfterAcChange();
 });
 
 function buildHoldOptions() {
@@ -246,7 +258,13 @@ function onBagsInput() {
   saveState();
 }
 
+/* 只有轉機艙位／件數會改變分配；其他特殊項目只影響重量，不重算才保留手動改過的件數 */
+function transitSig() {
+  return document.getElementById('transit-hold').value + '|' + v('transit-pcs');
+}
+
 function onSpecialChange() {
+  if (Object.keys(holdPcs).length && transitSig() !== _distSig) calcDistribution();
   updateWeightSummary();
   renderResult();
   saveState();
@@ -260,6 +278,7 @@ function calcDistribution() {
   const sp      = getSpecials();
   const holds   = AC[curAc].holds;
   holdPcs       = {};
+  _distSig      = transitSig();
 
   // 1. 轉機行李先固定放好（位置不動）
   if (sp.transit.hold && sp.transit.pcs > 0) {
@@ -269,7 +288,7 @@ function calcDistribution() {
   // 2. 剩下的出發行李依優先順序填（不含 nodist，排除已被轉機固定的件數）
   // 轉機件數已含在 totalPcs 內，只有在艙位+件數都填好時才從 remaining 扣除
   const transitFixed = sp.transit.hold && sp.transit.pcs > 0 ? sp.transit.pcs : 0;
-  let remaining = totalPcs - transitFixed;
+  let remaining = Math.max(0, totalPcs - transitFixed);  // 轉機比總件數多時不能分配負數，差額由 banner 顯示
   const fillOrder = AC[curAc].fillOrder;
   const fillHolds = fillOrder
     ? fillOrder.map(id => holds.find(h => h.id === id))
@@ -444,7 +463,19 @@ function clearAll() {
   }
   clearTimeout(_clearTimer);
   _clearPending = false;
+  resetForm();
+  localStorage.removeItem(STORE_KEY);
+  /* 雲端也清空，留下標記讓其他裝置知道要跟著清，避免重新整理又被拉回舊資料 */
+  clearTimeout(_syncDebounce);
+  pushState({ cleared: true });
 
+  const btn = document.getElementById('clearBtn');
+  btn.textContent = 'CLEAR';
+  btn.style.background = '';
+  btn.style.color = '';
+}
+
+function resetForm() {
   /* 清除所有欄位 */
   ['crew-hold','crew-pcs','crew-kg','toolbox-hold','toolbox-pcs','toolbox-kg',
    'transit-hold','transit-pcs','transit-kg','trash-hold','trash-pcs','trash-kg',
@@ -458,16 +489,8 @@ function clearAll() {
   applyCgo();
   document.getElementById('avgHint').textContent = 'Enter total pieces and weight';
   document.getElementById('weightSummary').style.display = 'none';
-  localStorage.removeItem(STORE_KEY);
-  renderResult();
-  /* 雲端也清空，避免重新整理又被拉回舊資料 */
   clearTimeout(_syncDebounce);
-  pushState();
-
-  const btn = document.getElementById('clearBtn');
-  btn.textContent = 'CLEAR';
-  btn.style.background = '';
-  btn.style.color = '';
+  renderResult();
   _chkActive = false;
   chkClearMarks();
 }
@@ -568,6 +591,11 @@ _zoomImg.addEventListener('load', zoomApply);
 
 /* ── 落地 LDM ── */
 let _ldmDate = '';  // 空字串 = 今天
+let _ldmDetailSeq = 0;      // 快速切換航班時，丟掉舊的附件回應
+let _ldmActiveId = '';      // 背景刷新清單後，把選中的航班標回去
+let _ldmLoadedAt = 0;
+let _ldmLoadedDate = '';
+const LDM_REFRESH_MS = 5 * 60 * 1000;
 
 /* 日期一律用台灣時間（跟後端 _asiaair_today 一致），不用 toISOString 的 UTC 日期 */
 function ldmShiftDate(dateStr, days) {
@@ -607,18 +635,28 @@ function ldmNextDay() {
   loadLdmFlights();
 }
 
-async function loadLdmFlights() {
+async function loadLdmFlights(silent) {
   updateLdmDateLabel();
-  document.getElementById('ldmFlightList').innerHTML = '<div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> Loading flights…</div>';
+  if (!silent) document.getElementById('ldmFlightList').innerHTML = '<div class="ldm-loading"><i class="bi bi-arrow-clockwise ldm-spin"></i> Loading flights…</div>';
+  _ldmLoadedAt = Date.now();
+  _ldmLoadedDate = ldmDateStr(0);
   try {
     const url  = _ldmDate ? `/api/loadsheet/flights?date=${_ldmDate}` : '/api/loadsheet/flights';
     const res  = await fetch(url);
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load flights');
     renderLdmFlights(data.flights || []);
   } catch(e) {
-    document.getElementById('ldmFlightList').innerHTML = '<div class="ldm-no-flights">Failed to load flights</div>';
+    /* 背景刷新失敗就留著原本的清單；抓不到不能顯示成「沒有航班」 */
+    if (!silent) document.getElementById('ldmFlightList').innerHTML = '<div class="ldm-no-flights">Failed to load flights — Notion may be down. Reopen to retry.</div>';
   }
 }
+
+/* 主畫面 App 從背景切回來不會重載：跨日或放久了就刷新清單 */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (ldmDateStr(0) !== _ldmLoadedDate || Date.now() - _ldmLoadedAt > LDM_REFRESH_MS) loadLdmFlights(true);
+});
 
 function renderLdmFlights(flights) {
   const el = document.getElementById('ldmFlightList');
@@ -630,7 +668,7 @@ function renderLdmFlights(flights) {
     const prefix = f.flight.slice(0,2).toLowerCase();
     const codeCls = ['fd','ak','z2'].includes(prefix) ? prefix : '';
     const sub = [f.origin ? f.origin+'→TPE' : '', f.sta ? 'ARR '+f.sta : '', f.reg ? escHtml(f.reg) : ''].filter(Boolean).join(' · ');
-    return `<div class="ldm-flight-item" data-notion="${f.notion_id}" data-flight="${f.flight}" data-cgo="${f.cgo || ''}" onclick="selectLdmFlight(this)">
+    return `<div class="ldm-flight-item${f.notion_id === _ldmActiveId ? ' active' : ''}" data-notion="${f.notion_id}" data-flight="${f.flight}" data-cgo="${f.cgo || ''}" onclick="selectLdmFlight(this)">
       <div class="ldm-fl-code ${codeCls}">${f.flight.slice(0,2)}</div>
       <div class="ldm-fl-info">
         <div class="ldm-fl-no">${f.flight}</div>
@@ -646,6 +684,8 @@ async function selectLdmFlight(el) {
   el.classList.add('active');
   const notionId = el.dataset.notion;
   const flight   = el.dataset.flight;
+  const seq      = ++_ldmDetailSeq;
+  _ldmActiveId   = notionId;
   setCgoFromFlight(flight, el.dataset.cgo);
 
   const content = document.getElementById('ldmContent');
@@ -657,6 +697,8 @@ async function selectLdmFlight(el) {
   try {
     const res  = await fetch(`/api/asia-airlines/detail/${notionId}`);
     const data = await res.json();
+    if (seq !== _ldmDetailSeq) return;
+    if (!res.ok) throw new Error(data.error || 'Failed to load');
     const list = data.items || [];
     if (!list.length) {
       items.innerHTML = '<div class="ldm-no-flights">No content on the Notion page for this flight</div>';
@@ -672,6 +714,7 @@ async function selectLdmFlight(el) {
       return '';
     }).join('');
   } catch(e) {
+    if (seq !== _ldmDetailSeq) return;
     items.innerHTML = '<div class="ldm-no-flights">Failed to load, please try again later</div>';
   }
 }
@@ -728,7 +771,9 @@ function renderLdmParse() {
     return;
   }
   if (!found.length) {
-    box.innerHTML = head + '<div class="ldm-parse-empty">No onward load in the LDM (TPE may be the final stop).</div>';
+    /* 沒有續程項目也要能一鍵清掉上一班留下的特殊項目 */
+    box.innerHTML = head + '<div class="ldm-parse-empty">No onward load in the LDM (TPE may be the final stop).</div>' +
+      `<button class="ldm-apply-btn" onclick="applyLdmParse()">Clear Crew / Toolbox / Transit / Garbage${ldmAc ? ' (switch to ' + ldmAc + ')' : ''}</button>`;
     return;
   }
   const validHolds = AC[ac] ? AC[ac].holds.map(h => h.id) : [];
@@ -766,13 +811,15 @@ function applyLdmParse() {
   });
   onSpecialChange();
   /* 換機型後舊的分配含有新機型沒有的艙位（例如 A321 HOLD2），要跟手動切換一樣重算 */
-  if (acChanged) calcDistribution();
+  if (acChanged) { calcDistribution(); chkHoldsAfterAcChange(); }
   const btn = document.querySelector('.ldm-apply-btn');
   if (btn) btn.textContent = 'Applied — please check Special Load below';
 }
 
 function closeLdm() {
   _ldmParseSeq++;
+  _ldmDetailSeq++;
+  _ldmActiveId = '';
   _ldmParsed = null;
   document.getElementById('ldmContent').style.display = 'none';
   document.querySelectorAll('.ldm-flight-item').forEach(x => x.classList.remove('active'));
@@ -990,6 +1037,13 @@ function chkCollect() {
   if (!(v('totalKg')  > 0)) issues.push({ key:'bags', name:'DEPARTURE BAGS', msg:'Enter total KG',  target:'totalKg' });
   return issues;
 }
+/* 換機型時新機型沒有的艙位會被清掉，重量卻還在總重裡：直接標紅提醒重選 */
+function chkHoldsAfterAcChange() {
+  const issues = chkCollect();
+  if (!issues.some(it => it.msg === 'Select a hold')) return;
+  _chkActive = true;
+  chkMark(issues);
+}
 function chkClearMarks() {
   document.querySelectorAll('.si-error').forEach(e => e.remove());
   document.querySelectorAll('.invalid').forEach(e => e.classList.remove('invalid'));
@@ -1036,5 +1090,6 @@ loadLdmFlights();
 const _initSyncId = getSyncId() || genSyncId();
 setSyncId(_initSyncId);
 /* 先顯示本機資料，雲端有資料再覆蓋；雲端沒有或連不上就維持本機 */
+_pulling = true;
 loadState();
 pullState();

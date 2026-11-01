@@ -96,13 +96,13 @@ body {
 .cat-thsr,
 .cat-mrt,
 .cat-tg,
-.cat-diet,
+.cat-ai,
 .cat-wx   { background: linear-gradient(135deg,#2997ff,#0071e3); }
 @media (prefers-color-scheme: dark) {
   .cat-thsr,
   .cat-mrt,
   .cat-tg,
-  .cat-diet,
+  .cat-ai,
   .cat-wx { background: linear-gradient(135deg,#4db3ff,#2997ff); }
 }
 .sec-card {
@@ -300,16 +300,9 @@ body {
     </div>
   </div>
 
-  <!-- 熱量追蹤 -->
-  <div class="sec-label"><span class="cat-chip cat-diet"><i class="bi bi-egg-fried"></i></span> 熱量追蹤</div>
+  <!-- 即時翻譯 -->
+  <div class="sec-label"><span class="cat-chip cat-ai"><i class="bi bi-translate"></i></span> 即時翻譯</div>
   <div class="sec-card">
-    <div class="s-row">
-      <span class="s-label">每日目標</span>
-      <div class="s-val">
-        <input id="dietLimit" class="s-input" type="number" min="500" max="9999" placeholder="2500">
-      </div>
-      <span class="s-suffix">kcal</span>
-    </div>
     <div class="s-row">
       <span class="s-label">Gemini Key</span>
       <div class="s-val">
@@ -386,9 +379,8 @@ function loadProfile(id) {
   document.getElementById('tgToken').value  = tg.token  || '';
   document.getElementById('tgChatId').value = tg.chatId || '';
 
-  // Diet（全域 key，非 per-profile，顯示目前裝置值）
+  // 翻譯用 Gemini Key（全域 key，非 per-profile，顯示目前裝置值）；沿用舊的儲存名稱，已存的金鑰才不會不見
   const ds = _safeJson('dietSettings', {});
-  document.getElementById('dietLimit').value  = ds.dailyLimit  || 2500;
   document.getElementById('geminiKey').value  = ds.geminiKey   || '';
 
   // Weather favorites
@@ -425,9 +417,8 @@ function saveAll() {
     },
   });
 
-  // Diet（全域）
+  // 翻譯用 Gemini Key（全域）
   const ds = _safeJson('dietSettings', {});
-  ds.dailyLimit = parseInt(document.getElementById('dietLimit').value) || 2500;
   ds.geminiKey  = document.getElementById('geminiKey').value.trim();
   localStorage.setItem('dietSettings', JSON.stringify(ds));
 

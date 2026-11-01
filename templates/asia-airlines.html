@@ -436,19 +436,9 @@ const STATUS_MAP = {
   'Not started':  { cls: 'st-wait',  label: '未開始' },
 };
 
-function getSyncId() {
-  let id = localStorage.getItem('asiaairSyncId');
-  if (!id) {
-    id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-          const r = Math.random() * 16 | 0;
-          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
-    localStorage.setItem('asiaairSyncId', id);
-  }
-  return id;
-}
+/* 固定同步碼：跟班表一樣繞過帳號系統，所有裝置看到同一份釘選 */
+const PIN_SYNC_ID = 'asiaair_default_v1';
+function getSyncId() { return PIN_SYNC_ID; }
 
 let _flights   = [];
 let _pinned    = new Set();
@@ -457,6 +447,8 @@ let _viewDate  = null;   // null = 今天（由伺服器判斷），否則是 YY
 let _isToday   = true;
 let _prevGates   = {};   // flight -> 上一次刷新的登機門
 let _gateChanges = {};   // flight -> { from, to }，只在偵測到變更那次刷新有效
+let _pinSaves    = 0;    // 釘選寫入中不拉雲端，免得舊資料蓋掉剛按的
+let _detailSeq   = 0;    // 開別班或關閉後，丟掉舊的附件與摘要回應
 
 function _fmtDayLabel(dateStr, isToday) {
   if (!dateStr) return '';
@@ -484,6 +476,7 @@ async function loadPins() {
 }
 
 async function savePins() {
+  _pinSaves++;
   try {
     await fetch('/api/asia-airlines/pins', {
       method: 'POST',
@@ -491,6 +484,7 @@ async function savePins() {
       body: JSON.stringify({ sync_id: getSyncId(), flights: [..._pinned] }),
     });
   } catch {}
+  _pinSaves--;
 }
 
 function togglePin(flightNo) {
@@ -607,6 +601,7 @@ function renderNeeds(f) {
 }
 
 async function openDetail(flightNo, notionId) {
+  const seq = ++_detailSeq;
   lockBodyScroll();
   const overlay = document.getElementById('detailOverlay');
   const body    = document.getElementById('detailBody');
@@ -628,6 +623,7 @@ async function openDetail(flightNo, notionId) {
   try {
     const res  = await fetch(`/api/asia-airlines/detail/${notionId}`);
     const data = await res.json();
+    if (seq !== _detailSeq) return;
     if (!res.ok) throw new Error(data.error || '載入失敗');
     const items = data.items || [];
     if (!items.length) {
@@ -650,6 +646,7 @@ async function openDetail(flightNo, notionId) {
       </div>
     </div>` + itemsHtml;
   } catch (e) {
+    if (seq !== _detailSeq) return;
     body.innerHTML = needsHtml + `<div class="detail-empty"><i class="bi bi-wifi-off"></i><br>${e.message}</div>`;
     return;
   }
@@ -658,6 +655,7 @@ async function openDetail(flightNo, notionId) {
   try {
     const res  = await fetch(`/api/asia-airlines/summary/${notionId}`);
     const data = await res.json();
+    if (seq !== _detailSeq) return;
     const box  = document.getElementById('aiSummary');
     if (!box) return;
     if (!res.ok) { box.remove(); return; }
@@ -675,6 +673,7 @@ async function openDetail(flightNo, notionId) {
     const dot = document.getElementById('aiSummaryDot');
     if (dot && data.alert) dot.style.display = 'inline-block';
   } catch (e) {
+    if (seq !== _detailSeq) return;
     const box = document.getElementById('aiSummary');
     if (box) box.remove();
   }
@@ -690,6 +689,7 @@ function toggleAiSummary() {
 }
 
 function closeDetail() {
+  _detailSeq++;
   document.getElementById('detailOverlay').classList.remove('show');
   unlockBodyScroll();
 }
@@ -847,7 +847,10 @@ async function loadFlights(manual, dateStr) {
     document.getElementById('todayBtn').style.visibility = _isToday ? 'hidden' : 'visible';
 
     // 只在看「今天」時才需要每 30 秒自動刷新，看歷史資料沒有必要一直打 API
-    if (_isToday && !_loadTimer) _loadTimer = setInterval(() => loadFlights(false), 30000);
+    if (_isToday && !_loadTimer) _loadTimer = setInterval(async () => {
+      if (!_pinSaves) await loadPins();
+      loadFlights(false);
+    }, 30000);
     if (!_isToday && _loadTimer) { clearInterval(_loadTimer); _loadTimer = null; }
 
     render();
@@ -1050,6 +1053,13 @@ bcSeekEl.addEventListener('input', () => {
 });
 ['change', 'pointerup', 'touchend', 'mouseup'].forEach(ev => bcSeekEl.addEventListener(ev, () => { _bcSeeking = false; }));
 
+/* 網址失效或連不上時畫面不能停在播放狀態；清掉播放器時移除 src 也會觸發，要排除 */
+bcAudio.addEventListener('error', () => {
+  if (!bcAudio.getAttribute('src')) return;
+  document.getElementById('miniPlayerIcon').className = 'bi bi-play-fill';
+  document.getElementById('miniPlayerTitle').textContent = '播放失敗，請關閉面板後重新開啟廣播詞再試';
+});
+
 bcAudio.addEventListener('loadedmetadata', () => {
   document.getElementById('miniPlayerDurTime').textContent = bcFmtTime(bcAudio.duration);
 });
@@ -1074,7 +1084,7 @@ bcAudio.addEventListener('timeupdate', () => {
   await loadFlights(false, null);
 
   const syncEl = document.getElementById('syncNote');
-  syncEl.textContent = `裝置同步碼：${getSyncId().slice(0, 8)}…（釘選狀態依此碼跨裝置同步，每日自動清空）`;
+  syncEl.textContent = '釘選狀態跨裝置同步，每日自動清空';
 })();
 </script>
 </body>

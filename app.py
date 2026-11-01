@@ -551,7 +551,7 @@ def tias_flights_api():
         "airlines":       _TIAS_AIRLINES,
         "airline_map":    filtered_airline_map,
         "airport_map":    filtered_airport_map,
-        "updated_at":     time.strftime("%H:%M:%S"),
+        "updated_at":     _tw_hms(),
     })
 
 
@@ -718,7 +718,7 @@ def schedule_week_api():
         "days":         days,
         "total_dep":    len(deps),
         "total_arr":    len(arrs),
-        "updated_at":   time.strftime("%H:%M:%S"),
+        "updated_at":   _tw_hms(),
     })
 
 
@@ -1161,7 +1161,13 @@ def _loadsheet_clean_item(raw) -> "dict | None":
 def _loadsheet_parse(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"loadsheet:parse:v9:{notion_id}"
+    items = _asiaair_fetch_detail(notion_id)
+    if items is None:
+        return None, "Notion is temporarily unavailable"
+    if not items:
+        return {"ldm_found": False}, None
+
+    cache_key = f"loadsheet:parse:v10:{notion_id}:{_asiaair_content_sig(items)}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and "ldm_found" in cached:
         return cached, None
@@ -1170,15 +1176,11 @@ def _loadsheet_parse(notion_id: str):
     if not api_key:
         return None, "Gemini API key is not configured on the server"
 
-    items = _asiaair_fetch_detail(notion_id)
-    if not items:
-        return {"ldm_found": False}, None
-
     parts = [{"text": _LOADSHEET_PARSE_PROMPT}]
     full_text = "\n".join(it["text"] for it in items if it["type"] == "text" and it.get("text"))
     if full_text.strip():
         parts.append({"text": "Notion 頁面文字：\n" + full_text[:6000]})
-    for it in [x for x in items if x["type"] in ("image", "file")][:8]:  # LDM 常在後面幾張，全部送
+    for it in [x for x in items if x["type"] in ("image", "file")][-8:]:  # 上限 8 個；LDM 常在後面幾張，留最後的
         data, mime = _asiaair_download_bytes(it["url"])
         if not data or not mime:
             continue
@@ -1251,7 +1253,7 @@ def amenities_api():
         "categories": _AMENITY_CATEGORIES,
         "source":     source,
         "count":      len(data),
-        "updated_at": time.strftime("%H:%M:%S"),
+        "updated_at": _tw_hms(),
     })
 
 
@@ -2321,9 +2323,8 @@ def api_weather():
 
 
 # ══════════════════════════════════════════════
-#  AI 飲食熱量追蹤（Gemini Vision + 跨裝置同步）
+#  KV 儲存（各功能共用）
 # ══════════════════════════════════════════════
-from datetime import date as _date_cls
 
 # ── KV storage layer (Upstash Redis REST API) ──
 # 支援 Vercel KV (KV_REST_API_*) 與 Upstash 直連 (UPSTASH_REDIS_REST_*) 兩種格式
@@ -2336,12 +2337,12 @@ _KV_TOKEN = (
     os.environ.get("KV_REST_API_TOKEN") or
     os.environ.get("UPSTASH_REDIS_REST_TOKEN") or ""
 )
-_diet_mem: dict = {}  # in-memory fallback
+_kv_mem: dict = {}  # in-memory fallback
 
 
 def _kv_get(key: str):
     if not (_KV_URL and _KV_TOKEN):
-        return _diet_mem.get(key)
+        return _kv_mem.get(key)
     try:
         r = _requests.get(
             f"{_KV_URL}/get/{key}",
@@ -2351,13 +2352,13 @@ def _kv_get(key: str):
         val = r.json().get("result")
         return _json.loads(val) if val else None
     except Exception:
-        return _diet_mem.get(key)
+        return _kv_mem.get(key)
 
 
 def _kv_set(key: str, value) -> None:
     serialized = _json.dumps(value, ensure_ascii=False)
     if not (_KV_URL and _KV_TOKEN):
-        _diet_mem[key] = value
+        _kv_mem[key] = value
         return
     try:
         _requests.post(
@@ -2367,16 +2368,17 @@ def _kv_set(key: str, value) -> None:
             timeout=5,
         )
     except Exception:
-        _diet_mem[key] = value  # fallback on network error
+        _kv_mem[key] = value  # fallback on network error
 
 
-def _diet_load(sync_id: str) -> dict:
-    data = _kv_get(f"diet:bank:{sync_id}")
-    return data if isinstance(data, dict) else {}
+def _safe_err(e) -> str:
+    """例外訊息會帶完整請求網址（Gemini 金鑰在 query string），回給前端前先遮掉。"""
+    return _re.sub(r"key=[^&\s'\")]+", "key=***", str(e))
 
 
-def _diet_save(sync_id: str, bank: dict) -> None:
-    _kv_set(f"diet:bank:{sync_id}", bank)
+def _tw_hms() -> str:
+    """畫面顯示的更新時間一律用台灣時間（Vercel 主機是 UTC）。"""
+    return _dt.now(_tz(_td(hours=8))).strftime("%H:%M:%S")
 
 
 def _valid_sync_id(sid: str) -> bool:
@@ -2386,7 +2388,7 @@ def _valid_sync_id(sid: str) -> bool:
 # ──────────────────────────────────────────────
 #  主頁卡片排序
 # ──────────────────────────────────────────────
-_DEFAULT_CARD_ORDER = ["asiaairlines", "tias", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "diet", "memo", "sop"]
+_DEFAULT_CARD_ORDER = ["asiaairlines", "tias", "thsr", "mrt", "schedule", "amenities", "visa", "codes", "share", "weather", "memo", "sop"]
 _VALID_CARD_IDS     = set(_DEFAULT_CARD_ORDER)
 
 
@@ -3017,86 +3019,6 @@ def thsr_tick():
                     "errors": errors, "sent": sent, "tg_error": _thsr_tg_error})
 
 
-@app.route("/diet")
-def diet():
-    return render_template("diet.html")
-
-
-@app.route("/api/diet/bank/<sync_id>")
-def diet_bank_get(sync_id):
-    if not _valid_sync_id(sync_id):
-        return jsonify({"error": "invalid sync_id"}), 400
-    return jsonify(_diet_load(sync_id))
-
-
-@app.route("/api/diet/record", methods=["POST"])
-def diet_record_add():
-    data        = request.get_json(force=True) or {}
-    sync_id     = str(data.get("sync_id", "")).strip()
-    if not _valid_sync_id(sync_id):
-        return jsonify({"error": "invalid sync_id"}), 400
-
-    date_str    = str(data.get("date", ""))
-    food_name   = str(data.get("food_name", ""))[:200]
-    calories    = max(0, int(float(data.get("calories", 0))))
-    macros      = data.get("macros", {})
-    carbs       = max(0, int(float(macros.get("carbs",   0))))
-    protein     = max(0, int(float(macros.get("protein", 0))))
-    fat         = max(0, int(float(macros.get("fat",     0))))
-    ts          = int(float(data.get("ts", 0)))
-    daily_limit = max(800, int(float(data.get("daily_limit", 2500))))
-
-    bank = _diet_load(sync_id)
-    if date_str not in bank:
-        bank[date_str] = {"records": [], "debt": 0}
-    day = bank[date_str]
-
-    day["records"].append({
-        "food_name": food_name,
-        "calories":  calories,
-        "macros":    {"carbs": carbs, "protein": protein, "fat": fat},
-        "ts":        ts,
-    })
-
-    total_cal = sum(r["calories"] for r in day["records"])
-    debt      = day.get("debt", 0)
-    effective = total_cal + debt
-
-    if effective > daily_limit and not day.get("_cheat_spread"):
-        overflow = effective - daily_limit
-        per_day  = (overflow + 1) // 2
-        base     = _date_cls.fromisoformat(date_str)
-        for i in range(1, 3):
-            fk = (base + _td(days=i)).isoformat()
-            if fk not in bank:
-                bank[fk] = {"records": [], "debt": 0}
-            bank[fk]["debt"] = bank[fk].get("debt", 0) + per_day
-        day["_cheat_spread"] = {"overflow": overflow, "perDay": per_day}
-
-    _diet_save(sync_id, bank)
-    return jsonify({"ok": True})
-
-
-@app.route("/api/diet/day/<sync_id>/<date_str>", methods=["DELETE"])
-def diet_day_clear(sync_id, date_str):
-    if not _valid_sync_id(sync_id):
-        return jsonify({"error": "invalid sync_id"}), 400
-    bank = _diet_load(sync_id)
-    if date_str in bank:
-        spread = bank[date_str].get("_cheat_spread")
-        if spread:
-            per_day = spread.get("perDay", 0)
-            base = _date_cls.fromisoformat(date_str)
-            for i in range(1, 3):
-                fk = (base + _td(days=i)).isoformat()
-                if fk in bank:
-                    bank[fk]["debt"] = max(0, bank[fk].get("debt", 0) - per_day)
-        bank[date_str]["records"] = []
-        bank[date_str].pop("_cheat_spread", None)
-    _diet_save(sync_id, bank)
-    return jsonify({"ok": True})
-
-
 # ──────────────────────────────────────────────
 #  亞洲航空航班資訊（讀取共用 Notion OIC 看板，僅檢視權限）
 # ──────────────────────────────────────────────
@@ -3106,6 +3028,9 @@ _ASIAAIR_COLLECTION_ID = "0c9a2cfd-a0aa-4072-b34d-c434df70ecc3"
 _ASIAAIR_VIEW_ID       = "e70f3f14-5af7-450e-ae79-803dd4f63b14"
 _ASIAAIR_CODES         = {"FD", "AK", "Z2", "D7"}  # 亞洲航空集團機隊代碼
 _ASIAAIR_TTL           = 60  # 秒，避免太頻繁打 Notion 非官方 API
+_ASIAAIR_QUERY_LIMIT   = 50000  # 只影響回傳的 ID 數量；內容另外補抓
+_ASIAAIR_FILL_CHUNK    = 250
+_ASIAAIR_FILL_SECONDS  = 25     # 補抓時間上限，留給 Vercel 60 秒內的其他步驟
 
 _ASIAAIR_FIELD_MAP = {
     "flight": "flight", "ACFT REG": "acft_reg", "GATE": "gate", "DATE": "date",
@@ -3215,11 +3140,30 @@ def _asiaair_get_schema() -> dict:
     return id_to_name
 
 
-def _asiaair_fetch_raw():
+def _asiaair_block_value(block: dict) -> dict:
+    value = block.get("value", {})
+    return value.get("value") or value
+
+
+def _asiaair_fetch_blocks(space_id: str, block_ids: list) -> dict:
+    r = _requests.post(
+        f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/syncRecordValuesMain",
+        headers={"x-notion-space-id": space_id},
+        json={"requests": [{"pointer": {"table": "block", "id": bid, "spaceId": space_id}, "version": -1} for bid in block_ids]},
+        timeout=10,
+    )
+    r.raise_for_status()
+    return r.json().get("recordMap", {}).get("block", {})
+
+
+def _asiaair_fetch_raw(date_str: str):
     space_id = _asiaair_get_space_id()
     if not space_id:
         return None
     id_to_name = _asiaair_get_schema()
+    # 拿不到欄位對照時所有列都對不到 DATE，會變成「今天沒有航班」，要當成失敗回報
+    if not id_to_name:
+        return None
     try:
         r = _requests.post(
             f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/queryCollection",
@@ -3232,7 +3176,7 @@ def _asiaair_fetch_raw():
                     "type":         "reducer",
                     # 公開唯讀存取下，Notion 會忽略自訂 sort/filter，一律回傳固定順序的資料，
                     # 所以這裡直接拉到伺服器允許的上限，篩選與排序都改在 Python 這邊做。
-                    "reducers":     {"collection_group_results": {"type": "results", "limit": 5000}},
+                    "reducers":     {"collection_group_results": {"type": "results", "limit": _ASIAAIR_QUERY_LIMIT}},
                     "userTimeZone": "Asia/Taipei",
                     "searchQuery":  "",
                 },
@@ -3255,16 +3199,43 @@ def _asiaair_fetch_raw():
         .get("blockIds", [])
     )
 
-    rows = []
-    for bid in block_ids:
-        entry = blocks.get(bid, {}).get("value", {}).get("value", {})
+    def to_row(bid, entry):
         if not entry or entry.get("type") != "page":
-            continue
+            return None
         row = {"notion_id": bid, "has_detail": bool(entry.get("content"))}
         for pid, val in entry.get("properties", {}).items():
             name = "flight" if pid == "title" else id_to_name.get(pid, pid)
             row[name] = _asiaair_plain_text(val)
-        rows.append(row)
+        # 少數列的日期寫成 2026/07/12
+        if row.get("DATE"):
+            row["DATE"] = row["DATE"].replace("/", "-")
+        return row
+
+    rows = []
+    for bid in block_ids:
+        if bid in blocks:
+            row = to_row(bid, _asiaair_block_value(blocks[bid]))
+            if row:
+                rows.append(row)
+
+    # queryCollection 給得出全部 ID，內容卻只附前 1000 筆，今天的航班常常排在後面，要另外補抓。
+    # 這段順序大致由新到舊，整批都比查詢日舊就不用再往後抓
+    missing = [bid for bid in block_ids if bid not in blocks]
+    deadline = time.time() + _ASIAAIR_FILL_SECONDS
+    for i in range(0, len(missing), _ASIAAIR_FILL_CHUNK):
+        chunk = missing[i:i + _ASIAAIR_FILL_CHUNK]
+        try:
+            fetched = _asiaair_fetch_blocks(space_id, chunk)
+        except Exception as e:
+            app.logger.error(f"_asiaair_fetch_blocks: {e}")
+            return None
+        chunk_rows = [r for r in (to_row(bid, _asiaair_block_value(fetched.get(bid, {}))) for bid in chunk) if r]
+        rows.extend(chunk_rows)
+        if not any(not r.get("DATE") or r["DATE"] >= date_str for r in chunk_rows):
+            break
+        if time.time() > deadline:
+            app.logger.warning(f"_asiaair_fetch_raw: 補抓 {date_str} 超過時間上限，停在第 {i} 筆")
+            break
     return rows
 
 
@@ -3302,7 +3273,7 @@ def _asiaair_fetch(date_str: str):
             return cached["data"], True
         stale = cached["data"] if cached else None
 
-    raw = _asiaair_fetch_raw()
+    raw = _asiaair_fetch_raw(date_str)
     if raw is None:
         if stale is not None:
             return stale, True
@@ -3353,7 +3324,7 @@ def asia_airlines_flights_api():
         "flights":     flights,
         "date":        date_str,
         "is_today":    date_str == today,
-        "updated_at":  time.strftime("%H:%M:%S"),
+        "updated_at":  _tw_hms(),
     })
 
 
@@ -3382,6 +3353,12 @@ def _asiaair_signed_file_url(source: str, block_id: str, space_id: str) -> "str 
     except Exception as e:
         app.logger.error(f"_asiaair_signed_file_url: {e}")
         return None
+
+
+def _asiaair_content_sig(items: list) -> str:
+    """附件或文字一改就換快取 key，LDM 重傳後才會重新辨識（檔案的 signed URL 每次不同，不能當簽章）。"""
+    joined = "\n".join(it.get("sig") or it.get("text", "") for it in items)
+    return hashlib.sha1(joined.encode("utf-8")).hexdigest()[:16]
 
 
 def _asiaair_fetch_detail(notion_id: str):
@@ -3418,11 +3395,11 @@ def _asiaair_fetch_detail(notion_id: str):
         title  = _asiaair_plain_text(props.get("title", []))
 
         if btype == "image" and source:
-            items.append({"type": "image", "url": _asiaair_image_url(source, bid, space_id), "title": title})
+            items.append({"type": "image", "url": _asiaair_image_url(source, bid, space_id), "title": title, "sig": f"{bid}:{source}"})
         elif btype == "file" and source:
             url = _asiaair_signed_file_url(source, bid, space_id)
             if url:
-                items.append({"type": "file", "url": url, "title": title or "檔案"})
+                items.append({"type": "file", "url": url, "title": title or "檔案", "sig": f"{bid}:{source}"})
         elif btype in ("text", "bulleted_list", "numbered_list", "to_do", "callout"):
             text = _asiaair_plain_text(props.get("title", []))
             if text.strip():
@@ -3517,6 +3494,10 @@ def _asiaair_bc_fetch_node(page_id: str):
         app.logger.error(f"_asiaair_bc_fetch_node signed urls: {e}")
         signed_urls = []
 
+    # 簽名失敗要回報錯誤，回空清單會被快取一小時
+    if len(signed_urls) < len(tracks) or not all(signed_urls):
+        return None
+
     items = []
     for t, url in zip(tracks, signed_urls):
         items.append({"label": t["label"], "title": t["title"], "url": url})
@@ -3555,6 +3536,8 @@ _ASIAAIR_SUMMARY_MODELS = (
     "gemini-2.0-flash",
 )
 
+_ASIAAIR_GEMINI_SECONDS = 45  # 所有模型輪流重試的總時間，超過 Vercel 60 秒會直接被砍
+
 _ASIAAIR_SUMMARY_PROMPT = (
     "你是機場地勤主管的助理。以下是某一班航班在系統裡附加的圖片／檔案，"
     "內容可能包含維修/機況限制通知、LDM 裝載電報、CPM 貨艙位置電報（Container/Pallet Message，"
@@ -3588,7 +3571,12 @@ def _asiaair_download_bytes(url: str, max_bytes: int = 15 * 1024 * 1024):
 
 def _asiaair_call_gemini(api_key: str, parts: list):
     last_status, last_err_msg = None, ""
+    deadline = time.time() + _ASIAAIR_GEMINI_SECONDS
     for model in _ASIAAIR_SUMMARY_MODELS:
+        remaining = deadline - time.time()
+        if remaining < 5:
+            last_status, last_err_msg = 504, last_err_msg or "AI request timed out"
+            break
         try:
             resp = _requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
@@ -3596,7 +3584,7 @@ def _asiaair_call_gemini(api_key: str, parts: list):
                     "contents": [{"parts": parts}],
                     "generationConfig": {"response_mime_type": "application/json"},
                 },
-                timeout=45,
+                timeout=remaining,
             )
             if resp.status_code == 200:
                 return resp, None, None
@@ -3604,14 +3592,21 @@ def _asiaair_call_gemini(api_key: str, parts: list):
             last_err_msg = (resp.json().get("error") or {}).get("message", resp.text[:300])
         except Exception as e:
             last_status  = 503
-            last_err_msg = str(e)
+            last_err_msg = _safe_err(e)
     return None, last_status, last_err_msg
 
 
 def _asiaair_build_summary(notion_id: str):
     import base64 as _base64
 
-    cache_key = f"asiaair:summary:v2:{notion_id}"
+    items = _asiaair_fetch_detail(notion_id)
+    if items is None:
+        return None, "Notion 資料暫時無法連線，請稍後再試"
+    attachments = [it for it in items if it["type"] in ("image", "file")]
+    if not attachments:
+        return {"alert": "", "positions": [], "points": []}, None
+
+    cache_key = f"asiaair:summary:v3:{notion_id}:{_asiaair_content_sig(attachments)}"
     cached = _kv_get(cache_key)
     if isinstance(cached, dict) and ("alert" in cached or "points" in cached):
         return cached, None
@@ -3620,14 +3615,8 @@ def _asiaair_build_summary(notion_id: str):
     if not api_key:
         return None, "伺服器未設定 Gemini API 金鑰"
 
-    items = _asiaair_fetch_detail(notion_id)
-    if not items:
-        return {"alert": "", "positions": [], "points": []}, None
-
     parts = [{"text": _ASIAAIR_SUMMARY_PROMPT}]
-    for it in items[:8]:  # 上限 8 個附件，避免單次請求過大
-        if it["type"] not in ("image", "file"):
-            continue
+    for it in attachments[:8]:  # 上限 8 個附件，避免單次請求過大
         data, mime = _asiaair_download_bytes(it["url"])
         if not data or not mime:
             continue
@@ -3693,121 +3682,6 @@ def asia_airlines_pins_set():
     today = _dt.now(_tz(_td(hours=8))).strftime("%Y-%m-%d")
     _kv_set(f"asiaair:pins:{sync_id}", {"date": today, "flights": [str(f)[:32] for f in flights[:10]]})
     return jsonify({"ok": True})
-
-
-@app.route("/api/analyze-food", methods=["POST"])
-def analyze_food():
-    import base64 as _b64
-
-    user_key   = request.form.get("ai_key", "").strip()
-    server_key = os.environ.get("GEMINI_API_KEY", "")
-    api_key    = user_key or server_key
-    key_source = "user" if user_key else "server"
-
-    if not api_key:
-        return jsonify({"error": "請在 ⚙ 設定中輸入 Gemini API 金鑰"}), 503
-
-    image_bytes = None
-    mime_type   = "image/jpeg"
-
-    ct = request.content_type or ""
-    if "multipart" in ct:
-        f = request.files.get("image")
-        if not f:
-            return jsonify({"error": "缺少 image 欄位"}), 400
-        image_bytes = f.read()
-        mime_type   = f.mimetype or "image/jpeg"
-    else:
-        body = request.get_json(silent=True) or {}
-        b64  = body.get("image", "")
-        if not b64:
-            return jsonify({"error": "缺少 image 欄位"}), 400
-        if "," in b64:
-            header, b64 = b64.split(",", 1)
-            if "png"  in header: mime_type = "image/png"
-            elif "webp" in header: mime_type = "image/webp"
-        mime_type   = body.get("mime_type", mime_type)
-        image_bytes = _b64.b64decode(b64)
-
-    if not image_bytes:
-        return jsonify({"error": "圖片內容為空"}), 400
-
-    food_hint = request.form.get("food_hint", "").strip()[:60]
-    b64_str   = _b64.b64encode(image_bytes).decode("utf-8")
-
-    hint_line = (
-        f"使用者校正提示：圖片中有「{food_hint}」，"
-        "請將外觀符合描述的食物辨識為此名稱，其餘食物照常辨識，全部一起計算。\n"
-    ) if food_hint else ""
-    _FOOD_PROMPT = (
-        f"{hint_line}"
-        "你是一位專業的運動營養師 AI。"
-        "分析使用者傳來的食物照片，辨識圖片中所有可見的食物並加總熱量。"
-        "嚴格以 JSON 格式回傳，不得輸出任何其他內容。\n"
-        '回傳格式：{"food_name":"所有食物的組合名稱（多樣時用＋連接，如「雞腿飯＋炒青菜＋湯」）","calories":所有食物總熱量整數,'
-        '"macros":{"carbs":整數,"protein":整數,"fat":整數},"comment":"一句30字以內的繁體中文正向評語"}\n'
-        "calories 單位大卡，macros 單位公克，皆為圖片中所有食物的合計。"
-    )
-
-    # 直接呼叫 Gemini REST API，不依賴 Python SDK
-    # 逐一試每個模型，429/404/400 都繼續試下一個，全部失敗才回錯
-    _MODELS = ("gemini-2.5-flash", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash-8b")
-    r = None
-    last_status  = None
-    last_err_msg = ""
-
-    for model in _MODELS:
-        try:
-            resp = _requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
-                json={
-                    "contents": [{
-                        "parts": [
-                            {"text": _FOOD_PROMPT},
-                            {"inline_data": {"mime_type": mime_type, "data": b64_str}},
-                        ]
-                    }],
-                    "generationConfig": {"response_mime_type": "application/json"},
-                },
-                timeout=30,
-            )
-            if resp.status_code == 200:
-                r = resp
-                break
-            last_status  = resp.status_code
-            last_err_msg = (resp.json().get("error") or {}).get("message", resp.text[:300])
-            # 不管 429/404/400/其他，都繼續試下一個模型
-        except Exception as e:
-            last_status  = 503
-            last_err_msg = str(e)
-
-    if r is None:
-        if last_status == 429:
-            err_code = "user_quota_exceeded" if key_source == "user" else "quota_exceeded"
-            return jsonify({"error": err_code, "detail": last_err_msg}), 429
-        return jsonify({"error": f"AI 分析失敗：{last_err_msg}"}), 500
-
-    try:
-        text = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-        if text.startswith("```"):
-            lines = text.splitlines()
-            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-        result = _json.loads(text)
-        macros = result.get("macros", {})
-        return jsonify({
-            "food_name": str(result.get("food_name", "未知食物")),
-            "calories":  max(0, int(float(result.get("calories", 0)))),
-            "macros": {
-                "carbs":   max(0, int(float(macros.get("carbs",   0)))),
-                "protein": max(0, int(float(macros.get("protein", 0)))),
-                "fat":     max(0, int(float(macros.get("fat",     0)))),
-            },
-            "comment": str(result.get("comment", "")),
-        })
-    except _json.JSONDecodeError:
-        return jsonify({"error": "AI 回傳格式異常，請再試一次"}), 500
-    except Exception as e:
-        return jsonify({"error": f"AI 分析失敗：{str(e)}"}), 500
 
 
 # ──────────────────────────────────────────────
@@ -3877,7 +3751,7 @@ def _call_gemini_translate(api_key: str, parts: list):
             last_err_msg = (resp.json().get("error") or {}).get("message", resp.text[:300])
         except Exception as e:
             last_status  = 503
-            last_err_msg = str(e)
+            last_err_msg = _safe_err(e)
     return None, last_status, last_err_msg
 
 
@@ -3952,7 +3826,7 @@ def translate():
     except _json.JSONDecodeError:
         return jsonify({"error": "AI 回傳格式異常，請再試一次"}), 500
     except Exception as e:
-        return jsonify({"error": f"翻譯失敗：{str(e)}"}), 500
+        return jsonify({"error": f"翻譯失敗：{_safe_err(e)}"}), 500
 
 
 # ──────────────────────────────────────────────
@@ -4023,11 +3897,9 @@ def auth_register():
     except Exception as e:
         app.logger.error(f"auth_register (check): {e}")
         return jsonify({"error": "network_error", "message": "連線資料庫失敗，請稍後再試"}), 503
-    diet_sync_id = str(data.get("dietSyncId", "")).strip() or None
     cfg = {
         "name": name,
         "code": code,
-        "dietSyncId": diet_sync_id,
         "createdAt": _dt.now(_tz.utc).isoformat(),
     }
     try:
@@ -4042,7 +3914,7 @@ def auth_register():
             timeout=8,
         )
         if r.ok:
-            return jsonify({"ok": True, "code": code, "name": name, "dietSyncId": diet_sync_id})
+            return jsonify({"ok": True, "code": code, "name": name})
         return jsonify({"error": "create_failed", "message": f"建立失敗 ({r.status_code})"}), 500
     except Exception as e:
         app.logger.error(f"auth_register (create): {e}")
@@ -4071,7 +3943,6 @@ def auth_login():
             "ok": True,
             "code": code,
             "name": cfg.get("name", ""),
-            "dietSyncId": cfg.get("dietSyncId"),
         })
     except Exception as e:
         app.logger.error(f"auth_login: {e}")

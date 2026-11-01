@@ -126,8 +126,6 @@ const Config = (() => {
       const pid = id || d.active;
       const p   = d.profiles[pid];
       if (!p || !p.syncKey) return { ok: false };
-      const dietSyncId = localStorage.getItem('dietSyncId');
-      if (dietSyncId) { p.dietSyncId = dietSyncId; _write(d); }
       try {
         const r = await fetch(`${SUPA_URL}/rest/v1/user_configs`, {
           method: 'POST',
