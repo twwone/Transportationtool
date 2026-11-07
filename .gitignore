@@ -8,3 +8,4 @@ __pycache__/
 .agents/
 .claude/
 skills-lock.json
+.env*
