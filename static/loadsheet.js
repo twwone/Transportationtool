@@ -299,9 +299,15 @@ function onBagsInput() {
   saveState();
 }
 
-/* 只有轉機艙位／件數會改變分配；其他特殊項目只影響重量，不重算才保留手動改過的件數 */
+/* 有貨的艙（貨物有填件數或重量）：不分配行李 */
+function cargoBlockedHold() {
+  const hold = document.getElementById('cargo-hold').value;
+  return hold && (v('cargo-pcs') > 0 || v('cargo-kg') > 0) ? hold : '';
+}
+
+/* 只有轉機艙位／件數、有貨的艙會改變分配；其他特殊項目只影響重量，不重算才保留手動改過的件數 */
 function transitSig() {
-  return document.getElementById('transit-hold').value + '|' + v('transit-pcs');
+  return document.getElementById('transit-hold').value + '|' + v('transit-pcs') + '|' + cargoBlockedHold();
 }
 
 function onSpecialChange() {
@@ -332,9 +338,11 @@ function calcDistribution() {
   const transitFixed = sp.transit.hold && sp.transit.pcs > 0 ? sp.transit.pcs : 0;
   let remaining = Math.max(0, totalPcs - transitFixed);  // 轉機比總件數多時不能分配負數，差額由 banner 顯示
   const fillOrder = AC[curAc].fillOrder;
-  const fillHolds = fillOrder
+  const cargoHold = cargoBlockedHold();
+  const fillHolds = (fillOrder
     ? fillOrder.map(id => holds.find(h => h.id === id))
-    : holds.filter(h => !h.nodist);
+    : holds.filter(h => !h.nodist)
+  ).filter(h => h.id !== cargoHold);   // 有貨的艙不裝行李
   /* 第一輪先裝到建議件數（softPcs，沒設就是上限），全部艙都裝滿還有剩，第二輪才補到上限 maxPcs */
   const passes = [h => h.softPcs ?? h.maxPcs, h => h.maxPcs];
   for (const cap of passes) {
