@@ -234,7 +234,7 @@ function cargoLoaded() {
   const loaded = parseFloat(raw) || 0;
   if (!pcs || !kg) return { err: 'Enter cargo PCS and KG first' };
   if (loaded > pcs) return { err: `Loaded ${loaded} PCS exceeds cargo ${pcs} PCS` };
-  const loadedKg = loaded === pcs ? kg : round1(loaded * kg / pcs);
+  const loadedKg = loaded === pcs ? kg : Math.round(loaded * kg / pcs); // 已裝取整數，未裝 = 總重 − 已裝
   return { pcs, kg, loaded, loadedKg, offPcs: round1(pcs - loaded), offKg: round1(kg - loadedKg) };
 }
 function updateCargoLoaded() {
