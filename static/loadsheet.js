@@ -251,6 +251,7 @@ function updateCargoLoaded() {
 function onCargoLoaded() {
   updateCargoLoaded();
   updateWeightSummary();
+  renderResult();
   saveState();
 }
 
@@ -361,6 +362,11 @@ function renderResult() {
   const assigned = Object.values(holdPcs).reduce((a, b) => a + b, 0);
   const remain   = totalPcs - assigned;
   const sp       = getSpecials();
+  /* 貨物只裝一部分時，艙重改算已裝的重量 */
+  const cl       = cargoLoaded();
+  const cargoPartial = cl && !cl.err;
+  const cargoAllKg   = sp.cargo.kg;
+  if (cargoPartial) sp.cargo.kg = cl.loadedKg;
 
   /* banner */
   const banner = document.getElementById('remainBanner');
@@ -422,7 +428,7 @@ function renderResult() {
       sp.toolbox.hold === h.id && (sp.toolbox.pcs > 0 || sp.toolbox.kg > 0) ? `<span class="extra-tag">Toolbox ${sp.toolbox.pcs||'—'} pcs / ${sp.toolbox.kg||'—'} KG</span>` : '',
       hasTransit ? `<span class="extra-tag transit">Transit ${sp.transit.pcs} pcs${sp.transit.kg ? ' / '+sp.transit.kg+' KG' : ''} (fixed)</span>` : '',
       sp.trash.hold === h.id ? `<span class="extra-tag">Garbage${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+' pcs' : ''}${sp.trash.kg ? ' / '+sp.trash.kg+' KG' : ''}</span>` : '',
-      sp.cargo.hold === h.id && sp.cargo.kg > 0 ? `<span class="extra-tag cargo">Cargo ${sp.cargo.kg} KG</span>` : '',
+      sp.cargo.hold === h.id && cargoAllKg > 0 ? `<span class="extra-tag cargo">${cargoPartial ? `Cargo loaded ${cl.loaded} / ${cl.pcs} PCS · ${cl.loadedKg} KG` : `Cargo ${cargoAllKg} KG`}</span>` : '',
     ].filter(Boolean).join('');
 
     const inputCls = (overPcs || overKg) ? 'err' : h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
@@ -458,7 +464,7 @@ function renderResult() {
                   ? `Bags ${totalKg}−${usedKg} = ${kg}`
                   : `Bags ${pcs}×${bagAvg} = ${kg}`)
             : '';
-          const spLines = spItems.map(x => x.s === sp.cargo ? `<span class="cargo-line">${x.label} ${x.s.kg}</span>` : `${x.label} ${x.s.kg}`);
+          const spLines = spItems.map(x => x.s === sp.cargo ? `<span class="cargo-line">${cargoPartial ? `Cargo loaded ${cl.loaded} PCS = ${x.s.kg}` : `${x.label} ${x.s.kg}`}</span>` : `${x.label} ${x.s.kg}`);
           const detail = [bagLine, ...spLines].filter(Boolean).join('<br>');
           return `<div class="hold-calc">
             <div class="hold-calc-kg">${holdTotal} KG</div>
