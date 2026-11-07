@@ -252,9 +252,6 @@ input::placeholder { color:#6f7276; }
 .extra-tag.cargo { color:var(--amber); border-color:rgba(255,166,51,0.6); background:rgba(255,166,51,0.12); }
 .cargo-line { color:var(--amber); font-weight:700; }
 .ws-row.cargo .ws-label, .ws-row.cargo .ws-val { color:var(--amber); }
-.cg-pcs { color:var(--cyan); }
-.cg-kg { color:var(--amber); }
-.cg-sep { color:var(--sub); }
 
 /* ── 數字鍵盤彈窗（仿 Flysmart+ WHBasicKeypadVC：popWindowMainBg 底、白色結果列、numericPad 白鍵）── */
 .si-field.kp-active, .field.kp-active { background:var(--active-fill); border-color:var(--active-edge); box-shadow:inset 0 1px 0 var(--active-hi); }
