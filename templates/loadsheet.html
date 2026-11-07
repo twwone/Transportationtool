@@ -133,6 +133,11 @@
         <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="text" inputmode="numeric" id="cargo-pcs" placeholder="0" oninput="onSpecialChange()"></div>
         <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="text" inputmode="decimal" id="cargo-kg"  placeholder="0" oninput="onSpecialChange()"></div>
       </div>
+      <!-- 只裝一部分：填實際裝的件數，依每件平均重換算（只顯示，不影響分配計算） -->
+      <div class="si-nums cargo-loaded-row">
+        <div class="si-field"><div class="si-field-label">LOADED PCS</div><input class="si-input" type="text" inputmode="numeric" id="cargo-loaded" placeholder="ALL" oninput="onCargoLoaded()"></div>
+      </div>
+      <div class="cargo-loaded-hint" id="cargoLoadedHint" hidden></div>
     </div>
 
   </div>

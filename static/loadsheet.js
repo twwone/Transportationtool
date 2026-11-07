@@ -33,7 +33,7 @@ function setCgoFromFlight(flight, raw) {
   const v = String(raw || '').trim().toUpperCase();
   const status = /^(Y|YES)\b/.test(v) ? 'YES' : /^(NIL|NO|N|NONE|0)$/.test(v) ? 'NIL' : '';
   _cgo = { flight, status };
-  if (status === 'NIL') ['cargo-hold','cargo-pcs','cargo-kg'].forEach(id => { document.getElementById(id).value = ''; });
+  if (status === 'NIL') ['cargo-hold','cargo-pcs','cargo-kg','cargo-loaded'].forEach(id => { document.getElementById(id).value = ''; });
   applyCgo();
   onSpecialChange();
 }
@@ -119,7 +119,7 @@ function schedulePush() {
 function saveState() {
   const fields = ['crew-hold','crew-pcs','crew-kg','toolbox-hold','toolbox-pcs','toolbox-kg',
                   'transit-hold','transit-pcs','transit-kg','trash-hold','trash-pcs','trash-kg',
-                  'cargo-hold','cargo-pcs','cargo-kg',
+                  'cargo-hold','cargo-pcs','cargo-kg','cargo-loaded',
                   'totalPcs','totalKg'];
   const data = { ac: curAc, holdPcs, fields: {}, cgo: _cgo };
   fields.forEach(id => { data.fields[id] = document.getElementById(id)?.value || ''; });
@@ -154,6 +154,7 @@ function loadState() {
     }
     onBagsInput();
     updateWeightSummary();
+    updateCargoLoaded();
   } catch (e) {}
 }
 
@@ -224,6 +225,28 @@ function getSpecials() {
   };
 }
 
+/* ── 貨物只裝一部分：已裝／未裝件數與重量（每件重 = 貨物 KG ÷ PCS，只顯示） ── */
+function updateCargoLoaded() {
+  const hint   = document.getElementById('cargoLoadedHint');
+  const raw    = document.getElementById('cargo-loaded').value.trim();
+  const pcs    = v('cargo-pcs'), kg = v('cargo-kg');
+  const loaded = parseFloat(raw) || 0;
+  hint.classList.remove('err');
+  if (raw === '') { hint.hidden = true; return; }
+  hint.hidden = false;
+  if (!pcs || !kg) { hint.classList.add('err'); hint.textContent = 'Enter cargo PCS and KG first'; return; }
+  if (loaded > pcs) { hint.classList.add('err'); hint.textContent = `Loaded ${loaded} PCS exceeds cargo ${pcs} PCS`; return; }
+  const loadedKg = loaded === pcs ? kg : round1(loaded * kg / pcs);
+  const offKg    = round1(kg - loadedKg);
+  hint.innerHTML = `<span class="cl-on">LOADED <b>${loaded}</b> PCS · <b>${loadedKg}</b> KG</span>`
+                 + `<span class="cl-off">NOT LOADED <b>${round1(pcs - loaded)}</b> PCS · <b>${offKg}</b> KG</span>`
+                 + `<span class="cl-avg">${kg} ÷ ${pcs} = ${round1(kg / pcs)} KG/PCS</span>`;
+}
+function onCargoLoaded() {
+  updateCargoLoaded();
+  saveState();
+}
+
 /* ── 總重合計 ── */
 function updateWeightSummary() {
   const sp     = getSpecials();
@@ -266,6 +289,7 @@ function transitSig() {
 function onSpecialChange() {
   if (Object.keys(holdPcs).length && transitSig() !== _distSig) calcDistribution();
   updateWeightSummary();
+  updateCargoLoaded();
   renderResult();
   saveState();
 }
@@ -479,7 +503,7 @@ function resetForm() {
   /* 清除所有欄位 */
   ['crew-hold','crew-pcs','crew-kg','toolbox-hold','toolbox-pcs','toolbox-kg',
    'transit-hold','transit-pcs','transit-kg','trash-hold','trash-pcs','trash-kg',
-                  'cargo-hold','cargo-pcs','cargo-kg',
+                  'cargo-hold','cargo-pcs','cargo-kg','cargo-loaded',
    'totalPcs','totalKg'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -487,6 +511,7 @@ function resetForm() {
   holdPcs = {};
   _cgo = null;
   applyCgo();
+  updateCargoLoaded();
   document.getElementById('avgHint').textContent = 'Enter total pieces and weight';
   document.getElementById('weightSummary').style.display = 'none';
   clearTimeout(_syncDebounce);
