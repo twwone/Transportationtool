@@ -1172,7 +1172,7 @@ def _loadsheet_parse(notion_id: str):
     if isinstance(cached, dict) and "ldm_found" in cached:
         return cached, None
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
         return None, "Gemini API key is not configured on the server"
 
@@ -3579,7 +3579,8 @@ def _asiaair_call_gemini(api_key: str, parts: list):
             break
         try:
             resp = _requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                headers={"x-goog-api-key": api_key.strip()},
                 json={
                     "contents": [{"parts": parts}],
                     "generationConfig": {"response_mime_type": "application/json"},
@@ -3611,7 +3612,7 @@ def _asiaair_build_summary(notion_id: str):
     if isinstance(cached, dict) and ("alert" in cached or "points" in cached):
         return cached, None
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
         return None, "伺服器未設定 Gemini API 金鑰"
 
@@ -3738,7 +3739,8 @@ def _call_gemini_translate(api_key: str, parts: list):
     for model in _TRANSLATE_MODELS:
         try:
             resp = _requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                headers={"x-goog-api-key": api_key.strip()},
                 json={
                     "contents": [{"parts": parts}],
                     "generationConfig": {"response_mime_type": "application/json"},
@@ -3760,7 +3762,7 @@ def translate():
     import base64 as _b64
 
     user_key   = request.form.get("ai_key", "").strip()
-    server_key = os.environ.get("GEMINI_API_KEY", "")
+    server_key = os.environ.get("GEMINI_API_KEY", "").strip()
     api_key    = user_key or server_key
     key_source = "user" if user_key else "server"
 
