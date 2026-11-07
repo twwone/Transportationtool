@@ -224,6 +224,11 @@ function getSpecials() {
   };
 }
 
+/* 貨物件數／重量 HTML（件數青色、重量橘色） */
+function cargoPcsKg(c) {
+  return `<span class="cg-pcs">${c.pcs || '—'} PCS</span><span class="cg-sep"> / </span><span class="cg-kg">${c.kg || '—'} KG</span>`;
+}
+
 /* ── 總重合計 ── */
 function updateWeightSummary() {
   const sp     = getSpecials();
@@ -245,7 +250,10 @@ function updateWeightSummary() {
   showRow('ws-crew-row',    'ws-crew',    sp.crew.kg);
   showRow('ws-toolbox-row', 'ws-toolbox', sp.toolbox.kg);
   showRow('ws-trash-row',   'ws-trash',   sp.trash.kg);
-  showRow('ws-cargo-row',   'ws-cargo',   sp.cargo.kg);
+  /* 貨物：件數與重量分色顯示 */
+  const showCargo = sp.cargo.pcs > 0 || sp.cargo.kg > 0;
+  document.getElementById('ws-cargo-row').style.display = showCargo ? '' : 'none';
+  if (showCargo) document.getElementById('ws-cargo').innerHTML = cargoPcsKg(sp.cargo);
   document.getElementById('weightSummary').style.display = '';
 }
 
@@ -381,7 +389,7 @@ function renderResult() {
       sp.toolbox.hold === h.id && (sp.toolbox.pcs > 0 || sp.toolbox.kg > 0) ? `<span class="extra-tag">Toolbox ${sp.toolbox.pcs||'—'} pcs / ${sp.toolbox.kg||'—'} KG</span>` : '',
       hasTransit ? `<span class="extra-tag transit">Transit ${sp.transit.pcs} pcs${sp.transit.kg ? ' / '+sp.transit.kg+' KG' : ''} (fixed)</span>` : '',
       sp.trash.hold === h.id ? `<span class="extra-tag">Garbage${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+' pcs' : ''}${sp.trash.kg ? ' / '+sp.trash.kg+' KG' : ''}</span>` : '',
-      sp.cargo.hold === h.id && sp.cargo.kg > 0 ? `<span class="extra-tag cargo">Cargo ${sp.cargo.kg} KG</span>` : '',
+      sp.cargo.hold === h.id && (sp.cargo.pcs > 0 || sp.cargo.kg > 0) ? `<span class="extra-tag cargo">Cargo ${cargoPcsKg(sp.cargo)}</span>` : '',
     ].filter(Boolean).join('');
 
     const inputCls = (overPcs || overKg) ? 'err' : h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
