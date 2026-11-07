@@ -252,6 +252,7 @@ input::placeholder { color:#6f7276; }
 .extra-tag.cargo { color:var(--amber); border-color:rgba(255,166,51,0.6); background:rgba(255,166,51,0.12); }
 .cargo-line { color:var(--amber); font-weight:700; }
 .ws-row.cargo .ws-label, .ws-row.cargo .ws-val { color:var(--amber); }
+.ws-row.cargo-off .ws-label, .ws-row.cargo-off .ws-val { color:var(--sub); text-decoration:line-through; }
 .cargo-loaded-row { margin-top:6px; }
 .cargo-loaded-hint { margin-top:6px; display:flex; flex-direction:column; gap:2px; font-size:0.72rem; font-weight:700; color:var(--sub); }
 .cargo-loaded-hint b { font-family:var(--num); font-size:0.9rem; }

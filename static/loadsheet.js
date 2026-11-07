@@ -226,24 +226,31 @@ function getSpecials() {
 }
 
 /* ── 貨物只裝一部分：已裝／未裝件數與重量（每件重 = 貨物 KG ÷ PCS，只顯示） ── */
-function updateCargoLoaded() {
-  const hint   = document.getElementById('cargoLoadedHint');
-  const raw    = document.getElementById('cargo-loaded').value.trim();
-  const pcs    = v('cargo-pcs'), kg = v('cargo-kg');
+/* 回傳 null = 沒填 LOADED（全裝）；err = 輸入有誤 */
+function cargoLoaded() {
+  const raw = document.getElementById('cargo-loaded').value.trim();
+  if (raw === '') return null;
+  const pcs = v('cargo-pcs'), kg = v('cargo-kg');
   const loaded = parseFloat(raw) || 0;
-  hint.classList.remove('err');
-  if (raw === '') { hint.hidden = true; return; }
-  hint.hidden = false;
-  if (!pcs || !kg) { hint.classList.add('err'); hint.textContent = 'Enter cargo PCS and KG first'; return; }
-  if (loaded > pcs) { hint.classList.add('err'); hint.textContent = `Loaded ${loaded} PCS exceeds cargo ${pcs} PCS`; return; }
+  if (!pcs || !kg) return { err: 'Enter cargo PCS and KG first' };
+  if (loaded > pcs) return { err: `Loaded ${loaded} PCS exceeds cargo ${pcs} PCS` };
   const loadedKg = loaded === pcs ? kg : round1(loaded * kg / pcs);
-  const offKg    = round1(kg - loadedKg);
-  hint.innerHTML = `<span class="cl-on">LOADED <b>${loaded}</b> PCS · <b>${loadedKg}</b> KG</span>`
-                 + `<span class="cl-off">NOT LOADED <b>${round1(pcs - loaded)}</b> PCS · <b>${offKg}</b> KG</span>`
-                 + `<span class="cl-avg">${kg} ÷ ${pcs} = ${round1(kg / pcs)} KG/PCS</span>`;
+  return { pcs, kg, loaded, loadedKg, offPcs: round1(pcs - loaded), offKg: round1(kg - loadedKg) };
+}
+function updateCargoLoaded() {
+  const hint = document.getElementById('cargoLoadedHint');
+  const c    = cargoLoaded();
+  hint.classList.remove('err');
+  hint.hidden = !c;
+  if (!c) return;
+  if (c.err) { hint.classList.add('err'); hint.textContent = c.err; return; }
+  hint.innerHTML = `<span class="cl-on">LOADED <b>${c.loaded}</b> PCS · <b>${c.loadedKg}</b> KG</span>`
+                 + `<span class="cl-off">NOT LOADED <b>${c.offPcs}</b> PCS · <b>${c.offKg}</b> KG</span>`
+                 + `<span class="cl-avg">${c.kg} ÷ ${c.pcs} = ${round1(c.kg / c.pcs)} KG/PCS</span>`;
 }
 function onCargoLoaded() {
   updateCargoLoaded();
+  updateWeightSummary();
   saveState();
 }
 
@@ -251,7 +258,11 @@ function onCargoLoaded() {
 function updateWeightSummary() {
   const sp     = getSpecials();
   const bagsKg = v('totalKg');
-  const extraKg = sp.crew.kg + sp.toolbox.kg + sp.trash.kg + sp.cargo.kg; // 轉機不加（已含在出發行李）
+  /* 貨物只裝一部分時，總重改算已裝的重量 */
+  const cl      = cargoLoaded();
+  const partial = cl && !cl.err;
+  const cargoKg = partial ? cl.loadedKg : sp.cargo.kg;
+  const extraKg = sp.crew.kg + sp.toolbox.kg + sp.trash.kg + cargoKg; // 轉機不加（已含在出發行李）
   const total   = round1(bagsKg + extraKg);
   const hasAny  = bagsKg > 0 || extraKg > 0;
 
@@ -268,7 +279,13 @@ function updateWeightSummary() {
   showRow('ws-crew-row',    'ws-crew',    sp.crew.kg);
   showRow('ws-toolbox-row', 'ws-toolbox', sp.toolbox.kg);
   showRow('ws-trash-row',   'ws-trash',   sp.trash.kg);
-  showRow('ws-cargo-row',   'ws-cargo',   sp.cargo.kg);
+  showRow('ws-cargo-row',   'ws-cargo',   cargoKg);
+  document.getElementById('ws-cargo-label').textContent = partial ? `Cargo loaded ${cl.loaded} / ${cl.pcs} PCS` : 'Cargo';
+  document.getElementById('ws-cargo-off-row').style.display = partial && cl.offPcs > 0 ? '' : 'none';
+  if (partial) {
+    document.getElementById('ws-cargo-off-label').textContent = `Cargo not loaded ${cl.offPcs} PCS`;
+    document.getElementById('ws-cargo-off').textContent = cl.offKg + ' KG';
+  }
   document.getElementById('weightSummary').style.display = '';
 }
 
