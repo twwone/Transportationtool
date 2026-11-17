@@ -231,12 +231,12 @@ function getSpecials() {
   };
 }
 
-/* ── 貨物：可分批填多種貨（例如郵件、快遞各一筆），每筆各自選艙位、件數、重量 ── */
+/* ── 貨物：可分批填多種貨，依序編號 Cargo 1、2、3…，每筆各自選艙位、件數、重量 ── */
 let _cargoN = 1;
 function gv(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function readCargoVals() {
   return [...Array(_cargoN)].map((_, i) => ({
-    name: gv(`cargo${i}-name`), hold: gv(`cargo${i}-hold`),
+    hold: gv(`cargo${i}-hold`),
     pcs: gv(`cargo${i}-pcs`), kg: gv(`cargo${i}-kg`), loaded: gv(`cargo${i}-loaded`),
   }));
 }
@@ -254,7 +254,6 @@ function cargoRowHtml(i) {
       ${num('kg', 'KG', 'decimal', '0', 'onSpecialChange()')}
     </div>
     <div class="si-nums cargo-loaded-row">
-      <div class="si-field cargo-type"><div class="si-field-label">TYPE</div><input class="si-input" type="text" id="cargo${i}-name" placeholder="—" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="onCargoName()"></div>
       ${num('loaded', 'LOADED PCS', 'numeric', 'ALL', 'onCargoLoaded()')}
     </div>
     <div class="cargo-loaded-hint" id="cargo${i}-hint" hidden></div>
@@ -266,7 +265,7 @@ function renderCargoRows(vals) {
   document.getElementById('cargoList').innerHTML = [...Array(_cargoN)].map((_, i) => cargoRowHtml(i)).join('');
   buildHoldOptions();
   vals.forEach((c, i) => {
-    ['name','pcs','kg','loaded'].forEach(k => { document.getElementById(`cargo${i}-${k}`).value = c[k] ?? ''; });
+    ['pcs','kg','loaded'].forEach(k => { document.getElementById(`cargo${i}-${k}`).value = c[k] ?? ''; });
     const sel = document.getElementById(`cargo${i}-hold`);
     sel.value = c.hold || '';
     if (sel.value !== (c.hold || '')) sel.value = '';
@@ -283,11 +282,6 @@ function removeCargo(i) {
   vals.splice(i, 1);
   renderCargoRows(vals.length ? vals : [{}]);
   onSpecialChange();
-}
-function onCargoName() {
-  updateWeightSummary();
-  renderResult();
-  saveState();
 }
 
 /* 單筆貨物只裝一部分：已裝／未裝件數與重量（每件重 = 貨物 KG ÷ PCS）。
@@ -308,10 +302,9 @@ function cargoItems() {
     const cl = cargoLoaded(i);
     const partial = !!(cl && !cl.err);
     const allKg = v(`cargo${i}-kg`);
-    const type = gv(`cargo${i}-name`).trim().toUpperCase();
     return {
       i, cl: partial ? cl : null,
-      name: type || (_cargoN > 1 ? `Cargo ${i + 1}` : 'Cargo'),
+      name: _cargoN > 1 ? `Cargo ${i + 1}` : 'Cargo',
       hold: gv(`cargo${i}-hold`), pcs: v(`cargo${i}-pcs`), allKg,
       kg: partial ? cl.loadedKg : allKg,
     };
@@ -1163,8 +1156,7 @@ function chkCollect() {
     else if (hold && need === 'pcs' && !(pcs > 0)) issues.push({ key, name, msg:'Enter PCS', target: key + '-pcs' });
   });
   cargoItems().forEach(c => {
-    const type = gv(`cargo${c.i}-name`).trim().toUpperCase();
-    const name = 'CARGO' + (_cargoN > 1 ? ' ' + (c.i + 1) : '') + (type ? ` (${esc(type)})` : '');
+    const name = 'CARGO' + (_cargoN > 1 ? ' ' + (c.i + 1) : '');
     if ((c.pcs > 0 || c.allKg > 0) && !c.hold) issues.push({ key:'cargo' + c.i, name, msg:'Select a hold', target:`cargo${c.i}-hold` });
     else if (c.hold && !(c.allKg > 0)) issues.push({ key:'cargo' + c.i, name, msg:'Enter KG', target:`cargo${c.i}-kg` });
   });
