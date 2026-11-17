@@ -123,22 +123,10 @@
       </div>
     </div>
 
-    <!-- 貨物（同組員行李：重量算進該艙，件數不佔艙位上限） -->
-    <div class="special-item">
-      <div class="si-top">
-        <div class="si-label"><span class="row-label">CARGO</span><span class="cgo-badge" id="cgoBadge" hidden></span></div>
-        <select class="si-select" id="cargo-hold" onchange="onSpecialChange()"><option value="">— Hold</option></select>
-      </div>
-      <div class="si-nums">
-        <div class="si-field"><div class="si-field-label">PCS</div><input class="si-input" type="text" inputmode="numeric" id="cargo-pcs" placeholder="0" oninput="onSpecialChange()"></div>
-        <div class="si-field"><div class="si-field-label">KG</div><input class="si-input" type="text" inputmode="decimal" id="cargo-kg"  placeholder="0" oninput="onSpecialChange()"></div>
-      </div>
-      <!-- 只裝一部分：填實際裝的件數，依每件平均重換算（只顯示，不影響分配計算） -->
-      <div class="si-nums cargo-loaded-row">
-        <div class="si-field"><div class="si-field-label">LOADED PCS</div><input class="si-input" type="text" inputmode="numeric" id="cargo-loaded" placeholder="ALL" oninput="onCargoLoaded()"></div>
-      </div>
-      <div class="cargo-loaded-hint" id="cargoLoadedHint" hidden></div>
-    </div>
+    <!-- 貨物：可分批填多種貨，每種各自選艙位、件數、重量、已裝件數（重量算進該艙，件數不佔艙位上限）。
+         列由 renderCargoRows() 產生 -->
+    <div id="cargoList"></div>
+    <button class="cargo-add-btn" type="button" onclick="addCargo()">+ ADD CARGO</button>
 
   </div>
 
@@ -159,8 +147,7 @@
     <div class="ws-row" id="ws-crew-row"  style="display:none"><span class="ws-label">Crew bag</span><span class="ws-val" id="ws-crew">— KG</span></div>
     <div class="ws-row" id="ws-toolbox-row" style="display:none"><span class="ws-label">Toolbox</span><span class="ws-val" id="ws-toolbox">— KG</span></div>
     <div class="ws-row" id="ws-trash-row" style="display:none"><span class="ws-label">Garbage</span><span class="ws-val" id="ws-trash">— KG</span></div>
-    <div class="ws-row cargo" id="ws-cargo-row" style="display:none"><span class="ws-label" id="ws-cargo-label">Cargo</span><span class="ws-val" id="ws-cargo">— KG</span></div>
-    <div class="ws-row cargo-off" id="ws-cargo-off-row" style="display:none"><span class="ws-label" id="ws-cargo-off-label">Cargo not loaded</span><span class="ws-val" id="ws-cargo-off">— KG</span></div>
+    <div id="ws-cargo-rows"></div>
     <div class="ws-row total"><span class="ws-label">TOTAL</span><span class="ws-val" id="ws-total">— KG</span></div>
   </div>
 

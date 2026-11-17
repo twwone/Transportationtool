@@ -27,13 +27,13 @@ function applyCgo() {
     badge.className = 'cgo-badge ' + (st === 'YES' ? 'yes' : 'nil');
     badge.textContent = (st === 'YES' ? 'CGO' : st === 'NIL' ? 'NIL' : 'NO INFO') + ' · ' + _cgo.flight.split('/')[0];
   }
-  ['cargo-pcs','cargo-kg'].forEach(id => { document.getElementById(id).placeholder = st === 'NIL' ? 'NIL' : '0'; });
+  document.querySelectorAll('.cargo-num').forEach(el => { el.placeholder = st === 'NIL' ? 'NIL' : '0'; });
 }
 function setCgoFromFlight(flight, raw) {
   const v = String(raw || '').trim().toUpperCase();
   const status = /^(Y|YES)\b/.test(v) ? 'YES' : /^(NIL|NO|N|NONE|0)$/.test(v) ? 'NIL' : '';
   _cgo = { flight, status };
-  if (status === 'NIL') ['cargo-hold','cargo-pcs','cargo-kg','cargo-loaded'].forEach(id => { document.getElementById(id).value = ''; });
+  if (status === 'NIL') renderCargoRows([{}]);
   applyCgo();
   onSpecialChange();
 }
@@ -119,9 +119,8 @@ function schedulePush() {
 function saveState() {
   const fields = ['crew-hold','crew-pcs','crew-kg','toolbox-hold','toolbox-pcs','toolbox-kg',
                   'transit-hold','transit-pcs','transit-kg','trash-hold','trash-pcs','trash-kg',
-                  'cargo-hold','cargo-pcs','cargo-kg','cargo-loaded',
                   'totalPcs','totalKg'];
-  const data = { ac: curAc, holdPcs, fields: {}, cgo: _cgo };
+  const data = { ac: curAc, holdPcs, fields: {}, cargo: readCargoVals(), cgo: _cgo };
   fields.forEach(id => { data.fields[id] = document.getElementById(id)?.value || ''; });
   localStorage.setItem(STORE_KEY, JSON.stringify(data));
   schedulePush();
@@ -144,8 +143,12 @@ function loadState() {
         if (el) el.value = val;
       });
     }
+    /* 舊版只有一筆貨物，存在 fields 的 cargo-* 欄位：轉成第一筆 */
+    const f = data.fields || {};
+    const cargo = Array.isArray(data.cargo) && data.cargo.length ? data.cargo
+      : [{ hold: f['cargo-hold'] || '', pcs: f['cargo-pcs'] || '', kg: f['cargo-kg'] || '', loaded: f['cargo-loaded'] || '' }];
     _cgo = data.cgo || null;
-    applyCgo();
+    renderCargoRows(cargo);
     /* 雲端是空的分配（另一台按了 CLEAR）也要蓋掉，不然會留著舊件數 */
     holdPcs = data.holdPcs || {};
     _distSig = transitSig();
@@ -193,10 +196,12 @@ document.getElementById('acSwitch').addEventListener('click', e => {
 
 function buildHoldOptions() {
   const holds = AC[curAc].holds;
-  ['crew-hold','toolbox-hold','transit-hold','trash-hold','cargo-hold'].forEach(id => {
+  const cargoIds = [...Array(_cargoN)].map((_, i) => `cargo${i}-hold`);
+  ['crew-hold','toolbox-hold','transit-hold','trash-hold', ...cargoIds].forEach(id => {
     const sel = document.getElementById(id);
+    if (!sel) return;
     const cur = sel.value;
-    const opts = id === 'cargo-hold' && AC[curAc].cargoHolds
+    const opts = id.startsWith('cargo') && AC[curAc].cargoHolds
       ? holds.filter(h => AC[curAc].cargoHolds.includes(h.id))
       : holds;
     sel.innerHTML = '<option value="">— Hold</option>' +
@@ -206,6 +211,7 @@ function buildHoldOptions() {
 }
 
 /* ── 輔助 ── */
+function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c])); }
 function round1(n) { return Math.round(n * 10) / 10; }
 function v(id)     { return parseFloat(document.getElementById(id).value) || 0; }
 
@@ -221,32 +227,108 @@ function getSpecials() {
     toolbox: { hold: document.getElementById('toolbox-hold').value, pcs: v('toolbox-pcs'), kg: v('toolbox-kg') },
     transit: { hold: document.getElementById('transit-hold').value, pcs: v('transit-pcs'), kg: v('transit-kg') },
     trash:   { hold: document.getElementById('trash-hold').value,   pcs: v('trash-pcs'),   kg: v('trash-kg')   },
-    cargo:   { hold: document.getElementById('cargo-hold').value,   pcs: v('cargo-pcs'),   kg: v('cargo-kg')   },
+    cargo:   cargoItems(),
   };
 }
 
-/* ── 貨物只裝一部分：已裝／未裝件數與重量（每件重 = 貨物 KG ÷ PCS，只顯示） ── */
-/* 回傳 null = 沒填 LOADED（全裝）；err = 輸入有誤 */
-function cargoLoaded() {
-  const raw = document.getElementById('cargo-loaded').value.trim();
+/* ── 貨物：可分批填多種貨（例如郵件、快遞各一筆），每筆各自選艙位、件數、重量 ── */
+let _cargoN = 1;
+function gv(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function readCargoVals() {
+  return [...Array(_cargoN)].map((_, i) => ({
+    name: gv(`cargo${i}-name`), hold: gv(`cargo${i}-hold`),
+    pcs: gv(`cargo${i}-pcs`), kg: gv(`cargo${i}-kg`), loaded: gv(`cargo${i}-loaded`),
+  }));
+}
+function cargoRowHtml(i) {
+  const num = (key, label, mode, ph, handler) =>
+    `<div class="si-field"><div class="si-field-label">${label}</div><input class="si-input${key !== 'loaded' ? ' cargo-num' : ''}" type="text" inputmode="${mode}" id="cargo${i}-${key}" placeholder="${ph}" oninput="${handler}"></div>`;
+  return `<div class="special-item cargo-item">
+    <div class="si-top">
+      <div class="si-label"><span class="row-label">${_cargoN > 1 ? 'CARGO ' + (i + 1) : 'CARGO'}</span>${i === 0 ? '<span class="cgo-badge" id="cgoBadge" hidden></span>' : ''}</div>
+      ${_cargoN > 1 ? `<button class="cargo-del" type="button" onclick="removeCargo(${i})" aria-label="Remove cargo ${i + 1}">✕</button>` : ''}
+      <select class="si-select" id="cargo${i}-hold" onchange="onSpecialChange()"><option value="">— Hold</option></select>
+    </div>
+    <div class="si-nums">
+      ${num('pcs', 'PCS', 'numeric', '0', 'onSpecialChange()')}
+      ${num('kg', 'KG', 'decimal', '0', 'onSpecialChange()')}
+    </div>
+    <div class="si-nums cargo-loaded-row">
+      <div class="si-field cargo-type"><div class="si-field-label">TYPE</div><input class="si-input" type="text" id="cargo${i}-name" placeholder="—" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="onCargoName()"></div>
+      ${num('loaded', 'LOADED PCS', 'numeric', 'ALL', 'onCargoLoaded()')}
+    </div>
+    <div class="cargo-loaded-hint" id="cargo${i}-hint" hidden></div>
+  </div>`;
+}
+/* 重畫貨物列並填回數值；vals 是 readCargoVals() 格式的陣列 */
+function renderCargoRows(vals) {
+  _cargoN = Math.max(1, vals.length);
+  document.getElementById('cargoList').innerHTML = [...Array(_cargoN)].map((_, i) => cargoRowHtml(i)).join('');
+  buildHoldOptions();
+  vals.forEach((c, i) => {
+    ['name','pcs','kg','loaded'].forEach(k => { document.getElementById(`cargo${i}-${k}`).value = c[k] ?? ''; });
+    const sel = document.getElementById(`cargo${i}-hold`);
+    sel.value = c.hold || '';
+    if (sel.value !== (c.hold || '')) sel.value = '';
+  });
+  applyCgo();
+  updateCargoLoaded();
+}
+function addCargo() {
+  renderCargoRows([...readCargoVals(), {}]);
+  saveState();
+}
+function removeCargo(i) {
+  const vals = readCargoVals();
+  vals.splice(i, 1);
+  renderCargoRows(vals.length ? vals : [{}]);
+  onSpecialChange();
+}
+function onCargoName() {
+  updateWeightSummary();
+  renderResult();
+  saveState();
+}
+
+/* 單筆貨物只裝一部分：已裝／未裝件數與重量（每件重 = 貨物 KG ÷ PCS）。
+   回傳 null = 沒填 LOADED（全裝）；err = 輸入有誤 */
+function cargoLoaded(i) {
+  const raw = gv(`cargo${i}-loaded`).trim();
   if (raw === '') return null;
-  const pcs = v('cargo-pcs'), kg = v('cargo-kg');
+  const pcs = v(`cargo${i}-pcs`), kg = v(`cargo${i}-kg`);
   const loaded = parseFloat(raw) || 0;
   if (!pcs || !kg) return { err: 'Enter cargo PCS and KG first' };
   if (loaded > pcs) return { err: `Loaded ${loaded} PCS exceeds cargo ${pcs} PCS` };
   const loadedKg = loaded === pcs ? kg : Math.round(loaded * kg / pcs); // 已裝取整數，未裝 = 總重 − 已裝
   return { pcs, kg, loaded, loadedKg, offPcs: round1(pcs - loaded), offKg: round1(kg - loadedKg) };
 }
+/* 每筆貨物：name 顯示用名稱；kg 是實際裝上機的重量（只裝一部分時為已裝重量），allKg 是填的總重 */
+function cargoItems() {
+  return [...Array(_cargoN)].map((_, i) => {
+    const cl = cargoLoaded(i);
+    const partial = !!(cl && !cl.err);
+    const allKg = v(`cargo${i}-kg`);
+    const type = gv(`cargo${i}-name`).trim().toUpperCase();
+    return {
+      i, cl: partial ? cl : null,
+      name: type || (_cargoN > 1 ? `Cargo ${i + 1}` : 'Cargo'),
+      hold: gv(`cargo${i}-hold`), pcs: v(`cargo${i}-pcs`), allKg,
+      kg: partial ? cl.loadedKg : allKg,
+    };
+  });
+}
 function updateCargoLoaded() {
-  const hint = document.getElementById('cargoLoadedHint');
-  const c    = cargoLoaded();
-  hint.classList.remove('err');
-  hint.hidden = !c;
-  if (!c) return;
-  if (c.err) { hint.classList.add('err'); hint.textContent = c.err; return; }
-  hint.innerHTML = `<span class="cl-on">LOADED <b>${c.loaded}</b> PCS · <b>${c.loadedKg}</b> KG</span>`
-                 + `<span class="cl-off">NOT LOADED <b>${c.offPcs}</b> PCS · <b>${c.offKg}</b> KG</span>`
-                 + `<span class="cl-avg">${c.kg} ÷ ${c.pcs} = ${round1(c.kg / c.pcs)} KG/PCS</span>`;
+  for (let i = 0; i < _cargoN; i++) {
+    const hint = document.getElementById(`cargo${i}-hint`);
+    const c    = cargoLoaded(i);
+    hint.classList.remove('err');
+    hint.hidden = !c;
+    if (!c) continue;
+    if (c.err) { hint.classList.add('err'); hint.textContent = c.err; continue; }
+    hint.innerHTML = `<span class="cl-on">LOADED <b>${c.loaded}</b> PCS · <b>${c.loadedKg}</b> KG</span>`
+                   + `<span class="cl-off">NOT LOADED <b>${c.offPcs}</b> PCS · <b>${c.offKg}</b> KG</span>`
+                   + `<span class="cl-avg">${c.kg} ÷ ${c.pcs} = ${round1(c.kg / c.pcs)} KG/PCS</span>`;
+  }
 }
 function onCargoLoaded() {
   updateCargoLoaded();
@@ -260,9 +342,7 @@ function updateWeightSummary() {
   const sp     = getSpecials();
   const bagsKg = v('totalKg');
   /* 貨物只裝一部分時，總重改算已裝的重量 */
-  const cl      = cargoLoaded();
-  const partial = cl && !cl.err;
-  const cargoKg = partial ? cl.loadedKg : sp.cargo.kg;
+  const cargoKg = sp.cargo.reduce((sum, c) => sum + c.kg, 0);
   const extraKg = sp.crew.kg + sp.toolbox.kg + sp.trash.kg + cargoKg; // 轉機不加（已含在出發行李）
   const total   = round1(bagsKg + extraKg);
   const hasAny  = bagsKg > 0 || extraKg > 0;
@@ -280,13 +360,11 @@ function updateWeightSummary() {
   showRow('ws-crew-row',    'ws-crew',    sp.crew.kg);
   showRow('ws-toolbox-row', 'ws-toolbox', sp.toolbox.kg);
   showRow('ws-trash-row',   'ws-trash',   sp.trash.kg);
-  showRow('ws-cargo-row',   'ws-cargo',   cargoKg);
-  document.getElementById('ws-cargo-label').textContent = partial ? `Cargo loaded ${cl.loaded} / ${cl.pcs} PCS` : 'Cargo';
-  document.getElementById('ws-cargo-off-row').style.display = partial && cl.offPcs > 0 ? '' : 'none';
-  if (partial) {
-    document.getElementById('ws-cargo-off-label').textContent = `Cargo not loaded ${cl.offPcs} PCS`;
-    document.getElementById('ws-cargo-off').textContent = cl.offKg + ' KG';
-  }
+  /* 每筆貨物一列；只裝一部分時另列一列刪除線的未裝重量 */
+  document.getElementById('ws-cargo-rows').innerHTML = sp.cargo.filter(c => c.allKg > 0).map(c =>
+    `<div class="ws-row cargo"><span class="ws-label">${esc(c.name)}${c.cl ? ` loaded ${c.cl.loaded} / ${c.cl.pcs} PCS` : ''}</span><span class="ws-val">${c.kg} KG</span></div>`
+    + (c.cl && c.cl.offPcs > 0 ? `<div class="ws-row cargo-off"><span class="ws-label">${esc(c.name)} not loaded ${c.cl.offPcs} PCS</span><span class="ws-val">${c.cl.offKg} KG</span></div>` : '')
+  ).join('');
   document.getElementById('weightSummary').style.display = '';
 }
 
@@ -299,15 +377,14 @@ function onBagsInput() {
   saveState();
 }
 
-/* 有貨的艙（貨物有填件數或重量）：不分配行李 */
-function cargoBlockedHold() {
-  const hold = document.getElementById('cargo-hold').value;
-  return hold && (v('cargo-pcs') > 0 || v('cargo-kg') > 0) ? hold : '';
+/* 有貨的艙（任一筆貨物有填件數或重量）：不分配行李 */
+function cargoBlockedHolds() {
+  return [...new Set(cargoItems().filter(c => c.hold && (c.pcs > 0 || c.allKg > 0)).map(c => c.hold))].sort();
 }
 
 /* 只有轉機艙位／件數、有貨的艙會改變分配；其他特殊項目只影響重量，不重算才保留手動改過的件數 */
 function transitSig() {
-  return document.getElementById('transit-hold').value + '|' + v('transit-pcs') + '|' + cargoBlockedHold();
+  return document.getElementById('transit-hold').value + '|' + v('transit-pcs') + '|' + cargoBlockedHolds().join(',');
 }
 
 function onSpecialChange() {
@@ -338,11 +415,11 @@ function calcDistribution() {
   const transitFixed = sp.transit.hold && sp.transit.pcs > 0 ? sp.transit.pcs : 0;
   let remaining = Math.max(0, totalPcs - transitFixed);  // 轉機比總件數多時不能分配負數，差額由 banner 顯示
   const fillOrder = AC[curAc].fillOrder;
-  const cargoHold = cargoBlockedHold();
+  const cargoHolds = cargoBlockedHolds();
   const fillHolds = (fillOrder
     ? fillOrder.map(id => holds.find(h => h.id === id))
     : holds.filter(h => !h.nodist)
-  ).filter(h => h.id !== cargoHold);   // 有貨的艙不裝行李
+  ).filter(h => !cargoHolds.includes(h.id));   // 有貨的艙不裝行李
   /* 第一輪先裝到建議件數（softPcs，沒設就是上限），全部艙都裝滿還有剩，第二輪才補到上限 maxPcs */
   const passes = [h => h.softPcs ?? h.maxPcs, h => h.maxPcs];
   for (const cap of passes) {
@@ -369,12 +446,7 @@ function renderResult() {
   const totalPcs = v('totalPcs');
   const assigned = Object.values(holdPcs).reduce((a, b) => a + b, 0);
   const remain   = totalPcs - assigned;
-  const sp       = getSpecials();
-  /* 貨物只裝一部分時，艙重改算已裝的重量 */
-  const cl       = cargoLoaded();
-  const cargoPartial = cl && !cl.err;
-  const cargoAllKg   = sp.cargo.kg;
-  if (cargoPartial) sp.cargo.kg = cl.loadedKg;
+  const sp       = getSpecials();   // 貨物 kg 已是實際裝上機的重量（只裝一部分時為已裝重量）
 
   /* banner */
   const banner = document.getElementById('remainBanner');
@@ -420,17 +492,18 @@ function renderResult() {
     const pcs     = holdPcs[h.id] || 0;
     const kg      = holdKg[h.id] ?? 0;
     /* 該艙特殊項目（轉機已含在行李件數內，不另外加） */
+    const holdCargo = sp.cargo.filter(c => c.hold === h.id);
     const spItems = [
       { label:'Crew',    s: sp.crew    },
       { label:'Toolbox', s: sp.toolbox },
       { label:'Garbage', s: sp.trash   },
-      { label:'Cargo',   s: sp.cargo   },
+      ...holdCargo.map(c => ({ label: c.name, s: c, cargo: true })),
     ].filter(x => x.s.hold === h.id && x.s.kg > 0);
     const spKg    = round1(spItems.reduce((sum, x) => sum + x.s.kg, 0));
     const holdTotal = round1(kg + spKg);
     const overPcs = pcs > h.maxPcs && h.maxPcs > 0;
     /* 貨物不設上限：超重判斷不算貨物重量 */
-    const overKg  = holdTotal - (sp.cargo.hold === h.id ? sp.cargo.kg : 0) > h.maxKg;
+    const overKg  = holdTotal - holdCargo.reduce((sum, c) => sum + c.kg, 0) > h.maxKg;
     const hasTransit = sp.transit.hold === h.id && sp.transit.pcs > 0;
 
     /* 特殊項目 tags */
@@ -439,7 +512,7 @@ function renderResult() {
       sp.toolbox.hold === h.id && (sp.toolbox.pcs > 0 || sp.toolbox.kg > 0) ? `<span class="extra-tag">Toolbox ${sp.toolbox.pcs||'—'} pcs / ${sp.toolbox.kg||'—'} KG</span>` : '',
       hasTransit ? `<span class="extra-tag transit">Transit ${sp.transit.pcs} pcs${sp.transit.kg ? ' / '+sp.transit.kg+' KG' : ''} (fixed)</span>` : '',
       sp.trash.hold === h.id ? `<span class="extra-tag">Garbage${sp.trash.pcs > 0 ? ' '+sp.trash.pcs+' pcs' : ''}${sp.trash.kg ? ' / '+sp.trash.kg+' KG' : ''}</span>` : '',
-      sp.cargo.hold === h.id && cargoAllKg > 0 ? `<span class="extra-tag cargo">${cargoPartial ? `Cargo loaded ${cl.loaded} / ${cl.pcs} PCS · ${cl.loadedKg} KG` : `Cargo ${cargoAllKg} KG`}</span>` : '',
+      ...holdCargo.filter(c => c.allKg > 0).map(c => `<span class="extra-tag cargo">${esc(c.name)} ${c.cl ? `loaded ${c.cl.loaded} / ${c.cl.pcs} PCS · ${c.cl.loadedKg} KG` : `${c.allKg} KG`}</span>`),
     ].filter(Boolean).join('');
 
     const inputCls = (overPcs || overKg) ? 'err' : h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
@@ -475,7 +548,7 @@ function renderResult() {
                   ? `Bags ${totalKg}−${usedKg} = ${kg}`
                   : `Bags ${pcs}×${bagAvg} = ${kg}`)
             : '';
-          const spLines = spItems.map(x => x.s === sp.cargo ? `<span class="cargo-line">${cargoPartial ? `Cargo loaded ${cl.loaded} PCS = ${x.s.kg}` : `${x.label} ${x.s.kg}`}</span>` : `${x.label} ${x.s.kg}`);
+          const spLines = spItems.map(x => x.cargo ? `<span class="cargo-line">${esc(x.label)} ${x.s.cl ? `loaded ${x.s.cl.loaded} PCS = ${x.s.kg}` : x.s.kg}</span>` : `${x.label} ${x.s.kg}`);
           const detail = [bagLine, ...spLines].filter(Boolean).join('<br>');
           return `<div class="hold-calc">
             <div class="hold-calc-kg">${holdTotal} KG</div>
@@ -537,15 +610,13 @@ function resetForm() {
   /* 清除所有欄位 */
   ['crew-hold','crew-pcs','crew-kg','toolbox-hold','toolbox-pcs','toolbox-kg',
    'transit-hold','transit-pcs','transit-kg','trash-hold','trash-pcs','trash-kg',
-                  'cargo-hold','cargo-pcs','cargo-kg','cargo-loaded',
    'totalPcs','totalKg'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   holdPcs = {};
   _cgo = null;
-  applyCgo();
-  updateCargoLoaded();
+  renderCargoRows([{}]);
   document.getElementById('avgHint').textContent = 'Enter total pieces and weight';
   document.getElementById('weightSummary').style.display = 'none';
   clearTimeout(_syncDebounce);
@@ -1080,7 +1151,6 @@ const CHK_ITEMS = [
   { key:'toolbox', name:'TOOLBOX',     need:'kg'  },
   { key:'transit', name:'TRANSIT BAG', need:'pcs' },
   { key:'trash',   name:'GARBAGE',     need:'kg'  },
-  { key:'cargo',   name:'CARGO',       need:'kg'  },
 ];
 let _chkActive = false;   // 按過 COMPUTE 且有錯之後，改資料就即時更新紅字
 function chkCollect() {
@@ -1091,6 +1161,12 @@ function chkCollect() {
     if ((pcs > 0 || kg > 0) && !hold) issues.push({ key, name, msg:'Select a hold', target: key + '-hold' });
     else if (hold && need === 'kg' && !(kg > 0)) issues.push({ key, name, msg:'Enter KG', target: key + '-kg' });
     else if (hold && need === 'pcs' && !(pcs > 0)) issues.push({ key, name, msg:'Enter PCS', target: key + '-pcs' });
+  });
+  cargoItems().forEach(c => {
+    const type = gv(`cargo${c.i}-name`).trim().toUpperCase();
+    const name = 'CARGO' + (_cargoN > 1 ? ' ' + (c.i + 1) : '') + (type ? ` (${esc(type)})` : '');
+    if ((c.pcs > 0 || c.allKg > 0) && !c.hold) issues.push({ key:'cargo' + c.i, name, msg:'Select a hold', target:`cargo${c.i}-hold` });
+    else if (c.hold && !(c.allKg > 0)) issues.push({ key:'cargo' + c.i, name, msg:'Enter KG', target:`cargo${c.i}-kg` });
   });
   if (!(v('totalPcs') > 0)) issues.push({ key:'bags', name:'DEPARTURE BAGS', msg:'Enter total PCS', target:'totalPcs' });
   if (!(v('totalKg')  > 0)) issues.push({ key:'bags', name:'DEPARTURE BAGS', msg:'Enter total KG',  target:'totalKg' });
@@ -1143,7 +1219,7 @@ function chkComputeAnyway() {
 }));
 
 /* 初始化 */
-buildHoldOptions();
+renderCargoRows([{}]);
 renderResult();
 loadLdmFlights();
 const _initSyncId = getSyncId() || genSyncId();

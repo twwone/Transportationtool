@@ -53,14 +53,14 @@ input::placeholder { color:#6f7276; }
 
 /* 共用：白色按鈕（btWhiteMedium）、灰色按鈕（btGrey）、藍色按鈕（btBlue） */
 .back-btn, .sync-btn, .sync-copy-btn, .ldm-date-btn, .img-modal-close,
-.ldm-apply-btn, .ldm-close-btn, .calc-btn, .clear-btn {
+.ldm-apply-btn, .ldm-close-btn, .calc-btn, .clear-btn, .cargo-add-btn {
   background:var(--btn-white); border:1px solid var(--btn-white-edge); color:var(--ink);
   border-radius:5px; font-weight:700; cursor:pointer;
   box-shadow:0 1px 2px rgba(0,0,0,0.45), inset 0 1px 0 #ffffff;
   transition:transform .12s, filter .12s;
 }
 .back-btn:active, .sync-btn:active, .sync-copy-btn:active, .ldm-date-btn:active, .img-modal-close:active,
-.ldm-apply-btn:active, .ldm-close-btn:active, .calc-btn:active, .clear-btn:active { transform:scale(0.97); filter:brightness(0.9); }
+.ldm-apply-btn:active, .ldm-close-btn:active, .calc-btn:active, .clear-btn:active, .cargo-add-btn:active { transform:scale(0.97); filter:brightness(0.9); }
 
 /* 頂部導覽列（navbarBg） */
 .header { position:sticky; top:0; z-index:100; background:var(--navbar); padding:env(safe-area-inset-top,0px) 10px 0; border-bottom:1px solid #000; box-shadow:0 1px 3px rgba(0,0,0,0.35); }
@@ -260,6 +260,13 @@ input::placeholder { color:#6f7276; }
 .cargo-loaded-hint .cl-off { color:var(--sub); }
 .cargo-loaded-hint .cl-avg { font-weight:600; font-size:0.66rem; }
 .cargo-loaded-hint.err { color:var(--danger); }
+/* 多筆貨物：TYPE 是文字欄（叫系統鍵盤），刪除鈕、新增鈕 */
+.cargo-type { flex:1.3; }
+.cargo-type .si-input { text-transform:uppercase; }
+.cargo-del { width:30px; height:30px; flex-shrink:0; border-radius:5px; border:1px solid #1d2024; background:#26292e; color:var(--sub); font-size:0.8rem; font-weight:800; cursor:pointer; box-shadow:inset 0 1px 2px rgba(0,0,0,0.5), 0 1px 0 rgba(161,161,161,0.25); }
+.cargo-del:active { color:var(--danger); }
+#cargoList .special-item:last-child { border-bottom:1px solid var(--row-line); box-shadow:0 1px 0 var(--row-hi); padding-bottom:9px; }
+.cargo-add-btn { width:100%; margin-top:10px; padding:9px; font-size:0.78rem; letter-spacing:0.04em; }
 
 /* ── 數字鍵盤彈窗（仿 Flysmart+ WHBasicKeypadVC：popWindowMainBg 底、白色結果列、numericPad 白鍵）── */
 .si-field.kp-active, .field.kp-active { background:var(--active-fill); border-color:var(--active-edge); box-shadow:inset 0 1px 0 var(--active-hi); }
