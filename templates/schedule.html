@@ -114,10 +114,37 @@ main {
   letter-spacing: -0.03em; color: var(--text);
   margin-bottom: 3px;
 }
-.month-sub {
-  font-size: 0.8rem; font-weight: 590; color: var(--sub);
-  margin-bottom: 14px; letter-spacing: -0.01em;
+
+/* ── 本月上班統計 ── */
+.work-stats {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 12px 14px 14px;
+  margin-bottom: 14px;
 }
+.ws-main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ws-label { font-size: 0.74rem; font-weight: 600; color: var(--sub); margin-bottom: 2px; }
+.ws-count {
+  font-size: 1.7rem; font-weight: 700; color: var(--accent);
+  letter-spacing: -0.03em; line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.ws-total { font-size: 0.95rem; font-weight: 600; color: var(--sub); letter-spacing: 0; }
+.ws-foot {
+  margin-top: 8px; font-size: 0.76rem; font-weight: 600; color: var(--sub);
+  font-variant-numeric: tabular-nums;
+}
+.ws-foot span { color: var(--text); }
+.ws-bar {
+  height: 6px; border-radius: 3px; background: var(--acc2);
+  margin-top: 10px; overflow: hidden;
+}
+.ws-fill {
+  height: 100%; width: 0; border-radius: 3px; background: var(--accent);
+  transition: width 0.4s cubic-bezier(0.25,1,0.5,1);
+}
+@media (prefers-reduced-motion: reduce) { .ws-fill { transition: none; } }
 
 /* ── Calendar ── */
 .cal-dow-row {
@@ -214,7 +241,6 @@ main {
 @media (min-width: 768px) {
   main { max-width: 920px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
   .month-header { font-size: 2.1rem; }
-  .month-sub { font-size: 0.88rem; }
   .month-delete-btn { font-size: 0.78rem; }
   .cal-dow-row { gap: 8px; margin-bottom: 8px; }
   .cal-dow { font-size: 0.8rem; }
@@ -507,10 +533,23 @@ main {
     <button class="month-nav-btn" id="btn-prev-month" onclick="navMonth(-1)" aria-label="上個月">‹</button>
     <div class="month-title">
       <div class="month-header" id="month-hdr"></div>
-      <div class="month-sub"   id="month-sub"></div>
       <button class="month-delete-btn" onclick="openDeleteSheet()">刪除本月班表</button>
     </div>
     <button class="month-nav-btn" id="btn-next-month" onclick="navMonth(1)" aria-label="下個月">›</button>
+  </div>
+  <div class="work-stats">
+    <div class="ws-main">
+      <div>
+        <div class="ws-label" id="ws-label">本月已上班</div>
+        <div class="ws-count"><span id="ws-done">0</span><span class="ws-total"> / <span id="ws-total">0</span> 天</span></div>
+      </div>
+      <div>
+        <div class="ws-label" id="ws-hlabel">已上時數</div>
+        <div class="ws-count"><span id="ws-hdone">0</span><span class="ws-total"> / <span id="ws-htotal">0</span> 小時</span></div>
+      </div>
+    </div>
+    <div class="ws-bar"><div class="ws-fill" id="ws-fill"></div></div>
+    <div class="ws-foot">還有 <span id="ws-left">0</span> 天 · 上課 <span id="ws-class">0</span> 天 · 休假 <span id="ws-off">0</span> 天</div>
   </div>
   <div class="cal-dow-row">
     <span class="cal-dow wknd">日</span>
@@ -742,6 +781,16 @@ function lookup(code) {
   return { type: 'unknown', label: code };
 }
 
+/* ── 班別時數：下班早於上班視為跨夜；代碼查不到時間的不計時數 ── */
+function shiftHours(s) {
+  if (s.type !== 'work') return 0;
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  let mins = toMin(s.end) - toMin(s.start);
+  if (mins <= 0) mins += 24 * 60;
+  return mins / 60;
+}
+function fmtHours(h) { return Number.isInteger(h) ? String(h) : h.toFixed(1); }
+
 /* ── 紀念日計算 ── */
 const COUPLE_START = new Date(2024, 9, 19); // 2024/10/19
 
@@ -774,15 +823,31 @@ function render() {
   document.getElementById('btn-prev-month').disabled = idx <= 0;
   document.getElementById('btn-next-month').disabled = idx === -1 || idx >= keys.length - 1;
 
-  let workDays = 0, classDays = 0, offDays = 0;
+  // 「已上班」算到今天為止（含今天）；過去的月份全算已上，未來的月份全算待上
+  const viewKey  = year * 12 + month;
+  const todayKey = today.getFullYear() * 12 + today.getMonth() + 1;
+  const doneUpTo = viewKey < todayKey ? daysInMonth : viewKey > todayKey ? 0 : today.getDate();
+  let workDays = 0, workDone = 0, classDays = 0, offDays = 0, hrsTotal = 0, hrsDone = 0;
   for (let d = 1; d <= daysInMonth; d++) {
     const c = getCode(d);
     if (c === '@') offDays++;
     else if (c === 'E') classDays++;
-    else workDays++;
+    else {
+      const h = shiftHours(lookup(c));
+      workDays++; hrsTotal += h;
+      if (d <= doneUpTo) { workDone++; hrsDone += h; }
+    }
   }
-  document.getElementById('month-sub').textContent =
-    `上班 ${workDays} 天 · 上課 ${classDays} 天 · 休假 ${offDays} 天`;
+  document.getElementById('ws-label').textContent = viewKey < todayKey ? '本月共上班' : '本月已上班';
+  document.getElementById('ws-done').textContent  = workDone;
+  document.getElementById('ws-total').textContent = workDays;
+  document.getElementById('ws-left').textContent  = workDays - workDone;
+  document.getElementById('ws-class').textContent = classDays;
+  document.getElementById('ws-off').textContent   = offDays;
+  document.getElementById('ws-hlabel').textContent = viewKey < todayKey ? '共上時數' : '已上時數';
+  document.getElementById('ws-hdone').textContent  = fmtHours(hrsDone);
+  document.getElementById('ws-htotal').textContent = fmtHours(hrsTotal);
+  document.getElementById('ws-fill').style.width  = workDays ? `${workDone / workDays * 100}%` : '0';
 
   let html = '';
   for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell empty"></div>';
