@@ -234,6 +234,13 @@ main {
 @media (prefers-color-scheme: dark) {
   .cal-class-label { color: #93c5fd; }
 }
+.cal-leave-label { font-size: 0.74rem; font-weight: 700; }
+.cal-leave-label.sick     { color: #ea580c; }
+.cal-leave-label.personal { color: #7c3aed; }
+@media (prefers-color-scheme: dark) {
+  .cal-leave-label.sick     { color: #fb923c; }
+  .cal-leave-label.personal { color: #a78bfa; }
+}
 
 /* ── 電腦版：限制寬度、格子改扁長、字放大 ──
    手機版用 aspect-ratio 讓格子隨寬度長高；大螢幕上一欄 260px 會長成 320px 高，
@@ -265,7 +272,7 @@ main {
     letter-spacing: 0;
   }
   .cal-time { font-size: 0.82rem; margin-top: 4px; letter-spacing: 0; }
-  .cal-off-label, .cal-class-label { font-size: 0.9rem; }
+  .cal-off-label, .cal-class-label, .cal-leave-label { font-size: 0.9rem; }
   .cal-cell.anniversary::before { top: 12px; left: auto; right: 12px; transform: none; width: 7px; height: 7px; }
 }
 
@@ -338,6 +345,12 @@ main {
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .quick-btn:active { opacity: 0.65; }
+.quick-btn.sick     { background: rgba(234,88,12,0.1);  color: #ea580c; }
+.quick-btn.personal { background: rgba(124,58,237,0.1); color: #7c3aed; }
+@media (prefers-color-scheme: dark) {
+  .quick-btn.sick     { color: #fb923c; }
+  .quick-btn.personal { color: #a78bfa; }
+}
 
 .sheet-actions {
   display: flex; gap: 10px; align-items: stretch;
@@ -549,7 +562,7 @@ main {
       </div>
     </div>
     <div class="ws-bar"><div class="ws-fill" id="ws-fill"></div></div>
-    <div class="ws-foot">還有 <span id="ws-left">0</span> 天 · 上課 <span id="ws-class">0</span> 天 · 休假 <span id="ws-off">0</span> 天</div>
+    <div class="ws-foot">還有 <span id="ws-left">0</span> 天 · 上課 <span id="ws-class">0</span> 天 · 休假 <span id="ws-off">0</span> 天<span id="ws-leave"></span></div>
   </div>
   <div class="cal-dow-row">
     <span class="cal-dow wknd">日</span>
@@ -590,6 +603,8 @@ main {
   <div class="quick-row">
     <button class="quick-btn" onclick="quickSet('@')">@ 休假</button>
     <button class="quick-btn" onclick="quickSet('E')">E 上課</button>
+    <button class="quick-btn sick" onclick="quickSet('SL')">SL 病假</button>
+    <button class="quick-btn personal" onclick="quickSet('PL')">PL 事假</button>
   </div>
   <div class="sheet-actions">
     <button class="btn-reset" id="btn-reset" onclick="resetDay()">還原原始</button>
@@ -775,11 +790,17 @@ function navMonth(delta) {
 function lookup(code) {
   if (!code || code === '@') return { type: 'off' };
   if (code === 'E')          return { type: 'class' };
+  if (code === 'SL')         return { type: 'sick' };
+  if (code === 'PL')         return { type: 'personal' };
   const norm = 'B' + code.slice(1);
   const t = T[norm];
   if (t) return { type: 'work', label: code, start: t[0], end: t[1] };
   return { type: 'unknown', label: code };
 }
+
+/* ── 代碼顯示名稱（編輯面板用） ── */
+const CODE_NAMES = { '@': '休假', 'E': '上課', 'SL': '病假', 'PL': '事假' };
+function codeName(code) { return CODE_NAMES[code] ? `${code} ${CODE_NAMES[code]}` : code; }
 
 /* ── 班別時數：下班早於上班視為跨夜；代碼查不到時間的不計時數 ── */
 function shiftHours(s) {
@@ -827,11 +848,13 @@ function render() {
   const viewKey  = year * 12 + month;
   const todayKey = today.getFullYear() * 12 + today.getMonth() + 1;
   const doneUpTo = viewKey < todayKey ? daysInMonth : viewKey > todayKey ? 0 : today.getDate();
-  let workDays = 0, workDone = 0, classDays = 0, offDays = 0, hrsTotal = 0, hrsDone = 0;
+  let workDays = 0, workDone = 0, classDays = 0, offDays = 0, sickDays = 0, personalDays = 0, hrsTotal = 0, hrsDone = 0;
   for (let d = 1; d <= daysInMonth; d++) {
     const c = getCode(d);
     if (c === '@') offDays++;
     else if (c === 'E') classDays++;
+    else if (c === 'SL') sickDays++;
+    else if (c === 'PL') personalDays++;
     else {
       const h = shiftHours(lookup(c));
       workDays++; hrsTotal += h;
@@ -844,6 +867,10 @@ function render() {
   document.getElementById('ws-left').textContent  = workDays - workDone;
   document.getElementById('ws-class').textContent = classDays;
   document.getElementById('ws-off').textContent   = offDays;
+  const leave = [];
+  if (sickDays)     leave.push(`病假 <span>${sickDays}</span> 天`);
+  if (personalDays) leave.push(`事假 <span>${personalDays}</span> 天`);
+  document.getElementById('ws-leave').innerHTML = leave.length ? ' · ' + leave.join(' · ') : '';
   document.getElementById('ws-hlabel').textContent = viewKey < todayKey ? '共上時數' : '已上時數';
   document.getElementById('ws-hdone').textContent  = fmtHours(hrsDone);
   document.getElementById('ws-htotal').textContent = fmtHours(hrsTotal);
@@ -869,6 +896,10 @@ function render() {
       </div>`;
     } else if (s.type === 'class') {
       shiftHtml = `<div class="cal-shift"><span class="cal-class-label">課</span></div>`;
+    } else if (s.type === 'sick') {
+      shiftHtml = `<div class="cal-shift"><span class="cal-leave-label sick">病假</span></div>`;
+    } else if (s.type === 'personal') {
+      shiftHtml = `<div class="cal-shift"><span class="cal-leave-label personal">事假</span></div>`;
     } else if (s.type === 'off') {
       shiftHtml = `<div class="cal-shift"><span class="cal-off-label">休</span></div>`;
     } else {
@@ -931,8 +962,8 @@ function openEdit(day) {
 
   document.getElementById('sheet-title').textContent = `${month}月${day}日（週${WD[dow]}）`;
   document.getElementById('sheet-current').innerHTML = modified
-    ? `原始：<b>${origCode}</b>　→　已調整為 <b>${code}</b>`
-    : `目前班別：<b>${code}</b>`;
+    ? `原始：<b>${codeName(origCode)}</b>　→　已調整為 <b>${codeName(code)}</b>`
+    : `目前班別：<b>${codeName(code)}</b>`;
 
   const annivLabel = getAnniversaryLabel(year, month, day);
   const banner = document.getElementById('anniversary-banner');
@@ -971,6 +1002,10 @@ function closeSheet() {
 
 function quickSet(code) {
   document.getElementById('sheet-input').value = code;
+  // 休假／上課／病假／事假沒有上下班時間，清掉以免看起來還是原本的班
+  document.getElementById('time-start').value = '';
+  document.getElementById('time-end').value   = '';
+  document.getElementById('time-hint').textContent = '';
   document.getElementById('sheet-input').focus();
 }
 
