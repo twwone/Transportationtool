@@ -386,7 +386,7 @@ function renderResult() {
   const list = document.getElementById('holdList');
   list.innerHTML = '';
 
-  /* 件數全部分配完時，最後一個有行李的艙（非 nodist）用總重減法算，吸收四捨五入誤差；
+  /* 件數全部分配完時，件數最少的有行李艙（非 nodist）用總重減法算，吸收四捨五入誤差；
      還有未分配件數時一律件數 × 平均重，避免把沒分配的重量算進最後一艙 */
   const totalKg     = v('totalKg');
   /* 轉機行李單獨放一艙（該艙件數剛好等於轉機件數，沒混一般行李）：那艙行李重量用轉機實重，
@@ -396,7 +396,10 @@ function renderResult() {
   const restPcs      = totalPcs - sp.transit.pcs;
   const bagAvg       = transitAlone && restPcs > 0 && avg ? round1((totalKg - sp.transit.kg) / restPcs) : avg;
   const activeHolds = AC[curAc].holds.filter(h => !h.nodist && (holdPcs[h.id] || 0) > 0 && !(transitAlone && h.id === tHold));
-  const lastHold    = remain === 0 ? activeHolds[activeHolds.length - 1] : null;
+  /* 件數多的艙先用件數 × 平均重，最後剩下件數最少的那艙用減法（同件數取艙位順序較後的） */
+  const lastHold    = remain === 0 && activeHolds.length
+    ? activeHolds.reduce((min, h) => holdPcs[h.id] <= holdPcs[min.id] ? h : min)
+    : null;
   let   usedKg      = 0;   // 前面各艙已算出的重量加總
 
   /* 先算非最後一艙的重量，記錄加總 */
