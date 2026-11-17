@@ -1,13 +1,13 @@
 const AC = {
-  /* cargoHolds：貨物可選的艙位 */
-  A320: { cargoHolds: ['HOLD3'], holds: [
+  /* cargoHolds：貨物可選的艙位（HOLD5 BULK 不放貨） */
+  A320: { cargoHolds: ['HOLD1','HOLD3','HOLD4'], holds: [
     { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:80, maxKg:3402 },
     { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:80, maxKg:2426 },
     { id:'HOLD4', label:'HOLD 4', tag:'AFT',  badge:'aft', maxPcs:40, maxKg:2110 },
     { id:'HOLD5', label:'HOLD 5', tag:'BULK', badge:'bulk',maxPcs:0,  maxKg:1497, nodist:true },
   ]},
   /* fillOrder：計算建議裝載時的填艙順序（沒設就照 holds 順序）；softPcs：優先只裝到這個件數；HOLD5 不分配，塞小件 */
-  A321: { fillOrder: ['HOLD3','HOLD4','HOLD2','HOLD1'], cargoHolds: ['HOLD2','HOLD3'], holds: [
+  A321: { fillOrder: ['HOLD3','HOLD4','HOLD2','HOLD1'], cargoHolds: ['HOLD1','HOLD2','HOLD3','HOLD4'], holds: [
     { id:'HOLD1', label:'HOLD 1', tag:'FWD',  badge:'',    maxPcs:50, maxKg:2202 },
     { id:'HOLD2', label:'HOLD 2', tag:'FWD',  badge:'',    maxPcs:90, softPcs:80, maxKg:3468 },
     { id:'HOLD3', label:'HOLD 3', tag:'AFT',  badge:'aft', maxPcs:90, softPcs:80, maxKg:3587 },
