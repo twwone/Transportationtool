@@ -444,6 +444,34 @@ body {
 .mo-amt { font-size: 0.92rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .mo-empty { font-size: 0.8rem; color: var(--sub); padding: 18px 4px; text-align: center; }
 
+/* 金錢搜尋 */
+.mo-search { padding: 14px 20px 0; }
+.mo-search + #moBody .mo { padding-top: 12px; }
+.mo-search-box {
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+.mo-search-box:focus-within { border-color: var(--accent); }
+.mo-search-box > i { color: var(--sub); font-size: 0.9rem; }
+.mo-search-input {
+  flex: 1; min-width: 0; border: none; background: none; outline: none; padding: 11px 0;
+  font-size: 16px; font-family: inherit; color: var(--text); -webkit-appearance: none;
+}
+.mo-search-input::-webkit-search-cancel-button { display: none; }
+.mo-search-clear {
+  border: none; background: none; color: var(--sub); font-size: 1rem; padding: 4px;
+  cursor: pointer; display: none; -webkit-tap-highlight-color: transparent;
+}
+.mo-search-clear.show { display: block; }
+.mo-res { padding: 12px 20px 40px; }
+.mo-res-count { font-size: 0.74rem; color: var(--sub); text-align: center; margin: 4px 0 10px; }
+.mo-res-month {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 0.78rem; font-weight: 650; color: var(--sub); margin: 16px 4px 2px;
+}
+.mo-res-month span { font-weight: 500; font-variant-numeric: tabular-nums; }
+.mo-res-date { font-size: 0.72rem; color: var(--sub); width: 62px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
 /* 上緣錨定的編輯面板（避免 iOS 鍵盤遮住輸入框） */
 .money-sheet {
   position: fixed; top: 0; left: 0; right: 0; z-index: 101;
@@ -524,6 +552,12 @@ body {
   .mo-entry:hover .mo-item { color: var(--accent); }
   .mo-entry:last-child { border-bottom: none; }
   .mo-add-btn:hover { opacity: 0.88; }
+
+  .mo-search { padding: 22px 24px 0; }
+  .mo-search + #moBody .mo { padding-top: 16px; }
+  .mo-res { padding: 16px 24px 48px; }
+  .mo-res-date { width: 76px; font-size: 0.8rem; }
+  .mo-search-clear:hover { color: var(--text); }
 }
 </style>
 </head>
@@ -812,6 +846,7 @@ let _moY = new Date().getFullYear();
 let _moM = new Date().getMonth();
 let _moSel = _ymd(new Date());
 let _msEditId = null, _msWho = 'me';
+let _moQ = '';
 
 function moShift(delta) {
   const d = new Date(_moY, _moM + delta, 1);
@@ -825,8 +860,80 @@ function moToday() {
 }
 function moPick(date) { _moSel = date; renderMoney(); }
 
+/* 外框：搜尋框只建一次，打字時只重繪 #moBody，避免輸入框失焦收鍵盤 */
 function renderMoney() {
-  const wrap = document.getElementById('listWrap');
+  if (!document.getElementById('moBody')) {
+    document.getElementById('listWrap').innerHTML = `<div class="mo-wrap">
+      <div class="mo-search"><div class="mo-search-box">
+        <i class="bi bi-search"></i>
+        <input class="mo-search-input" id="moQ" type="search" enterkeyhint="search"
+          placeholder="搜尋項目，例如：電影、午餐" autocomplete="off" oninput="moSearch(this.value)">
+        <button class="mo-search-clear" id="moQClear" onclick="moSearchClear()" aria-label="清除"><i class="bi bi-x-circle-fill"></i></button>
+      </div></div>
+      <div id="moBody"></div>
+    </div>`;
+    document.getElementById('moQ').value = _moQ;
+  }
+  document.getElementById('moQClear').classList.toggle('show', !!_moQ);
+  if (_moQ.trim()) renderMoneySearch(); else renderMoneyCal();
+}
+
+function moSearch(v) { _moQ = v; renderMoney(); }
+function moSearchClear() {
+  _moQ = '';
+  const el = document.getElementById('moQ');
+  if (el) { el.value = ''; el.blur(); }
+  renderMoney();
+}
+
+/* 搜尋結果：跨所有月份，空白分隔多個關鍵字須全部符合 */
+function renderMoneySearch() {
+  const body = document.getElementById('moBody');
+  const words = _moQ.trim().toLowerCase().split(/\s+/);
+  const hits = (_data.money || [])
+    .filter(x => { const t = String(x.item || '').toLowerCase(); return words.every(w => t.includes(w)); })
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.created_at || 0) - (a.created_at || 0));
+  if (!hits.length) {
+    body.innerHTML = `<div class="mo-res"><div class="mo-empty">找不到「${esc(_moQ.trim())}」的紀錄</div></div>`;
+    return;
+  }
+  let me = 0, her = 0;
+  const months = [];
+  hits.forEach(x => {
+    const a = Number(x.amount) || 0;
+    if (x.who === 'her') her += a; else me += a;
+    const ym = (x.date || '').slice(0, 7);
+    let g = months[months.length - 1];
+    if (!g || g.ym !== ym) { g = { ym, total: 0, items: [] }; months.push(g); }
+    g.total += a; g.items.push(x);
+  });
+  const groups = months.map(g => {
+    const [y, m] = g.ym.split('-');
+    return `<div class="mo-res-month">${y} 年 ${+m} 月<span>${_money(g.total)}</span></div>` +
+      g.items.map(x => {
+        const [, mm, dd] = (x.date || '--').split('-');
+        const wk = _WK[new Date(x.date + 'T00:00').getDay()] || '';
+        return `<div class="mo-entry" onclick="openMoney('${x.id}')">
+          <span class="mo-res-date">${+mm}/${+dd}（${wk}）</span>
+          <span class="mo-who ${x.who === 'her' ? 'her' : 'me'}">${x.who === 'her' ? '她付' : '我付'}</span>
+          <span class="mo-item">${esc(x.item)}</span>
+          <span class="mo-amt">${_money(Number(x.amount) || 0)}</span>
+        </div>`;
+      }).join('');
+  }).join('');
+  body.innerHTML = `<div class="mo-res">
+    <div class="mo-sum">
+      <div class="mo-sum-box me"><div class="mo-sum-label">我付</div><div class="mo-sum-val">${_money(me)}</div></div>
+      <div class="mo-sum-box her"><div class="mo-sum-label">她付</div><div class="mo-sum-val">${_money(her)}</div></div>
+      <div class="mo-sum-box"><div class="mo-sum-label">合計</div><div class="mo-sum-val">${_money(me + her)}</div></div>
+    </div>
+    <div class="mo-res-count">共 ${hits.length} 筆，橫跨 ${months.length} 個月</div>
+    ${groups}
+  </div>`;
+}
+
+function renderMoneyCal() {
+  const body = document.getElementById('moBody');
   const list = _data.money || [];
   const prefix = `${_moY}-${_pad(_moM + 1)}-`;
   const monthItems = list.filter(x => (x.date || '').startsWith(prefix));
@@ -873,7 +980,7 @@ function renderMoney() {
       <span class="mo-amt">${_money(Number(x.amount) || 0)}</span>
     </div>`).join('') : '<div class="mo-empty">這天沒有紀錄</div>';
 
-  wrap.innerHTML = `<div class="mo">
+  body.innerHTML = `<div class="mo">
     <div class="mo-main">
     <div class="mo-nav">
       <button class="mo-nav-btn" onclick="moShift(-1)"><i class="bi bi-chevron-left"></i></button>
