@@ -2434,6 +2434,7 @@ def memo_get():
     data.setdefault("todos", [])
     data.setdefault("likes", [])
     data.setdefault("dates", [])
+    data.setdefault("money", [])
     return jsonify(data)
 
 @app.route("/api/memo", methods=["POST"])
@@ -2444,6 +2445,12 @@ def memo_save():
         "likes": body.get("likes", []) if isinstance(body.get("likes"), list) else [],
         "dates": body.get("dates", []) if isinstance(body.get("dates"), list) else [],
     }
+    # 金錢紀錄：舊版頁面（快取）存檔時不帶 money，沿用雲端既有資料，避免被清空
+    if isinstance(body.get("money"), list):
+        data["money"] = body["money"]
+    else:
+        old = _kv_get(_MEMO_KEY)
+        data["money"] = old.get("money", []) if isinstance(old, dict) and isinstance(old.get("money"), list) else []
     _kv_set(_MEMO_KEY, data)
     return jsonify({"ok": True})
 

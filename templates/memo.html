@@ -378,6 +378,101 @@ body {
   transition: opacity 0.15s, transform 0.15s;
 }
 .sh-save:active { transform: scale(0.97); }
+/* ── 金錢（月曆記帳） ── */
+:root { --me: var(--accent); --her: #ff375f; }
+.mo { padding: 14px 20px 40px; }
+.mo-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.mo-nav-title { font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em; display: flex; align-items: center; }
+.mo-nav-btn {
+  width: 36px; height: 36px; border: none; background: none; color: var(--accent);
+  font-size: 1.1rem; cursor: pointer; border-radius: 100px; -webkit-tap-highlight-color: transparent;
+}
+.mo-nav-btn:active { background: var(--accent-2); }
+.mo-today-btn {
+  border: 1px solid var(--border); background: none; color: var(--sub); font-family: inherit;
+  font-size: 0.7rem; padding: 4px 10px; border-radius: 100px; margin-left: 8px; cursor: pointer;
+}
+.mo-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px; }
+.mo-sum-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 12px;
+}
+.mo-sum-label { font-size: 0.68rem; color: var(--sub); letter-spacing: 0.04em; }
+.mo-sum-val { font-size: 1.02rem; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.mo-sum-box.me  .mo-sum-val { color: var(--me); }
+.mo-sum-box.her .mo-sum-val { color: var(--her); }
+.mo-diff { font-size: 0.74rem; color: var(--sub); text-align: center; margin: 4px 0 12px; }
+.cal-head, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-head div { text-align: center; font-size: 0.66rem; color: var(--sub); padding: 4px 0 6px; }
+.cal-grid { gap: 3px; }
+.cal-cell {
+  min-height: 54px; border-radius: 9px; padding: 5px 2px 4px; text-align: center;
+  cursor: pointer; border: 1px solid transparent; background: var(--surface);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  -webkit-tap-highlight-color: transparent; transition: transform 0.12s;
+}
+.cal-cell:active { transform: scale(0.94); }
+.cal-cell.empty { background: none; cursor: default; }
+.cal-cell.today .cal-num { color: #fff; background: var(--accent); }
+.cal-cell.sel { border-color: var(--accent); background: var(--accent-2); }
+.cal-num {
+  font-size: 0.78rem; font-weight: 550; width: 22px; height: 22px; line-height: 22px; border-radius: 100px;
+}
+.cal-amt { font-size: 0.6rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+.cal-dots { display: flex; gap: 3px; height: 5px; }
+.cal-dot { width: 5px; height: 5px; border-radius: 100px; }
+.cal-dot.me { background: var(--me); }
+.cal-dot.her { background: var(--her); }
+.mo-day { margin-top: 18px; }
+.mo-day-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.mo-day-title { font-size: 0.86rem; font-weight: 600; }
+.mo-day-total { font-size: 0.74rem; color: var(--sub); margin-left: 6px; font-weight: 400; }
+.mo-add-btn {
+  border: none; background: var(--accent); color: #fff; font-family: inherit; font-size: 0.76rem;
+  font-weight: 600; padding: 7px 14px; border-radius: 100px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.mo-add-btn:active { transform: scale(0.95); }
+.mo-entry {
+  display: flex; align-items: center; gap: 10px; padding: 12px 4px;
+  border-bottom: 1px solid var(--rule); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.mo-entry:active { opacity: 0.6; }
+.mo-who { font-size: 0.66rem; font-weight: 700; padding: 3px 8px; border-radius: 100px; flex-shrink: 0; }
+.mo-who.me  { color: var(--me);  background: var(--accent-2); }
+.mo-who.her { color: var(--her); background: rgba(255, 55, 95, 0.1); }
+.mo-item { flex: 1; min-width: 0; font-size: 0.9rem; word-break: break-word; }
+.mo-amt { font-size: 0.92rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mo-empty { font-size: 0.8rem; color: var(--sub); padding: 18px 4px; text-align: center; }
+
+/* 上緣錨定的編輯面板（避免 iOS 鍵盤遮住輸入框） */
+.money-sheet {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 101;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  border-radius: 0 0 20px 20px;
+  padding: max(16px, env(safe-area-inset-top) + 8px) 0 18px;
+  transform: translateY(-105%); transition: transform 0.38s cubic-bezier(0.25,1,0.5,1);
+  max-height: 90vh; overflow-y: auto; overscroll-behavior: contain;
+}
+.money-sheet.open { transform: translateY(0); }
+.ms-input {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg); font-size: 16px; color: var(--text); font-family: inherit; outline: none;
+  -webkit-appearance: none; display: block;
+}
+.ms-input:focus { border-color: var(--accent); }
+.ms-input.err { border-color: #c0392b; }
+.ms-seg { display: flex; gap: 8px; }
+.ms-seg button {
+  flex: 1; padding: 10px; border-radius: 12px; border: 1.5px solid var(--border); background: none;
+  font-family: inherit; font-size: 0.86rem; font-weight: 600; color: var(--sub); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ms-seg button.on.me  { border-color: var(--me);  color: var(--me);  background: var(--accent-2); }
+.ms-seg button.on.her { border-color: var(--her); color: var(--her); background: rgba(255, 55, 95, 0.1); }
+.ms-del {
+  flex: 1; padding: 11px; border: 1.5px solid rgba(192, 57, 43, 0.4); background: transparent;
+  border-radius: 2px; font-size: 0.82rem; font-family: inherit; color: #c0392b; cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -392,11 +487,12 @@ body {
   <button class="tab active" id="tab-todos" onclick="switchTab('todos')">待辦</button>
   <button class="tab"        id="tab-likes" onclick="switchTab('likes')">她的喜好</button>
   <button class="tab"        id="tab-dates" onclick="switchTab('dates')">約會計畫</button>
+  <button class="tab"        id="tab-money" onclick="switchTab('money')">金錢</button>
 </div>
 
 <div class="list-wrap" id="listWrap"></div>
 
-<div class="add-bar">
+<div class="add-bar" id="addBar">
   <div class="add-fields">
     <input class="add-input" id="addText" placeholder="寫下來…" autocomplete="off"
            onkeydown="if(event.key==='Enter')addItem()">
@@ -434,6 +530,36 @@ body {
   </div>
 </div>
 
+<!-- 金錢編輯面板（上緣錨定） -->
+<div class="sheet-overlay" id="moneyOverlay" onclick="closeMoney()"></div>
+<div class="money-sheet" id="moneySheet">
+  <div class="sh-title" id="msTitle">記一筆</div>
+  <div class="sh-field">
+    <div class="sh-label">項目</div>
+    <input class="ms-input" id="msItem" placeholder="例如：午餐、飲料、禮物" autocomplete="off">
+  </div>
+  <div class="sh-field">
+    <div class="sh-label">金額</div>
+    <input class="ms-input" id="msAmt" type="text" inputmode="decimal" placeholder="0" autocomplete="off">
+  </div>
+  <div class="sh-field">
+    <div class="sh-label">誰付的</div>
+    <div class="ms-seg">
+      <button class="me"  id="msWhoMe"  onclick="setWho('me')">我付</button>
+      <button class="her" id="msWhoHer" onclick="setWho('her')">她付</button>
+    </div>
+  </div>
+  <div class="sh-field">
+    <div class="sh-label">日期</div>
+    <input class="ms-input" id="msDate" type="date">
+  </div>
+  <div class="sh-actions">
+    <button class="ms-del" id="msDel" onclick="delMoney()">刪除</button>
+    <button class="sh-cancel" onclick="closeMoney()">取消</button>
+    <button class="sh-save" onclick="saveMoney()">儲存</button>
+  </div>
+</div>
+
 <script>
 /* ── 背景頁面捲動鎖定：面板開著時，拖拉只捲動最上層那個面板，
    不會穿透帶動底下的頁面／上一層面板一起動。計數器處理疊面板的巢狀情況。 */
@@ -459,7 +585,7 @@ function unlockBodyScroll() {
   window.scrollTo(0, _scrollLockY);
 }
 
-let _data = { todos: [], likes: [], dates: [] };
+let _data = { todos: [], likes: [], dates: [], money: [] };
 let _tab  = 'todos';
 let _saveTimer = null;
 let _editingId = null;
@@ -484,6 +610,7 @@ async function load() {
     const r = await fetch('/api/memo');
     _data = await r.json();
   } catch {}
+  if (!Array.isArray(_data.money)) _data.money = [];
   render();
 }
 
@@ -502,15 +629,18 @@ function scheduleSave() {
 
 function switchTab(tab) {
   _tab = tab;
-  ['todos','likes','dates'].forEach(t => {
+  ['todos','likes','dates','money'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('active', t === tab);
   });
+  document.getElementById('addBar').style.display = tab === 'money' ? 'none' : '';
+  if (tab === 'money') { renderMoney(); return; }
   document.getElementById('addNote').style.display = tab === 'likes' ? '' : 'none';
   document.getElementById('addText').placeholder = _CFG[tab].placeholder;
   render();
 }
 
 function render() {
+  if (_tab === 'money') { renderMoney(); return; }
   const wrap  = document.getElementById('listWrap');
   const items = _data[_tab] || [];
   if (!items.length) {
@@ -620,6 +750,167 @@ function addItem() {
   scheduleSave();
   textEl.focus();
 }
+
+/* ── 金錢：月曆記帳 ── */
+const _pad = n => String(n).padStart(2, '0');
+const _ymd = d => `${d.getFullYear()}-${_pad(d.getMonth() + 1)}-${_pad(d.getDate())}`;
+const _money = n => '$' + (Math.round(n * 100) / 100).toLocaleString('zh-TW');
+const _WK = '日一二三四五六';
+let _moY = new Date().getFullYear();
+let _moM = new Date().getMonth();
+let _moSel = _ymd(new Date());
+let _msEditId = null, _msWho = 'me';
+
+function moShift(delta) {
+  const d = new Date(_moY, _moM + delta, 1);
+  _moY = d.getFullYear(); _moM = d.getMonth();
+  renderMoney();
+}
+function moToday() {
+  const t = new Date();
+  _moY = t.getFullYear(); _moM = t.getMonth(); _moSel = _ymd(t);
+  renderMoney();
+}
+function moPick(date) { _moSel = date; renderMoney(); }
+
+function renderMoney() {
+  const wrap = document.getElementById('listWrap');
+  const list = _data.money || [];
+  const prefix = `${_moY}-${_pad(_moM + 1)}-`;
+  const monthItems = list.filter(x => (x.date || '').startsWith(prefix));
+  const byDay = {};
+  let me = 0, her = 0;
+  monthItems.forEach(x => {
+    const a = Number(x.amount) || 0;
+    const who = x.who === 'her' ? 'her' : 'me';
+    if (!byDay[x.date]) byDay[x.date] = { total: 0, me: false, her: false };
+    byDay[x.date].total += a;
+    byDay[x.date][who] = true;
+    if (who === 'her') her += a; else me += a;
+  });
+  const diff = me - her;
+  const diffText = !monthItems.length ? '這個月還沒有紀錄'
+    : diff === 0 ? '兩人付的一樣多'
+    : diff > 0 ? `我多付 ${_money(diff)}` : `她多付 ${_money(-diff)}`;
+
+  const first = new Date(_moY, _moM, 1).getDay();
+  const days = new Date(_moY, _moM + 1, 0).getDate();
+  const today = _ymd(new Date());
+  let cells = '';
+  for (let i = 0; i < first; i++) cells += '<div class="cal-cell empty"></div>';
+  for (let d = 1; d <= days; d++) {
+    const date = prefix + _pad(d);
+    const info = byDay[date];
+    const cls = ['cal-cell', date === today ? 'today' : '', date === _moSel ? 'sel' : ''].join(' ');
+    const extra = info
+      ? `<div class="cal-amt">${Math.round(info.total).toLocaleString('zh-TW')}</div>
+         <div class="cal-dots">${info.me ? '<span class="cal-dot me"></span>' : ''}${info.her ? '<span class="cal-dot her"></span>' : ''}</div>`
+      : '';
+    cells += `<div class="${cls}" onclick="moPick('${date}')"><div class="cal-num">${d}</div>${extra}</div>`;
+  }
+
+  const dayItems = list.filter(x => x.date === _moSel)
+    .sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+  const dayTotal = dayItems.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const [, sm, sd] = _moSel.split('-');
+  const wk = _WK[new Date(_moSel + 'T00:00').getDay()];
+  const dayList = dayItems.length ? dayItems.map(x => `
+    <div class="mo-entry" onclick="openMoney('${x.id}')">
+      <span class="mo-who ${x.who === 'her' ? 'her' : 'me'}">${x.who === 'her' ? '她付' : '我付'}</span>
+      <span class="mo-item">${esc(x.item)}</span>
+      <span class="mo-amt">${_money(Number(x.amount) || 0)}</span>
+    </div>`).join('') : '<div class="mo-empty">這天沒有紀錄</div>';
+
+  wrap.innerHTML = `<div class="mo">
+    <div class="mo-nav">
+      <button class="mo-nav-btn" onclick="moShift(-1)"><i class="bi bi-chevron-left"></i></button>
+      <div class="mo-nav-title">${_moY} 年 ${_moM + 1} 月<button class="mo-today-btn" onclick="moToday()">今天</button></div>
+      <button class="mo-nav-btn" onclick="moShift(1)"><i class="bi bi-chevron-right"></i></button>
+    </div>
+    <div class="mo-sum">
+      <div class="mo-sum-box me"><div class="mo-sum-label">我付</div><div class="mo-sum-val">${_money(me)}</div></div>
+      <div class="mo-sum-box her"><div class="mo-sum-label">她付</div><div class="mo-sum-val">${_money(her)}</div></div>
+      <div class="mo-sum-box"><div class="mo-sum-label">本月合計</div><div class="mo-sum-val">${_money(me + her)}</div></div>
+    </div>
+    <div class="mo-diff">${diffText}</div>
+    <div class="cal-head">${[..._WK].map(w => `<div>${w}</div>`).join('')}</div>
+    <div class="cal-grid">${cells}</div>
+    <div class="mo-day">
+      <div class="mo-day-head">
+        <div class="mo-day-title">${+sm}/${+sd}（${wk}）${dayItems.length ? `<span class="mo-day-total">共 ${_money(dayTotal)}</span>` : ''}</div>
+        <button class="mo-add-btn" onclick="openMoney()">＋ 記一筆</button>
+      </div>
+      ${dayList}
+    </div>
+  </div>`;
+}
+
+function setWho(w) {
+  _msWho = w;
+  document.getElementById('msWhoMe').classList.toggle('on', w === 'me');
+  document.getElementById('msWhoHer').classList.toggle('on', w === 'her');
+}
+
+function openMoney(id) {
+  const x = id ? (_data.money || []).find(e => e.id === id) : null;
+  _msEditId = x ? x.id : null;
+  document.getElementById('msTitle').textContent = x ? '編輯紀錄' : '記一筆';
+  document.getElementById('msItem').value = x ? x.item : '';
+  document.getElementById('msAmt').value  = x ? x.amount : '';
+  document.getElementById('msDate').value = x ? x.date : _moSel;
+  document.getElementById('msDel').style.display = x ? '' : 'none';
+  ['msItem', 'msAmt'].forEach(i => document.getElementById(i).classList.remove('err'));
+  setWho(x ? x.who : 'me');
+  lockBodyScroll();
+  document.getElementById('moneyOverlay').classList.add('open');
+  document.getElementById('moneySheet').classList.add('open');
+  if (!x) setTimeout(() => document.getElementById('msItem').focus(), 350);
+}
+
+function closeMoney() {
+  _msEditId = null;
+  if (document.activeElement) document.activeElement.blur();
+  document.getElementById('moneyOverlay').classList.remove('open');
+  document.getElementById('moneySheet').classList.remove('open');
+  unlockBodyScroll();
+}
+
+function saveMoney() {
+  const itemEl = document.getElementById('msItem');
+  const amtEl  = document.getElementById('msAmt');
+  const item = itemEl.value.trim();
+  const amount = parseFloat(amtEl.value.replace(/[,，\s$]/g, ''));
+  const date = document.getElementById('msDate').value || _moSel;
+  itemEl.classList.toggle('err', !item);
+  amtEl.classList.toggle('err', !(amount > 0));
+  if (!item || !(amount > 0)) return;
+
+  if (_msEditId) {
+    const x = _data.money.find(e => e.id === _msEditId);
+    if (x) Object.assign(x, { item, amount, date, who: _msWho });
+  } else {
+    _data.money.push({ id: uid(), date, item, amount, who: _msWho, created_at: Date.now() });
+  }
+  // 存到別的日期時，月曆跟著跳過去
+  _moSel = date;
+  const [y, m] = date.split('-').map(Number);
+  _moY = y; _moM = m - 1;
+  closeMoney();
+  renderMoney();
+  scheduleSave();
+}
+
+function delMoney() {
+  if (!_msEditId) return;
+  if (!confirm('刪除這筆紀錄？')) return;
+  _data.money = _data.money.filter(e => e.id !== _msEditId);
+  closeMoney();
+  renderMoney();
+  scheduleSave();
+}
+
+['msItem', 'msAmt'].forEach(i => document.getElementById(i)
+  .addEventListener('keydown', e => { if (e.key === 'Enter') saveMoney(); }));
 
 load();
 </script>
