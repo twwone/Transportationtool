@@ -72,15 +72,42 @@ body {
 /* ── 主畫面 ── */
 #mainScreen { flex: 1; display: none; flex-direction: column; }
 
-.top-bar {
+.sticky-head {
   position: sticky; top: 0; z-index: 10;
-  display: flex; align-items: center;
-  padding: max(14px, env(safe-area-inset-top)) 16px 12px;
   background: rgba(10,10,15,0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
 }
+.top-bar {
+  display: flex; align-items: center;
+  padding: max(14px, env(safe-area-inset-top)) 16px 10px;
+}
+/* ── 搜尋列 ── */
+.search-bar { padding: 0 16px 12px; }
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 10px 0 12px;
+  transition: border-color 0.15s;
+}
+.search-box:focus-within { border-color: var(--tint); }
+.search-box > .bi-search { color: var(--sub); font-size: 0.9rem; }
+.search-input {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  color: var(--text); font-family: inherit; font-size: 16px;
+  padding: 9px 0;
+}
+.search-input::placeholder { color: var(--sub); }
+.search-input::-webkit-search-cancel-button { display: none; }
+.search-clear {
+  display: none; background: none; border: none; cursor: pointer;
+  color: var(--sub); font-size: 1rem; padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.search-clear.show { display: block; }
+.search-count { font-size: 0.75rem; color: var(--sub); margin: 8px 2px 0; display: none; }
+.search-count.show { display: block; }
 .top-title { flex: 1; text-align: center; font-size: 1rem; font-weight: 700; }
 .top-left { display: flex; align-items: center; gap: 2px; min-width: 80px; }
 .top-right { display: flex; align-items: center; gap: 2px; min-width: 80px; justify-content: flex-end; }
@@ -255,7 +282,7 @@ body {
 @media (min-width: 768px) {
   .grid { max-width: 920px; margin: 0 auto; padding: 24px 16px;
           grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
-  .top-bar { padding-left: max(16px, calc((100% - 920px) / 2 + 16px));
+  .top-bar, .search-bar { padding-left: max(16px, calc((100% - 920px) / 2 + 16px));
              padding-right: max(16px, calc((100% - 920px) / 2 + 16px)); }
   .modal-overlay { align-items: center; justify-content: center; }
   .modal-box { max-width: 440px; border-radius: 24px; border: 1px solid var(--border);
@@ -310,6 +337,7 @@ body {
 
 <!-- 主畫面 -->
 <div id="mainScreen">
+  <div class="sticky-head">
   <div class="top-bar">
     <div class="top-left">
       <a class="back-btn" href="/">‹ 返回</a>
@@ -321,6 +349,15 @@ body {
       <button class="add-btn-bar" id="addBtnBar" onclick="openAddModal()">＋ 新增</button>
       <button class="add-btn-bar" id="editBtn" onclick="toggleDelMode()">編輯</button>
     </div>
+  </div>
+  <div class="search-bar">
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input class="search-input" id="searchInput" type="search" placeholder="搜尋番號、標題、網站" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button class="search-clear" id="searchClear" onclick="clearSearch()" title="清除"><i class="bi bi-x-circle-fill"></i></button>
+    </div>
+    <div class="search-count" id="searchCount"></div>
+  </div>
   </div>
   <div id="gridContainer"></div>
 </div>
@@ -388,6 +425,8 @@ let _pin = '';
 let _delMode = false;
 let _longPressTimer = null;
 let _domain = 'missav.ws';
+let _items = [];
+let _query = '';
 const PIN_KEY = 'vpin';   // 記在這台裝置，按鎖頭才清掉
 
 // ── PIN ──────────────────────────────────────
@@ -429,6 +468,8 @@ function lock() {
   _pin = '';
   updateDots();
   localStorage.removeItem(PIN_KEY);
+  document.getElementById('searchInput').value = '';   // 上鎖時清掉搜尋字，下次解鎖不留痕跡
+  _query = '';
   document.getElementById('mainScreen').style.display = 'none';
   document.getElementById('pinScreen').style.display = 'flex';
 }
@@ -466,7 +507,37 @@ async function apiFetch(path, body) {
 
 function applyList(res) {
   if (res.domain) _domain = res.domain;
-  renderGrid(res.items);
+  _items = res.items || [];
+  renderGrid();
+}
+
+// ── 搜尋：前端即時篩選，空白分隔多個關鍵字要全部符合 ──
+// 比對時去掉大小寫、空白與連字號，SSIS123、ssis-123 都找得到 SSIS-123
+function normSearch(s) {
+  return String(s || '').toLowerCase().replace(/[\s\-_]+/g, '');
+}
+function itemHaystack(item) {
+  return normSearch([item.code, item.title, item.uncensored ? '無碼' : '',
+    hostOf(item.url), item.mpath, item.by].join(' '));
+}
+function filterItems() {
+  const words = _query.trim().split(/\s+/).map(normSearch).filter(Boolean);
+  if (!words.length) return _items;
+  return _items.filter(item => {
+    const hay = itemHaystack(item);
+    return words.every(w => hay.includes(w));
+  });
+}
+function onSearchInput() {
+  _query = document.getElementById('searchInput').value;
+  renderGrid(true);
+}
+function clearSearch() {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  _query = '';
+  renderGrid(true);
+  input.focus();
 }
 
 async function refreshGrid() {
@@ -486,13 +557,27 @@ function hostOf(url) {
 }
 
 // ── Grid ─────────────────────────────────────
-function renderGrid(items) {
+function renderGrid(fromSearch) {
   const container = document.getElementById('gridContainer');
-  if (!items || items.length === 0) {
+  const searching = _query.trim() !== '';
+  const items = filterItems();
+  document.getElementById('searchClear').classList.toggle('show', _query !== '');
+  const countEl = document.getElementById('searchCount');
+  countEl.classList.toggle('show', searching && _items.length > 0);
+  countEl.textContent = `找到 ${items.length} 部（共 ${_items.length} 部）`;
+  if (_items.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="icon"><i class="bi bi-film"></i></div>
         <p>尚無收藏<br>用 Bookmarklet 或右上角＋新增</p>
+      </div>`;
+    return;
+  }
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon"><i class="bi bi-search"></i></div>
+        <p>沒有符合「${esc(_query.trim())}」的收藏</p>
       </div>`;
     return;
   }
@@ -502,7 +587,9 @@ function renderGrid(items) {
     const card = document.createElement('div');
     card.className = 'card' + (_delMode ? ' delmode' : '');
     card.dataset.id = item.id;
-    card.style.animationDelay = (idx * 40) + 'ms';
+    // 打字搜尋時不跑逐張進場動畫，避免卡片閃爍延遲
+    if (fromSearch) card.style.animation = 'none';
+    else card.style.animationDelay = Math.min(idx, 20) * 40 + 'ms';
     const head = item.code
       ? `<div class="card-code">${esc(item.code)}${item.uncensored ? '<span class="tag-unc">無碼</span>' : ''}</div>`
       : '';
@@ -658,6 +745,21 @@ function esc(s) {
 
 document.getElementById('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveSettings(); });
 document.getElementById('addUrl').addEventListener('keydown', e => { if (e.key === 'Enter') submitAdd(); });
+document.getElementById('searchInput').addEventListener('input', onSearchInput);
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (_query) clearSearch(); else e.target.blur(); }
+  if (e.key === 'Enter') e.target.blur();   // 手機收起鍵盤
+});
+// 電腦版：按 / 或 Cmd/Ctrl+K 直接跳到搜尋框（輸入框或彈窗開著時不攔）
+document.addEventListener('keydown', e => {
+  if (document.getElementById('mainScreen').style.display !== 'flex') return;
+  if (document.querySelector('.modal-overlay.show')) return;
+  const inField = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName);
+  if ((e.key === '/' && !inField) || (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey))) {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
 
 // ── Init：這台裝置解鎖過就直接進 ──────────────
 (function() {
