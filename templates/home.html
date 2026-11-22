@@ -1038,7 +1038,7 @@ body {
 
     <div class="admin-sec-label">私人</div>
     <div class="admin-card">
-      <a class="admin-link" href="/v" onclick="sessionStorage.setItem('v_admin_pin', sessionStorage.getItem('v_admin_pin') || localStorage.getItem('admin_pin') || _ADMIN_PIN)"><i class="bi bi-film"></i> 收藏庫 ↗</a>
+      <a class="admin-link" href="/v"><i class="bi bi-film"></i> 收藏庫 ↗</a>
     </div>
 
     <button class="admin-exit-btn" onclick="_exitAdmin()"><i class="bi bi-box-arrow-right"></i> 關閉上帝模式</button>
@@ -1860,7 +1860,6 @@ function _pinDel() {
 function _verifyPin() {
   if (_pinBuffer === _ADMIN_PIN) {
     localStorage.setItem(_ADMIN_LS_KEY, _pinBuffer);
-    sessionStorage.setItem('v_admin_pin', _pinBuffer);
     _closePinModal();
     const crown = document.getElementById('crownBtn');
     crown.classList.add('visible');

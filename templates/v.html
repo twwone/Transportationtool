@@ -36,6 +36,7 @@ body {
   gap: 32px;
   padding-top: env(safe-area-inset-top);
 }
+.pin-msg { min-height: 1.2em; font-size: 0.85rem; color: var(--danger); margin-top: -18px; }
 .pin-title { font-size: 1.1rem; font-weight: 600; color: var(--sub); letter-spacing: 0.04em; }
 .pin-dots {
   display: flex; gap: 18px;
@@ -165,6 +166,19 @@ body {
   overflow: hidden;
 }
 
+.card-code {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.95rem; font-weight: 800; letter-spacing: 0.02em;
+  color: var(--text); margin-bottom: 3px;
+}
+.tag-unc {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0;
+  color: #fff; background: var(--danger);
+  padding: 1px 6px; border-radius: 6px;
+}
+.card-code + .card-title { font-size: 0.76rem; font-weight: 500; color: var(--sub); }
+.card-host { font-size: 0.7rem; color: var(--sub); margin-top: 4px; }
+
 .del-badge {
   position: absolute; top: 6px; right: 6px;
   width: 24px; height: 24px; border-radius: 50%;
@@ -216,6 +230,8 @@ body {
 }
 .modal-input:focus { border-color: var(--tint); }
 .modal-input::placeholder { color: var(--sub); }
+.modal-label { font-size: 0.78rem; color: var(--sub); margin: 4px 2px 6px; }
+.modal-hint  { font-size: 0.75rem; color: var(--sub); margin: -2px 2px 12px; line-height: 1.45; }
 .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
 .modal-cancel {
   flex: 1; background: var(--surface); border: 1px solid var(--border);
@@ -234,6 +250,19 @@ body {
 }
 .modal-save:active { opacity: 0.7; }
 .modal-save:disabled { opacity: 0.4; }
+
+/* ── 電腦版：內容置中限寬，彈窗改置中卡片 ── */
+@media (min-width: 768px) {
+  .grid { max-width: 920px; margin: 0 auto; padding: 24px 16px;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
+  .top-bar { padding-left: max(16px, calc((100% - 920px) / 2 + 16px));
+             padding-right: max(16px, calc((100% - 920px) / 2 + 16px)); }
+  .modal-overlay { align-items: center; justify-content: center; }
+  .modal-box { max-width: 440px; border-radius: 24px; border: 1px solid var(--border);
+               padding: 24px; animation: popIn 0.2s ease; }
+  @keyframes popIn { from { transform: scale(0.95); opacity: 0; } to { transform: none; opacity: 1; } }
+  .card:hover { border-color: rgba(191,90,242,0.5); }
+}
 
 /* ── Toast ── */
 .toast {
@@ -256,6 +285,7 @@ body {
 <!-- PIN 畫面 -->
 <div id="pinScreen">
   <div class="pin-title">輸入 PIN 碼</div>
+  <div class="pin-msg" id="pinMsg"></div>
   <div class="pin-dots" id="pinDots">
     <div class="pin-dot" id="d0"></div>
     <div class="pin-dot" id="d1"></div>
@@ -285,7 +315,7 @@ body {
       <a class="back-btn" href="/">‹ 返回</a>
       <button class="lock-btn" onclick="lock()" title="鎖定"><i class="bi bi-lock-fill"></i></button>
     </div>
-    <div class="top-title" onclick="openNameModal()" style="cursor:pointer">收藏庫</div>
+    <div class="top-title" onclick="openSettings()" style="cursor:pointer">收藏庫 <i class="bi bi-gear" style="font-size:0.8rem;color:var(--sub)"></i></div>
     <div class="top-right">
       <button class="refresh-btn" id="refreshBtn" onclick="refreshGrid()" title="重新整理">↺</button>
       <button class="add-btn-bar" id="addBtnBar" onclick="openAddModal()">＋ 新增</button>
@@ -300,6 +330,7 @@ body {
   <div class="modal-box">
     <div class="modal-title">手動新增</div>
     <input class="modal-input" id="addUrl"   placeholder="影片網址" type="url" autocomplete="off">
+    <div class="modal-hint">missav 網址會自動帶出番號與封面，其他網站會嘗試抓網頁的標題和預覽圖</div>
     <input class="modal-input" id="addTitle" placeholder="標題（可選）">
     <input class="modal-input" id="addImg"   placeholder="縮圖網址（可選）" type="url" autocomplete="off">
     <div class="modal-actions">
@@ -310,15 +341,18 @@ body {
 </div>
 
 
-<!-- 名字 Modal -->
-<div class="modal-overlay" id="nameModal">
+<!-- 設定 Modal -->
+<div class="modal-overlay" id="settingsModal">
   <div class="modal-box">
-    <div class="modal-title">你叫什麼名字？</div>
-    <input class="modal-input" id="nameInput" placeholder="輸入你的名字" maxlength="12" autocomplete="off"
-           onkeydown="if(event.key==='Enter')saveName()">
+    <div class="modal-title">設定</div>
+    <div class="modal-label">你的名字</div>
+    <input class="modal-input" id="nameInput" placeholder="輸入你的名字" maxlength="12" autocomplete="off">
+    <div class="modal-label">missav 網域</div>
+    <input class="modal-input" id="domainInput" placeholder="missav.ws" autocomplete="off" autocapitalize="off">
+    <div class="modal-hint">網站換網域時改這裡，所有收藏會一起換成新網域</div>
     <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeNameModal()">略過</button>
-      <button class="modal-save" onclick="saveName()">確定</button>
+      <button class="modal-cancel" onclick="closeSettings()">取消</button>
+      <button class="modal-save" onclick="saveSettings()" id="settingsSave">儲存</button>
     </div>
   </div>
 </div>
@@ -353,7 +387,8 @@ function unlockBodyScroll() {
 let _pin = '';
 let _delMode = false;
 let _longPressTimer = null;
-const BASE = '';
+let _domain = 'missav.ws';
+const PIN_KEY = 'vpin';   // 記在這台裝置，按鎖頭才清掉
 
 // ── PIN ──────────────────────────────────────
 function numTap(n) {
@@ -375,47 +410,52 @@ function updateDots(err) {
 async function submitPin() {
   const res = await apiFetch('/api/v/list', { pin: _pin });
   if (!res || res.error) {
+    localStorage.removeItem(PIN_KEY);
+    document.getElementById('pinMsg').textContent =
+      res?.error === 'locked' ? res.message : (res ? '' : '連線失敗，請再試一次');
     updateDots(true);
     setTimeout(() => { _pin = ''; updateDots(); }, 600);
     return;
   }
-  sessionStorage.setItem('vpin', _pin);
+  document.getElementById('pinMsg').textContent = '';
+  localStorage.setItem(PIN_KEY, _pin);
   document.getElementById('pinScreen').style.display = 'none';
   document.getElementById('mainScreen').style.display = 'flex';
-
-  // 從 Bookmarklet 帶參數進來，PIN 驗完直接存
-  const p = new URLSearchParams(location.search);
-  if (p.get('url')) {
-    history.replaceState({}, '', '/v');
-    renderGrid(res.items);
-    ensureUsername(async () => {
-      const addRes = await apiFetch('/api/v/add', {
-        pin:   _pin,
-        url:   p.get('url')   || '',
-        title: p.get('title') || '',
-        img:   p.get('img')   || '',
-        by:    getUsername() || '匿名',
-      });
-      renderGrid(addRes?.items || res.items);
-      showToast(addRes?.dup ? '已收藏過了' : '已收藏！');
-    });
-  } else {
-    renderGrid(res.items);
-  }
+  applyList(res);
+  handleBookmarklet();
 }
 
 function lock() {
   _pin = '';
   updateDots();
-  sessionStorage.removeItem('vpin');
+  localStorage.removeItem(PIN_KEY);
   document.getElementById('mainScreen').style.display = 'none';
   document.getElementById('pinScreen').style.display = 'flex';
+}
+
+// ── Bookmarklet：網址帶 ?url= 進來，解鎖後自動收藏（只送一次）──
+function handleBookmarklet() {
+  const p = new URLSearchParams(location.search);
+  const url = p.get('url');
+  if (!url) return;
+  history.replaceState({}, '', '/v');   // 先清參數，避免重新整理又送一次
+  ensureUsername(async () => {
+    const res = await apiFetch('/api/v/add', {
+      pin: _pin, url,
+      title: p.get('title') || '',
+      img:   p.get('img')   || '',
+      by:    getUsername() || '匿名',
+    });
+    if (!res || res.error) { showToast('收藏失敗'); return; }
+    applyList(res);
+    showToast(res.dup ? '已收藏過了' : '已收藏！');
+  });
 }
 
 // ── API ──────────────────────────────────────
 async function apiFetch(path, body) {
   try {
-    const r = await fetch(BASE + path, {
+    const r = await fetch(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -424,16 +464,25 @@ async function apiFetch(path, body) {
   } catch { return null; }
 }
 
-function getPin() {
-  return sessionStorage.getItem('vpin') || _pin;
+function applyList(res) {
+  if (res.domain) _domain = res.domain;
+  renderGrid(res.items);
 }
 
 async function refreshGrid() {
   const btn = document.getElementById('refreshBtn');
   btn.classList.add('spin');
-  const res = await apiFetch('/api/v/list', { pin: getPin() });
+  const res = await apiFetch('/api/v/list', { pin: _pin });
   btn.classList.remove('spin');
-  if (res && res.items) renderGrid(res.items);
+  if (res && res.items) applyList(res);
+}
+
+// missav 收藏用目前設定的網域組網址；其他網站照原網址
+function itemUrl(item) {
+  return item.mpath ? `https://${_domain}/${item.mpath}` : item.url;
+}
+function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
 
 // ── Grid ─────────────────────────────────────
@@ -451,22 +500,29 @@ function renderGrid(items) {
   const grid = document.getElementById('grid');
   items.forEach((item, idx) => {
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = 'card' + (_delMode ? ' delmode' : '');
     card.dataset.id = item.id;
     card.style.animationDelay = (idx * 40) + 'ms';
+    const head = item.code
+      ? `<div class="card-code">${esc(item.code)}${item.uncensored ? '<span class="tag-unc">無碼</span>' : ''}</div>`
+      : '';
+    const title = item.title || (item.code ? '' : hostOf(item.url) || item.url);
     card.innerHTML = `
       ${item.img
         ? `<img class="card-thumb" src="${esc(item.img)}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
         : ''}
       <div class="card-thumb-placeholder" ${item.img ? 'style="display:none"' : ''}><i class="bi bi-film"></i></div>
       <div class="card-body">
-        <div class="card-title">${esc(item.title)}</div>
+        ${head}
+        ${title ? `<div class="card-title">${esc(title)}</div>` : ''}
+        ${!item.code && item.title ? `<div class="card-host">${esc(hostOf(item.url))}</div>` : ''}
         ${item.by ? `<div class="card-by">由 ${esc(item.by)} 加入</div>` : ''}
       </div>
-      <div class="del-badge" onclick="delItem(event,'${item.id}')"><i class="bi bi-x-lg"></i></div>`;
+      <div class="del-badge"><i class="bi bi-x-lg"></i></div>`;
+    card.querySelector('.del-badge').addEventListener('click', e => delItem(e, item.id));
     card.addEventListener('click', () => {
       if (_delMode) return;
-      window.open(item.url, '_blank');
+      window.open(itemUrl(item), '_blank');
     });
     card.addEventListener('touchstart', () => {
       _longPressTimer = setTimeout(() => enterDelMode(), 600);
@@ -503,10 +559,10 @@ function exitDelModeOnOutside(e) {
 
 async function delItem(e, id) {
   e.stopPropagation();
-  const res = await apiFetch('/api/v/del', { pin: getPin(), id });
+  const res = await apiFetch('/api/v/del', { pin: _pin, id });
   if (!res || res.error) { showToast('刪除失敗'); return; }
   exitDelMode();
-  renderGrid(res.items);
+  applyList(res);
   showToast('已刪除');
 }
 
@@ -518,15 +574,6 @@ function openAddModal() {
   document.getElementById('addImg').value = '';
   document.getElementById('addModal').classList.add('show');
   setTimeout(() => document.getElementById('addUrl').focus(), 200);
-  // 讀 URL params（Bookmarklet 跳轉後帶過來）
-  const p = new URLSearchParams(location.search);
-  if (p.get('url')) {
-    document.getElementById('addUrl').value   = p.get('url')   || '';
-    document.getElementById('addTitle').value = p.get('title') || '';
-    document.getElementById('addImg').value   = p.get('img')   || '';
-    history.replaceState({}, '', '/v');
-    submitAdd();
-  }
 }
 function closeAddModal() {
   document.getElementById('addModal').classList.remove('show');
@@ -538,40 +585,17 @@ async function submitAdd() {
   const title = document.getElementById('addTitle').value.trim();
   const img   = document.getElementById('addImg').value.trim();
   if (!url) { showToast('請輸入網址'); return; }
-  document.getElementById('saveBtn').disabled = true;
-  const res = await apiFetch('/api/v/add', { pin: getPin(), url, title, img, by: getUsername() });
-  document.getElementById('saveBtn').disabled = false;
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = '處理中…';
+  const res = await apiFetch('/api/v/add', { pin: _pin, url, title, img, by: getUsername() });
+  btn.disabled = false; btn.textContent = '儲存';
   if (!res || res.error) { showToast('儲存失敗'); return; }
   closeAddModal();
-  renderGrid(res.items);
+  applyList(res);
   showToast(res.dup ? '已收藏過了' : '已收藏！');
 }
 
-// ── Bookmarklet 自動處理 ──────────────────────
-function checkBookmarkletParams() {
-  const p = new URLSearchParams(location.search);
-  if (!p.get('url')) return;
-  const savedPin = sessionStorage.getItem('vpin');
-  if (savedPin) {
-    // 已登入，直接存
-    ensureUsername(async () => {
-      const res2 = await apiFetch('/api/v/add', {
-        pin:   savedPin,
-        url:   p.get('url')   || '',
-        title: p.get('title') || '',
-        img:   p.get('img')   || '',
-        by:    getUsername() || '匿名',
-      });
-      history.replaceState({}, '', '/v');
-      if (res2 && res2.ok) {
-        renderGrid(res2.items);
-        showToast(res2.dup ? '已收藏過了' : '已收藏！');
-      }
-    });
-  }
-  // 未登入則等輸完 PIN 後 submitPin 會觸發 openAddModal
-}
-
+// ── 名字 ─────────────────────────────────────
 function getUsername() {
   const saved = localStorage.getItem('v_username');
   if (saved) return saved;
@@ -584,32 +608,41 @@ function getUsername() {
   return '';
 }
 
+let _pendingNameCb = null;
 function ensureUsername(cb) {
   if (getUsername()) return cb();
-  lockBodyScroll();
-  document.getElementById('nameModal').classList.add('show');
-  document.getElementById('nameInput').focus();
   _pendingNameCb = cb;
+  openSettings();
 }
-let _pendingNameCb = null;
 
-function openNameModal() {
+// ── 設定 Modal（名字＋missav 網域）────────────
+function openSettings() {
   lockBodyScroll();
   document.getElementById('nameInput').value = getUsername();
-  document.getElementById('nameModal').classList.add('show');
+  document.getElementById('domainInput').value = _domain;
+  document.getElementById('settingsModal').classList.add('show');
   setTimeout(() => document.getElementById('nameInput').focus(), 200);
 }
-function closeNameModal() {
-  document.getElementById('nameModal').classList.remove('show');
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('show');
   unlockBodyScroll();
+  // 略過名字也照樣收藏，記成匿名
+  if (_pendingNameCb) { const cb = _pendingNameCb; _pendingNameCb = null; cb(); }
 }
-function saveName() {
+async function saveSettings() {
   const n = document.getElementById('nameInput').value.trim();
-  if (!n) return;
-  localStorage.setItem('v_username', n);
-  closeNameModal();
-  showToast(`名字已設定：${n}`);
-  if (_pendingNameCb) { _pendingNameCb(); _pendingNameCb = null; }
+  const d = document.getElementById('domainInput').value.trim();
+  if (n) localStorage.setItem('v_username', n);
+  if (d && d !== _domain) {
+    const btn = document.getElementById('settingsSave');
+    btn.disabled = true;
+    const res = await apiFetch('/api/v/domain', { pin: _pin, domain: d });
+    btn.disabled = false;
+    if (!res || res.error) { showToast(res?.message || '網域儲存失敗'); return; }
+    _domain = res.domain;
+  }
+  closeSettings();
+  showToast('已儲存');
 }
 
 // ── 工具 ─────────────────────────────────────
@@ -623,24 +656,14 @@ function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Init ─────────────────────────────────────
+document.getElementById('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveSettings(); });
+document.getElementById('addUrl').addEventListener('keydown', e => { if (e.key === 'Enter') submitAdd(); });
+
+// ── Init：這台裝置解鎖過就直接進 ──────────────
 (function() {
-  checkBookmarkletParams();
-  const adminPin = sessionStorage.getItem('v_admin_pin');
-  if (adminPin) {
-    sessionStorage.removeItem('v_admin_pin');
-    apiFetch('/api/v/admin-bypass', { admin_pin: adminPin }).then(res => {
-      if (res && res.pin) {
-        sessionStorage.setItem('vpin', res.pin);
-        _pin = res.pin;
-        document.getElementById('pinScreen').style.display = 'none';
-        document.getElementById('mainScreen').style.display = 'flex';
-        renderGrid(res.items);
-      }
-    });
-    return;
-  }
-  const saved = sessionStorage.getItem('vpin');
+  sessionStorage.removeItem('v_admin_pin');   // 舊版免密碼入口的殘留
+  const saved = localStorage.getItem(PIN_KEY) || sessionStorage.getItem('vpin');
+  sessionStorage.removeItem('vpin');
   if (saved) {
     _pin = saved;
     submitPin();

@@ -3985,7 +3985,136 @@ def _redis_del(key: str):
 
 def _v_check_pin(pin: str) -> bool:
     correct = os.environ.get("V_PIN", "")
-    return bool(correct) and pin == correct
+    return bool(correct) and hmac.compare_digest(pin, correct)
+
+_V_FAIL_MAX = 8      # 同一 IP 連續輸錯幾次就鎖
+_V_FAIL_TTL = 900    # 鎖 15 分鐘
+
+def _v_auth(data: dict):
+    """驗證收藏庫 PIN（含錯誤次數鎖定）。通過回 None，否則回 (json, status)。"""
+    ip  = (request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+           or request.remote_addr or "?")
+    key = f"vfav:fail:{ip}"
+    try:
+        fails = int(_redis_get(key) or 0)
+    except ValueError:
+        fails = 0
+    if fails >= _V_FAIL_MAX:
+        return jsonify({"error": "locked", "message": "輸錯太多次，15 分鐘後再試"}), 429
+    if _v_check_pin(str(data.get("pin", ""))):
+        if fails:
+            _redis_del(key)
+        return None
+    _redis_set(key, str(fails + 1), _V_FAIL_TTL)
+    return jsonify({"error": "wrong_pin"}), 403
+
+# ── 網址解析：missav 從網址直接推出番號／封面；其他站抓 og 標籤 ──
+_V_DOMAIN_KEY     = "vfav:missav_domain"
+_V_DOMAIN_DEFAULT = "missav.ws"
+_V_SLUG_SUFFIX    = ("-uncensored-leak", "-chinese-subtitle", "-english-subtitle")
+_V_TITLE_TAIL     = _re.compile(r"\s*[-|｜]\s*MissAV\b.*$", _re.I)
+
+def _v_domain() -> str:
+    return _redis_get(_V_DOMAIN_KEY) or _V_DOMAIN_DEFAULT
+
+def _v_parse_missav(url: str) -> dict | None:
+    p = _urlparse.urlparse(url)
+    if "missav" not in p.netloc.lower():
+        return None
+    segs = [x for x in p.path.split("/") if x]
+    if not segs:
+        return None
+    slug = segs[-1].lower()
+    if not _re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)+", slug):
+        return None
+    code = slug
+    for suf in _V_SLUG_SUFFIX:
+        if code.endswith(suf):
+            code = code[: -len(suf)]
+    return {
+        "slug":       slug,
+        "code":       code.upper(),
+        "mpath":      "/".join(segs),
+        "uncensored": "uncensored" in slug,
+        "img":        f"https://fourhoi.com/{slug}/cover-n.jpg",
+    }
+
+def _v_fetch_meta(url: str) -> dict:
+    """抓網頁的 og:title / og:image（抓不到就回空）。"""
+    import html as _html
+    try:
+        r = _requests.get(url, timeout=5, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept-Language": "zh-TW,zh;q=0.9",
+        })
+        if not r.ok:
+            return {}
+        doc = r.text[:400_000]
+    except Exception:
+        return {}
+    def og(prop):
+        for pat in (rf'<meta[^>]+property=["\']og:{prop}["\'][^>]+content=["\']([^"\']+)',
+                    rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:{prop}["\']'):
+            m = _re.search(pat, doc, _re.I)
+            if m:
+                return _html.unescape(m.group(1)).strip()
+        return ""
+    title = og("title")
+    if not title:
+        m = _re.search(r"<title[^>]*>(.*?)</title>", doc, _re.I | _re.S)
+        title = _html.unescape(m.group(1)).strip() if m else ""
+    img = og("image")
+    if img:
+        img = _urlparse.urljoin(url, img)
+    return {"title": title, "img": img}
+
+def _v_clean_title(title: str, code: str) -> str:
+    t = _V_TITLE_TAIL.sub("", title or "").strip()
+    if code and t.upper().startswith(code):
+        t = t[len(code):].lstrip(" -–—:：")
+    return t
+
+def _v_enrich(item: dict, fetch: bool = True) -> dict:
+    """補齊番號、封面、乾淨標題。已處理過（v=2）的直接略過。"""
+    if item.get("v") == 2:
+        return item
+    url   = item.get("url", "")
+    title = (item.get("title") or "").strip()
+    if title == url:
+        title = ""
+    m = _v_parse_missav(url)
+    if m:
+        item.update(site="missav", code=m["code"], mpath=m["mpath"],
+                    uncensored=m["uncensored"])
+        if not item.get("img"):
+            item["img"] = m["img"]
+    elif fetch and (not title or not item.get("img")):
+        meta = _v_fetch_meta(url)
+        title = title or meta.get("title", "")
+        if not item.get("img"):
+            item["img"] = meta.get("img", "")
+    item["title"] = _v_clean_title(title, item.get("code", ""))
+    item["v"] = 2
+    return item
+
+def _v_key(item: dict) -> str:
+    m = _v_parse_missav(item.get("url", ""))
+    return f"missav:{m['slug']}" if m else item.get("url", "")
+
+def _v_load() -> list:
+    """讀清單；舊資料第一次讀到時順手補齊並寫回。"""
+    raw   = _redis_get(_V_KEY)
+    items = _json.loads(raw) if raw else []
+    if any(i.get("v") != 2 for i in items):
+        items = [_v_enrich(i) for i in items]
+        _v_save(items)
+    return items
+
+def _v_save(items: list):
+    _redis_set_perm(_V_KEY, _json.dumps(items, ensure_ascii=False))
+
+def _v_resp(items: list, **extra):
+    return jsonify({"ok": True, "items": items, "domain": _v_domain(), **extra})
 
 @app.route("/v")
 def v_page():
@@ -3994,81 +4123,57 @@ def v_page():
 @app.route("/api/v/list", methods=["POST"])
 def v_list():
     data = request.get_json(force=True) or {}
-    if not _v_check_pin(str(data.get("pin", ""))):
-        return jsonify({"error": "wrong_pin"}), 403
-    raw = _redis_get(_V_KEY)
-    items = _json.loads(raw) if raw else []
-    return jsonify({"ok": True, "items": items})
+    if (err := _v_auth(data)):
+        return err
+    return _v_resp(_v_load())
 
 @app.route("/api/v/add", methods=["POST"])
 def v_add():
     data = request.get_json(force=True) or {}
-    if not _v_check_pin(str(data.get("pin", ""))):
-        return jsonify({"error": "wrong_pin"}), 403
+    if (err := _v_auth(data)):
+        return err
     url   = str(data.get("url", "")).strip()
-    title = str(data.get("title", "")).strip() or url
-    img   = str(data.get("img", "")).strip()
-    by    = str(data.get("by", "")).strip()[:20]
     if not url:
         return jsonify({"error": "missing_url"}), 400
-    raw   = _redis_get(_V_KEY)
-    items = _json.loads(raw) if raw else []
-    if any(i["url"] == url for i in items):
-        return jsonify({"ok": True, "dup": True, "items": items})
-    items.insert(0, {
+    if not _re.match(r"^https?://", url, _re.I):
+        url = "https://" + url
+    items = _v_load()
+    new = {
         "id":    secrets.token_hex(6),
         "url":   url,
-        "title": title,
-        "img":   img,
-        "by":    by,
+        "title": str(data.get("title", "")).strip(),
+        "img":   str(data.get("img", "")).strip(),
+        "by":    str(data.get("by", "")).strip()[:20],
         "ts":    int(time.time()),
-    })
-    _redis_set_perm(_V_KEY, _json.dumps(items, ensure_ascii=False))
-    return jsonify({"ok": True, "items": items})
+    }
+    key = _v_key(new)
+    if any(_v_key(i) == key for i in items):
+        return _v_resp(items, dup=True)
+    items.insert(0, _v_enrich(new))
+    _v_save(items)
+    return _v_resp(items)
 
-@app.route("/api/v/thumb")
-def v_thumb():
-    from flask import Response
-    import urllib.parse as _up
-    raw_url = request.args.get("url", "").strip()
-    if not raw_url:
-        return "", 400
-    parsed = _up.urlparse(raw_url)
-    if parsed.scheme not in ("http", "https"):
-        return "", 400
-    try:
-        r = _requests.get(raw_url, timeout=8, headers={
-            "Referer": "https://missav.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        })
-        ct = r.headers.get("Content-Type", "image/jpeg")
-        return Response(r.content, content_type=ct,
-                        headers={"Cache-Control": "public, max-age=86400"})
-    except Exception:
-        return "", 502
-
-@app.route("/api/v/admin-bypass", methods=["POST"])
-def v_admin_bypass():
-    data      = request.get_json(force=True) or {}
-    admin_pin = str(data.get("admin_pin", ""))
-    if not _admin_pin_ok(admin_pin):
-        return jsonify({"error": "wrong_pin"}), 403
-    v_pin = os.environ.get("V_PIN", "")
-    raw   = _redis_get(_V_KEY)
-    items = _json.loads(raw) if raw else []
-    return jsonify({"ok": True, "pin": v_pin, "items": items})
+@app.route("/api/v/domain", methods=["POST"])
+def v_set_domain():
+    data = request.get_json(force=True) or {}
+    if (err := _v_auth(data)):
+        return err
+    dom = str(data.get("domain", "")).strip().lower()
+    dom = _re.sub(r"^https?://", "", dom).strip("/")
+    if not _re.fullmatch(r"[a-z0-9-]+(\.[a-z0-9-]+)+", dom):
+        return jsonify({"error": "bad_domain", "message": "網域格式不對，例：missav.ws"}), 400
+    _redis_set_perm(_V_DOMAIN_KEY, dom)
+    return jsonify({"ok": True, "domain": dom})
 
 @app.route("/api/v/del", methods=["POST"])
 def v_del():
     data = request.get_json(force=True) or {}
-    if not _v_check_pin(str(data.get("pin", ""))):
-        return jsonify({"error": "wrong_pin"}), 403
-    vid = str(data.get("id", ""))
-    raw = _redis_get(_V_KEY)
-    items = _json.loads(raw) if raw else []
-    items = [i for i in items if i["id"] != vid]
-    _redis_set_perm(_V_KEY, _json.dumps(items, ensure_ascii=False))
-    return jsonify({"ok": True, "items": items})
+    if (err := _v_auth(data)):
+        return err
+    vid   = str(data.get("id", ""))
+    items = [i for i in _v_load() if i["id"] != vid]
+    _v_save(items)
+    return _v_resp(items)
 
 
 # IATA airline code → ICAO operator code（for ADS-B callsign lookup）
