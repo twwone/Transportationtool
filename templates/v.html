@@ -367,7 +367,7 @@ body {
   <div class="modal-box">
     <div class="modal-title">手動新增</div>
     <input class="modal-input" id="addUrl"   placeholder="影片網址" type="url" autocomplete="off">
-    <div class="modal-hint">missav 網址會自動帶出番號與封面，其他網站會嘗試抓網頁的標題和預覽圖</div>
+    <div class="modal-hint">missav 網址會自動帶出番號、封面，並用番號查標題；其他網站會嘗試抓網頁的標題和預覽圖</div>
     <input class="modal-input" id="addTitle" placeholder="標題（可選）">
     <input class="modal-input" id="addImg"   placeholder="縮圖網址（可選）" type="url" autocomplete="off">
     <div class="modal-actions">
@@ -462,6 +462,25 @@ async function submitPin() {
   document.getElementById('mainScreen').style.display = 'flex';
   applyList(res);
   handleBookmarklet();
+  backfillTitles();
+}
+
+// ── 沒標題的收藏在背景用番號補標題（一次 8 筆，接著補到沒有為止）──
+let _backfilling = false;
+async function backfillTitles() {
+  const due = i => i.code && !i.title && (!i.tl || Date.now() / 1000 - i.tl > 3 * 86400);
+  if (_backfilling || !_items.some(due)) return;
+  _backfilling = true;
+  let total = 0;
+  for (let round = 0; round < 30 && _pin; round++) {
+    const res = await apiFetch('/api/v/backfill', { pin: _pin });
+    if (!res || res.error) break;
+    applyList(res);
+    total += res.filled || 0;
+    if (!res.remaining) break;
+  }
+  _backfilling = false;
+  if (total) showToast(`已補上 ${total} 部標題`);
 }
 
 function lock() {
@@ -517,7 +536,7 @@ function normSearch(s) {
   return String(s || '').toLowerCase().replace(/[\s\-_]+/g, '');
 }
 function itemHaystack(item) {
-  return normSearch([item.code, item.title, item.uncensored ? '無碼' : '',
+  return normSearch([item.code, item.title, item.title_en, item.uncensored ? '無碼' : '',
     hostOf(item.url), item.mpath, item.by].join(' '));
 }
 function filterItems() {

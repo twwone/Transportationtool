@@ -4068,6 +4068,68 @@ def _v_fetch_meta(url: str) -> dict:
         img = _urlparse.urljoin(url, img)
     return {"title": title, "img": img}
 
+_V_UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+_V_TITLE_RETRY = 3 * 86400   # 查不到標題的番號，3 天後才再試
+
+def _v_code_norm(code: str) -> str:
+    """番號比對用：只留英數、去掉 PPV（javdb 把 FC2-PPV-123 寫成 FC2-123）。"""
+    return _re.sub(r"[^a-z0-9]", "", (code or "").lower()).replace("ppv", "")
+
+def _v_lookup_title(code: str) -> dict:
+    """用番號查標題（missav 有 Cloudflare 擋伺服器，改查其他來源）。
+    先查 r18.dev（一般有碼番號，回日文原標題＋英文），查不到再查 javdb 搜尋頁（FC2 等）。"""
+    key = _re.sub(r"[^a-z0-9]", "", (code or "").lower())
+    if not key:
+        return {}
+    try:
+        r = _requests.get(f"https://r18.dev/videos/vod/movies/detail/-/dvd_id={key}/json",
+                          timeout=6, headers=_V_UA)
+        if r.ok:
+            d  = r.json()
+            en = (d.get("title") or "").strip()
+            ja = ""
+            cid = d.get("content_id")
+            if cid:
+                r2 = _requests.get(f"https://r18.dev/videos/vod/movies/detail/-/combined={cid}/json",
+                                   timeout=6, headers=_V_UA)
+                if r2.ok:
+                    d2 = r2.json()
+                    ja = (d2.get("title_ja") or "").strip()
+                    en = (d2.get("title_en") or en).strip()
+            if ja or en:
+                return {"title": ja or en, "title_en": en if ja else ""}
+    except Exception:
+        pass
+    try:
+        import html as _html
+        r = _requests.get("https://javdb.com/search", params={"q": code, "f": "all"},
+                          timeout=6, headers=_V_UA)
+        if r.ok:
+            want = _v_code_norm(code)
+            for m in _re.finditer(r'<div class="video-title"><strong>(.*?)</strong>\s*(.*?)</div>',
+                                  r.text, _re.S):
+                if _v_code_norm(m.group(1)) == want:
+                    t = _html.unescape(_re.sub(r"<[^>]+>", "", m.group(2))).strip()
+                    if t:
+                        return {"title": t, "title_en": ""}
+    except Exception:
+        pass
+    return {}
+
+def _v_needs_title(item: dict) -> bool:
+    return bool(item.get("code")) and not (item.get("title") or "").strip() \
+        and time.time() - item.get("tl", 0) > _V_TITLE_RETRY
+
+def _v_apply_title(item: dict, found: dict):
+    """把查到的標題寫進收藏；查不到就記下時間，避免每次都重查。"""
+    if found.get("title"):
+        item["title"] = _v_clean_title(found["title"], item.get("code", ""))
+        if found.get("title_en"):
+            item["title_en"] = _v_clean_title(found["title_en"], item.get("code", ""))
+        item.pop("tl", None)
+    else:
+        item["tl"] = int(time.time())
+
 def _v_clean_title(title: str, code: str) -> str:
     t = _V_TITLE_TAIL.sub("", title or "").strip()
     if code and t.upper().startswith(code):
@@ -4094,6 +4156,9 @@ def _v_enrich(item: dict, fetch: bool = True) -> dict:
         if not item.get("img"):
             item["img"] = meta.get("img", "")
     item["title"] = _v_clean_title(title, item.get("code", ""))
+    # missav 網址沒帶標題（手動貼網址）時，用番號去別的來源查
+    if fetch and m and not item["title"]:
+        _v_apply_title(item, _v_lookup_title(item["code"]))
     item["v"] = 2
     return item
 
@@ -4152,6 +4217,27 @@ def v_add():
     items.insert(0, _v_enrich(new))
     _v_save(items)
     return _v_resp(items)
+
+@app.route("/api/v/backfill", methods=["POST"])
+def v_backfill():
+    """幫沒有標題的舊收藏補標題，一次最多 8 筆（避免超過 Vercel 執行時間），前端會接著再叫。"""
+    data = request.get_json(force=True) or {}
+    if (err := _v_auth(data)):
+        return err
+    todo = [i for i in _v_load() if _v_needs_title(i)][:8]
+    if not todo:
+        return _v_resp(_v_load(), remaining=0, filled=0)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(lambda i: _v_lookup_title(i["code"]), todo))
+    found = {i["id"]: res for i, res in zip(todo, results)}
+    items = _v_load()   # 查詢期間可能有人新增或刪除，重讀最新清單再合併
+    filled = 0
+    for it in items:
+        if it["id"] in found and not (it.get("title") or "").strip():
+            _v_apply_title(it, found[it["id"]])
+            filled += bool(it.get("title"))
+    _v_save(items)
+    return _v_resp(items, remaining=sum(_v_needs_title(i) for i in items), filled=filled)
 
 @app.route("/api/v/domain", methods=["POST"])
 def v_set_domain():
