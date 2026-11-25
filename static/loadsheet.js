@@ -814,18 +814,32 @@ let _ldmEtaSeq = 0;
 let _ldmEtaAt = 0;
 const LDM_ETA_MS = 2 * 60 * 1000;
 
-async function loadLdmEta() {
+async function loadLdmEta(force) {
   if (!_ldmFlights.length) return;
   const seq = ++_ldmEtaSeq;
   const fl  = _ldmFlights.map(f => f.flight + '|' + (f.sta || '')).join(',');
   try {
-    const res  = await fetch(`/api/loadsheet/eta?date=${_ldmFlightsDate}&fl=${encodeURIComponent(fl)}`);
+    const res  = await fetch(`/api/loadsheet/eta?date=${_ldmFlightsDate}&fl=${encodeURIComponent(fl)}${force ? '&force=1' : ''}`);
     const data = await res.json();
     if (seq !== _ldmEtaSeq || !res.ok) return;
     _ldmEta = data.flights || {};
     _ldmEtaAt = Date.now();
   } catch (e) { /* 留著上一次的結果，畫面改用 Notion ETA */ }
   if (seq === _ldmEtaSeq) ldmRefreshEta();
+}
+/* 手動刷新：重抓 FR24（略過快取），按鈕轉圈到抓完；航班清單還沒載入就整個重載 */
+let _ldmRefreshing = false;
+async function ldmRefreshClick() {
+  if (_ldmRefreshing) return;
+  _ldmRefreshing = true;
+  const btn = document.getElementById('ldmRefreshBtn');
+  btn.classList.add('spinning');
+  try {
+    if (_ldmFlights.length) await loadLdmEta(true); else await loadLdmFlights();
+  } finally {
+    _ldmRefreshing = false;
+    btn.classList.remove('spinning');
+  }
 }
 function ldmRefreshEta() {
   document.querySelectorAll('.ldm-fl-eta[data-eta-for]').forEach(el => {

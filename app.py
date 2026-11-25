@@ -1085,12 +1085,13 @@ _ls_eta_lock  = threading.Lock()
 _LS_ETA_TTL   = 60         # 秒；FR24 打太兇會被擋 IP
 
 
-def _fr24_tpe_legs(no: str) -> "list | None":
-    """FR24 查單一班號，只留目的地 TPE 的航段（時間都是 UNIX 秒）。失敗回 None。"""
+def _fr24_tpe_legs(no: str, force: bool = False) -> "list | None":
+    """FR24 查單一班號，只留目的地 TPE 的航段（時間都是 UNIX 秒）。失敗回 None。
+    force：手動刷新略過快取，但 10 秒內抓過就沿用，避免連按被 FR24 擋 IP。"""
     now = time.time()
     with _ls_eta_lock:
         c = _ls_eta_cache.get(no)
-        if c and now < c["expires_at"]:
+        if c and now < (c["expires_at"] - _LS_ETA_TTL + 10 if force else c["expires_at"]):
             return c["legs"]
     try:
         r = _requests.get(
@@ -1149,7 +1150,8 @@ def loadsheet_eta_api():
 
     nos = sorted({no for _, no, _ in reqs})
     with ThreadPoolExecutor(max_workers=6) as pool:
-        legs_by_no = dict(zip(nos, pool.map(_fr24_tpe_legs, nos)))
+        force = request.args.get("force") == "1"
+        legs_by_no = dict(zip(nos, pool.map(lambda n: _fr24_tpe_legs(n, force), nos)))
 
     out = {}
     for flight, no, target in reqs:
