@@ -1069,8 +1069,109 @@ def loadsheet_flights_api():
             "origin":    f.get("origin", ""),
             "reg":       (f.get("acft_reg") or "").strip(),
             "cgo":       f.get("cgo", ""),
+            "eta":       (f.get("eta") or "").strip(),   # Notion 手填的 ETA，FR24 抓不到時當備援
         })
     return jsonify({"flights": result, "date": date_str})
+
+
+# ── 抵達倒數：FR24 單一班號的航段（非官方端點，失敗時前端改用 Notion ETA）──
+_FR24_HDR = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+    "Accept": "application/json",
+}
+_ls_eta_cache: dict = {}   # 班號 -> {"legs": [...], "expires_at": float}
+_ls_eta_lock  = threading.Lock()
+_LS_ETA_TTL   = 60         # 秒；FR24 打太兇會被擋 IP
+
+
+def _fr24_tpe_legs(no: str) -> "list | None":
+    """FR24 查單一班號，只留目的地 TPE 的航段（時間都是 UNIX 秒）。失敗回 None。"""
+    now = time.time()
+    with _ls_eta_lock:
+        c = _ls_eta_cache.get(no)
+        if c and now < c["expires_at"]:
+            return c["legs"]
+    try:
+        r = _requests.get(
+            "https://api.flightradar24.com/common/v1/flight/list.json",
+            params={"query": no, "fetchBy": "flight", "page": 1, "limit": 25},
+            headers=_FR24_HDR, timeout=8,
+        )
+        rows = ((r.json().get("result") or {}).get("response") or {}).get("data") or []
+    except Exception:
+        return None
+    legs = []
+    for x in rows:
+        ap   = x.get("airport") or {}
+        dest = ((ap.get("destination") or {}).get("code") or {}).get("iata")
+        if dest != "TPE":
+            continue
+        t  = x.get("time") or {}
+        tg = lambda a, b: (t.get(a) or {}).get(b)
+        st = x.get("status") or {}
+        legs.append({
+            "origin": ((ap.get("origin") or {}).get("code") or {}).get("iata") or "",
+            "sta": tg("scheduled", "arrival"), "eta": tg("estimated", "arrival"), "ata": tg("real", "arrival"),
+            "std": tg("scheduled", "departure"), "etd": tg("estimated", "departure"), "atd": tg("real", "departure"),
+            "live": bool(st.get("live")),
+        })
+    with _ls_eta_lock:
+        _ls_eta_cache[no] = {"legs": legs, "expires_at": now + _LS_ETA_TTL}
+    return legs
+
+
+def _ls_sta_ts(date_str: str, sta: str) -> "float | None":
+    """Notion 的 STA（'23:15（前一天）'、'00:30（隔天）'）→ 台灣時間的 UNIX 秒。"""
+    m = _re.search(r"(\d{1,2}):(\d{2})", sta or "")
+    if not m:
+        return None
+    try:
+        base = _dt.strptime(date_str, "%Y-%m-%d").replace(tzinfo=_tz(_td(hours=8)))
+    except ValueError:
+        return None
+    day = -1 if "前一天" in sta else 1 if ("隔天" in sta or "翌日" in sta) else 0
+    return (base + _td(days=day, hours=int(m.group(1)), minutes=int(m.group(2)))).timestamp()
+
+
+@app.route("/api/loadsheet/eta")
+def loadsheet_eta_api():
+    """?date=YYYY-MM-DD&fl=AK177/177|23:15（前一天）,Z2128/129|00:00 → 每班的起飛／抵達狀態"""
+    date_str = request.args.get("date", "").strip()
+    if not _re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+        date_str = _asiaair_today()
+    reqs = []
+    for part in request.args.get("fl", "").split(",")[:30]:
+        flight, _, sta = part.partition("|")
+        no = flight.split("/")[0].strip().upper()
+        if _re.match(r"^[A-Z0-9]{2}\d{1,4}[A-Z]?$", no):
+            reqs.append((flight.strip(), no, _ls_sta_ts(date_str, sta)))
+
+    nos = sorted({no for _, no, _ in reqs})
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        legs_by_no = dict(zip(nos, pool.map(_fr24_tpe_legs, nos)))
+
+    out = {}
+    for flight, no, target in reqs:
+        legs = [l for l in (legs_by_no.get(no) or []) if l["sta"]]
+        if target is None:   # STA 沒填：用當天中午找最近的那段
+            target = _ls_sta_ts(date_str, "12:00")
+            limit = 14 * 3600
+        else:
+            limit = 6 * 3600
+        leg = min(legs, key=lambda l: abs(l["sta"] - target), default=None)
+        if not leg or abs(leg["sta"] - target) > limit:
+            out[flight] = None
+            continue
+        if leg["ata"]:
+            state = "landed"
+        elif leg["atd"] or leg["live"]:
+            state = "airborne"
+        else:
+            state = "scheduled"
+        out[flight] = {"state": state, **{k: leg[k] for k in ("origin", "sta", "eta", "ata", "std", "etd", "atd")}}
+    return jsonify({"date": date_str, "flights": out, "fr24_ok": any(v is not None for v in legs_by_no.values()),
+                    "now": int(time.time())})
 
 
 _LOADSHEET_PARSE_PROMPT = (

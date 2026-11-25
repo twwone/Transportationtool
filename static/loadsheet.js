@@ -768,7 +768,10 @@ async function loadLdmFlights(silent) {
     const res  = await fetch(url);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load flights');
-    renderLdmFlights(data.flights || []);
+    _ldmFlights = data.flights || [];
+    _ldmFlightsDate = data.date || ldmDateStr(0);
+    renderLdmFlights(_ldmFlights);
+    loadLdmEta();
   } catch(e) {
     /* 背景刷新失敗就留著原本的清單；抓不到不能顯示成「沒有航班」 */
     if (!silent) document.getElementById('ldmFlightList').innerHTML = '<div class="ldm-no-flights">Failed to load flights — Notion may be down. Reopen to retry.</div>';
@@ -797,9 +800,93 @@ function renderLdmFlights(flights) {
         <div class="ldm-fl-no">${f.flight}</div>
         <div class="ldm-fl-sub">${sub || '—'}</div>
       </div>
+      <div class="ldm-fl-eta" data-eta-for="${escHtml(f.flight)}">${ldmEtaHtml(f)}</div>
       <i class="bi bi-chevron-right" style="color:var(--sub);font-size:0.8rem"></i>
     </div>`;
   }).join('');
+}
+
+/* ── 抵達倒數：FR24 每 2 分鐘抓一次（頁面開著才抓），倒數每 30 秒重畫；FR24 抓不到改用 Notion ETA ── */
+let _ldmFlights = [];
+let _ldmFlightsDate = '';
+let _ldmEta = {};          // flight -> FR24 結果（null = FR24 找不到這班）
+let _ldmEtaSeq = 0;
+let _ldmEtaAt = 0;
+const LDM_ETA_MS = 2 * 60 * 1000;
+
+async function loadLdmEta() {
+  if (!_ldmFlights.length) return;
+  const seq = ++_ldmEtaSeq;
+  const fl  = _ldmFlights.map(f => f.flight + '|' + (f.sta || '')).join(',');
+  try {
+    const res  = await fetch(`/api/loadsheet/eta?date=${_ldmFlightsDate}&fl=${encodeURIComponent(fl)}`);
+    const data = await res.json();
+    if (seq !== _ldmEtaSeq || !res.ok) return;
+    _ldmEta = data.flights || {};
+    _ldmEtaAt = Date.now();
+  } catch (e) { /* 留著上一次的結果，畫面改用 Notion ETA */ }
+  if (seq === _ldmEtaSeq) ldmRefreshEta();
+}
+function ldmRefreshEta() {
+  document.querySelectorAll('.ldm-fl-eta[data-eta-for]').forEach(el => {
+    const f = _ldmFlights.find(x => x.flight === el.dataset.etaFor);
+    if (f) el.innerHTML = ldmEtaHtml(f);
+  });
+}
+setInterval(() => {
+  if (document.hidden || !_ldmFlights.length) return;
+  if (Date.now() - _ldmEtaAt > LDM_ETA_MS) loadLdmEta(); else ldmRefreshEta();
+}, 30 * 1000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && _ldmFlights.length && Date.now() - _ldmEtaAt > LDM_ETA_MS) loadLdmEta();
+});
+
+function ldmHm(ts) {
+  return new Date(ts * 1000).toLocaleTimeString('en-GB', { timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false });
+}
+function ldmDur(sec) {
+  const m = Math.max(0, Math.round(sec / 60));
+  return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm';
+}
+/* Notion 的 ETA（HH:MM，打錯字就不用）→ UNIX 秒；日期跟著 STA（前一天／隔天），跨午夜自動調整 */
+function ldmNotionEtaTs(f) {
+  const m = /^\s*(\d{1,2}):(\d{2})\s*$/.exec(f.eta || '');
+  if (!m || +m[1] > 23 || +m[2] > 59) return null;
+  const [y, mo, d] = (_ldmFlightsDate || ldmDateStr(0)).split('-').map(Number);
+  const sta = /(\d{1,2}):(\d{2})/.exec(f.sta || '');
+  const day = /前一天/.test(f.sta || '') ? -1 : /隔天|翌日/.test(f.sta || '') ? 1 : 0;
+  const at  = (h, mi, dd) => Date.UTC(y, mo - 1, d + dd, h - 8, mi) / 1000;   // 台灣時間 UTC+8
+  let ts = at(+m[1], +m[2], day);
+  if (sta) {
+    const st = at(+sta[1], +sta[2], day);
+    if (ts - st > 12 * 3600) ts -= 86400;
+    else if (st - ts > 12 * 3600) ts += 86400;
+  }
+  return ts;
+}
+function ldmEtaHtml(f) {
+  const now = Date.now() / 1000;
+  const e = _ldmEta[f.flight];
+  const box = (cls, label, time, sub) =>
+    `<span class="ldm-eta-label ${cls}">${label}</span><span class="ldm-eta-time ${cls}">${time}</span>` +
+    (sub ? `<span class="ldm-eta-sub">${sub}</span>` : '');
+  if (e && e.state === 'landed') {
+    const ago = now - e.ata;
+    return box('landed', 'LANDED', ldmHm(e.ata), ago >= 0 && ago < 3 * 3600 ? ldmDur(ago) + ' ago' : '');
+  }
+  if (e && e.state === 'airborne') {
+    const t = e.eta || e.sta;
+    return box('air', 'ETA', ldmHm(t), t > now ? 'in ' + ldmDur(t - now) : 'Arriving');
+  }
+  if (e && e.state === 'scheduled') {
+    const dep = e.etd || e.std, t = e.eta || e.sta;
+    const sub = !dep ? '' : dep > now ? 'Dep in ' + ldmDur(dep - now) : 'Not departed';
+    return box('sched', 'STA', ldmHm(t), sub);
+  }
+  /* FR24 沒有這班（或抓失敗）：用 Notion ETA */
+  const ts = ldmNotionEtaTs(f);
+  if (ts == null) return '';
+  return box('notion', 'ETA', ldmHm(ts), ts > now ? 'in ' + ldmDur(ts - now) : 'Notion');
 }
 
 async function selectLdmFlight(el) {

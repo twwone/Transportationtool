@@ -131,6 +131,18 @@ input::placeholder { color:#6f7276; }
 .ldm-fl-no  { font-family:var(--num); font-size:0.95rem; font-weight:700; color:var(--text); letter-spacing:0.03em; }
 .ldm-fl-sub { font-size:0.68rem; color:var(--sub); margin-top:1px; }
 .ldm-flight-item.active .ldm-fl-sub { color:#e2e8ee; }
+/* 抵達倒數（FR24／Notion ETA） */
+.ldm-fl-eta { display:grid; grid-template-columns:auto auto; column-gap:5px; align-items:baseline; justify-items:end; text-align:right; flex-shrink:0; min-width:64px; }
+.ldm-fl-eta:empty { display:none; }
+.ldm-eta-label { font-size:0.58rem; font-weight:700; letter-spacing:0.05em; color:var(--sub); }
+.ldm-eta-time  { font-family:var(--num); font-size:0.95rem; font-weight:700; color:var(--text); letter-spacing:0.02em; }
+.ldm-eta-sub   { grid-column:1 / -1; font-size:0.66rem; color:var(--sub); margin-top:1px; white-space:nowrap; }
+.ldm-eta-time.air    { color:var(--green); }
+.ldm-eta-label.air   { color:var(--green); }
+.ldm-eta-time.landed { color:var(--cyan); }
+.ldm-eta-label.landed{ color:var(--cyan); }
+.ldm-eta-time.notion { color:var(--amber); }
+.ldm-flight-item.active .ldm-eta-sub { color:#e2e8ee; }
 .ldm-no-flights { text-align:center; padding:10px 0; color:var(--sub); font-size:0.8rem; }
 .ldm-img { width:100%; border-radius:3px; display:block; margin-bottom:8px; cursor:pointer; border:1px solid #000; }
 .ldm-text-block { font-family:Menlo,monospace; font-size:0.74rem; color:var(--text); background:#000; border:1px solid #666a70; border-radius:3px; padding:9px 10px; margin-bottom:8px; white-space:pre-wrap; line-height:1.55; }
