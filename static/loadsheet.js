@@ -888,8 +888,11 @@ function ldmEtaHtml(f) {
     return box('landed', 'LANDED', ldmHm(e.ata), agoTxt);
   }
   if (e && e.state === 'airborne') {
-    const t = e.eta || e.sta, d = late(t, e.sta);
+    /* FR24 沒給 ETA：用實際起飛 + 表定航程（STA − STD）推算，起飛晚多少就晚到多少 */
+    let t = e.eta || (e.atd && e.std && e.sta ? e.atd + (e.sta - e.std) : e.sta);
     const sub = t > now ? 'in ' + ldmDur(t - now) : 'Arriving';
+    /* 過了 ETA 還沒落地：最快也要現在才到，延誤跟著時間往上加 */
+    const d = late(Math.max(t, now), e.sta);
     if (d) return box('delay', 'DELAY', ldmHm(t), plus(d) + ' · ' + sub);
     return box('air', 'ETA', ldmHm(t), sub);
   }
