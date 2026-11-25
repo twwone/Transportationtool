@@ -864,8 +864,8 @@ function ldmNotionEtaTs(f) {
   }
   return ts;
 }
-/* 延誤：預計／實際抵達比表定（STA）晚 15 分鐘以上（航空業準點率標準），標籤改 DELAY、紅色 */
-const LDM_DELAY_SEC = 15 * 60;
+/* 延誤：預計／實際抵達比表定（STA）晚 1 分鐘以上，標籤改 DELAY、紅色 */
+const LDM_DELAY_SEC = 60;
 function ldmNotionStaTs(f) {
   const m = /(\d{1,2}):(\d{2})/.exec(f.sta || '');
   if (!m) return null;
