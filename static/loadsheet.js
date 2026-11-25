@@ -864,29 +864,50 @@ function ldmNotionEtaTs(f) {
   }
   return ts;
 }
+/* 延誤：預計／實際抵達比表定（STA）晚 15 分鐘以上（航空業準點率標準），標籤改 DELAY、紅色 */
+const LDM_DELAY_SEC = 15 * 60;
+function ldmNotionStaTs(f) {
+  const m = /(\d{1,2}):(\d{2})/.exec(f.sta || '');
+  if (!m) return null;
+  const [y, mo, d] = (_ldmFlightsDate || ldmDateStr(0)).split('-').map(Number);
+  const day = /前一天/.test(f.sta) ? -1 : /隔天|翌日/.test(f.sta) ? 1 : 0;
+  return Date.UTC(y, mo - 1, d + day, +m[1] - 8, +m[2]) / 1000;
+}
 function ldmEtaHtml(f) {
   const now = Date.now() / 1000;
   const e = _ldmEta[f.flight];
+  const late = (t, sta) => t && sta && t - sta >= LDM_DELAY_SEC ? t - sta : 0;
+  const plus = sec => '+' + ldmDur(sec);
   const box = (cls, label, time, sub) =>
     `<span class="ldm-eta-label ${cls}">${label}</span><span class="ldm-eta-time ${cls}">${time}</span>` +
     (sub ? `<span class="ldm-eta-sub">${sub}</span>` : '');
   if (e && e.state === 'landed') {
-    const ago = now - e.ata;
-    return box('landed', 'LANDED', ldmHm(e.ata), ago >= 0 && ago < 3 * 3600 ? ldmDur(ago) + ' ago' : '');
+    const ago = now - e.ata, d = late(e.ata, e.sta);
+    const agoTxt = ago >= 0 && ago < 3 * 3600 ? ldmDur(ago) + ' ago' : '';
+    if (d) return box('delay', 'DELAY', ldmHm(e.ata), 'Landed ' + plus(d));
+    return box('landed', 'LANDED', ldmHm(e.ata), agoTxt);
   }
   if (e && e.state === 'airborne') {
-    const t = e.eta || e.sta;
-    return box('air', 'ETA', ldmHm(t), t > now ? 'in ' + ldmDur(t - now) : 'Arriving');
+    const t = e.eta || e.sta, d = late(t, e.sta);
+    const sub = t > now ? 'in ' + ldmDur(t - now) : 'Arriving';
+    if (d) return box('delay', 'DELAY', ldmHm(t), plus(d) + ' · ' + sub);
+    return box('air', 'ETA', ldmHm(t), sub);
   }
   if (e && e.state === 'scheduled') {
-    const dep = e.etd || e.std, t = e.eta || e.sta;
+    const dep = e.etd || e.std;
     const sub = !dep ? '' : dep > now ? 'Dep in ' + ldmDur(dep - now) : 'Not departed';
-    return box('sched', 'STA', ldmHm(t), sub);
+    /* 還沒起飛：起飛延後多少，抵達就往後推多少；過了表定起飛還沒飛，就以現在當起飛時間估 */
+    const depLag = e.std ? Math.max((e.etd || e.std) - e.std, now - e.std, 0) : 0;
+    const t = e.eta || (e.sta ? e.sta + depLag : 0), d = late(t, e.sta);
+    if (d) return box('delay', 'DELAY', ldmHm(t), plus(d) + (sub ? ' · ' + sub : ''));
+    return box('sched', 'STA', ldmHm(e.eta || e.sta), sub);
   }
   /* FR24 沒有這班（或抓失敗）：用 Notion ETA */
   const ts = ldmNotionEtaTs(f);
   if (ts == null) return '';
-  return box('notion', 'ETA', ldmHm(ts), ts > now ? 'in ' + ldmDur(ts - now) : 'Notion');
+  const sub = ts > now ? 'in ' + ldmDur(ts - now) : 'Notion', d = late(ts, ldmNotionStaTs(f));
+  if (d) return box('delay', 'DELAY', ldmHm(ts), plus(d) + ' · ' + sub);
+  return box('notion', 'ETA', ldmHm(ts), sub);
 }
 
 async function selectLdmFlight(el) {

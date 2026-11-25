@@ -142,6 +142,7 @@ input::placeholder { color:#6f7276; }
 .ldm-eta-time.landed { color:var(--cyan); }
 .ldm-eta-label.landed{ color:var(--cyan); }
 .ldm-eta-time.notion { color:var(--amber); }
+.ldm-eta-time.delay, .ldm-eta-label.delay { color:var(--danger); }
 .ldm-flight-item.active .ldm-eta-sub { color:#e2e8ee; }
 .ldm-no-flights { text-align:center; padding:10px 0; color:var(--sub); font-size:0.8rem; }
 .ldm-img { width:100%; border-radius:3px; display:block; margin-bottom:8px; cursor:pointer; border:1px solid #000; }
