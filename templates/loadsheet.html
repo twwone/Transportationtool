@@ -52,6 +52,9 @@
     <button class="seg-btn" data-ac="A321">A321</button>
   </div>
 
+  <!-- 電腦版分欄：≥768px 左 LDM／右 輸入＋結果，≥1280px 三欄；手機照原順序直排 -->
+  <div class="ls-cols">
+  <div class="ls-col ls-col-ldm">
   <!-- 落地 LDM：選航班 + 顯示 Notion 內容 -->
   <div class="card" id="ldmCard" style="animation-delay:.01s">
     <div class="card-title">
@@ -71,6 +74,9 @@
     </div>
   </div>
 
+  </div><!-- /ls-col-ldm -->
+
+  <div class="ls-col ls-col-input">
   <!-- 特殊項目 -->
   <div class="card" style="animation-delay:.02s">
     <div class="card-title">SPECIAL LOAD</div>
@@ -158,6 +164,9 @@
     <button class="calc-btn" onclick="onComputeClick()">COMPUTE<span class="btn-sub">Suggest distribution</span></button>
   </div>
 
+  </div><!-- /ls-col-input -->
+
+  <div class="ls-col ls-col-result">
   <!-- 結果 -->
   <div id="resultSection">
     <div class="remain-banner" id="remainBanner">
@@ -170,6 +179,8 @@
     <div class="section-label" id="resultLabel">Suggested distribution</div>
     <div id="holdList"></div>
   </div>
+  </div><!-- /ls-col-result -->
+  </div><!-- /ls-cols -->
 
 </div>
 
