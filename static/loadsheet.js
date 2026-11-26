@@ -189,7 +189,9 @@ document.getElementById('acSwitch').addEventListener('click', e => {
   curAc = btn.dataset.ac;
   buildHoldOptions();
   if (_ldmParsed && !_ldmParsed.ac) renderLdmParse();  // LDM 看不出機型時，手動切換後重新檢查艙位
-  if (document.getElementById('resultSection').style.display !== 'none') calcDistribution();
+  /* 有填出發行李就照新機型重新分配；沒填也要重畫艙位卡片（A320 4 艙、A321 5 艙），不然會停在上一個機型 */
+  if (v('totalPcs')) calcDistribution();
+  else renderResult();
   saveState();
   chkHoldsAfterAcChange();
 });
