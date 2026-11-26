@@ -446,9 +446,11 @@ function renderResult() {
   /* banner */
   const banner = document.getElementById('remainBanner');
   const val    = document.getElementById('remainVal');
-  val.textContent  = remain === 0 ? '0 PCS ✓' : remain > 0 ? `+${remain} PCS` : `${remain} PCS`;
-  banner.className = 'remain-banner' + (remain === 0 ? ' ok' : ' warn');
-  val.className    = 'remain-val'    + (remain === 0 ? ' ok' : ' warn');
+  /* 還沒填出發行李總件數：不算剩餘件數（避免空白時顯示綠色 0 ✓、清掉總件數後顯示負數） */
+  const st = !totalPcs ? '' : remain === 0 ? ' ok' : ' warn';
+  val.textContent  = !totalPcs ? '—' : remain === 0 ? '0 PCS ✓' : remain > 0 ? `+${remain} PCS` : `${remain} PCS`;
+  banner.className = 'remain-banner' + st;
+  val.className    = 'remain-val'    + st;
 
   const list = document.getElementById('holdList');
   list.innerHTML = '';
@@ -765,8 +767,11 @@ async function loadLdmFlights(silent) {
     const res  = await fetch(url);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load flights');
+    const newDate = data.date || ldmDateStr(0);
+    /* 換日期：同班號不同天，上一個日期的 FR24 狀態不能沿用（FR24 抓失敗時會一直掛著別天的落地時間） */
+    if (newDate !== _ldmFlightsDate) { _ldmEta = {}; _ldmEtaAt = 0; }
     _ldmFlights = data.flights || [];
-    _ldmFlightsDate = data.date || ldmDateStr(0);
+    _ldmFlightsDate = newDate;
     renderLdmFlights(_ldmFlights);
     loadLdmEta();
   } catch(e) {
@@ -1263,7 +1268,7 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
   kpPress(k);
 });
-window.addEventListener('scroll', () => { if (_kp.key) kpPlace(); }, { passive: true });
+document.addEventListener('scroll', () => { if (_kp.key) kpPlace(); }, { passive: true, capture: true });
 window.addEventListener('resize', () => { if (_kp.key) kpPlace(); });
 
 /* ── COMPUTE 前檢查：沒填好的項目跳警示框、欄位標紅字；不改 calcDistribution 本身 ── */

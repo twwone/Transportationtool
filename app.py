@@ -1125,7 +1125,7 @@ def _fr24_tpe_legs(no: str, force: bool = False) -> "list | None":
 def _ls_sta_ts(date_str: str, sta: str) -> "float | None":
     """Notion 的 STA（'23:15（前一天）'、'00:30（隔天）'）→ 台灣時間的 UNIX 秒。"""
     m = _re.search(r"(\d{1,2}):(\d{2})", sta or "")
-    if not m:
+    if not m or int(m.group(1)) > 23 or int(m.group(2)) > 59:
         return None
     try:
         base = _dt.strptime(date_str, "%Y-%m-%d").replace(tzinfo=_tz(_td(hours=8)))
@@ -1139,7 +1139,9 @@ def _ls_sta_ts(date_str: str, sta: str) -> "float | None":
 def loadsheet_eta_api():
     """?date=YYYY-MM-DD&fl=AK177/177|23:15（前一天）,Z2128/129|00:00 → 每班的起飛／抵達狀態"""
     date_str = request.args.get("date", "").strip()
-    if not _re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+    try:
+        _dt.strptime(date_str, "%Y-%m-%d")   # 格式對但日期不存在（2026-02-30）也改用今天，不然後面比對會 500
+    except ValueError:
         date_str = _asiaair_today()
     reqs = []
     for part in request.args.get("fl", "").split(",")[:30]:
