@@ -3146,7 +3146,8 @@ _ASIAAIR_CODES         = {"FD", "AK", "Z2", "D7"}  # 亞洲航空集團機隊代
 _ASIAAIR_TTL           = 60  # 秒，避免太頻繁打 Notion 非官方 API
 _ASIAAIR_QUERY_LIMIT   = 50000  # 只影響回傳的 ID 數量；內容另外補抓
 _ASIAAIR_FILL_CHUNK    = 250
-_ASIAAIR_FILL_SECONDS  = 25     # 補抓時間上限，留給 Vercel 60 秒內的其他步驟
+_ASIAAIR_FILL_SECONDS  = 20     # 補抓時間上限，留給 Vercel 60 秒內的其他步驟
+_ASIAAIR_QUERY_TIMEOUT = 30     # Notion 查詢偶爾要 12 秒以上，10 秒會直接失敗
 
 _ASIAAIR_FIELD_MAP = {
     "flight": "flight", "ACFT REG": "acft_reg", "GATE": "gate", "DATE": "date",
@@ -3234,7 +3235,7 @@ def _asiaair_get_schema() -> dict:
                     "searchQuery":  "",
                 },
             },
-            timeout=10,
+            timeout=_ASIAAIR_QUERY_TIMEOUT,
         )
         r.raise_for_status()
         collections = r.json().get("recordMap", {}).get("collection", {})
@@ -3266,20 +3267,28 @@ def _asiaair_fetch_blocks(space_id: str, block_ids: list) -> dict:
         f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/syncRecordValuesMain",
         headers={"x-notion-space-id": space_id},
         json={"requests": [{"pointer": {"table": "block", "id": bid, "spaceId": space_id}, "version": -1} for bid in block_ids]},
-        timeout=10,
+        timeout=20,
     )
     r.raise_for_status()
     return r.json().get("recordMap", {}).get("block", {})
+
+
+def _asiaair_schema_from_payload(payload: dict) -> dict:
+    for c in (payload.get("recordMap", {}).get("collection") or {}).values():
+        schema = _asiaair_block_value(c).get("schema") or {}
+        if schema:
+            return {pid: pdef.get("name", pid) for pid, pdef in schema.items()}
+    return {}
 
 
 def _asiaair_fetch_raw(date_str: str):
     space_id = _asiaair_get_space_id()
     if not space_id:
         return None
-    id_to_name = _asiaair_get_schema()
-    # 拿不到欄位對照時所有列都對不到 DATE，會變成「今天沒有航班」，要當成失敗回報
-    if not id_to_name:
-        return None
+    # Notion 公開 API 有時一個請求要 12 秒以上，schema 跟主查詢同時發，不要排隊等
+    from concurrent.futures import ThreadPoolExecutor
+    pool = ThreadPoolExecutor(max_workers=1)
+    schema_future = pool.submit(_asiaair_get_schema)
     try:
         r = _requests.post(
             f"https://{_ASIAAIR_NOTION_DOMAIN}/api/v3/queryCollection",
@@ -3297,12 +3306,29 @@ def _asiaair_fetch_raw(date_str: str):
                     "searchQuery":  "",
                 },
             },
-            timeout=10,
+            timeout=_ASIAAIR_QUERY_TIMEOUT,
         )
         r.raise_for_status()
         payload = r.json()
     except Exception as e:
         app.logger.error(f"_asiaair_fetch_raw: {e}")
+        pool.shutdown(wait=False)
+        return None
+
+    # 主查詢有附 schema 就直接用；limit 很大時 Notion 常常不附，才等另外那個小請求
+    id_to_name = _asiaair_schema_from_payload(payload)
+    if id_to_name:
+        _asiaair_schema_cache["value"]      = id_to_name
+        _asiaair_schema_cache["expires_at"] = time.time() + 3600
+    else:
+        try:
+            id_to_name = schema_future.result(timeout=_ASIAAIR_QUERY_TIMEOUT)
+        except Exception as e:
+            app.logger.error(f"_asiaair_fetch_raw schema: {e}")
+            id_to_name = {}
+    pool.shutdown(wait=False)
+    # 拿不到欄位對照時所有列都對不到 DATE，會變成「今天沒有航班」，要當成失敗回報
+    if not id_to_name:
         return None
 
     record_map = payload.get("recordMap", {})
