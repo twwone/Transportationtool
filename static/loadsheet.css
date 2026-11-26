@@ -146,6 +146,13 @@ input::placeholder { color:#6f7276; }
 .ldm-eta-time.notion { color:var(--amber); }
 .ldm-eta-time.delay, .ldm-eta-label.delay { color:var(--danger); }
 .ldm-flight-item.active .ldm-eta-sub { color:#e2e8ee; }
+/* 已落地：整列變暗、時間改灰，一眼跟還沒落地的分開；選中時恢復全亮 */
+.ldm-flight-item.landed:not(.active) > .ldm-fl-code,
+.ldm-flight-item.landed:not(.active) > .ldm-fl-info { opacity:0.45; }
+.ldm-flight-item.landed:not(.active) .ldm-eta-label.landed,
+.ldm-flight-item.landed:not(.active) .ldm-eta-time.landed { color:#8fb9c9; }
+.ldm-eta-label i { font-size:0.62rem; }
+.ldm-eta-late { color:var(--danger); font-weight:700; }
 .ldm-no-flights { text-align:center; padding:10px 0; color:var(--sub); font-size:0.8rem; }
 .ldm-img { width:100%; border-radius:3px; display:block; margin-bottom:8px; cursor:pointer; border:1px solid #000; }
 .ldm-text-block { font-family:Menlo,monospace; font-size:0.74rem; color:var(--text); background:#000; border:1px solid #666a70; border-radius:3px; padding:9px 10px; margin-bottom:8px; white-space:pre-wrap; line-height:1.55; }

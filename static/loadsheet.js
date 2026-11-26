@@ -799,6 +799,7 @@ function renderLdmFlights(flights) {
       <i class="bi bi-chevron-right" style="color:var(--sub);font-size:0.8rem"></i>
     </div>`;
   }).join('');
+  el.querySelectorAll('.ldm-fl-eta').forEach(ldmMarkLanded);
 }
 
 /* ── 抵達倒數：FR24 每 2 分鐘抓一次（頁面開著才抓），倒數每 30 秒重畫；FR24 抓不到改用 Notion ETA ── */
@@ -836,10 +837,14 @@ async function ldmRefreshClick() {
     btn.classList.remove('spinning');
   }
 }
+function ldmMarkLanded(el) {
+  el.closest('.ldm-flight-item').classList.toggle('landed', !!el.querySelector('.ldm-eta-label.landed'));
+}
 function ldmRefreshEta() {
   document.querySelectorAll('.ldm-fl-eta[data-eta-for]').forEach(el => {
     const f = _ldmFlights.find(x => x.flight === el.dataset.etaFor);
     if (f) el.innerHTML = ldmEtaHtml(f);
+    ldmMarkLanded(el);
   });
 }
 setInterval(() => {
@@ -893,8 +898,9 @@ function ldmEtaHtml(f) {
   if (e && e.state === 'landed') {
     const ago = now - e.ata, d = late(e.ata, e.sta);
     const agoTxt = ago >= 0 && ago < 3 * 3600 ? ldmDur(ago) + ' ago' : '';
-    if (d) return box('delay', 'DELAY', ldmHm(e.ata), 'Landed ' + plus(d));
-    return box('landed', 'LANDED', ldmHm(e.ata), agoTxt);
+    /* 已落地一律標 LANDED（整列變暗），延誤只在下方用紅字註明，跟還沒落地的紅色 DELAY 分開 */
+    return box('landed', '<i class="bi bi-check-circle-fill"></i> LANDED', ldmHm(e.ata),
+      d ? `<span class="ldm-eta-late">${plus(d)} late</span>` : agoTxt);
   }
   if (e && e.state === 'airborne') {
     /* FR24 沒給 ETA：用實際起飛 + 表定航程（STA − STD）推算，起飛晚多少就晚到多少 */
