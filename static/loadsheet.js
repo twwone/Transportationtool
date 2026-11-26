@@ -494,9 +494,6 @@ function renderResult() {
     ].filter(x => x.s.hold === h.id && x.s.kg > 0);
     const spKg    = round1(spItems.reduce((sum, x) => sum + x.s.kg, 0));
     const holdTotal = round1(kg + spKg);
-    const overPcs = pcs > h.maxPcs && h.maxPcs > 0;
-    /* 貨物不設上限：超重判斷不算貨物重量 */
-    const overKg  = holdTotal - holdCargo.reduce((sum, c) => sum + c.kg, 0) > h.maxKg;
     const hasTransit = sp.transit.hold === h.id && sp.transit.pcs > 0;
 
     /* 特殊項目 tags */
@@ -508,7 +505,8 @@ function renderResult() {
       ...holdCargo.filter(c => c.allKg > 0).map(c => `<span class="extra-tag cargo">${esc(c.name)} ${c.cl ? `loaded ${c.cl.loaded} / ${c.cl.pcs} PCS · ${c.cl.loadedKg} KG` : `${c.allKg} KG`}</span>`),
     ].filter(Boolean).join('');
 
-    const inputCls = (overPcs || overKg) ? 'err' : h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
+    /* 超過艙位件數／重量上限不標紅，照常顯示（上限只用在自動分配） */
+    const inputCls = h.badge === 'aft' || h.badge === 'bulk' ? 'aft' : '';
     const barCls   = h.badge === 'aft' || h.badge === 'bulk' ? 'bar-aft' : 'bar-fwd';
 
     const card = document.createElement('div');
@@ -560,10 +558,7 @@ function onHoldInput(el) {
   const holdId = el.dataset.hold;
   holdPcs[holdId] = parseFloat(el.value) || 0;
   const h = AC[curAc].holds.find(x => x.id === holdId);
-  const avg = avgWeight() || 0;
-  const overPcs = h && h.maxPcs > 0 && holdPcs[holdId] > h.maxPcs;
-  const overKg  = h && avg && round1(holdPcs[holdId] * avg) > h.maxKg;
-  el.className = 'hold-input ' + (overPcs || overKg ? 'err' : h.badge === 'aft' ? 'aft' : '');
+  el.className = 'hold-input ' + (h && h.badge === 'aft' ? 'aft' : '');
   renderResult();
   saveState();
 }
