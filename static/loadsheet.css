@@ -339,22 +339,30 @@ input::placeholder { color:#6f7276; }
 .chk-btns button { flex:1; padding:11px 0; font-size:0.8rem; font-weight:800; letter-spacing:0.04em; border-radius:5px; cursor:pointer; background:var(--btn-white); border:1px solid var(--btn-white-edge); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,0.45), inset 0 1px 0 #fff; }
 .chk-btns .primary { color:var(--blue); }
 
-/* ── 電腦版：≥768px 兩欄（左 LDM／右 輸入＋結果），≥1280px 三欄（LDM／輸入／結果）；手機照原本直排 ── */
+/* ── 電腦／平板版：≥768px 兩欄（左 LDM／右 輸入＋結果），≥1180px 三欄（LDM／輸入／結果）；手機照原本直排 ──
+   1180 涵蓋 iPad Air／Pro 11 橫放；iPad 10.2 橫放（1080）與所有直放走兩欄 */
 @media (min-width:768px) {
-  .header-row, .sync-sheet { max-width:920px; margin:0 auto; }
-  .content { max-width:920px; padding:0 16px 40px; }
+  .header-row, .sync-sheet { max-width:1120px; margin:0 auto; }
+  .content { max-width:1120px; padding:0 16px 40px; }
   /* 機型切換：改成置中的圓角分段鈕，不再滿版 */
   .seg { max-width:320px; margin:14px auto; border:1px solid #000; border-radius:6px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 #fff; }
   .ls-cols { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 14px; align-items:start; }
-  /* LDM 欄：捲動時固定在畫面上，內容太長就欄內自己捲 */
-  .ls-col-ldm { position:sticky; top:62px; max-height:calc(100vh - 76px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; border-radius:5px; }
+  /* 兩欄時 LDM 佔左欄兩列，輸入和結果都疊在右欄（沒指定的話結果會掉到左欄 LDM 下面） */
+  .ls-col-ldm    { grid-column:1; grid-row:1 / span 2; }
+  .ls-col-input  { grid-column:2; grid-row:1; }
+  .ls-col-result { grid-column:2; grid-row:2; }
+  /* LDM 欄：捲動時固定在畫面上，內容太長就欄內自己捲；dvh 扣掉 iOS Safari 網址列 */
+  .ls-col-ldm { position:sticky; top:62px; max-height:calc(100vh - 76px); max-height:calc(100dvh - 76px); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-width:thin; border-radius:5px; }
   .ls-col-ldm .card { margin-bottom:0; }
   .img-modal { max-width:min(900px, 92vw); }
 }
-@media (min-width:1280px) {
+@media (min-width:1180px) {
   .header-row, .sync-sheet { max-width:1360px; }
   .content { max-width:1360px; padding:0 24px 40px; }
   .ls-cols { grid-template-columns:minmax(0,1.05fr) minmax(0,1fr) minmax(0,1fr); gap:0 16px; }
+  .ls-col-ldm    { grid-row:1; }
+  .ls-col-input  { grid-column:2; grid-row:1; }
+  .ls-col-result { grid-column:3; grid-row:1; }
   /* 結果欄也固定，按 COMPUTE 後不用往下捲就看得到 */
-  .ls-col-result { position:sticky; top:62px; max-height:calc(100vh - 76px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+  .ls-col-result { position:sticky; top:62px; max-height:calc(100vh - 76px); max-height:calc(100dvh - 76px); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
 }
