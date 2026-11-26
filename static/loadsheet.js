@@ -845,7 +845,7 @@ async function ldmRefreshClick() {
   }
 }
 function ldmMarkLanded(el) {
-  el.closest('.ldm-flight-item').classList.toggle('landed', !!el.querySelector('.ldm-eta-label.landed'));
+  el.closest('.ldm-flight-item').classList.toggle('landed', !!el.querySelector('.ldm-eta-label.landed, .ldm-eta-label.cnl'));
 }
 function ldmRefreshEta() {
   document.querySelectorAll('.ldm-fl-eta[data-eta-for]').forEach(el => {
@@ -887,6 +887,7 @@ function ldmNotionEtaTs(f) {
 }
 /* 延誤：預計／實際抵達比表定（STA）晚 1 分鐘以上，標籤改 DELAY、紅色 */
 const LDM_DELAY_SEC = 60;
+const LDM_CNL_SEC = 6 * 3600;   // 超過表定起飛 6 小時沒起飛視為取消
 function ldmNotionStaTs(f) {
   const m = /(\d{1,2}):(\d{2})/.exec(f.sta || '');
   if (!m) return null;
@@ -902,6 +903,11 @@ function ldmEtaHtml(f) {
   const box = (cls, label, time, sub) =>
     `<span class="ldm-eta-label ${cls}">${label}</span><span class="ldm-eta-time ${cls}">${time}</span>` +
     (sub ? `<span class="ldm-eta-sub">${sub}</span>` : '');
+  /* 取消：FR24 標記取消，或過了表定（預計）起飛 6 小時還沒有起飛紀錄 */
+  const depT = e && (e.etd || e.std);
+  if (e && (e.state === 'canceled' || (e.state === 'scheduled' && depT && now - depT > LDM_CNL_SEC))) {
+    return box('cnl', 'CNL', `<s>${ldmHm(e.sta || depT)}</s>`, e.state === 'canceled' ? 'Cancelled' : 'No departure');
+  }
   if (e && e.state === 'landed') {
     const ago = now - e.ata, d = late(e.ata, e.sta);
     const agoTxt = ago >= 0 && ago < 3 * 3600 ? ldmDur(ago) + ' ago' : '';

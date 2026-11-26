@@ -1116,6 +1116,8 @@ def _fr24_tpe_legs(no: str, force: bool = False) -> "list | None":
             "sta": tg("scheduled", "arrival"), "eta": tg("estimated", "arrival"), "ata": tg("real", "arrival"),
             "std": tg("scheduled", "departure"), "etd": tg("estimated", "departure"), "atd": tg("real", "departure"),
             "live": bool(st.get("live")),
+            # FR24 標記取消（generic.status.text = canceled／cancelled）
+            "canceled": "cancel" in str(((st.get("generic") or {}).get("status") or {}).get("text") or "").lower(),
         })
     with _ls_eta_lock:
         _ls_eta_cache[no] = {"legs": legs, "expires_at": now + _LS_ETA_TTL}
@@ -1167,7 +1169,9 @@ def loadsheet_eta_api():
         if not leg or abs(leg["sta"] - target) > limit:
             out[flight] = None
             continue
-        if leg["ata"]:
+        if leg.get("canceled") and not leg["atd"]:
+            state = "canceled"
+        elif leg["ata"]:
             state = "landed"
         elif leg["atd"] or leg["live"]:
             state = "airborne"

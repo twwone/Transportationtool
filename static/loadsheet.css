@@ -153,6 +153,9 @@ input::placeholder { color:#6f7276; }
 .ldm-flight-item.landed:not(.active) .ldm-eta-time.landed { color:#8fb9c9; }
 .ldm-eta-label i { font-size:0.62rem; }
 .ldm-eta-late { color:var(--danger); font-weight:700; }
+/* 取消：灰色 CNL、表定時間刪除線，整列跟已落地一樣變暗 */
+.ldm-eta-label.cnl, .ldm-eta-time.cnl { color:#9a9ea4; }
+.ldm-eta-time.cnl s { text-decoration-thickness:2px; }
 .ldm-no-flights { text-align:center; padding:10px 0; color:var(--sub); font-size:0.8rem; }
 .ldm-img { width:100%; border-radius:3px; display:block; margin-bottom:8px; cursor:pointer; border:1px solid #000; }
 .ldm-text-block { font-family:Menlo,monospace; font-size:0.74rem; color:var(--text); background:#000; border:1px solid #666a70; border-radius:3px; padding:9px 10px; margin-bottom:8px; white-space:pre-wrap; line-height:1.55; }
